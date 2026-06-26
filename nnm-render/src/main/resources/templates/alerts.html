@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'NotoSansSC', 'Microsoft YaHei', sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            width: 480px;
+            padding: 16px;
+        }
+        .card {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .title {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .alert-item {
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .alert-item:last-child { margin-bottom: 0; }
+        .mission {
+            font-size: 13px;
+            color: #ccc;
+        }
+        .reward {
+            font-size: 14px;
+            color: #ffd700;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .expiry {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="title">当前警报</div>
+    <div class="alert-item" th:each="alert : ${alerts}">
+        <div class="mission" th:text="${alert.mission}">任务节点</div>
+        <div class="reward" th:text="${alert.reward}">奖励内容</div>
+        <div class="expiry" th:text="'剩余: ' + ${alert.remaining}">剩余: 1小时20分</div>
+    </div>
+    <div th:if="${#lists.isEmpty(alerts)}" style="color:#888;font-size:13px;text-align:center;padding:20px;">
+        当前没有活跃警报
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.nnm</groupId>
+        <artifactId>NnmBot</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>nnm-app</artifactId>
+    <name>nnm-app</name>
+    <description>Application entry point - assembles all modules</description>
+
+    <dependencies>
+        <!-- All modules -->
+        <dependency>
+            <groupId>com.nnm</groupId>
+            <artifactId>nnm-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nnm</groupId>
+            <artifactId>nnm-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nnm</groupId>
+            <artifactId>nnm-render</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nnm</groupId>
+            <artifactId>nnm-warframe</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nnm</groupId>
+            <artifactId>nnm-scheduler</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nnm</groupId>
+            <artifactId>nnm-admin</artifactId>
+        </dependency>
+
+        <!-- Database -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- H2 for local development -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Flyway -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Actuator (health checks, metrics) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.nnm.bot.NnmBotApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <finalName>NnmBot</finalName>
+    </build>
+
+</project>

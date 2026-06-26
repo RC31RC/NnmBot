@@ -1,0 +1,95 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: NnmBot
+
+  profiles:
+    active: dev
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./data/nnm;MODE=PostgreSQL;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=600s
+
+  task:
+    execution:
+      pool:
+        core-size: 0
+        max-size: 1
+        keep-alive: 10s
+    scheduling:
+      shutdown:
+        await-termination: true
+        await-termination-period: 10s
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production}
+  expiration: 3600
+
+# OneBot Configuration
+shiro:
+  ws:
+    server:
+      url: /ws/shiro
+      enable: true
+    client:
+      enable: false
+      url: ws://localhost:3001
+      reconnect-interval: 5000
+
+# Render engine configuration
+render:
+  engine: auto  # auto | openhtmltopdf | playwright
+  openhtmltopdf:
+    dpi: 144
+    font-dir: classpath:fonts/
+  playwright:
+    chromium-args: --no-sandbox,--disable-gpu
+
+# Logging
+logging:
+  level:
+    com.nnm.bot: INFO
+    com.mikuac.shiro: INFO
+    org.hibernate.SQL: WARN
+    org.springframework: INFO
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
