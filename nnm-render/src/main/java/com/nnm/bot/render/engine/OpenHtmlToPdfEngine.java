@@ -4,7 +4,6 @@ import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.RenderOptions;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -35,7 +34,7 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
             builder.toStream(pdfOs);
             builder.run();
 
-            try (PDDocument doc = Loader.loadPDF(pdfOs.toByteArray())) {
+            try (PDDocument doc = PDDocument.load(pdfOs.toByteArray())) {
                 PDFRenderer renderer = new PDFRenderer(doc);
                 BufferedImage image = renderer.renderImageWithDPI(0, options.getDpi());
 

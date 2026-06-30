@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.3</version>
+        <version>4.0.6</version>
         <relativePath/>
     </parent>
 
@@ -33,7 +33,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Spring & Boot -->
-        <spring-modulith.version>1.3.2</spring-modulith.version>
+        <spring-modulith.version>2.0.7</spring-modulith.version>
 
         <!-- Bot SDK -->
         <shiro.version>2.5.4</shiro.version>
@@ -46,11 +46,8 @@
         <caffeine.version>3.1.8</caffeine.version>
 
         <!-- Render -->
-        <openhtmltopdf.version>1.1.22</openhtmltopdf.version>
+        <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
         <playwright.version>1.49.0</playwright.version>
-
-        <!-- Resilience -->
-        <resilience4j.version>2.2.0</resilience4j.version>
 
         <!-- JWT -->
         <jjwt.version>0.13.0</jjwt.version>
@@ -60,7 +57,7 @@
         <commons-text.version>1.13.0</commons-text.version>
 
         <!-- Documentation -->
-        <springdoc.version>2.8.4</springdoc.version>
+        <springdoc.version>3.0.3</springdoc.version>
     </properties>
 
     <dependencyManagement>
@@ -102,15 +99,6 @@
                 <groupId>org.springframework.modulith</groupId>
                 <artifactId>spring-modulith-bom</artifactId>
                 <version>${spring-modulith.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <!-- Resilience4j -->
-            <dependency>
-                <groupId>io.github.resilience4j</groupId>
-                <artifactId>resilience4j-bom</artifactId>
-                <version>${resilience4j.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
