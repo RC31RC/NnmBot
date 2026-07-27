@@ -18,22 +18,30 @@ Warframe QQ Bot - Modular Architecture
 
 - Java 21+
 - Maven 3.9+
-- PostgreSQL 16+ (production) / H2 (development)
+- PostgreSQL (development and production)
+- H2 (automated tests only)
 
 ## Quick Start
 
 ```bash
-# Development (H2, auto DDL)
-mvn clean install -DskipTests
-cd nnm-app
-mvn spring-boot:run
+# Development (localhost PostgreSQL + Flyway)
+export DB_HOST=localhost DB_PORT=5432 DB_NAME=nnmbot
+export DB_SCHEMA=nnmbot DB_USERNAME=nnmbot DB_PASSWORD=nnmbot
+./scripts/run-dev.sh
 
 # Production
 export DB_HOST=localhost DB_PORT=5432 DB_NAME=nnmbot
-export DB_USERNAME=nnmbot DB_PASSWORD=your-password
-export JWT_SECRET=your-secret-key
+export DB_SCHEMA=nnmbot DB_USERNAME=nnmbot DB_PASSWORD=your-password
 java -jar nnm-app/target/NnmBot.jar --spring.profiles.active=prod
 ```
+
+Database schema changes are managed by Flyway. Hibernate validates entity mappings
+at startup and does not update production or development schemas automatically.
+Application tables use the `nnmbot` schema; Flyway keeps its history table in `public`.
+
+The development script compiles all reactor modules first, then starts `nnm-app`
+with each module's current `target/classes`. This avoids loading stale internal
+module JARs from the local Maven repository and does not create a production package.
 
 ## Render Engine
 
@@ -50,7 +58,7 @@ render:
 ## Architecture
 
 ```
-Spring Boot 3.4 + Spring Modulith
+Spring Boot 4.0 + Spring Modulith
 ├── Event-driven inter-module communication
 ├── Plugin SPI for bot commands
 ├── Strategy pattern for change detection

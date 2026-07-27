@@ -4,15 +4,15 @@ import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.engine.OpenHtmlToPdfEngine;
 import com.nnm.bot.render.engine.PlaywrightEngine;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
-@Configuration
+@Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties(RenderProperties.class)
 public class RenderEngineConfig {
 
     /**
@@ -22,21 +22,19 @@ public class RenderEngineConfig {
      */
     private static final long PLAYWRIGHT_MIN_PHYSICAL_MEMORY = 4L * 1024 * 1024 * 1024;
 
-    @Value("${render.engine:auto}")
-    private String engineType;
+    private final RenderProperties properties;
 
-    @Value("${render.openhtmltopdf.font-dir:classpath:fonts/}")
-    private String fontDir;
-
-    @Value("${render.playwright.chromium-args:--no-sandbox,--disable-gpu}")
-    private String chromiumArgs;
+    public RenderEngineConfig(RenderProperties properties) {
+        properties.validate();
+        this.properties = properties;
+    }
 
     @Bean
     public RenderEngine renderEngine() {
-        return switch (engineType) {
-            case "playwright" -> createPlaywright();
-            case "openhtmltopdf" -> createOpenHtmlToPdf();
-            default -> autoSelect();
+        return switch (properties.getEngine()) {
+            case PLAYWRIGHT -> createPlaywright();
+            case OPENHTMLTOPDF -> createOpenHtmlToPdf();
+            case AUTO -> autoSelect();
         };
     }
 
@@ -60,8 +58,7 @@ public class RenderEngineConfig {
     }
 
     private PlaywrightEngine createPlaywright() {
-        List<String> args = Arrays.asList(chromiumArgs.split(","));
-        return new PlaywrightEngine(args);
+        return new PlaywrightEngine(List.copyOf(properties.getPlaywright().getChromiumArgs()));
     }
 
     /**

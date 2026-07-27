@@ -1,7 +1,9 @@
 package com.nnm.bot.common.http;
 
+import com.nnm.bot.common.retry.RetryBackoff;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -53,12 +55,12 @@ public class HttpClient {
 
     private HttpResult doGet(String url, Map<String, String> headers) {
         try {
-            String body = restClient.get()
+            ResponseEntity<String> response = restClient.get()
                     .uri(url)
                     .headers(h -> headers.forEach(h::add))
                     .retrieve()
-                    .body(String.class);
-            return new HttpResult(200, body, null);
+                    .toEntity(String.class);
+            return new HttpResult(response.getStatusCode().value(), response.getBody(), null);
         } catch (RestClientResponseException e) {
             // 拿到了响应但状态码非 2xx
             return new HttpResult(e.getStatusCode().value(), e.getResponseBodyAsString(), e);
@@ -74,13 +76,13 @@ public class HttpClient {
      */
     public HttpResult post(String url, String body, Map<String, String> headers) {
         try {
-            String responseBody = restClient.post()
+            ResponseEntity<String> response = restClient.post()
                     .uri(url)
                     .headers(h -> headers.forEach(h::add))
                     .body(body)
                     .retrieve()
-                    .body(String.class);
-            return new HttpResult(200, responseBody, null);
+                    .toEntity(String.class);
+            return new HttpResult(response.getStatusCode().value(), response.getBody(), null);
         } catch (RestClientResponseException e) {
             return new HttpResult(e.getStatusCode().value(), e.getResponseBodyAsString(), e);
         } catch (Exception e) {
@@ -94,7 +96,11 @@ public class HttpClient {
      */
     private boolean sleepBackoff(int attempt) {
         try {
-            Thread.sleep(properties.getRetryBackoff().toMillis() * attempt);
+            Thread.sleep(RetryBackoff.exponential(
+                    properties.getRetryBackoff(),
+                    properties.getRetryMaxBackoff(),
+                    attempt
+            ).toMillis());
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

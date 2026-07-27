@@ -1,23 +1,29 @@
 spring:
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:file:./data/nnm-dev;MODE=PostgreSQL;AUTO_SERVER=TRUE
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nnmbot}?currentSchema=${DB_SCHEMA:nnmbot},public
+    username: ${DB_USERNAME:nnmbot}
+    password: ${DB_PASSWORD:nnmbot}
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${DB_SCHEMA:nnmbot}
+    show-sql: false
 
   flyway:
-    enabled: false
+    enabled: true
 
 logging:
   level:
     com.nnm.bot: DEBUG
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: WARN
+
+nnm:
+  admin:
+    bootstrap:
+      enabled: true
+      username: admin
+      password: admin123

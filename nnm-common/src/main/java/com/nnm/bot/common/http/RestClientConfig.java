@@ -2,6 +2,7 @@ package com.nnm.bot.common.http;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -18,7 +19,8 @@ import java.security.cert.X509Certificate;
  * 全局 {@link RestClient} 配置。
  * <p>
  * 底层基于 Java 21 {@link HttpClient} + {@link JdkClientHttpRequestFactory}，连接/读取超时可配。
- * 默认信任所有 SSL 证书以适配国内访问海外 Warframe API 的场景（参考 NyxBot 的做法）。
+ * 默认执行标准 SSL 证书校验。确需排查本地代理证书问题时，可临时启用
+ * {@code nnm.http.trust-all-certs}。
  * </p>
  */
 @Slf4j
@@ -27,7 +29,9 @@ import java.security.cert.X509Certificate;
 public class RestClientConfig {
 
     @Bean
+    @ConditionalOnMissingBean(RestClient.class)
     public RestClient restClient(HttpClientProperties properties) {
+        properties.validate();
         HttpClient.Builder httpClientBuilder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(properties.getConnectTimeout())

@@ -47,17 +47,17 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- H2 for local development -->
+        <!-- H2 for automated tests only -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
 
         <!-- Flyway -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
@@ -86,6 +86,26 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.nnm.bot.NnmBotApplication</mainClass>
+                    <additionalClasspathElements>
+                        <additionalClasspathElement>
+                            ${maven.multiModuleProjectDirectory}/nnm-common/target/classes
+                        </additionalClasspathElement>
+                        <additionalClasspathElement>
+                            ${maven.multiModuleProjectDirectory}/nnm-core/target/classes
+                        </additionalClasspathElement>
+                        <additionalClasspathElement>
+                            ${maven.multiModuleProjectDirectory}/nnm-render/target/classes
+                        </additionalClasspathElement>
+                        <additionalClasspathElement>
+                            ${maven.multiModuleProjectDirectory}/nnm-warframe/target/classes
+                        </additionalClasspathElement>
+                        <additionalClasspathElement>
+                            ${maven.multiModuleProjectDirectory}/nnm-scheduler/target/classes
+                        </additionalClasspathElement>
+                        <additionalClasspathElement>
+                            ${maven.multiModuleProjectDirectory}/nnm-admin/target/classes
+                        </additionalClasspathElement>
+                    </additionalClasspathElements>
                 </configuration>
                 <executions>
                     <execution>

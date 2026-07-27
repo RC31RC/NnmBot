@@ -21,8 +21,13 @@ public class HttpClientProperties {
     private int maxAttempts = 3;
     /** 重试基础退避间隔 */
     private Duration retryBackoff = Duration.ofMillis(500);
-    /** 是否信任所有 SSL 证书（应对国内访问海外 CDN/API 时证书链不完整） */
-    private boolean trustAllCerts = true;
+    /** 单次重试退避上限 */
+    private Duration retryMaxBackoff = Duration.ofSeconds(5);
+    /**
+     * 是否跳过 SSL 证书校验。仅用于定位本地网络或代理证书问题，
+     * 正式环境必须保持关闭。
+     */
+    private boolean trustAllCerts = false;
 
     public Duration getConnectTimeout() {
         return connectTimeout;
@@ -56,11 +61,45 @@ public class HttpClientProperties {
         this.retryBackoff = retryBackoff;
     }
 
+    public Duration getRetryMaxBackoff() {
+        return retryMaxBackoff;
+    }
+
+    public void setRetryMaxBackoff(Duration retryMaxBackoff) {
+        this.retryMaxBackoff = retryMaxBackoff;
+    }
+
     public boolean isTrustAllCerts() {
         return trustAllCerts;
     }
 
     public void setTrustAllCerts(boolean trustAllCerts) {
         this.trustAllCerts = trustAllCerts;
+    }
+
+    void validate() {
+        requirePositive(connectTimeout, "nnm.http.connect-timeout");
+        requirePositive(readTimeout, "nnm.http.read-timeout");
+        if (maxAttempts < 1 || maxAttempts > 10) {
+            throw new IllegalArgumentException("nnm.http.max-attempts must be between 1 and 10");
+        }
+        requireNotNegative(retryBackoff, "nnm.http.retry-backoff");
+        requireNotNegative(retryMaxBackoff, "nnm.http.retry-max-backoff");
+        if (retryMaxBackoff.compareTo(retryBackoff) < 0) {
+            throw new IllegalArgumentException(
+                    "nnm.http.retry-max-backoff must not be shorter than retry-backoff");
+        }
+    }
+
+    private void requirePositive(Duration value, String name) {
+        if (value == null || value.isZero() || value.isNegative()) {
+            throw new IllegalArgumentException(name + " must be positive");
+        }
+    }
+
+    private void requireNotNegative(Duration value, String name) {
+        if (value == null || value.isNegative()) {
+            throw new IllegalArgumentException(name + " must not be negative");
+        }
     }
 }

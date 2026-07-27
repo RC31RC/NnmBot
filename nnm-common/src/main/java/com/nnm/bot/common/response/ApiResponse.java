@@ -1,6 +1,7 @@
 package com.nnm.bot.common.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.nnm.bot.common.error.ErrorCode;
 import lombok.Getter;
 
 @Getter
@@ -27,6 +28,10 @@ public class ApiResponse<T> {
 
     public static <T> ApiResponse<T> error(int code, String message) {
         return new ApiResponse<>(code, message, null);
+    }
+
+    public static <T> ApiResponse<T> error(ErrorCode errorCode) {
+        return error(errorCode.getCode(), errorCode.getMessage());
     }
 
     public static <T> ApiResponse<T> error(String message) {

@@ -1,29 +1,28 @@
 package com.nnm.bot.warframe.infrastructure.client;
 
 import com.nnm.bot.common.http.HttpClient;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class WarframeApiClient {
 
-    private static final String WORLD_STATE_URL = "https://api.warframestat.us/pc";
-    private static final String MARKET_API_URL = "https://api.warframe.market/v1";
-
     private final HttpClient httpClient;
+    private final WarframeApiProperties properties;
 
-    @Value("${warframe.api.language:zh}")
-    private String language;
+    public WarframeApiClient(HttpClient httpClient, WarframeApiProperties properties) {
+        properties.validate();
+        this.httpClient = httpClient;
+        this.properties = properties;
+    }
 
     public String fetchWorldState() {
-        var result = httpClient.get(WORLD_STATE_URL,
-                Map.of("Accept-Language", language));
+        var result = httpClient.get(properties.getWorldStateUrl().toString(),
+                Map.of("Accept-Language", properties.getLanguage()));
         if (result.isSuccess()) {
             return result.body();
         }
@@ -32,10 +31,14 @@ public class WarframeApiClient {
     }
 
     public String fetchMarketOrders(String itemUrlName) {
-        String url = MARKET_API_URL + "/items/" + itemUrlName + "/orders";
+        String url = UriComponentsBuilder.fromUri(properties.getMarketBaseUrl())
+                .pathSegment("items", itemUrlName, "orders")
+                .build()
+                .encode()
+                .toUriString();
         var result = httpClient.get(url, Map.of(
-                "Platform", "pc",
-                "Language", language
+                "Platform", properties.getPlatform(),
+                "Language", properties.getLanguage()
         ));
         if (result.isSuccess()) {
             return result.body();

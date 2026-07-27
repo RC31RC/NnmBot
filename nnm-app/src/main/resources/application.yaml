@@ -13,10 +13,6 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:file:./data/nnm;MODE=PostgreSQL;AUTO_SERVER=TRUE
-    username: sa
-    password:
     hikari:
       maximum-pool-size: 5
       minimum-idle: 2
@@ -33,28 +29,28 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    default-schema: public
     baseline-on-migrate: true
 
   cache:
+    # Retained temporarily as the Caffeine fallback configuration.
+    # WarframeCacheConfiguration supplies the active cache2k CacheManager.
     type: caffeine
     caffeine:
       spec: maximumSize=500,expireAfterWrite=600s
 
-  task:
-    execution:
-      pool:
-        core-size: 0
-        max-size: 1
-        keep-alive: 10s
-    scheduling:
-      shutdown:
-        await-termination: true
-        await-termination-period: 10s
-
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET:change-me-in-production}
-  expiration: 3600
+# Sa-Token authentication
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: 7200
+  active-timeout: 1800
+  is-concurrent: true
+  is-share: false
+  max-login-count: 5
+  is-read-cookie: false
+  is-read-body: false
+  is-write-header: false
 
 # OneBot Configuration
 shiro:
@@ -69,12 +65,11 @@ shiro:
 
 # Render engine configuration
 render:
-  engine: auto  # auto | openhtmltopdf | playwright
-  openhtmltopdf:
-    dpi: 144
-    font-dir: classpath:fonts/
+  engine: auto
   playwright:
-    chromium-args: --no-sandbox,--disable-gpu
+    chromium-args:
+      - --no-sandbox
+      - --disable-gpu
 
 # Logging
 logging:
@@ -93,3 +88,42 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+nnm:
+  http:
+    connect-timeout: 10s
+    read-timeout: 30s
+    max-attempts: 3
+    retry-backoff: 500ms
+    retry-max-backoff: 5s
+    trust-all-certs: false
+  executor:
+    task:
+      core-size: 2
+      max-size: 8
+      queue-capacity: 100
+      keep-alive: 60s
+    scheduler:
+      pool-size: 2
+    await-termination: 30s
+  warframe:
+    polling:
+      enabled: true
+      interval: 2m
+    api:
+      world-state-url: https://api.warframestat.us/pc
+      market-base-url: https://api.warframe.market/v1
+      language: zh
+      platform: pc
+    cache:
+      world-state:
+        capacity: 1
+      metadata:
+        capacity: 64
+        expire-after-write: 6h
+      translations:
+        capacity: 16
+        expire-after-write: 12h
+      data-source-tag:
+        capacity: 8
+        expire-after-write: 2m

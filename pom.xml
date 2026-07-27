@@ -40,7 +40,6 @@
 
         <!-- Database -->
         <postgresql.version>42.7.5</postgresql.version>
-        <flyway.version>10.22.0</flyway.version>
 
         <!-- Cache -->
         <caffeine.version>3.1.8</caffeine.version>
@@ -49,8 +48,8 @@
         <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
         <playwright.version>1.49.0</playwright.version>
 
-        <!-- JWT -->
-        <jjwt.version>0.13.0</jjwt.version>
+        <!-- Authentication -->
+        <sa-token.version>1.45.0</sa-token.version>
 
         <!-- Utilities -->
         <commons-lang3.version>3.17.0</commons-lang3.version>
@@ -129,23 +128,11 @@
                 <version>${playwright.version}</version>
             </dependency>
 
-            <!-- JWT -->
+            <!-- Authentication -->
             <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-api</artifactId>
-                <version>${jjwt.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-impl</artifactId>
-                <version>${jjwt.version}</version>
-                <scope>runtime</scope>
-            </dependency>
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-jackson</artifactId>
-                <version>${jjwt.version}</version>
-                <scope>runtime</scope>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-spring-boot4-starter</artifactId>
+                <version>${sa-token.version}</version>
             </dependency>
 
             <!-- Utilities -->
