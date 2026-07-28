@@ -391,7 +391,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     private SysUser user(long id) {
-        return userRepository.findByIdWithAuthorities(id)
+        return userRepository.findWithAuthoritiesById(id)
                 .orElseThrow(() -> new DataNotFoundException("用户不存在"));
     }
 

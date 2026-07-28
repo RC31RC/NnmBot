@@ -24,6 +24,8 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate.query.fail_on_pagination_over_collection_fetch: true
     show-sql: false
 
   flyway:
@@ -55,6 +57,7 @@ sa-token:
 # OneBot Configuration
 shiro:
   ws:
+    access-token: ${ONEBOT_ACCESS_TOKEN:}
     server:
       url: /ws/shiro
       enable: true

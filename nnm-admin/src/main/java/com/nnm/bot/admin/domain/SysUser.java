@@ -8,6 +8,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.NamedAttributeNode;
+import jakarta.persistence.NamedEntityGraph;
+import jakarta.persistence.NamedEntityGraphs;
+import jakarta.persistence.NamedSubgraph;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -22,7 +26,27 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "sys_user")
+@NamedEntityGraphs({
+        @NamedEntityGraph(
+                name = SysUser.GRAPH_ROLES,
+                attributeNodes = @NamedAttributeNode("roles")
+        ),
+        @NamedEntityGraph(
+                name = SysUser.GRAPH_AUTHORITIES,
+                attributeNodes = @NamedAttributeNode(value = "roles", subgraph = "roleAuthorities"),
+                subgraphs = @NamedSubgraph(
+                        name = "roleAuthorities",
+                        attributeNodes = {
+                                @NamedAttributeNode("permissions"),
+                                @NamedAttributeNode("menus")
+                        }
+                )
+        )
+})
 public class SysUser {
+
+    public static final String GRAPH_ROLES = "SysUser.roles";
+    public static final String GRAPH_AUTHORITIES = "SysUser.authorities";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

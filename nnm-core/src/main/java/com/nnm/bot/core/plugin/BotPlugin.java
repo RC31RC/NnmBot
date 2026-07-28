@@ -1,13 +1,12 @@
 package com.nnm.bot.core.plugin;
 
-import com.mikuac.shiro.core.Bot;
-import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
+import com.nnm.bot.core.message.BotMessageContext;
 
 public interface BotPlugin {
 
     boolean match(String message);
 
-    void handle(Bot bot, AnyMessageEvent event, String message);
+    void handle(BotMessageContext context);
 
     String command();
 

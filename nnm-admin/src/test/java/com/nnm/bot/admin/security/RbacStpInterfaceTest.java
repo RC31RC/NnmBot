@@ -44,7 +44,7 @@ class RbacStpInterfaceTest {
         SysUser user = new SysUser();
         user.getRoles().add(admin);
         user.getRoles().add(disabledRole);
-        given(userRepository.findByIdWithAuthorities(1L)).willReturn(Optional.of(user));
+        given(userRepository.findWithAuthoritiesById(1L)).willReturn(Optional.of(user));
 
         assertThat(stpInterface.getPermissionList(1L, "login"))
                 .containsExactly("system:user:view");
@@ -56,7 +56,7 @@ class RbacStpInterfaceTest {
         user.getRoles().add(role("R_USER", true));
         user.getRoles().add(role("R_ADMIN", true));
         user.getRoles().add(role("R_DISABLED", false));
-        given(userRepository.findByIdWithAuthorities(1L)).willReturn(Optional.of(user));
+        given(userRepository.findWithAuthoritiesById(1L)).willReturn(Optional.of(user));
 
         assertThat(stpInterface.getRoleList(1L, "login"))
                 .containsExactly("R_ADMIN", "R_USER");

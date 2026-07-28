@@ -42,7 +42,7 @@ public class RbacQueryServiceImpl implements RbacQueryService {
 
     @Override
     public PageResult<UserListItem> users(long operatorId, String username, int current, int size) {
-        SysUser operator = userRepository.findByIdWithAuthorities(operatorId)
+        SysUser operator = userRepository.findWithAuthoritiesById(operatorId)
                 .filter(SysUser::isEnabled)
                 .orElseThrow(() -> new BusinessException(401, "账号不可用"));
         boolean canViewAll = operator.getRoles().stream()
@@ -64,11 +64,18 @@ public class RbacQueryServiceImpl implements RbacQueryService {
         }
 
         PageRequest pageable = pageable(current, size, "createdAt");
-        Page<SysUser> page = username == null || username.isBlank()
-                ? userRepository.findAllBy(pageable)
-                : userRepository.findByUsernameContainingIgnoreCase(username.trim(), pageable);
+        Page<SysUserRepository.IdOnly> page = username == null || username.isBlank()
+                ? userRepository.findPageBy(pageable)
+                : userRepository.findPageByUsernameContainingIgnoreCase(username.trim(), pageable);
 
-        List<UserListItem> records = page.getContent().stream()
+        List<Long> userIds = page.getContent().stream()
+                .map(SysUserRepository.IdOnly::getId)
+                .toList();
+        Map<Long, SysUser> usersById = userRepository.findPageDetailsByIdIn(userIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, user -> user));
+        List<UserListItem> records = userIds.stream()
+                .map(usersById::get)
+                .filter(Objects::nonNull)
                 .map(this::toUserItem)
                 .toList();
         return PageResult.of(
@@ -124,7 +131,7 @@ public class RbacQueryServiceImpl implements RbacQueryService {
 
     @Override
     public List<MenuItem> menus(long userId) {
-        SysUser user = userRepository.findByIdWithAuthorities(userId)
+        SysUser user = userRepository.findWithAuthoritiesById(userId)
                 .filter(SysUser::isEnabled)
                 .orElseThrow(() -> new BusinessException(401, "账号不可用"));
 

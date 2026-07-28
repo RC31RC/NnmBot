@@ -44,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(401, "刷新令牌无效");
         }
 
-        SysUser user = userRepository.findByIdWithAuthorities(parseLoginId(loginId))
+        SysUser user = userRepository.findWithAuthoritiesById(parseLoginId(loginId))
                 .filter(SysUser::isEnabled)
                 .orElseThrow(() -> new BusinessException(401, "账号不可用"));
 
@@ -60,7 +60,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserInfoResponse currentUser(long userId) {
-        SysUser user = userRepository.findByIdWithAuthorities(userId)
+        SysUser user = userRepository.findWithAuthoritiesById(userId)
                 .filter(SysUser::isEnabled)
                 .orElseThrow(() -> new BusinessException(401, "账号不可用"));
 

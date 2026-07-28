@@ -43,6 +43,6 @@ public class RbacStpInterface implements StpInterface {
         } catch (NumberFormatException e) {
             return new SysUser();
         }
-        return userRepository.findByIdWithAuthorities(userId).orElseGet(SysUser::new);
+        return userRepository.findWithAuthoritiesById(userId).orElseGet(SysUser::new);
     }
 }

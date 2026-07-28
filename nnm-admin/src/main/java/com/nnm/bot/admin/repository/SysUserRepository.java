@@ -1,38 +1,42 @@
 package com.nnm.bot.admin.repository;
 
 import com.nnm.bot.admin.domain.SysUser;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface SysUserRepository extends JpaRepository<SysUser, Long> {
 
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "roles.menus"})
+    @EntityGraph(SysUser.GRAPH_AUTHORITIES)
     Optional<SysUser> findByUsername(String username);
 
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "roles.menus"})
+    @EntityGraph(SysUser.GRAPH_AUTHORITIES)
     Optional<SysUser> findByUsernameIgnoreCase(String username);
 
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "roles.menus"})
-    @Query("select user from SysUser user where user.id = :id")
-    Optional<SysUser> findByIdWithAuthorities(@Param("id") Long id);
+    @EntityGraph(SysUser.GRAPH_AUTHORITIES)
+    Optional<SysUser> findWithAuthoritiesById(Long id);
 
     boolean existsByIdAndEnabledTrue(Long id);
 
     boolean existsByUsernameIgnoreCase(String username);
 
-    @EntityGraph(attributePaths = "roles")
+    @EntityGraph(SysUser.GRAPH_ROLES)
     List<SysUser> findAllByRoles_Id(Long roleId);
 
-    @EntityGraph(attributePaths = "roles")
-    Page<SysUser> findByUsernameContainingIgnoreCase(String username, Pageable pageable);
+    Page<IdOnly> findPageBy(Pageable pageable);
 
-    @EntityGraph(attributePaths = "roles")
-    Page<SysUser> findAllBy(Pageable pageable);
+    Page<IdOnly> findPageByUsernameContainingIgnoreCase(String username, Pageable pageable);
+
+    @EntityGraph(SysUser.GRAPH_ROLES)
+    List<SysUser> findPageDetailsByIdIn(Collection<Long> ids);
+
+    interface IdOnly {
+
+        Long getId();
+    }
 }

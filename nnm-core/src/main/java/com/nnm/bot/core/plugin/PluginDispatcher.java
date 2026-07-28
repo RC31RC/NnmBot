@@ -1,7 +1,6 @@
 package com.nnm.bot.core.plugin;
 
-import com.mikuac.shiro.core.Bot;
-import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
+import com.nnm.bot.core.message.BotMessageContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -29,11 +28,12 @@ public class PluginDispatcher {
                 this.plugins.stream().map(BotPlugin::command).toList());
     }
 
-    public void dispatch(Bot bot, AnyMessageEvent event, String rawMessage) {
+    public boolean dispatch(BotMessageContext context) {
+        Objects.requireNonNull(context, "context must not be null");
         for (BotPlugin plugin : plugins) {
             boolean matched;
             try {
-                matched = plugin.match(rawMessage);
+                matched = plugin.match(context.message());
             } catch (Exception e) {
                 log.error("Plugin [{}] matching failed", plugin.command(), e);
                 continue;
@@ -42,12 +42,13 @@ public class PluginDispatcher {
                 continue;
             }
             try {
-                plugin.handle(bot, event, rawMessage);
+                plugin.handle(context);
             } catch (Exception e) {
                 log.error("Plugin [{}] handling failed", plugin.command(), e);
             }
-            return;
+            return true;
         }
+        return false;
     }
 
     public List<BotPlugin> plugins() {
