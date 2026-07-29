@@ -15,6 +15,11 @@
     <description>Warframe domain module: market, world state, notifications</description>
 
     <dependencies>
+        <!-- Jackson is part of the NnmBot-owned external protocol adapter. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-common</artifactId>

@@ -55,6 +55,13 @@ render:
   engine: auto  # auto | openhtmltopdf | playwright
 ```
 
+Trusted external render engines can implement `RenderEngineProvider` and register through
+Java `ServiceLoader`. External JAR discovery is disabled by default; see
+`docs/项目模块与目录职责.md` for the plugin contract and security boundary.
+
+For the complete backend directory and file responsibility map, see
+`docs/项目模块与目录职责.md`.
+
 ## Architecture
 
 ```

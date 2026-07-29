@@ -69,6 +69,11 @@ shiro:
 # Render engine configuration
 render:
   engine: auto
+  plugins:
+    enabled: true
+    external-enabled: false
+    directory: ./plugin
+    # provider: custom-renderer
   playwright:
     chromium-args:
       - --no-sandbox
