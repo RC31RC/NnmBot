@@ -39,15 +39,15 @@ public class StatusPlugin implements BotPlugin {
         String status = """
                 NnmBot 运行正常
 
-                机器人 QQ：%d
+                机器人账号：%s
                 会话类型：%s
                 运行时长：%s
                 JVM：%s
                 内存：%d MiB / %d MiB
                 插件数量：%d
                 """.formatted(
-                context.botId(),
-                context.isGroupMessage() ? "群聊" : "私聊",
+                context.botAccountId(),
+                context.isGroupMessage() ? "群聊" : context.isChannelMessage() ? "频道" : "私聊",
                 formatDuration(uptime),
                 System.getProperty("java.version"),
                 usedMemory / MEBIBYTE,

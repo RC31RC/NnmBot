@@ -23,6 +23,12 @@ public class HttpClientProperties {
     private Duration retryBackoff = Duration.ofMillis(500);
     /** 单次重试退避上限 */
     private Duration retryMaxBackoff = Duration.ofSeconds(5);
+    /** 超过该耗时的请求记录为慢请求 */
+    private Duration slowRequestThreshold = Duration.ofSeconds(3);
+    /** 是否记录请求和响应内容，默认关闭以避免泄漏凭据或业务数据 */
+    private boolean payloadLoggingEnabled = false;
+    /** 请求和响应内容的最大日志长度 */
+    private int maxPayloadLogLength = 2048;
     /**
      * 是否跳过 SSL 证书校验。仅用于定位本地网络或代理证书问题，
      * 正式环境必须保持关闭。
@@ -69,6 +75,30 @@ public class HttpClientProperties {
         this.retryMaxBackoff = retryMaxBackoff;
     }
 
+    public Duration getSlowRequestThreshold() {
+        return slowRequestThreshold;
+    }
+
+    public void setSlowRequestThreshold(Duration slowRequestThreshold) {
+        this.slowRequestThreshold = slowRequestThreshold;
+    }
+
+    public boolean isPayloadLoggingEnabled() {
+        return payloadLoggingEnabled;
+    }
+
+    public void setPayloadLoggingEnabled(boolean payloadLoggingEnabled) {
+        this.payloadLoggingEnabled = payloadLoggingEnabled;
+    }
+
+    public int getMaxPayloadLogLength() {
+        return maxPayloadLogLength;
+    }
+
+    public void setMaxPayloadLogLength(int maxPayloadLogLength) {
+        this.maxPayloadLogLength = maxPayloadLogLength;
+    }
+
     public boolean isTrustAllCerts() {
         return trustAllCerts;
     }
@@ -88,6 +118,11 @@ public class HttpClientProperties {
         if (retryMaxBackoff.compareTo(retryBackoff) < 0) {
             throw new IllegalArgumentException(
                     "nnm.http.retry-max-backoff must not be shorter than retry-backoff");
+        }
+        requireNotNegative(slowRequestThreshold, "nnm.http.slow-request-threshold");
+        if (maxPayloadLogLength < 128 || maxPayloadLogLength > 65536) {
+            throw new IllegalArgumentException(
+                    "nnm.http.max-payload-log-length must be between 128 and 65536");
         }
     }
 

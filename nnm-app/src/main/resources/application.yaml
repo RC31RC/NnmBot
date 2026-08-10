@@ -98,12 +98,25 @@ management:
       show-details: when-authorized
 
 nnm:
+  bot:
+    qq-official:
+      enabled: ${QQ_BOT_ENABLED:false}
+      app-id: ${QQ_BOT_APP_ID:}
+      client-secret: ${QQ_BOT_CLIENT_SECRET:}
+      token-url: https://bots.qq.com/app/getAppAccessToken
+      api-base-url: https://api.sgroup.qq.com
+      intents: 100663296
+      gateway-connect-timeout: 10s
+      reconnect-delay: 5s
   http:
     connect-timeout: 10s
     read-timeout: 30s
     max-attempts: 3
     retry-backoff: 500ms
     retry-max-backoff: 5s
+    slow-request-threshold: 3s
+    payload-logging-enabled: false
+    max-payload-log-length: 2048
     trust-all-certs: false
   executor:
     task:

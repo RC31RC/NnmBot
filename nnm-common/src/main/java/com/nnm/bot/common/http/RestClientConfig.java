@@ -51,7 +51,7 @@ public class RestClientConfig {
     }
 
     /**
-     * 创建信任所有证书的 SSLContext，解决国内访问海外 CDN/API 时证书链不完整导致的握手失败。
+     * 创建仅供临时诊断使用的信任所有证书 SSLContext。
      */
     private SSLContext createTrustAllSslContext() {
         try {

@@ -1,96 +1,102 @@
 package com.nnm.bot.core.message;
 
-import com.mikuac.shiro.core.Bot;
-import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.util.Objects;
 
+/**
+ * Platform-neutral message context used by plugins.
+ *
+ * @param nativeSource adapter-owned source event, never interpreted by plugins
+ */
 public final class BotMessageContext {
 
-    public enum Scope {
-        GROUP,
-        PRIVATE
-    }
-
-    private final Bot bot;
-    private final AnyMessageEvent sourceEvent;
-    private final Scope scope;
-    private final long botId;
-    private final long userId;
-    private final Long groupId;
-    private final Integer messageId;
+    private final BotPlatform platform;
+    private final BotMessageScope scope;
+    private final String botAccountId;
+    private final String senderId;
+    private final String conversationId;
+    private final String messageId;
     private final String rawMessage;
     private final String message;
+    private final Object nativeSource;
 
-    private BotMessageContext(Bot bot,
-                              AnyMessageEvent sourceEvent,
-                              Scope scope,
-                              long botId,
-                              long userId,
-                              Long groupId,
-                              Integer messageId,
+    private BotMessageContext(BotPlatform platform,
+                              BotMessageScope scope,
+                              String botAccountId,
+                              String senderId,
+                              String conversationId,
+                              String messageId,
                               String rawMessage,
-                              String message) {
-        this.bot = bot;
-        this.sourceEvent = sourceEvent;
+                              String message,
+                              Object nativeSource) {
+        this.platform = platform;
         this.scope = scope;
-        this.botId = botId;
-        this.userId = userId;
-        this.groupId = groupId;
+        this.botAccountId = botAccountId;
+        this.senderId = senderId;
+        this.conversationId = conversationId;
         this.messageId = messageId;
         this.rawMessage = rawMessage;
         this.message = message;
+        this.nativeSource = nativeSource;
     }
 
-    public static BotMessageContext from(Bot bot, AnyMessageEvent event) {
-        Objects.requireNonNull(bot, "bot must not be null");
-        Objects.requireNonNull(event, "event must not be null");
-
-        Scope scope = "group".equals(event.getMessageType()) ? Scope.GROUP : Scope.PRIVATE;
-        String rawMessage = Objects.requireNonNullElse(event.getRawMessage(), "");
-        String plainMessage = StringUtils.hasText(event.getPlainText())
-                ? event.getPlainText()
-                : rawMessage;
-
+    public static BotMessageContext of(BotPlatform platform,
+                                       BotMessageScope scope,
+                                       String botAccountId,
+                                       String senderId,
+                                       String conversationId,
+                                       String messageId,
+                                       String rawMessage,
+                                       String message,
+                                       Object nativeSource) {
+        Assert.notNull(platform, "platform must not be null");
+        Assert.notNull(scope, "scope must not be null");
+        Assert.hasText(botAccountId, "botAccountId must not be blank");
+        Assert.hasText(senderId, "senderId must not be blank");
+        Assert.hasText(conversationId, "conversationId must not be blank");
         return new BotMessageContext(
-                bot,
-                event,
+                platform,
                 scope,
-                bot.getSelfId(),
-                Objects.requireNonNullElse(event.getUserId(), 0L),
-                event.getGroupId(),
-                event.getMessageId(),
-                rawMessage,
-                plainMessage.trim()
+                botAccountId,
+                senderId,
+                conversationId,
+                messageId,
+                Objects.requireNonNullElse(rawMessage, ""),
+                normalizeMessage(message, rawMessage),
+                nativeSource
         );
     }
 
-    Bot bot() {
-        return bot;
+    private static String normalizeMessage(String message, String rawMessage) {
+        String value = StringUtils.hasText(message)
+                ? message
+                : Objects.requireNonNullElse(rawMessage, "");
+        return value.trim();
     }
 
-    AnyMessageEvent sourceEvent() {
-        return sourceEvent;
+    public BotPlatform platform() {
+        return platform;
     }
 
-    public Scope scope() {
+    public BotMessageScope scope() {
         return scope;
     }
 
-    public long botId() {
-        return botId;
+    public String botAccountId() {
+        return botAccountId;
     }
 
-    public long userId() {
-        return userId;
+    public String senderId() {
+        return senderId;
     }
 
-    public Long groupId() {
-        return groupId;
+    public String conversationId() {
+        return conversationId;
     }
 
-    public Integer messageId() {
+    public String messageId() {
         return messageId;
     }
 
@@ -103,6 +109,23 @@ public final class BotMessageContext {
     }
 
     public boolean isGroupMessage() {
-        return scope == Scope.GROUP;
+        return scope == BotMessageScope.GROUP;
+    }
+
+    public boolean isPrivateMessage() {
+        return scope == BotMessageScope.PRIVATE;
+    }
+
+    public boolean isChannelMessage() {
+        return scope == BotMessageScope.CHANNEL;
+    }
+
+    public <T> T nativeSource(Class<T> type) {
+        Assert.notNull(type, "type must not be null");
+        if (!type.isInstance(nativeSource)) {
+            throw new IllegalStateException(
+                    "Message source is not " + type.getSimpleName() + ": " + nativeSource);
+        }
+        return type.cast(nativeSource);
     }
 }
