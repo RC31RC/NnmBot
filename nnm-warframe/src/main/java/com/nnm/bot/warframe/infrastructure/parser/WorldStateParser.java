@@ -29,7 +29,7 @@ public class WorldStateParser {
     }
 
     public WorldState parse(String json) {
-        return parse(json, "warframestat.us");
+        return parse(json, "warframe-official");
     }
 
     public WorldState parse(String json, String source) {

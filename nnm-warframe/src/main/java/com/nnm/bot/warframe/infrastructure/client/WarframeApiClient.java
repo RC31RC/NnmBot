@@ -20,14 +20,13 @@ public class WarframeApiClient {
         this.properties = properties;
     }
 
-    public String fetchWorldState() {
+    public HttpClient.HttpResult fetchWorldStateResult() {
         var result = httpClient.get(properties.getWorldStateUrl().toString(),
                 Map.of("Accept-Language", properties.getLanguage()));
-        if (result.isSuccess()) {
-            return result.body();
+        if (!result.isSuccess()) {
+            log.warn("Failed to fetch world state: {}", result.statusCode());
         }
-        log.warn("Failed to fetch world state: {}", result.statusCode());
-        return null;
+        return result;
     }
 
     public String fetchMarketOrders(String itemUrlName) {

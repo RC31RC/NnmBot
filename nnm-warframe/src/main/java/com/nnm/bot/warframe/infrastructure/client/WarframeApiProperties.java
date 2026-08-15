@@ -7,7 +7,7 @@ import java.net.URI;
 @ConfigurationProperties(prefix = "nnm.warframe.api")
 public class WarframeApiProperties {
 
-    private URI worldStateUrl = URI.create("https://api.warframestat.us/pc");
+    private URI worldStateUrl = URI.create("https://api.warframe.com/cdn/worldState.php");
     private URI marketBaseUrl = URI.create("https://api.warframe.market/v1");
     private String language = "zh";
     private String platform = "pc";

@@ -57,13 +57,17 @@
 - 业务代码不得拼接原生 SQL；确需报表、批处理或数据库特有能力时，放入独立查询实现并补充集成测试。
 - Flyway SQL 仅用于表结构和基础数据迁移，统一放在 `nnm-app/src/main/resources/db/migration`。
 - 测试可使用 SQL 验证迁移结果，但测试夹具应放在 `src/test/resources`，不得混入生产业务逻辑。
-- 表结构只由 Flyway 迁移管理；Hibernate 使用 `ddl-auto: validate`，不得依赖 `update` 修改数据库。
+- 表结构由 Flyway 管理；当前开发阶段使用
+  `nnm-app/src/main/resources/db/migration/V1__init_schema.sql` 作为唯一可编辑基线，
+  直接在该文件中维护结构，不新增版本号。正式发布前再将基线拆分为不可变的版本迁移。
+- Hibernate 使用 `ddl-auto: validate`，不得依赖 `update` 修改数据库。
 - H2 仅作为测试依赖，用于自动化测试；开发和生产数据库统一优先 PostgreSQL。
 - 当前迁移脚本以 PostgreSQL 为目标；若正式选择 MySQL 8，使用独立的数据库迁移目录，不编写伪兼容 SQL。
 - PostgreSQL 使用 `database=nnmbot`、`schema=nnmbot`；Flyway 历史表固定保留在 `public`。
 - 新增迁移必须显式使用 `nnmbot.<table>`，不要依赖连接的 `search_path` 隐式决定业务对象位置。
 - 数据库连接池默认上限为 5。新增线程池、缓存或渲染并发时，必须评估 4GB 内存机器的资源预算。
-- 不修改或删除现有本地数据库和日志文件，数据库变更通过新增 Flyway 版本脚本完成。
+- 当前开发阶段不要求保留测试数据库数据；结构调整直接修改唯一基线 SQL 文件。不要修改无关的
+  本地日志文件。正式发布前再恢复“新增版本脚本、不修改历史迁移”的生产迁移约定。
 - Warframe 外部数据源、代理和缓存演进遵循
   `docs/Warframe外部数据源、代理与缓存演进任务.md`；目标 JVM 业务缓存为 cache2k，
   cache2k 已作为生效的 `CacheManager`。Caffeine 依赖和 YAML 配置仅为评估回退暂留，

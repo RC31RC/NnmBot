@@ -41,17 +41,16 @@
 - 如果最终选择 MySQL 8，应建立独立迁移目录并进行完整集成测试，不能假设 PostgreSQL
   的 `BIGSERIAL`、索引和类型定义可以直接复用。
 
-当前项目仍处于开发基线阶段，现有测试数据无需兼容，因此 V1-V3 直接创建和修改
-`nnmbot.<table>`。本轮调整后旧的本地开发结构应重建一次，不保留 `public` 中的业务表。
+当前项目仍处于开发基线阶段，现有测试数据无需兼容。`db/migration` 暂时只维护
+`V1__init_schema.sql`，新增或修改字段直接更新这一个文件，不增加开发期版本号。旧的本地
+开发结构发生变化时可以重建，不在 `public` 中保留业务表。
 
-基线稳定后，新增或修改字段必须新增下一版本迁移脚本，例如 `V4__add_xxx.sql`，不得修改
-已经执行过的迁移版本，也不得直接依赖 Hibernate `update`。Flyway history schema 固定为
-`public`，Hibernate 默认 schema 为 `nnmbot`。数据库客户端查看对象时，应展开
-`nnmbot -> Schemas -> nnmbot -> Tables`。
+Flyway history schema 固定为 `public`，Hibernate 默认 schema 为 `nnmbot`。数据库客户端
+查看对象时，应展开 `nnmbot -> Schemas -> nnmbot -> Tables`。
 
-Flyway 从开发阶段开始保留。它的作用不是“上线时才迁移”，而是让每次表结构修改都有明确
-版本，使新环境、现有开发库和后续正式库能够按相同顺序升级。当前项目持续开发且 RBAC 已
-存在多张关联表，此时建立迁移基线的成本低于后期补录历史变更。
+Flyway 在开发阶段仍保留，用于验证一份基线能否从空库稳定创建完整结构。正式发布前冻结
+该基线；从那时起，所有结构变化再使用新的不可变版本脚本，且不得修改已经发布或执行过的
+历史迁移，也不得依赖 Hibernate `update`。
 
 ## 4GB 机器基线
 

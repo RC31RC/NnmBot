@@ -132,7 +132,7 @@ nnm:
       enabled: true
       interval: 2m
     api:
-      world-state-url: https://api.warframestat.us/pc
+      world-state-url: https://api.warframe.com/cdn/worldState.php
       market-base-url: https://api.warframe.market/v1
       language: zh
       platform: pc
