@@ -21,7 +21,7 @@ public class WarframeApiClient {
     }
 
     public HttpClient.HttpResult fetchWorldStateResult() {
-        var result = httpClient.get(properties.getWorldStateUrl().toString(),
+        HttpClient.HttpResult result = httpClient.get(properties.getWorldStateUrl().toString(),
                 Map.of("Accept-Language", properties.getLanguage()));
         if (!result.isSuccess()) {
             log.warn("Failed to fetch world state: {}", result.statusCode());
@@ -35,7 +35,7 @@ public class WarframeApiClient {
                 .build()
                 .encode()
                 .toUriString();
-        var result = httpClient.get(url, Map.of(
+        HttpClient.HttpResult result = httpClient.get(url, Map.of(
                 "Platform", properties.getPlatform(),
                 "Language", properties.getLanguage()
         ));

@@ -1,5 +1,6 @@
 package com.nnm.bot.render.config;
 
+import com.sun.management.OperatingSystemMXBean;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.spi.RenderEngineProvider;
 import com.nnm.bot.render.spi.RenderEngineProviderContext;
@@ -91,7 +92,7 @@ public class RenderEngineConfig {
 
     private boolean hasEnoughMemoryForPlaywright() {
         try {
-            var osBean = (com.sun.management.OperatingSystemMXBean)
+            OperatingSystemMXBean osBean = (OperatingSystemMXBean)
                     java.lang.management.ManagementFactory.getOperatingSystemMXBean();
             long totalPhysical = osBean.getTotalMemorySize();
             return totalPhysical >= PLAYWRIGHT_MIN_PHYSICAL_MEMORY;

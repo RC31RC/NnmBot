@@ -13,10 +13,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.ServiceConfigurationError;
+import java.util.stream.Stream;
 
 /** 负责内置与外部渲染提供者的发现、去重和确定性排序。 */
 @Slf4j
@@ -45,7 +47,7 @@ public class RenderEngineProviderLoader {
         if (!Files.isDirectory(directory)) {
             return;
         }
-        try (var paths = Files.list(directory)) {
+        try (Stream<Path> paths = Files.list(directory)) {
             List<URL> jars = paths.filter(path -> path.getFileName().toString().endsWith(".jar"))
                     .sorted().map(this::toUrl).toList();
             if (jars.isEmpty()) {
@@ -54,7 +56,8 @@ public class RenderEngineProviderLoader {
             URLClassLoader loader = new URLClassLoader(jars.toArray(URL[]::new),
                     RenderEngineProvider.class.getClassLoader());
             classLoaders.add(loader);
-            var discovered = ServiceLoader.load(RenderEngineProvider.class, loader).stream().iterator();
+            Iterator<ServiceLoader.Provider<RenderEngineProvider>> discovered =
+                    ServiceLoader.load(RenderEngineProvider.class, loader).stream().iterator();
             int discoveryErrors = 0;
             while (discoveryErrors < MAX_DISCOVERY_ERRORS) {
                 try {

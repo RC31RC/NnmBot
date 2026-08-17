@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.infrastructure.provider;
 
+import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.warframe.infrastructure.client.WarframeApiClient;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +22,7 @@ public class OfficialWorldStateProvider implements WorldStateProvider {
 
     @Override
     public Optional<WorldStatePayload> fetch() {
-        var result = apiClient.fetchWorldStateResult();
+        HttpClient.HttpResult result = apiClient.fetchWorldStateResult();
         if (!result.isSuccess() || result.body() == null || result.body().isBlank()) {
             return Optional.empty();
         }

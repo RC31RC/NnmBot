@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 将 warframestat.us 和官方 worldState 风格 JSON 转成 NnmBot 领域模型。
@@ -511,7 +512,7 @@ public class WorldStateParser {
         if (!exact.isMissingNode() || !parent.isObject()) {
             return exact;
         }
-        for (var field : parent.properties()) {
+        for (Map.Entry<String, JsonNode> field : parent.properties()) {
             if (field.getKey().equalsIgnoreCase(name)) {
                 return field.getValue();
             }

@@ -1,5 +1,9 @@
 package com.nnm.bot.render.engine;
 
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Playwright;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.RenderOptions;
 import lombok.extern.slf4j.Slf4j;
@@ -24,19 +28,19 @@ public class PlaywrightEngine implements RenderEngine {
     @Override
     public byte[] renderHtmlToImage(String html, RenderOptions options) {
         try {
-            var playwright = com.microsoft.playwright.Playwright.create();
-            var browser = playwright.chromium().launch(
-                    new com.microsoft.playwright.BrowserType.LaunchOptions()
+            Playwright playwright = Playwright.create();
+            Browser browser = playwright.chromium().launch(
+                    new BrowserType.LaunchOptions()
                             .setHeadless(true)
                             .setArgs(chromiumArgs)
             );
-            var page = browser.newPage();
+            Page page = browser.newPage();
             page.setViewportSize(options.getWidth(), 800);
             page.setContent(html);
             page.waitForLoadState();
 
             byte[] screenshot = page.screenshot(
-                    new com.microsoft.playwright.Page.ScreenshotOptions()
+                    new Page.ScreenshotOptions()
                             .setFullPage(true)
                             .setType(com.microsoft.playwright.options.ScreenshotType.PNG)
             );

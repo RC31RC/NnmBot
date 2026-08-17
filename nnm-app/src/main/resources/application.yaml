@@ -57,13 +57,13 @@ sa-token:
 # OneBot Configuration
 shiro:
   ws:
-    access-token: ${ONEBOT_ACCESS_TOKEN:}
+    access-token: ${ONEBOT_ACCESS_TOKEN:QsqrA8oIMJL9tnE-RMaLlZ-2mjjrfZKkyrBfdko65-g}
     server:
       url: /ws/shiro
       enable: false
     client:
       enable: true
-      url: ${ONEBOT_WS_URL:ws://127.0.0.1:3001}
+      url: ${ONEBOT_WS_URL:ws://123.206.232.72:3001}
       reconnect-interval: 5
 
 # Render engine configuration
