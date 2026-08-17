@@ -7,7 +7,8 @@ NnmBot 当前同时支持两条独立接入链路。
 ```text
 个人 QQ
   -> SnowLuma / OneBot v11 实现端
-  -> 反向 WebSocket
+  -> 正向 WebSocket 服务端
+  -> NnmBot WebSocket 客户端
   -> Shiro SDK
   -> OneBot 适配器
   -> 平台无关消息上下文
@@ -30,28 +31,43 @@ QQ 官方机器人
 
 ## 2. SnowLuma / OneBot v11
 
-NnmBot 默认启用 Shiro 的反向 WebSocket 服务端：
+NnmBot 默认启用 Shiro 的正向 WebSocket 客户端，主动连接 OneBot 实现端：
 
 ```text
-ws://127.0.0.1:8080/ws/shiro
+ws://127.0.0.1:3001
 ```
 
-可选访问令牌通过环境变量配置：
+在 SnowLuma 中启用正向 WebSocket 服务端。本机联调监听
+`127.0.0.1:3001`；SnowLuma 与 NnmBot 不在同一台机器时，监听
+`0.0.0.0:3001`，并通过防火墙限制来源地址。
+
+连接地址和访问令牌通过环境变量配置。`scripts/run-dev.sh` 会自动加载仓库
+根目录中被 Git 忽略的 `.env`：
 
 ```bash
-export ONEBOT_ACCESS_TOKEN=your-local-token
+cp .env.example .env
+# 编辑 .env 中的 ONEBOT_WS_URL 和 ONEBOT_ACCESS_TOKEN
 ./scripts/run-dev.sh
 ```
 
-未配置 `ONEBOT_ACCESS_TOKEN` 时，本地连接不校验令牌。该设置只适合
-`127.0.0.1` 本机开发，不应将无令牌的 WebSocket 服务暴露到公网。
+`ONEBOT_ACCESS_TOKEN` 填 SnowLuma 中配置的原始 Token，不要手动添加
+`Bearer ` 前缀，Shiro 会自动生成 `Authorization: Bearer <token>`。
+SnowLuma 默认会生成 Token，可在 SnowLuma 运行目录的
+`config/onebot_<QQ号>.json` 中查看，账号单独配置存在时以
+`config/account_<QQ号>.json` 的 `access_token` 为准。SnowLuma 未启用
+Token 时可以省略该变量，但无令牌服务不得暴露到公网。
 
-在 SnowLuma 中新增反向 WebSocket 客户端：
+连接成功后日志至少包含：
 
 ```text
-URL：ws://127.0.0.1:8080/ws/shiro
-Token：与 ONEBOT_ACCESS_TOKEN 一致
+Account <QQ号> connected
+OneBot connected, botId=<QQ号>
 ```
+
+`HTTP 401` 表示地址和端口已经连通，但 SnowLuma Token 缺失或不一致，
+不是防火墙或监听地址问题；
+`Connection refused` 表示目标端口没有监听或被防火墙拒绝。Shiro
+`reconnect-interval` 的单位是秒，项目当前每 5 秒重试一次。
 
 NnmBot 使用的是标准 OneBot v11 边界，SnowLuma 不要求修改项目内的
 `OneBotMessageContextFactory` 或插件接口。以后切换其他兼容实现端时，业务插件同样无需改动。

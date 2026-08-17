@@ -1,9 +1,9 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nnmbot}?currentSchema=${DB_SCHEMA:nnmbot},public
-    username: ${DB_USERNAME:nnmbot}
-    password: ${DB_PASSWORD:nnmbot}
+    url: jdbc:postgresql://${DB_HOST:123.206.232.72}:${DB_PORT:5432}/${DB_NAME:nnmbot}?currentSchema=${DB_SCHEMA:nnmbot},public
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:12345678}
 
   jpa:
     hibernate:
@@ -19,6 +19,8 @@ spring:
 logging:
   level:
     com.nnm.bot: DEBUG
+    com.mikuac.shiro: DEBUG
+    org.springframework.web.socket.client: DEBUG
     org.hibernate.SQL: WARN
 
 nnm:

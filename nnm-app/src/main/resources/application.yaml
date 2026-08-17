@@ -60,11 +60,11 @@ shiro:
     access-token: ${ONEBOT_ACCESS_TOKEN:}
     server:
       url: /ws/shiro
-      enable: true
-    client:
       enable: false
-      url: ws://localhost:3001
-      reconnect-interval: 5000
+    client:
+      enable: true
+      url: ${ONEBOT_WS_URL:ws://127.0.0.1:3001}
+      reconnect-interval: 5
 
 # Render engine configuration
 render:
@@ -130,7 +130,7 @@ nnm:
   warframe:
     polling:
       enabled: true
-      interval: 2m
+      interval: 200m
     api:
       world-state-url: https://api.warframe.com/cdn/worldState.php
       market-base-url: https://api.warframe.market/v1
