@@ -15,4 +15,16 @@ public interface BotPlugin {
     default int order() {
         return 0;
     }
+
+    default CommandDescriptor descriptor() {
+        return new CommandDescriptor(
+                command(),
+                command(),
+                java.util.Set.of(),
+                description(),
+                "",
+                MatchType.CUSTOM,
+                order()
+        );
+    }
 }

@@ -3,6 +3,9 @@ package com.nnm.bot.core.plugin.builtin;
 import com.nnm.bot.core.message.BotMessageContext;
 import com.nnm.bot.core.message.BotMessageSender;
 import com.nnm.bot.core.plugin.BotPlugin;
+import com.nnm.bot.core.plugin.CommandDescriptor;
+import com.nnm.bot.core.plugin.CommandRegistry;
+import com.nnm.bot.core.plugin.MatchType;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
@@ -15,19 +18,21 @@ import java.util.Set;
 public class StatusPlugin implements BotPlugin {
 
     private static final long MEBIBYTE = 1024L * 1024L;
-    private static final Set<String> COMMANDS = Set.of("状态", "运行状态", "版本", "检查版本");
 
     private final BotMessageSender messageSender;
-    private final ObjectProvider<BotPlugin> plugins;
+    private final ObjectProvider<CommandRegistry> commandRegistries;
 
-    public StatusPlugin(BotMessageSender messageSender, ObjectProvider<BotPlugin> plugins) {
+    public StatusPlugin(BotMessageSender messageSender,
+                        ObjectProvider<CommandRegistry> commandRegistries) {
         this.messageSender = messageSender;
-        this.plugins = plugins;
+        this.commandRegistries = commandRegistries;
     }
 
     @Override
     public boolean match(String message) {
-        return message != null && COMMANDS.contains(message.trim().toLowerCase(Locale.ROOT));
+        return message != null && descriptor().lookupNames().stream()
+                .anyMatch(name -> name.trim().toLowerCase(Locale.ROOT)
+                        .equals(message.trim().toLowerCase(Locale.ROOT)));
     }
 
     @Override
@@ -52,7 +57,7 @@ public class StatusPlugin implements BotPlugin {
                 System.getProperty("java.version"),
                 usedMemory / MEBIBYTE,
                 runtime.maxMemory() / MEBIBYTE,
-                plugins.stream().count()
+                commandRegistries.getObject().size()
         ).strip();
         messageSender.sendText(context, status);
     }
@@ -70,6 +75,19 @@ public class StatusPlugin implements BotPlugin {
     @Override
     public int order() {
         return Integer.MIN_VALUE + 1;
+    }
+
+    @Override
+    public CommandDescriptor descriptor() {
+        return new CommandDescriptor(
+                "status",
+                "状态",
+                Set.of("status", "运行状态", "版本", "检查版本"),
+                description(),
+                "",
+                MatchType.EXACT,
+                order()
+        );
     }
 
     private static String formatDuration(Duration duration) {

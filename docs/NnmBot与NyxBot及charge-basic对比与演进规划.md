@@ -417,7 +417,9 @@ nnm-admin
 
 ### 7.2 命令系统建议
 
-当前 `BotPlugin.match(String)` 足以支撑原型，但随着菜单增加，单纯依赖每个插件自行写正则会出现以下问题：
+当前已引入启动期 `CommandRegistry`。精确命令由索引直接路由，参数命令仍保留插件自定义匹配，
+这样既能保持现有插件接口的兼容性，也能避免所有消息都遍历全部插件。后续随着菜单增加，
+仍需避免单纯依赖每个插件自行维护元数据：
 
 - 命令别名分散；
 - 参数解析重复；
@@ -425,34 +427,36 @@ nnm-admin
 - 插件匹配顺序可能产生冲突；
 - 无法统一生成命令文档和测试用例。
 
-建议后续将插件元数据显式化：
+插件元数据使用不可变描述对象：
 
 ```java
-public record CommandDefinition(
+public record CommandDescriptor(
+        String code,
         String name,
-        List<String> aliases,
-        String usage,
+        Set<String> aliases,
         String description,
-        Permission permission,
-        boolean allowPrivate,
-        boolean allowGroup
+        String permission,
+        MatchType matchType,
+        int order
 ) {}
 ```
 
-插件负责处理已解析的命令：
+当前调用链：
 
 ```text
 原始消息
   -> 消息清洗
-  -> 命令识别
-  -> 别名归一化
+  -> CommandRegistry 精确索引
+  -> 自定义插件回退匹配
   -> 参数解析
   -> 权限和场景校验
   -> 插件处理
   -> 统一发送结果
 ```
 
-在此基础上，帮助菜单可以从所有已注册插件自动生成。
+`CommandRegistry` 启动时校验稳定编码、旧 `BotPlugin.command()`、命令名称和别名的唯一性，
+帮助菜单从已注册描述对象自动生成。数据库后续只保存启用状态、别名覆盖、权限覆盖和冷却时间，
+不保存任意正则或 Java 类名。
 
 ### 7.3 世界状态模型建议
 
@@ -581,7 +585,7 @@ P0 完成后，NnmBot 才具备“机器人项目”的最小可用性。
 | 已完成 | 修复 TLS 默认配置 | 默认校验证书，仅保留显式临时排查开关 |
 | 已完成 | 统一分页、业务断言和写事务边界 | 减少管理模块重复 DTO 和异常/事务样板代码 |
 | 已完成 | 约束通用线程池和插件注册 | 避免无界并发、重复命令和单插件异常扩大 |
-| P1 | 将命令元数据集中化 | 为帮助菜单、权限和参数校验提供基础 |
+| 已完成 | 将命令元数据集中化 | `CommandDescriptor`、启动期 `CommandRegistry`、精确索引和自定义匹配回退已落地 |
 | P1 | 重新设计订阅关系表 | 兼容 NyxBot 的用户级规则过滤 |
 | P1 | 增加通知幂等和失败状态 | 防止重复推送并支持恢复 |
 | P1 | 增加数据缓存和动态轮询 | 降低外部 API 不稳定和限流影响 |
