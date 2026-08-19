@@ -8,7 +8,7 @@ import java.nio.file.Path;
 public class RenderPluginProperties {
 
     private boolean enabled = true;
-    /** External JARs execute code in-process, so discovery is explicit opt-in. */
+    /** 外部 JAR 会在当前进程内执行代码，因此必须显式开启发现。 */
     private boolean externalEnabled;
     private Path directory = Path.of("./plugin");
     private String provider;

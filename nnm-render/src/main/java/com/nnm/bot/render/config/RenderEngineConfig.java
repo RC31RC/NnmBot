@@ -6,33 +6,39 @@ import com.nnm.bot.render.spi.RenderEngineProvider;
 import com.nnm.bot.render.spi.RenderEngineProviderContext;
 import com.nnm.bot.render.spi.RenderEngineProviderLoader;
 import com.nnm.bot.render.spi.RenderPluginProperties;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-/** Selects an NnmBot render provider; external JARs are discovered through ServiceLoader. */
+/** 选择 NnmBot 渲染提供者；外部 JAR 通过 ServiceLoader 发现。 */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({RenderProperties.class, RenderPluginProperties.class})
 public class RenderEngineConfig {
 
-    /** Keep enough headroom for Chromium; the 4GB deployment profile uses the lightweight engine. */
+    /** 为 Chromium 保留足够内存余量；4GB 部署配置优先使用轻量渲染引擎。 */
     private static final long PLAYWRIGHT_MIN_PHYSICAL_MEMORY = 8L * 1024 * 1024 * 1024;
 
-    private final RenderProperties properties;
-    private final List<RenderEngineProvider> providers;
-    private final String configuredProvider;
+    @Resource
+    private RenderProperties properties;
+    @Resource
+    private RenderPluginProperties pluginProperties;
+    @Resource
+    private RenderEngineProviderLoader providerLoader;
+    private List<RenderEngineProvider> providers = List.of();
+    private String configuredProvider;
 
-    public RenderEngineConfig(RenderProperties properties,
-                              RenderPluginProperties pluginProperties,
-                              RenderEngineProviderLoader providerLoader) {
+    @PostConstruct
+    void initialize() {
         properties.validate();
-        this.properties = properties;
         this.providers = providerLoader.load(pluginProperties);
         this.configuredProvider = pluginProperties.getProvider();
     }
@@ -92,8 +98,7 @@ public class RenderEngineConfig {
 
     private boolean hasEnoughMemoryForPlaywright() {
         try {
-            OperatingSystemMXBean osBean = (OperatingSystemMXBean)
-                    java.lang.management.ManagementFactory.getOperatingSystemMXBean();
+            OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
             long totalPhysical = osBean.getTotalMemorySize();
             return totalPhysical >= PLAYWRIGHT_MIN_PHYSICAL_MEMORY;
         } catch (Throwable t) {

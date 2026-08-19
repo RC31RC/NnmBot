@@ -7,7 +7,7 @@ import com.nnm.bot.admin.service.OnlineSessionService;
 import com.nnm.bot.admin.service.OperationAuditService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,11 +19,12 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/v1")
-@RequiredArgsConstructor
 public class SystemMonitorController {
 
-    private final OperationAuditService auditService;
-    private final OnlineSessionService onlineSessionService;
+    @Resource
+    private OperationAuditService auditService;
+    @Resource
+    private OnlineSessionService onlineSessionService;
 
     @GetMapping("/operation-logs")
     @SaCheckPermission("system:audit:view")

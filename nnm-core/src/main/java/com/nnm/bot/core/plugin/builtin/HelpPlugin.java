@@ -1,12 +1,9 @@
 package com.nnm.bot.core.plugin.builtin;
 
 import com.nnm.bot.core.message.BotMessageContext;
-import com.nnm.bot.core.message.BotMessageSender;
 import com.nnm.bot.core.plugin.BotPlugin;
 import com.nnm.bot.core.plugin.CommandDescriptor;
-import com.nnm.bot.core.plugin.CommandRegistry;
 import com.nnm.bot.core.plugin.MatchType;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -14,16 +11,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Component
-public class HelpPlugin implements BotPlugin {
-
-    private final BotMessageSender messageSender;
-    private final ObjectProvider<CommandRegistry> commandRegistries;
-
-    public HelpPlugin(BotMessageSender messageSender,
-                      ObjectProvider<CommandRegistry> commandRegistries) {
-        this.messageSender = messageSender;
-        this.commandRegistries = commandRegistries;
-    }
+public class HelpPlugin extends BotPlugin {
 
     @Override
     public boolean match(String message) {
@@ -35,7 +23,7 @@ public class HelpPlugin implements BotPlugin {
     @Override
     public void handle(BotMessageContext context) {
         StringBuilder help = new StringBuilder("NnmBot 命令\n");
-        commandRegistries.getObject().descriptors().stream()
+        commandRegistry.descriptors().stream()
                 .filter(descriptor -> !descriptor.code().equals(descriptor().code()))
                 .sorted(Comparator.comparingInt(CommandDescriptor::order)
                         .thenComparing(descriptor ->

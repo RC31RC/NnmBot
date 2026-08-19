@@ -4,7 +4,7 @@ import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.context.SaHolder;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.service.RbacAccountService;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,10 +16,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(AdminBootstrapProperties.class)
-@RequiredArgsConstructor
 public class SaTokenConfig implements WebMvcConfigurer {
 
-    private final RbacAccountService accountService;
+    @Resource
+    private RbacAccountService accountService;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

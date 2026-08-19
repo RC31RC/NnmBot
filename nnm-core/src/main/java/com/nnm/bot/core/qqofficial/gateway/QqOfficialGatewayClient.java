@@ -7,8 +7,10 @@ import com.nnm.bot.core.qqofficial.api.QqOfficialApiClient;
 import com.nnm.bot.core.qqofficial.api.QqOfficialTokenClient;
 import com.nnm.bot.core.qqofficial.config.QqOfficialProperties;
 import com.nnm.bot.core.qqofficial.message.QqOfficialMessageContextFactory;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
@@ -24,24 +26,31 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Component
-public class QqOfficialGatewayClient implements WebSocket.Listener, org.springframework.context.SmartLifecycle {
+public class QqOfficialGatewayClient implements WebSocket.Listener, SmartLifecycle {
 
     private static final int DISPATCH = 0;
     private static final int RECONNECT = 7;
     private static final int INVALID_SESSION = 9;
     private static final int HELLO = 10;
 
-    private final QqOfficialProperties properties;
-    private final QqOfficialApiClient apiClient;
-    private final QqOfficialTokenClient tokenClient;
-    private final ObjectMapper objectMapper;
-    private final PluginDispatcher pluginDispatcher;
-    private final ThreadPoolTaskExecutor taskExecutor;
-    private final ThreadPoolTaskScheduler scheduler;
+    @Resource
+    private QqOfficialProperties properties;
+    @Resource
+    private QqOfficialApiClient apiClient;
+    @Resource
+    private QqOfficialTokenClient tokenClient;
+    @Resource
+    private ObjectMapper objectMapper;
+    @Resource
+    private PluginDispatcher pluginDispatcher;
+    @Resource(name = "applicationTaskExecutor")
+    private ThreadPoolTaskExecutor taskExecutor;
+    @Resource(name = "scheduledExecutor")
+    private ThreadPoolTaskScheduler scheduler;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean connecting = new AtomicBoolean();
     private final StringBuilder incoming = new StringBuilder();
-    private final HttpClient webSocketClient;
+    private HttpClient webSocketClient;
 
     private volatile WebSocket webSocket;
     private volatile ScheduledFuture<?> heartbeat;
@@ -49,22 +58,8 @@ public class QqOfficialGatewayClient implements WebSocket.Listener, org.springfr
     private volatile String sessionId;
     private volatile Integer sequence;
 
-    public QqOfficialGatewayClient(QqOfficialProperties properties,
-                                   QqOfficialApiClient apiClient,
-                                   QqOfficialTokenClient tokenClient,
-                                   ObjectMapper objectMapper,
-                                   PluginDispatcher pluginDispatcher,
-                                   @Qualifier("applicationTaskExecutor")
-                                   ThreadPoolTaskExecutor taskExecutor,
-                                   @Qualifier("scheduledExecutor")
-                                   ThreadPoolTaskScheduler scheduler) {
-        this.properties = properties;
-        this.apiClient = apiClient;
-        this.tokenClient = tokenClient;
-        this.objectMapper = objectMapper;
-        this.pluginDispatcher = pluginDispatcher;
-        this.taskExecutor = taskExecutor;
-        this.scheduler = scheduler;
+    @PostConstruct
+    void initialize() {
         this.webSocketClient = HttpClient.newBuilder()
                 .executor(taskExecutor)
                 .connectTimeout(properties.getGatewayConnectTimeout())

@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * Stateless retry delay calculations shared by outbound clients.
+ * 无状态的重试延迟计算，供外部调用客户端复用。
  */
 public final class RetryBackoff {
 

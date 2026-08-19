@@ -12,8 +12,8 @@ import com.nnm.bot.admin.dto.system.UserSaveRequest;
 import com.nnm.bot.admin.dto.system.UserStatusRequest;
 import com.nnm.bot.admin.service.RbacManagementService;
 import com.nnm.bot.common.response.ApiResponse;
+import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,10 +25,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin/v1")
-@RequiredArgsConstructor
 public class RbacManagementController {
 
-    private final RbacManagementService managementService;
+    @Resource
+    private RbacManagementService managementService;
 
     @PostMapping("/users")
     @SaCheckPermission("system:user:create")

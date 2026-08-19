@@ -39,6 +39,34 @@ Database schema changes are managed by Flyway. Hibernate validates entity mappin
 at startup and does not update production or development schemas automatically.
 Application tables use the `nnmbot` schema; Flyway keeps its history table in `public`.
 
+### PostgreSQL permissions
+
+The role in `DB_USERNAME` must be able to use the application schema and modify
+the RBAC data written during startup. If `nnmbot` was created by a different
+database role, run the following once as the schema owner or a PostgreSQL
+administrator, replacing `nnmbot` with the actual application role when needed:
+
+```sql
+GRANT CONNECT ON DATABASE nnmbot TO nnmbot;
+GRANT USAGE, CREATE ON SCHEMA nnmbot TO nnmbot;
+GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER
+    ON ALL TABLES IN SCHEMA nnmbot TO nnmbot;
+GRANT USAGE, SELECT, UPDATE
+    ON ALL SEQUENCES IN SCHEMA nnmbot TO nnmbot;
+ALTER DEFAULT PRIVILEGES FOR ROLE nnmbot IN SCHEMA nnmbot
+    GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER
+    ON TABLES TO nnmbot;
+ALTER DEFAULT PRIVILEGES FOR ROLE nnmbot IN SCHEMA nnmbot
+    GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO nnmbot;
+```
+
+The `FOR ROLE` value must be the role that will execute future Flyway
+migrations; omit it only when running the command as that same role.
+
+`permission denied for schema nnmbot` means the connection reached PostgreSQL
+successfully but the configured role is missing at least the schema `USAGE`
+privilege. Restarting the application does not change PostgreSQL grants.
+
 The development script compiles all reactor modules first, then starts `nnm-app`
 with each module's current `target/classes`. This avoids loading stale internal
 module JARs from the local Maven repository and does not create a production package.

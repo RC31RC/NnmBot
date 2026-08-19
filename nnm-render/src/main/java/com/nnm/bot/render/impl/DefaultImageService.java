@@ -4,7 +4,8 @@ import com.nnm.bot.render.ImageService;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.RenderOptions;
 import com.nnm.bot.render.TemplateRenderer;
-import lombok.RequiredArgsConstructor;
+import com.nnm.bot.core.message.BotImageRenderer;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -12,11 +13,12 @@ import java.util.Map;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
-public class DefaultImageService implements ImageService {
+public class DefaultImageService implements ImageService, BotImageRenderer {
 
-    private final TemplateRenderer templateRenderer;
-    private final RenderEngine renderEngine;
+    @Resource
+    private TemplateRenderer templateRenderer;
+    @Resource
+    private RenderEngine renderEngine;
 
     @Override
     public byte[] generate(String templateName, Map<String, Object> data) {
@@ -27,5 +29,10 @@ public class DefaultImageService implements ImageService {
     public byte[] generate(String templateName, Map<String, Object> data, RenderOptions options) {
         String html = templateRenderer.render(templateName, data);
         return renderEngine.renderHtmlToImage(html, options);
+    }
+
+    @Override
+    public byte[] render(String templateName, Map<String, Object> data) {
+        return generate(templateName, data);
     }
 }

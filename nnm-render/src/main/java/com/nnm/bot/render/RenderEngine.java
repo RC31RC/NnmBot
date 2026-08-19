@@ -1,8 +1,8 @@
 package com.nnm.bot.render;
 
 /**
- * SPI interface for image rendering engines.
- * Implementations can use openhtmltopdf, Playwright, or any custom renderer.
+ * 图片渲染引擎的 SPI 接口。
+ * 实现可以使用 openhtmltopdf、Playwright 或自定义渲染器。
  */
 public interface RenderEngine {
 

@@ -6,15 +6,15 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Immutable metadata used to register and display a bot command.
+ * 用于注册和展示机器人命令的不可变元数据。
  *
- * @param code stable command code used by configuration and permissions
- * @param name primary display name
- * @param aliases additional exact-match names
- * @param description help text
- * @param permission optional permission code
- * @param matchType command lookup strategy
- * @param order display and fallback order
+ * @param code 用于配置和权限校验的稳定命令编码
+ * @param name 命令主名称
+ * @param aliases 额外的精确匹配名称
+ * @param description 帮助菜单中的说明
+ * @param permission 可选的权限码
+ * @param matchType 命令查找策略
+ * @param order 展示顺序和回退匹配顺序
  */
 public record CommandDescriptor(
         String code,

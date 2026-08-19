@@ -3,6 +3,7 @@ package com.nnm.bot.warframe.infrastructure.parser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.warframe.domain.model.WorldState;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -23,11 +24,8 @@ import java.util.Map;
 @Component
 public class WorldStateParser {
 
-    private final ObjectMapper objectMapper;
-
-    public WorldStateParser(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    @Resource
+    private ObjectMapper objectMapper;
 
     public WorldState parse(String json) {
         return parse(json, "warframe-official");

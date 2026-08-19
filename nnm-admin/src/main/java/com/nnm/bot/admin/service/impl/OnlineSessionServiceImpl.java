@@ -10,7 +10,7 @@ import com.nnm.bot.admin.repository.SysUserRepository;
 import com.nnm.bot.admin.service.OnlineSessionService;
 import com.nnm.bot.admin.service.OperationAuditService;
 import com.nnm.bot.common.exception.BusinessException;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -20,11 +20,12 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class OnlineSessionServiceImpl implements OnlineSessionService {
 
-    private final SysUserRepository userRepository;
-    private final OperationAuditService auditService;
+    @Resource
+    private SysUserRepository userRepository;
+    @Resource
+    private OperationAuditService auditService;
 
     @Override
     public List<SessionItem> sessions() {

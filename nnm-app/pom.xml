@@ -15,7 +15,7 @@
     <description>Application entry point - assembles all modules</description>
 
     <dependencies>
-        <!-- All modules -->
+        <!-- 组装全部模块 -->
         <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-common</artifactId>
@@ -41,20 +41,20 @@
             <artifactId>nnm-admin</artifactId>
         </dependency>
 
-        <!-- Database -->
+        <!-- 数据库 -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- H2 for automated tests only -->
+        <!-- H2 仅用于自动化测试 -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Flyway -->
+        <!-- Flyway 数据库迁移 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
@@ -65,13 +65,13 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Actuator (health checks, metrics) -->
+        <!-- Actuator（健康检查和指标） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Test -->
+        <!-- 测试依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

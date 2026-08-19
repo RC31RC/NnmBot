@@ -3,10 +3,13 @@ package com.nnm.bot.core.qqofficial.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.nnm.bot.common.http.ExternalHttpException;
 import com.nnm.bot.common.http.HttpClient;
+import com.nnm.bot.core.message.BotMarkdownMessage;
 import com.nnm.bot.core.qqofficial.config.QqOfficialProperties;
 import com.nnm.bot.core.qqofficial.message.QqOfficialMessageSource;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.Base64;
@@ -16,20 +19,14 @@ import java.util.concurrent.ThreadLocalRandom;
 @Component
 public class QqOfficialApiClient {
 
-    private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
-    private final QqOfficialTokenClient tokenClient;
-    private final QqOfficialProperties properties;
-
-    public QqOfficialApiClient(HttpClient httpClient,
-                               ObjectMapper objectMapper,
-                               QqOfficialTokenClient tokenClient,
-                               QqOfficialProperties properties) {
-        this.httpClient = httpClient;
-        this.objectMapper = objectMapper;
-        this.tokenClient = tokenClient;
-        this.properties = properties;
-    }
+    @Resource
+    private HttpClient httpClient;
+    @Resource
+    private ObjectMapper objectMapper;
+    @Resource
+    private QqOfficialTokenClient tokenClient;
+    @Resource
+    private QqOfficialProperties properties;
 
     public String gatewayUrl() {
         String configured = properties.getGatewayUrl();
@@ -74,6 +71,33 @@ public class QqOfficialApiClient {
                 .put("msg_type", 7)
                 .put("msg_seq", nextMessageSequence());
         body.putObject("media").put("file_info", fileInfo);
+        if (source.messageId() != null) {
+            body.put("msg_id", source.messageId());
+        }
+        request("POST", source.messagePath(), body);
+    }
+
+    public void sendMarkdown(QqOfficialMessageSource source, BotMarkdownMessage message) {
+        ObjectNode body = objectMapper.createObjectNode();
+        if (source.requiresMessageType()) {
+            body.put("msg_type", 2)
+                    .put("msg_seq", nextMessageSequence());
+        }
+        ObjectNode markdown = body.putObject("markdown");
+        if (message.content() != null) {
+            markdown.put("content", message.content());
+        }
+        if (message.customTemplateId() != null) {
+            markdown.put("custom_template_id", message.customTemplateId());
+        }
+        if (!message.params().isEmpty()) {
+            ArrayNode params = markdown.putArray("params");
+            message.params().forEach((key, values) -> {
+                ObjectNode parameter = params.addObject().put("key", key);
+                ArrayNode valueArray = parameter.putArray("values");
+                values.forEach(valueArray::add);
+            });
+        }
         if (source.messageId() != null) {
             body.put("msg_id", source.messageId());
         }

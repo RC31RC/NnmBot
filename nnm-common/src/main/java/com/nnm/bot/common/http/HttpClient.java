@@ -3,6 +3,7 @@ package com.nnm.bot.common.http;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.retry.RetryBackoff;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
@@ -29,17 +30,12 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class HttpClient {
 
-    private final RestClient restClient;
-    private final ObjectMapper objectMapper;
-    private final HttpClientProperties properties;
-
-    public HttpClient(RestClient restClient,
-                      ObjectMapper objectMapper,
-                      HttpClientProperties properties) {
-        this.restClient = restClient;
-        this.objectMapper = objectMapper;
-        this.properties = properties;
-    }
+    @Resource
+    private RestClient restClient;
+    @Resource
+    private ObjectMapper objectMapper;
+    @Resource
+    private HttpClientProperties properties;
 
     public HttpResult get(String url) {
         return get(url, Map.of());

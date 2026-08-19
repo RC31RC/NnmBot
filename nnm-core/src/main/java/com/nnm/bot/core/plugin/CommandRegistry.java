@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -11,23 +13,27 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Startup-built command index.
+ * 启动阶段构建的命令索引。
  *
- * <p>Exact commands use the map for near O(1) lookup. Plugins with custom
- * matching rules remain in a stable, ordered fallback list.</p>
+ * <p>精确命令使用 Map 实现近似 O(1) 查找；自定义匹配规则的插件保留在
+ * 稳定且有序的回退列表中。</p>
  */
 @Slf4j
 @Component
 public class CommandRegistry {
 
-    private final List<RegisteredCommand> commands;
-    private final Map<String, RegisteredCommand> exactCommands;
-    private final List<RegisteredCommand> fallbackCommands;
+    @Resource
+    private List<BotPlugin> botPlugins;
 
-    public CommandRegistry(List<BotPlugin> plugins) {
-        Objects.requireNonNull(plugins, "plugins must not be null");
+    private List<RegisteredCommand> commands = List.of();
+    private Map<String, RegisteredCommand> exactCommands = Map.of();
+    private List<RegisteredCommand> fallbackCommands = List.of();
 
-        this.commands = plugins.stream()
+    @PostConstruct
+    void initialize() {
+        Objects.requireNonNull(botPlugins, "botPlugins must not be null");
+
+        this.commands = botPlugins.stream()
                 .map(plugin -> new RegisteredCommand(
                         Objects.requireNonNull(plugin, "plugin must not be null"),
                         plugin.descriptor()))

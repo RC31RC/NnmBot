@@ -26,7 +26,7 @@
             <artifactId>shiro</artifactId>
         </dependency>
 
-        <!-- Spring Modulith -->
+        <!-- Spring Modulith 模块化支持 -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-core</artifactId>
@@ -36,14 +36,14 @@
             <artifactId>spring-modulith-events-api</artifactId>
         </dependency>
 
-        <!-- Lombok -->
+        <!-- Lombok 代码生成 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Test -->
+        <!-- 测试依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

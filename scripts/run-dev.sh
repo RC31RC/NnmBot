@@ -9,7 +9,7 @@ cd "$PROJECT_DIR"
 
 if [ -f "$ENV_FILE" ]; then
     set -a
-    # shellcheck disable=SC1090
+    # shellcheck：允许加载由变量指定的环境文件
     . "$ENV_FILE"
     set +a
 fi

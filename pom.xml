@@ -32,36 +32,36 @@
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Spring & Boot -->
+        <!-- Spring 与 Spring Boot -->
         <spring-modulith.version>2.0.7</spring-modulith.version>
 
-        <!-- Bot SDK -->
+        <!-- 机器人 SDK -->
         <shiro.version>2.5.4</shiro.version>
 
-        <!-- Database -->
+        <!-- 数据库 -->
         <postgresql.version>42.7.5</postgresql.version>
 
-        <!-- Cache -->
+        <!-- 缓存 -->
         <caffeine.version>3.1.8</caffeine.version>
 
-        <!-- Render -->
+        <!-- 渲染 -->
         <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
         <playwright.version>1.49.0</playwright.version>
 
-        <!-- Authentication -->
+        <!-- 认证 -->
         <sa-token.version>1.45.0</sa-token.version>
 
-        <!-- Utilities -->
+        <!-- 通用工具 -->
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <commons-text.version>1.13.0</commons-text.version>
 
-        <!-- Documentation -->
+        <!-- 文档 -->
         <springdoc.version>3.0.3</springdoc.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <!-- Internal Modules -->
+            <!-- 内部模块 -->
             <dependency>
                 <groupId>com.nnm</groupId>
                 <artifactId>nnm-common</artifactId>
@@ -93,7 +93,7 @@
                 <version>${project.version}</version>
             </dependency>
 
-            <!-- Spring Modulith -->
+            <!-- Spring Modulith 模块化支持 -->
             <dependency>
                 <groupId>org.springframework.modulith</groupId>
                 <artifactId>spring-modulith-bom</artifactId>
@@ -109,7 +109,7 @@
                 <version>${shiro.version}</version>
             </dependency>
 
-            <!-- Render: openhtmltopdf -->
+            <!-- 渲染：openhtmltopdf -->
             <dependency>
                 <groupId>com.openhtmltopdf</groupId>
                 <artifactId>openhtmltopdf-pdfbox</artifactId>
@@ -121,21 +121,21 @@
                 <version>${openhtmltopdf.version}</version>
             </dependency>
 
-            <!-- Render: Playwright -->
+            <!-- 渲染：Playwright -->
             <dependency>
                 <groupId>com.microsoft.playwright</groupId>
                 <artifactId>playwright</artifactId>
                 <version>${playwright.version}</version>
             </dependency>
 
-            <!-- Authentication -->
+            <!-- 认证 -->
             <dependency>
                 <groupId>cn.dev33</groupId>
                 <artifactId>sa-token-spring-boot4-starter</artifactId>
                 <version>${sa-token.version}</version>
             </dependency>
 
-            <!-- Utilities -->
+            <!-- 通用工具 -->
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
@@ -147,14 +147,14 @@
                 <version>${commons-text.version}</version>
             </dependency>
 
-            <!-- API Documentation -->
+            <!-- API 文档 -->
             <dependency>
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
             </dependency>
 
-            <!-- Caffeine Cache -->
+            <!-- Caffeine 缓存 -->
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>

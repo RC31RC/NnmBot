@@ -4,7 +4,7 @@
     <property name="LOG_PATH" value="./logs"/>
     <property name="LOG_PATTERN" value="%-5level %d{yyyy-MM-dd HH:mm:ss} [%thread] %-40.40logger{39} : %msg%n"/>
 
-    <!-- Console -->
+    <!-- 控制台输出 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%highlight(%-5level) %d{HH:mm:ss} %cyan([%thread]) %logger{36} : %msg%n</pattern>
@@ -12,7 +12,7 @@
         </encoder>
     </appender>
 
-    <!-- Rolling File -->
+    <!-- 滚动文件输出 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_PATH}/nnmbot.log</file>
         <encoder>

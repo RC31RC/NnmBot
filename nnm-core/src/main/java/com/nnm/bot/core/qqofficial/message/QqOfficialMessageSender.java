@@ -1,20 +1,20 @@
 package com.nnm.bot.core.qqofficial.message;
 
 import com.nnm.bot.core.message.BotMessageContext;
+import com.nnm.bot.core.message.BotMarkdownMessage;
 import com.nnm.bot.core.message.BotPlatform;
+import com.nnm.bot.core.message.MarkdownMessageSender;
 import com.nnm.bot.core.message.PlatformMessageSender;
 import com.nnm.bot.core.qqofficial.api.QqOfficialApiClient;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 @Component
-public class QqOfficialMessageSender implements PlatformMessageSender {
+public class QqOfficialMessageSender implements PlatformMessageSender, MarkdownMessageSender {
 
-    private final QqOfficialApiClient apiClient;
-
-    public QqOfficialMessageSender(QqOfficialApiClient apiClient) {
-        this.apiClient = apiClient;
-    }
+    @Resource
+    private QqOfficialApiClient apiClient;
 
     @Override
     public BotPlatform platform() {
@@ -33,5 +33,12 @@ public class QqOfficialMessageSender implements PlatformMessageSender {
         Assert.notNull(context, "context must not be null");
         Assert.isTrue(image != null && image.length > 0, "image must not be empty");
         apiClient.sendImage(context.nativeSource(QqOfficialMessageSource.class), image);
+    }
+
+    @Override
+    public void sendMarkdown(BotMessageContext context, BotMarkdownMessage message) {
+        Assert.notNull(context, "context must not be null");
+        Assert.notNull(message, "message must not be null");
+        apiClient.sendMarkdown(context.nativeSource(QqOfficialMessageSource.class), message);
     }
 }

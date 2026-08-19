@@ -9,7 +9,7 @@ import com.nnm.bot.admin.dto.auth.UserInfoResponse;
 import com.nnm.bot.admin.repository.SysUserRepository;
 import com.nnm.bot.admin.service.AuthService;
 import com.nnm.bot.common.exception.BusinessException;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -17,11 +17,12 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private final SysUserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    @Resource
+    private SysUserRepository userRepository;
+    @Resource
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public LoginResponse login(LoginRequest request) {

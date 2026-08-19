@@ -15,7 +15,7 @@
     <description>Warframe domain module: market, world state, notifications</description>
 
     <dependencies>
-        <!-- Jackson is part of the NnmBot-owned external protocol adapter. -->
+        <!-- Jackson 属于 NnmBot 自有的外部协议适配层。 -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -33,19 +33,19 @@
             <artifactId>nnm-render</artifactId>
         </dependency>
 
-        <!-- JPA -->
+        <!-- JPA 数据访问 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Active JVM business cache -->
+        <!-- 生效的 JVM 业务缓存 -->
         <dependency>
             <groupId>org.cache2k</groupId>
             <artifactId>cache2k-spring</artifactId>
         </dependency>
 
-        <!-- Retained temporarily for comparison and rollback; not the active CacheManager -->
+        <!-- 暂时保留用于对比和回滚，不是当前生效的 CacheManager -->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
@@ -55,14 +55,14 @@
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
-        <!-- Lombok -->
+        <!-- Lombok 代码生成 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Test -->
+        <!-- 测试依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

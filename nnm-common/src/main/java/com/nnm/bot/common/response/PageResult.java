@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Framework-neutral paged response shared by application modules.
+ * 与具体框架无关的分页响应，供各业务模块复用。
  */
 public record PageResult<T>(
         List<T> records,

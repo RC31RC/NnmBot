@@ -2,8 +2,10 @@ package com.nnm.bot.warframe.application;
 
 import com.nnm.bot.warframe.domain.ChangeDetector;
 import com.nnm.bot.warframe.domain.model.WorldState;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -14,13 +16,20 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class WorldStateService {
 
-    private final List<ChangeDetector<WorldState>> detectors;
-    private final ApplicationEventPublisher eventPublisher;
+    @Resource
+    private ObjectProvider<ChangeDetector<WorldState>> detectorProvider;
+    @Resource
+    private ApplicationEventPublisher eventPublisher;
+    private List<ChangeDetector<WorldState>> detectors = List.of();
 
     private final AtomicReference<WorldState> currentState = new AtomicReference<>();
+
+    @PostConstruct
+    void initializeDetectors() {
+        detectors = detectorProvider.orderedStream().toList();
+    }
 
     public void processNewState(WorldState newState) {
         Objects.requireNonNull(newState, "newState must not be null");

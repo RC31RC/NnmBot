@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 
 /**
- * HTTP 客户端配置。可通过 {@code nnm.http.*} 在 application.yml 中覆盖。
+ * HTTP 客户端配置，可通过 {@code nnm.http.*} 在 application.yml 中覆盖。
  * <p>
  * 默认值针对「国内访问海外 Warframe API」场景调高，给慢速跨境链路留足时间。
  * </p>

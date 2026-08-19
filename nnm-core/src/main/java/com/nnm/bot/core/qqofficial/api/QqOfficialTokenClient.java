@@ -3,6 +3,7 @@ package com.nnm.bot.core.qqofficial.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.core.qqofficial.config.QqOfficialProperties;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -16,16 +17,12 @@ public class QqOfficialTokenClient {
     private static final long DEFAULT_EXPIRES_IN_SECONDS = 7200;
     private static final long REFRESH_AHEAD_SECONDS = 300;
 
-    private final HttpClient httpClient;
-    private final QqOfficialProperties properties;
+    @Resource
+    private HttpClient httpClient;
+    @Resource
+    private QqOfficialProperties properties;
     private String accessToken;
     private Instant expiresAt = Instant.MIN;
-
-    public QqOfficialTokenClient(HttpClient httpClient,
-                                 QqOfficialProperties properties) {
-        this.httpClient = httpClient;
-        this.properties = properties;
-    }
 
     public synchronized String getAccessToken() {
         if (accessToken != null

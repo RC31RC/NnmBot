@@ -1,32 +1,24 @@
 package com.nnm.bot.core.plugin.builtin;
 
 import com.nnm.bot.core.message.BotMessageContext;
-import com.nnm.bot.core.message.BotMessageSender;
+import com.nnm.bot.core.message.BotImageRenderer;
 import com.nnm.bot.core.plugin.BotPlugin;
 import com.nnm.bot.core.plugin.CommandDescriptor;
-import com.nnm.bot.core.plugin.CommandRegistry;
 import com.nnm.bot.core.plugin.MatchType;
-import org.springframework.beans.factory.ObjectProvider;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 @Component
-public class StatusPlugin implements BotPlugin {
+public class StatusPlugin extends BotPlugin {
 
     private static final long MEBIBYTE = 1024L * 1024L;
-
-    private final BotMessageSender messageSender;
-    private final ObjectProvider<CommandRegistry> commandRegistries;
-
-    public StatusPlugin(BotMessageSender messageSender,
-                        ObjectProvider<CommandRegistry> commandRegistries) {
-        this.messageSender = messageSender;
-        this.commandRegistries = commandRegistries;
-    }
 
     @Override
     public boolean match(String message) {
@@ -41,6 +33,34 @@ public class StatusPlugin implements BotPlugin {
         long usedMemory = runtime.totalMemory() - runtime.freeMemory();
         Duration uptime = Duration.ofMillis(ManagementFactory.getRuntimeMXBean().getUptime());
 
+        String accountId = context.botAccountId();
+        String scope = context.isGroupMessage() ? "群聊" : context.isChannelMessage() ? "频道" : "私聊";
+        String uptimeText = formatDuration(uptime);
+        String javaVersion = System.getProperty("java.version");
+        long usedMemoryMiB = usedMemory / MEBIBYTE;
+        long maxMemoryMiB = runtime.maxMemory() / MEBIBYTE;
+        int pluginCount = commandRegistry.size();
+
+        BotImageRenderer imageRenderer = imageRendererProvider.getIfAvailable();
+        if (imageRenderer != null) {
+            byte[] image = renderStatusImage(imageRenderer, Map.of(
+                    "accountId", accountId,
+                    "scope", scope,
+                    "uptime", uptimeText,
+                    "javaVersion", javaVersion,
+                    "memory", "%d MiB / %d MiB".formatted(usedMemoryMiB, maxMemoryMiB),
+                    "pluginCount", pluginCount
+            ));
+            try {
+                if (image != null) {
+                    messageSender.sendImage(context, image);
+                    return;
+                }
+            } catch (UnsupportedOperationException exception) {
+                log.debug("Image status is not supported by {}", context.platform());
+            }
+        }
+
         String status = """
                 NnmBot 运行正常
 
@@ -51,13 +71,13 @@ public class StatusPlugin implements BotPlugin {
                 内存：%d MiB / %d MiB
                 插件数量：%d
                 """.formatted(
-                context.botAccountId(),
-                context.isGroupMessage() ? "群聊" : context.isChannelMessage() ? "频道" : "私聊",
-                formatDuration(uptime),
-                System.getProperty("java.version"),
-                usedMemory / MEBIBYTE,
-                runtime.maxMemory() / MEBIBYTE,
-                commandRegistries.getObject().size()
+                accountId,
+                scope,
+                uptimeText,
+                javaVersion,
+                usedMemoryMiB,
+                maxMemoryMiB,
+                pluginCount
         ).strip();
         messageSender.sendText(context, status);
     }
@@ -99,5 +119,16 @@ public class StatusPlugin implements BotPlugin {
             return "%d天 %02d:%02d:%02d".formatted(days, hours, minutes, seconds);
         }
         return "%02d:%02d:%02d".formatted(hours, minutes, seconds);
+    }
+
+    private static byte[] renderStatusImage(BotImageRenderer imageRenderer,
+                                            Map<String, Object> data) {
+        try {
+            return imageRenderer.render("status", data);
+        } catch (RuntimeException exception) {
+            log.warn("Failed to render image status, falling back to text: {}",
+                    exception.getMessage());
+            return null;
+        }
     }
 }

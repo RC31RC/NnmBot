@@ -10,7 +10,7 @@ import com.nnm.bot.admin.repository.SysMenuRepository;
 import com.nnm.bot.admin.repository.SysPermissionRepository;
 import com.nnm.bot.admin.repository.SysRoleRepository;
 import com.nnm.bot.admin.repository.SysUserRepository;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,15 +22,20 @@ import java.util.List;
 import java.util.Set;
 
 @Component
-@RequiredArgsConstructor
 public class RbacDataInitializer implements ApplicationRunner {
 
-    private final SysUserRepository userRepository;
-    private final SysRoleRepository roleRepository;
-    private final SysPermissionRepository permissionRepository;
-    private final SysMenuRepository menuRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AdminBootstrapProperties bootstrapProperties;
+    @Resource
+    private SysUserRepository userRepository;
+    @Resource
+    private SysRoleRepository roleRepository;
+    @Resource
+    private SysPermissionRepository permissionRepository;
+    @Resource
+    private SysMenuRepository menuRepository;
+    @Resource
+    private PasswordEncoder passwordEncoder;
+    @Resource
+    private AdminBootstrapProperties bootstrapProperties;
 
     @Override
     @Transactional(rollbackFor = Exception.class)

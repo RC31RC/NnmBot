@@ -2,6 +2,7 @@ package com.nnm.bot.warframe.infrastructure.provider;
 
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.warframe.infrastructure.client.WarframeApiClient;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -14,11 +15,8 @@ public class OfficialWorldStateProvider implements WorldStateProvider {
 
     static final String SOURCE = "warframe-official";
 
-    private final WarframeApiClient apiClient;
-
-    public OfficialWorldStateProvider(WarframeApiClient apiClient) {
-        this.apiClient = apiClient;
-    }
+    @Resource
+    private WarframeApiClient apiClient;
 
     @Override
     public Optional<WorldStatePayload> fetch() {

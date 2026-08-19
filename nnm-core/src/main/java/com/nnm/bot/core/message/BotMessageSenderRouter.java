@@ -1,5 +1,7 @@
 package com.nnm.bot.core.message;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -8,13 +10,17 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class BotMessageSenderRouter implements BotMessageSender {
+public class BotMessageSenderRouter implements BotMessageSender, MarkdownMessageSender {
 
-    private final Map<BotPlatform, PlatformMessageSender> senders;
+    @Resource
+    private List<PlatformMessageSender> platformSenders;
 
-    public BotMessageSenderRouter(List<PlatformMessageSender> senders) {
+    private Map<BotPlatform, PlatformMessageSender> senders;
+
+    @PostConstruct
+    void initialize() {
         EnumMap<BotPlatform, PlatformMessageSender> registry = new EnumMap<>(BotPlatform.class);
-        for (PlatformMessageSender sender : senders) {
+        for (PlatformMessageSender sender : platformSenders) {
             PlatformMessageSender previous = registry.put(sender.platform(), sender);
             if (previous != null) {
                 throw new IllegalStateException("Duplicate message sender for " + sender.platform());
@@ -31,6 +37,16 @@ public class BotMessageSenderRouter implements BotMessageSender {
     @Override
     public void sendImage(BotMessageContext context, byte[] image) {
         sender(context).sendImage(context, image);
+    }
+
+    @Override
+    public void sendMarkdown(BotMessageContext context, BotMarkdownMessage message) {
+        PlatformMessageSender platformSender = sender(context);
+        if (!(platformSender instanceof MarkdownMessageSender markdownSender)) {
+            throw new UnsupportedOperationException(
+                    "Markdown messages are not supported by " + context.platform());
+        }
+        markdownSender.sendMarkdown(context, message);
     }
 
     private PlatformMessageSender sender(BotMessageContext context) {

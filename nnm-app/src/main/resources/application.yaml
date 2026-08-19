@@ -35,13 +35,13 @@ spring:
     baseline-on-migrate: true
 
   cache:
-    # Retained temporarily as the Caffeine fallback configuration.
-    # WarframeCacheConfiguration supplies the active cache2k CacheManager.
+    # 暂时保留作为 Caffeine 回退配置。
+    # WarframeCacheConfiguration 提供当前生效的 cache2k CacheManager。
     type: caffeine
     caffeine:
       spec: maximumSize=500,expireAfterWrite=600s
 
-# Sa-Token authentication
+# Sa-Token 认证
 sa-token:
   token-name: Authorization
   token-prefix: Bearer
@@ -54,7 +54,7 @@ sa-token:
   is-read-body: false
   is-write-header: false
 
-# OneBot Configuration
+# OneBot 配置
 shiro:
   ws:
     access-token: ${ONEBOT_ACCESS_TOKEN:QsqrA8oIMJL9tnE-RMaLlZ-2mjjrfZKkyrBfdko65-g}
@@ -66,20 +66,20 @@ shiro:
       url: ${ONEBOT_WS_URL:ws://123.206.232.72:3001}
       reconnect-interval: 5
 
-# Render engine configuration
+# 渲染引擎配置
 render:
   engine: auto
   plugins:
     enabled: true
     external-enabled: false
     directory: ./plugin
-    # provider: custom-renderer
+    # provider: custom-renderer（可选，自定义渲染提供者标识）
   playwright:
     chromium-args:
       - --no-sandbox
       - --disable-gpu
 
-# Logging
+# 日志
 logging:
   level:
     com.nnm.bot: INFO
@@ -87,7 +87,7 @@ logging:
     org.hibernate.SQL: WARN
     org.springframework: INFO
 
-# Actuator
+# Actuator 运行监控
 management:
   endpoints:
     web:

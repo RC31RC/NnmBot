@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.Objects;
 
 /**
- * Business validation helpers that keep exception construction consistent.
+ * 业务前置条件校验工具，统一业务异常的构造方式。
  */
 public final class BusinessAssert {
 

@@ -6,9 +6,9 @@ import org.springframework.util.StringUtils;
 import java.util.Objects;
 
 /**
- * Platform-neutral message context used by plugins.
+ * 与平台无关的消息上下文，供插件处理消息时使用。
  *
- * @param nativeSource adapter-owned source event, never interpreted by plugins
+ * @param nativeSource 由适配器持有的原始事件，插件不得直接解释其结构
  */
 public final class BotMessageContext {
 

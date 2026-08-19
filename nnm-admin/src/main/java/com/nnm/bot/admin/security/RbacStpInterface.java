@@ -4,16 +4,16 @@ import cn.dev33.satoken.stp.StpInterface;
 import com.nnm.bot.admin.domain.SysRole;
 import com.nnm.bot.admin.domain.SysUser;
 import com.nnm.bot.admin.repository.SysUserRepository;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class RbacStpInterface implements StpInterface {
 
-    private final SysUserRepository userRepository;
+    @Resource
+    private SysUserRepository userRepository;
 
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {

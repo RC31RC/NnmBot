@@ -24,7 +24,7 @@ import com.nnm.bot.common.error.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.common.validation.BusinessAssert;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,16 +38,22 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class RbacManagementServiceImpl implements RbacManagementService {
 
-    private final SysUserRepository userRepository;
-    private final SysRoleRepository roleRepository;
-    private final SysMenuRepository menuRepository;
-    private final SysPermissionRepository permissionRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final RbacQueryService queryService;
-    private final OperationAuditService auditService;
+    @Resource
+    private SysUserRepository userRepository;
+    @Resource
+    private SysRoleRepository roleRepository;
+    @Resource
+    private SysMenuRepository menuRepository;
+    @Resource
+    private SysPermissionRepository permissionRepository;
+    @Resource
+    private PasswordEncoder passwordEncoder;
+    @Resource
+    private RbacQueryService queryService;
+    @Resource
+    private OperationAuditService auditService;
 
     @Override
     @Transactional

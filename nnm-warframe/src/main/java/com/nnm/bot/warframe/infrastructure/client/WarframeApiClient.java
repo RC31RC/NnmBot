@@ -1,6 +1,8 @@
 package com.nnm.bot.warframe.infrastructure.client;
 
 import com.nnm.bot.common.http.HttpClient;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -11,13 +13,14 @@ import java.util.Map;
 @Component
 public class WarframeApiClient {
 
-    private final HttpClient httpClient;
-    private final WarframeApiProperties properties;
+    @Resource
+    private HttpClient httpClient;
+    @Resource
+    private WarframeApiProperties properties;
 
-    public WarframeApiClient(HttpClient httpClient, WarframeApiProperties properties) {
+    @PostConstruct
+    void validateProperties() {
         properties.validate();
-        this.httpClient = httpClient;
-        this.properties = properties;
     }
 
     public HttpClient.HttpResult fetchWorldStateResult() {

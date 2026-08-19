@@ -1,16 +1,16 @@
 package com.nnm.bot.core.plugin;
 
 /**
- * Describes how a command is selected before its plugin handles the message.
+ * 描述插件处理消息前采用的命令匹配方式。
  */
 public enum MatchType {
     /**
-     * The normalized message must equal the command or one of its aliases.
+     * 规范化后的消息必须等于命令名称或其某个别名。
      */
     EXACT,
 
     /**
-     * The plugin remains in the ordered fallback chain and decides how to match.
+     * 插件保留在有序的回退链中，由插件自行决定匹配规则。
      */
     CUSTOM
 }

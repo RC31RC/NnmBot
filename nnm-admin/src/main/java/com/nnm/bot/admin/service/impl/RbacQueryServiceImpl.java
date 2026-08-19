@@ -18,7 +18,7 @@ import com.nnm.bot.admin.repository.SysMenuRepository;
 import com.nnm.bot.admin.service.RbacQueryService;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.response.PageResult;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,13 +32,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class RbacQueryServiceImpl implements RbacQueryService {
 
-    private final SysUserRepository userRepository;
-    private final SysRoleRepository roleRepository;
-    private final SysPermissionRepository permissionRepository;
-    private final SysMenuRepository menuRepository;
+    @Resource
+    private SysUserRepository userRepository;
+    @Resource
+    private SysRoleRepository roleRepository;
+    @Resource
+    private SysPermissionRepository permissionRepository;
+    @Resource
+    private SysMenuRepository menuRepository;
 
     @Override
     public PageResult<UserListItem> users(long operatorId, String username, int current, int size) {

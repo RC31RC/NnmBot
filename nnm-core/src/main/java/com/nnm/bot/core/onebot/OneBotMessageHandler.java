@@ -5,17 +5,15 @@ import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.nnm.bot.core.plugin.PluginDispatcher;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 @Shiro
 @Component
 public class OneBotMessageHandler {
 
-    private final PluginDispatcher pluginDispatcher;
-
-    public OneBotMessageHandler(PluginDispatcher pluginDispatcher) {
-        this.pluginDispatcher = pluginDispatcher;
-    }
+    @Resource
+    private PluginDispatcher pluginDispatcher;
 
     @AnyMessageHandler
     public boolean onMessage(Bot bot, AnyMessageEvent event) {

@@ -1,6 +1,7 @@
 package com.nnm.bot.core.plugin;
 
 import com.nnm.bot.core.message.BotMessageContext;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -11,12 +12,8 @@ import java.util.Objects;
 @Component
 public class PluginDispatcher {
 
-    private final CommandRegistry commandRegistry;
-
-    public PluginDispatcher(CommandRegistry commandRegistry) {
-        this.commandRegistry = Objects.requireNonNull(commandRegistry,
-                "commandRegistry must not be null");
-    }
+    @Resource
+    private CommandRegistry commandRegistry;
 
     public boolean dispatch(BotMessageContext context) {
         Objects.requireNonNull(context, "context must not be null");

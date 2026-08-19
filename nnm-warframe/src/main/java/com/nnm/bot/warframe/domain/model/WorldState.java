@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * NnmBot 自己维护的 Warframe 世界状态模型。
  *
- * <p>这个模型不暴露任何上游 SDK 类型。外部 API 的字段变化由 parser/mapper
+ * <p>这个模型不暴露任何上游 SDK 类型。外部 API 的字段变化由解析器和映射器
  * 吸收，业务层只依赖稳定的 Warframe 概念。前 11 个字段保留了早期 NnmBot
  * API 的兼容构造器，新字段用于覆盖机器人业务所需的主要世界状态和数据质量信息。</p>
  */
@@ -242,7 +242,7 @@ public record WorldState(
         }
     }
 
-    /** 新闻与活动目标分开建模，避免混淆官方 Events 和 Goals 的不同语义。 */
+    /** 新闻与活动目标分开建模，避免混淆官方事件列表与目标列表的不同语义。 */
     public record NewsItem(
             String id,
             String title,

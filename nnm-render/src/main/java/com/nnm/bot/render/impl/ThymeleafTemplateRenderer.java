@@ -1,7 +1,7 @@
 package com.nnm.bot.render.impl;
 
 import com.nnm.bot.render.TemplateRenderer;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -9,10 +9,10 @@ import org.thymeleaf.context.Context;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class ThymeleafTemplateRenderer implements TemplateRenderer {
 
-    private final TemplateEngine templateEngine;
+    @Resource
+    private TemplateEngine templateEngine;
 
     @Override
     public String render(String templateName, Map<String, Object> variables) {

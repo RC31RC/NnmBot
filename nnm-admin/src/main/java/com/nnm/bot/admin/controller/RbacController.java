@@ -11,7 +11,7 @@ import com.nnm.bot.admin.service.AuthService;
 import com.nnm.bot.admin.service.RbacQueryService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,11 +21,12 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/v1")
-@RequiredArgsConstructor
 public class RbacController {
 
-    private final AuthService authService;
-    private final RbacQueryService rbacQueryService;
+    @Resource
+    private AuthService authService;
+    @Resource
+    private RbacQueryService rbacQueryService;
 
     @GetMapping("/me")
     public ApiResponse<UserInfoResponse> me() {

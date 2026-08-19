@@ -4,6 +4,8 @@ import com.nnm.bot.warframe.application.WorldStateService;
 import com.nnm.bot.warframe.infrastructure.parser.WorldStateParser;
 import com.nnm.bot.warframe.infrastructure.provider.WorldStateProvider;
 import com.nnm.bot.scheduler.config.WarframePollingProperties;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,18 +21,18 @@ import org.springframework.stereotype.Component;
 )
 public class WorldStatePollingTask {
 
-    private final WorldStateProvider worldStateProvider;
-    private final WorldStateService worldStateService;
-    private final WorldStateParser worldStateParser;
+    @Resource
+    private WorldStateProvider worldStateProvider;
+    @Resource
+    private WorldStateService worldStateService;
+    @Resource
+    private WorldStateParser worldStateParser;
+    @Resource
+    private WarframePollingProperties properties;
 
-    public WorldStatePollingTask(WorldStateProvider worldStateProvider,
-                                 WorldStateService worldStateService,
-                                 WorldStateParser worldStateParser,
-                                 WarframePollingProperties properties) {
+    @PostConstruct
+    void validateProperties() {
         properties.validate();
-        this.worldStateProvider = worldStateProvider;
-        this.worldStateService = worldStateService;
-        this.worldStateParser = worldStateParser;
     }
 
     @Scheduled(fixedDelayString = "${nnm.warframe.polling.interval:2m}")

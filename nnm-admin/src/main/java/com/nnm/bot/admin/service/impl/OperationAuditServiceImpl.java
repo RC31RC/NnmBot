@@ -9,8 +9,8 @@ import com.nnm.bot.admin.repository.SysOperationLogRepository;
 import com.nnm.bot.admin.repository.SysUserRepository;
 import com.nnm.bot.admin.service.OperationAuditService;
 import com.nnm.bot.common.response.PageResult;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -20,11 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class OperationAuditServiceImpl implements OperationAuditService {
 
-    private final SysOperationLogRepository logRepository;
-    private final SysUserRepository userRepository;
+    @Resource
+    private SysOperationLogRepository logRepository;
+    @Resource
+    private SysUserRepository userRepository;
 
     @Override
     @Transactional
