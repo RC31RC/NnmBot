@@ -3,16 +3,38 @@ package com.nnm.bot.core.message;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
+import com.nnm.bot.core.channel.BotChannelKey;
 import com.nnm.bot.core.onebot.OneBotMessageSource;
+import com.nnm.bot.core.onebot.config.OneBotProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class OneBotMessageSender implements PlatformMessageSender {
 
+    private final Set<BotChannelKey> channels;
+
+    public OneBotMessageSender(OneBotProperties properties) {
+        this.channels = properties.isEnabled()
+                ? properties.getInstances().stream()
+                .filter(OneBotProperties.Instance::isEnabled)
+                .map(instance -> new BotChannelKey(
+                        BotPlatform.ONEBOT, instance.getBotAccountId()))
+                .collect(Collectors.toUnmodifiableSet())
+                : Set.of();
+    }
+
     @Override
     public BotPlatform platform() {
         return BotPlatform.ONEBOT;
+    }
+
+    @Override
+    public Set<BotChannelKey> channels() {
+        return channels;
     }
 
     @Override

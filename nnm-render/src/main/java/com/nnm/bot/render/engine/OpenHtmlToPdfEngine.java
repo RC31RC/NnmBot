@@ -10,14 +10,23 @@ import org.apache.pdfbox.rendering.PDFRenderer;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 @Slf4j
 public class OpenHtmlToPdfEngine implements RenderEngine {
 
     private final String baseUri;
+    private final List<Path> fontPaths;
 
     public OpenHtmlToPdfEngine(String baseUri) {
+        this(baseUri, List.of());
+    }
+
+    public OpenHtmlToPdfEngine(String baseUri, List<Path> fontPaths) {
         this.baseUri = baseUri;
+        this.fontPaths = fontPaths == null ? List.of() : List.copyOf(fontPaths);
     }
 
     @Override
@@ -30,6 +39,7 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
         try (ByteArrayOutputStream pdfOs = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
+            registerFonts(builder);
             builder.withHtmlContent(html, baseUri);
             builder.toStream(pdfOs);
             builder.run();
@@ -46,6 +56,23 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
             log.error("OpenHtmlToPdf render failed", e);
             throw new RuntimeException("Image render failed", e);
         }
+    }
+
+    private void registerFonts(PdfRendererBuilder builder) {
+        for (Path fontPath : fontPaths) {
+            if (fontPath == null || !Files.isRegularFile(fontPath)) {
+                continue;
+            }
+            try {
+                builder.useFont(fontPath.toFile(), "Noto Sans SC");
+                log.debug("Registered render font: {}", fontPath);
+                return;
+            } catch (RuntimeException exception) {
+                log.warn("Unable to register render font {}: {}", fontPath,
+                        exception.getMessage());
+            }
+        }
+        log.warn("No configured Chinese font was found; CJK glyphs may be missing");
     }
 
     @Override

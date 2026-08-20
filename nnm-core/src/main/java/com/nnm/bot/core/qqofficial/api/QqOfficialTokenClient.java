@@ -3,26 +3,27 @@ package com.nnm.bot.core.qqofficial.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.core.qqofficial.config.QqOfficialProperties;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Map;
 
 @Slf4j
-@Component
 public class QqOfficialTokenClient {
 
     private static final long DEFAULT_EXPIRES_IN_SECONDS = 7200;
     private static final long REFRESH_AHEAD_SECONDS = 300;
 
-    @Resource
-    private HttpClient httpClient;
-    @Resource
-    private QqOfficialProperties properties;
+    private final HttpClient httpClient;
+    private final QqOfficialProperties.Connection connection;
     private String accessToken;
     private Instant expiresAt = Instant.MIN;
+
+    public QqOfficialTokenClient(HttpClient httpClient,
+                                 QqOfficialProperties.Connection connection) {
+        this.httpClient = httpClient;
+        this.connection = connection;
+    }
 
     public synchronized String getAccessToken() {
         if (accessToken != null
@@ -31,10 +32,10 @@ public class QqOfficialTokenClient {
         }
 
         JsonNode json = httpClient.postJson(
-                properties.getTokenUrl(),
+                connection.getTokenUrl(),
                 Map.of(
-                        "appId", properties.getAppId(),
-                        "clientSecret", properties.getClientSecret()
+                        "appId", connection.getAppId(),
+                        "clientSecret", connection.getClientSecret()
                 ),
                 Map.of(),
                 JsonNode.class);

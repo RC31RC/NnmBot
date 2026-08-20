@@ -662,9 +662,9 @@ P0 完成后，NnmBot 才具备“机器人项目”的最小可用性。
 - API 客户端：`nnm-warframe/src/main/java/com/nnm/bot/warframe/infrastructure/client/WarframeApiClient.java`
 - 轮询任务：`nnm-scheduler/src/main/java/com/nnm/bot/scheduler/task/WorldStatePollingTask.java`
 - 数据库迁移：`nnm-app/src/main/resources/db/migration/V1__init_schema.sql`
-- 主配置：`nnm-app/src/main/resources/application.yaml`
-- 开发配置：`nnm-app/src/main/resources/application-dev.yaml`
-- 生产配置：`nnm-app/src/main/resources/application-prod.yaml`
+- 主配置：`nnm-app/src/main/resources/application.yml`
+- 基础配置：`nnm-app/src/main/resources/application.yml`
+- 机器人扩展配置：`nnm-app/src/main/resources/application-bot.yml`
 
 ### NyxBot
 

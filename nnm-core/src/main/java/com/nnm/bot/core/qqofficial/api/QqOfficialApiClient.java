@@ -9,27 +9,30 @@ import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.core.message.BotMarkdownMessage;
 import com.nnm.bot.core.qqofficial.config.QqOfficialProperties;
 import com.nnm.bot.core.qqofficial.message.QqOfficialMessageSource;
-import jakarta.annotation.Resource;
-import org.springframework.stereotype.Component;
 
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-@Component
 public class QqOfficialApiClient {
 
-    @Resource
-    private HttpClient httpClient;
-    @Resource
-    private ObjectMapper objectMapper;
-    @Resource
-    private QqOfficialTokenClient tokenClient;
-    @Resource
-    private QqOfficialProperties properties;
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
+    private final QqOfficialTokenClient tokenClient;
+    private final QqOfficialProperties.Connection connection;
+
+    public QqOfficialApiClient(HttpClient httpClient,
+                               ObjectMapper objectMapper,
+                               QqOfficialTokenClient tokenClient,
+                               QqOfficialProperties.Connection connection) {
+        this.httpClient = httpClient;
+        this.objectMapper = objectMapper;
+        this.tokenClient = tokenClient;
+        this.connection = connection;
+    }
 
     public String gatewayUrl() {
-        String configured = properties.getGatewayUrl();
+        String configured = connection.getGatewayUrl();
         if (configured != null && !configured.isBlank()) {
             return configured;
         }
@@ -106,7 +109,7 @@ public class QqOfficialApiClient {
 
     private JsonNode request(String method, String path, ObjectNode body) {
         String token = tokenClient.getAccessToken();
-        String url = properties.getApiBaseUrl().replaceAll("/$", "") + path;
+        String url = connection.getApiBaseUrl().replaceAll("/$", "") + path;
         Map<String, String> headers = Map.of("Authorization", "QQBot " + token);
         try {
             if ("GET".equals(method)) {

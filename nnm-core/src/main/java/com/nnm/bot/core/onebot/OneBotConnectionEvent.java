@@ -2,6 +2,9 @@ package com.nnm.bot.core.onebot;
 
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.core.CoreEvent;
+import com.nnm.bot.core.channel.BotChannelKey;
+import com.nnm.bot.core.channel.BotChannelRegistry;
+import com.nnm.bot.core.message.BotPlatform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
@@ -13,14 +16,21 @@ import org.springframework.web.socket.WebSocketSession;
 public class OneBotConnectionEvent extends CoreEvent {
 
     private static final Logger log = LoggerFactory.getLogger(OneBotConnectionEvent.class);
+    private final BotChannelRegistry channelRegistry;
+
+    public OneBotConnectionEvent(BotChannelRegistry channelRegistry) {
+        this.channelRegistry = channelRegistry;
+    }
 
     @Override
     public void online(Bot bot) {
+        channelRegistry.connected(key(bot.getSelfId()));
         log.info("OneBot connected, botId={}", bot.getSelfId());
     }
 
     @Override
     public void offline(long account) {
+        channelRegistry.disconnected(key(account));
         log.warn("OneBot disconnected, botId={}", account);
     }
 
@@ -28,5 +38,9 @@ public class OneBotConnectionEvent extends CoreEvent {
     public boolean session(WebSocketSession session) {
         log.debug("OneBot WebSocket session established, remoteAddress={}", session.getRemoteAddress());
         return true;
+    }
+
+    private static BotChannelKey key(long account) {
+        return new BotChannelKey(BotPlatform.ONEBOT, String.valueOf(account));
     }
 }

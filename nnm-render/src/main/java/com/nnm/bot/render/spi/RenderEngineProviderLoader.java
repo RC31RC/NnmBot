@@ -138,7 +138,7 @@ public class RenderEngineProviderLoader {
 
         @Override
         public com.nnm.bot.render.RenderEngine create(RenderEngineProviderContext context) {
-            return new OpenHtmlToPdfEngine(context.templateBaseUri());
+            return new OpenHtmlToPdfEngine(context.templateBaseUri(), context.fontPaths());
         }
     }
 

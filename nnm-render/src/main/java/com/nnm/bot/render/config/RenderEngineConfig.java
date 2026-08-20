@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.lang.management.ManagementFactory;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -46,7 +47,11 @@ public class RenderEngineConfig {
     @Bean
     public RenderEngine renderEngine() {
         RenderEngineProviderContext context = new RenderEngineProviderContext(
-                "file:///templates/", properties.getPlaywright().getChromiumArgs());
+                "file:///templates/",
+                properties.getPlaywright().getChromiumArgs(),
+                properties.getFonts().getPaths().stream()
+                        .map(Path::of)
+                        .toList());
         if (configuredProvider != null && !configuredProvider.isBlank()) {
             return create(configuredProvider.trim(), context);
         }

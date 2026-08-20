@@ -24,15 +24,9 @@ Warframe QQ Bot - Modular Architecture
 ## Quick Start
 
 ```bash
-# Development (localhost PostgreSQL + Flyway)
-export DB_HOST=localhost DB_PORT=5432 DB_NAME=nnmbot
-export DB_SCHEMA=nnmbot DB_USERNAME=nnmbot DB_PASSWORD=nnmbot
+# Configure PostgreSQL in nnm-app/src/main/resources/application.yml
+# Configure robot channels in nnm-app/src/main/resources/application-bot.yml
 ./scripts/run-dev.sh
-
-# Production
-export DB_HOST=localhost DB_PORT=5432 DB_NAME=nnmbot
-export DB_SCHEMA=nnmbot DB_USERNAME=nnmbot DB_PASSWORD=your-password
-java -jar nnm-app/target/NnmBot.jar --spring.profiles.active=prod
 ```
 
 Database schema changes are managed by Flyway. Hibernate validates entity mappings
@@ -41,7 +35,7 @@ Application tables use the `nnmbot` schema; Flyway keeps its history table in `p
 
 ### PostgreSQL permissions
 
-The role in `DB_USERNAME` must be able to use the application schema and modify
+The role in `spring.datasource.username` must be able to use the application schema and modify
 the RBAC data written during startup. If `nnmbot` was created by a different
 database role, run the following once as the schema owner or a PostgreSQL
 administrator, replacing `nnmbot` with the actual application role when needed:
@@ -77,7 +71,7 @@ The render engine is auto-selected based on environment:
 - **openhtmltopdf** (default): Lightweight, CSS3 support, zero external dependencies
 - **Playwright**: Full Chrome rendering, set `render.engine=playwright` in config
 
-Override via `application.yaml`:
+Override via `application-bot.yml`:
 ```yaml
 render:
   engine: auto  # auto | openhtmltopdf | playwright

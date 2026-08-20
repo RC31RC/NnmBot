@@ -1,0 +1,78 @@
+# 所有机器人渠道都按“协议 -> 渠道实例”组织。
+# connection 保存连接凭据；runtime 保存重连等运行策略；实时连接状态由内存注册表维护。
+nnm:
+  bot:
+    channels:
+      onebot:
+        enabled: false
+        instances:
+          - id: personal-qq
+            bot-account-id: ""
+            enabled: true
+            connection:
+              url: ws://127.0.0.1:3001
+              access-token: ""
+            runtime:
+              reconnect-interval: 5s
+        # 连接第二个账号时，在 instances 下继续添加实例，并使用不同的 id、账号和地址。
+      qq-official:
+        enabled: false
+        instances:
+          - id: official-bot
+            enabled: true
+            connection:
+              app-id: ""
+              client-secret: ""
+              token-url: https://bots.qq.com/app/getAppAccessToken
+              api-base-url: https://api.sgroup.qq.com
+              gateway-url: ""
+            runtime:
+              intents: 100663296
+              gateway-connect-timeout: 10s
+              reconnect-delay: 5s
+  warframe:
+    polling:
+      enabled: true
+      interval: 200m
+    api:
+      world-state-url: https://api.warframe.com/cdn/worldState.php
+      market-base-url: https://api.warframe.market/v1
+      language: zh
+      platform: pc
+    cache:
+      world-state:
+        capacity: 1
+      metadata:
+        capacity: 64
+        expire-after-write: 6h
+      translations:
+        capacity: 16
+        expire-after-write: 12h
+      data-source-tag:
+        capacity: 8
+        expire-after-write: 2m
+
+# Shiro 只提供 OneBot 协议解析；多地址连接由 NnmBot 自己管理。
+shiro:
+  ws:
+    access-token: ""
+    server:
+      enable: false
+      url: /ws/shiro
+    client:
+      enable: false
+
+render:
+  engine: auto
+  # OpenHTMLToPDF 会按顺序选择第一个存在的中文字体。
+  # fonts:
+  #   paths:
+  #     - /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+  plugins:
+    enabled: true
+    external-enabled: false
+    directory: ./plugin
+  playwright:
+    chromium-args:
+      - --no-sandbox
+      - --disable-gpu

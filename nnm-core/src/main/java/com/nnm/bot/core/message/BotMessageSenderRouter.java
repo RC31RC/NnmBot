@@ -1,29 +1,39 @@
 package com.nnm.bot.core.message;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
+import com.nnm.bot.core.channel.BotChannelKey;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class BotMessageSenderRouter implements BotMessageSender, MarkdownMessageSender {
 
-    @Resource
-    private List<PlatformMessageSender> platformSenders;
+    private final List<PlatformMessageSender> platformSenders;
 
-    private Map<BotPlatform, PlatformMessageSender> senders;
+    private Map<BotChannelKey, PlatformMessageSender> senders;
+
+    public BotMessageSenderRouter(List<PlatformMessageSender> platformSenders) {
+        this.platformSenders = List.copyOf(platformSenders);
+    }
 
     @PostConstruct
     void initialize() {
-        EnumMap<BotPlatform, PlatformMessageSender> registry = new EnumMap<>(BotPlatform.class);
+        Map<BotChannelKey, PlatformMessageSender> registry = new HashMap<>();
         for (PlatformMessageSender sender : platformSenders) {
-            PlatformMessageSender previous = registry.put(sender.platform(), sender);
-            if (previous != null) {
-                throw new IllegalStateException("Duplicate message sender for " + sender.platform());
+            for (BotChannelKey channel : sender.channels()) {
+                if (channel.platform() != sender.platform()) {
+                    throw new IllegalStateException(
+                            "Sender platform does not match channel " + channel);
+                }
+                PlatformMessageSender previous = registry.put(channel, sender);
+                if (previous != null) {
+                    throw new IllegalStateException(
+                            "Duplicate message sender for " + channel);
+                }
             }
         }
         this.senders = Map.copyOf(registry);
@@ -51,9 +61,11 @@ public class BotMessageSenderRouter implements BotMessageSender, MarkdownMessage
 
     private PlatformMessageSender sender(BotMessageContext context) {
         Assert.notNull(context, "context must not be null");
-        PlatformMessageSender sender = senders.get(context.platform());
+        BotChannelKey key = new BotChannelKey(
+                context.platform(), context.botAccountId());
+        PlatformMessageSender sender = senders.get(key);
         if (sender == null) {
-            throw new IllegalStateException("No message sender registered for " + context.platform());
+            throw new IllegalStateException("No message sender registered for " + key);
         }
         return sender;
     }

@@ -27,6 +27,9 @@
         </rollingPolicy>
     </appender>
 
+    <!-- PDFBox 扫描到 Windows 自带的损坏字体时只会跳过；避免输出无意义的 EOF 警告堆栈。 -->
+    <logger name="org.apache.pdfbox.pdmodel.font.FileSystemFontProvider" level="ERROR"/>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>

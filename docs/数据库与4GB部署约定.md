@@ -60,8 +60,7 @@ Flyway 在开发阶段仍保留，用于验证一份基线能否从空库稳定�
 java -Xms256m -Xmx1536m \
   -XX:MaxMetaspaceSize=256m \
   -XX:+UseG1GC \
-  -jar nnm-app/target/NnmBot.jar \
-  --spring.profiles.active=prod
+  -jar nnm-app/target/NnmBot.jar
 ```
 
 基础资源约束：

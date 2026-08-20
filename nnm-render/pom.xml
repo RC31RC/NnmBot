@@ -47,6 +47,12 @@
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
+        <!-- FreeMarker：先引入依赖，当前模板渲染仍由 Thymeleaf 提供 -->
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+        </dependency>
+
         <!-- Lombok 代码生成 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

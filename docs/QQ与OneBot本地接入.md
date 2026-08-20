@@ -27,11 +27,13 @@ QQ 官方机器人
 ```
 
 两条链路可以同时启用。插件不依赖 Shiro 或 QQ 官方事件类型，回复由
-`BotMessageSenderRouter` 根据消息来源自动发回原平台。
+`BotMessageSenderRouter` 根据消息来源中的 `BotPlatform + botAccountId`
+自动发回原渠道实例，多个同类型账号不会共用路由键。
 
 ## 2. SnowLuma / OneBot v11
 
-NnmBot 默认启用 Shiro 的正向 WebSocket 客户端，主动连接 OneBot 实现端：
+NnmBot 复用 Shiro 的 OneBot 事件解析能力，并由项目自己的连接管理器建立正向
+WebSocket。一个渠道实例对应一个机器人账号和一个 WebSocket 地址，例如：
 
 ```text
 ws://127.0.0.1:3001
@@ -41,21 +43,29 @@ ws://127.0.0.1:3001
 `127.0.0.1:3001`；SnowLuma 与 NnmBot 不在同一台机器时，监听
 `0.0.0.0:3001`，并通过防火墙限制来源地址。
 
-连接地址和访问令牌通过环境变量配置。`scripts/run-dev.sh` 会自动加载仓库
-根目录中被 Git 忽略的 `.env`：
+连接实例和敏感令牌统一在 `application-bot.yml` 配置：
 
-```bash
-cp .env.example .env
-# 编辑 .env 中的 ONEBOT_WS_URL 和 ONEBOT_ACCESS_TOKEN
-./scripts/run-dev.sh
+```yaml
+nnm:
+  bot:
+    channels:
+      onebot:
+        enabled: true
+        instances:
+          - id: personal-qq
+            bot-account-id: "123456789"
+            enabled: true
+            connection:
+              url: ws://127.0.0.1:3001
+              access-token: "SnowLuma 中的原始 Token"
 ```
 
-`ONEBOT_ACCESS_TOKEN` 填 SnowLuma 中配置的原始 Token，不要手动添加
-`Bearer ` 前缀，Shiro 会自动生成 `Authorization: Bearer <token>`。
+`access-token` 填 SnowLuma 中配置的原始 Token，不要手动添加
+`Bearer ` 前缀，NnmBot 会自动生成 `Authorization: Bearer <token>`。
 SnowLuma 默认会生成 Token，可在 SnowLuma 运行目录的
 `config/onebot_<QQ号>.json` 中查看，账号单独配置存在时以
 `config/account_<QQ号>.json` 的 `access_token` 为准。SnowLuma 未启用
-Token 时可以省略该变量，但无令牌服务不得暴露到公网。
+Token 时可以将 `access-token` 留空，但无令牌服务不得暴露到公网。
 
 连接成功后日志至少包含：
 
@@ -66,8 +76,12 @@ OneBot connected, botId=<QQ号>
 
 `HTTP 401` 表示地址和端口已经连通，但 SnowLuma Token 缺失或不一致，
 不是防火墙或监听地址问题；
-`Connection refused` 表示目标端口没有监听或被防火墙拒绝。Shiro
-`reconnect-interval` 的单位是秒，项目当前每 5 秒重试一次。
+`Connection refused` 表示目标端口没有监听或被防火墙拒绝。
+`runtime.reconnect-interval` 控制每个实例的重连间隔。
+
+可以在 `instances` 中添加多个地址来连接多个 OneBot 账号。当前 Shiro 客户端的
+会话模型按“一个连接对应一个账号”工作，不支持在一个正向 WebSocket 会话中可靠地
+复用多个账号；如果协议实现端提供了多个账号，请为每个账号暴露独立地址。
 
 NnmBot 使用的是标准 OneBot v11 边界，SnowLuma 不要求修改项目内的
 `OneBotMessageContextFactory` 或插件接口。以后切换其他兼容实现端时，业务插件同样无需改动。
@@ -75,13 +89,20 @@ NnmBot 使用的是标准 OneBot v11 边界，SnowLuma 不要求修改项目内�
 ## 3. QQ 官方机器人
 
 QQ 官方适配器默认关闭。先在 QQ 开放平台取得机器人 `AppID` 和
-`ClientSecret`，再使用环境变量启动：
+`ClientSecret`，在 `application-bot.yml` 中填写实例并启用渠道，再启动应用：
 
-```bash
-export QQ_BOT_ENABLED=true
-export QQ_BOT_APP_ID=your-app-id
-export QQ_BOT_CLIENT_SECRET=your-client-secret
-./scripts/run-dev.sh
+```yaml
+nnm:
+  bot:
+    channels:
+      qq-official:
+        enabled: true
+        instances:
+          - id: official-bot
+            enabled: true
+            connection:
+              app-id: "your-app-id"
+              client-secret: "your-client-secret"
 ```
 
 启用后 NnmBot 会：
@@ -130,18 +151,46 @@ AstrBot 原有连接可以继续保留，但两个业务程序可能同时收到
 ```yaml
 nnm:
   bot:
-    qq-official:
-      enabled: false
-      intents: 100663296
-      gateway-connect-timeout: 10s
-      reconnect-delay: 5s
+    channels:
+      onebot:
+        enabled: true
+        instances:
+          - id: personal-qq
+            bot-account-id: "123456789"
+            connection:
+              url: ws://127.0.0.1:3001
+              access-token: "SnowLuma 中的原始 Token"
+            runtime:
+              reconnect-interval: 5s
+      qq-official:
+        enabled: true
+        instances:
+          - id: official-bot
+            connection:
+              app-id: "your-app-id"
+              client-secret: "your-client-secret"
+            runtime:
+              intents: 100663296
+              gateway-connect-timeout: 10s
+              reconnect-delay: 5s
 ```
 
-- `enabled=false` 时不建立官方 Gateway 连接，也不要求配置凭据；
-- `enabled=true` 时启动阶段校验 `app-id` 与 `client-secret`；
+- 渠道或实例的 `enabled=false` 时不建立连接；
+- `enabled=true` 时启动阶段校验该协议要求的地址和凭据；
 - Token 只保存在 JVM 内存中，不写入数据库、缓存或日志；
 - Gateway 回调、消息分发、心跳和重连复用项目已有有界执行器；
 - 当前不引入 WebClient、额外 SDK 线程池或第二套插件体系。
+
+当前开发阶段不从环境变量或额外配置文件读取这些值。`application.yml` 和
+`application-bot.yml` 都会进入版本管理，填写真实 Token 或密钥后，提交代码前应确认
+不会将其推送到远程仓库。
+
+连接状态、最后错误和能力集合属于实时状态，由 `BotChannelRegistry` 保存在内存中，
+不会回写 YAML。管理端后续可以读取该注册表，再将功能分配关系独立持久化。
+
+OneBot 与 QQ 官方事件的原始字段并不相同。OneBot 一般使用 QQ 号、群号并可调用群成员
+列表接口；QQ 官方机器人主要使用 OpenID，能读取的成员信息取决于开放平台事件、权限和
+API 范围。业务功能应检查 `BotChannelCapability`，不能假设所有渠道都能枚举群成员。
 
 ## 7. 插件机制
 
