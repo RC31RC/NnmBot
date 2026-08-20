@@ -7,14 +7,18 @@ nnm:
         enabled: false
         instances:
           - id: personal-qq
-            bot-account-id: ""
+            # 一个正向 WebSocket 可承载多个 QQ；按 OneBot 事件中的 self_id 分流。
+            # 配置明确账号时仅接受这些 QQ；不确定账号时可改为 account-ids: [] 并开启自动发现。
+            account-ids:
+              - "123456789"
+            auto-discover-accounts: false
             enabled: true
             connection:
-              url: ws://127.0.0.1:3001
-              access-token: ""
+              url: ${ONEBOT_WS_URL:ws://123.206.232.72:3001}
+              access-token: ${ONEBOT_ACCESS_TOKEN:QsqrA8oIMJL9tnE-RMaLlZ-2mjjrfZKkyrBfdko65-g}
             runtime:
               reconnect-interval: 5s
-        # 连接第二个账号时，在 instances 下继续添加实例，并使用不同的 id、账号和地址。
+        # 同地址、同 Token 的多个实例会复用一条 WebSocket；不同地址才需要新增连接实例。
       qq-official:
         enabled: false
         instances:
@@ -55,7 +59,7 @@ nnm:
 # Shiro 只提供 OneBot 协议解析；多地址连接由 NnmBot 自己管理。
 shiro:
   ws:
-    access-token: ""
+    access-token: ${ONEBOT_ACCESS_TOKEN:QsqrA8oIMJL9tnE-RMaLlZ-2mjjrfZKkyrBfdko65-g}
     server:
       enable: false
       url: /ws/shiro

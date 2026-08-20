@@ -47,6 +47,15 @@ public class BotChannelRegistry {
         instanceKeys.putIfAbsent(normalizedInstanceId, key);
     }
 
+    public synchronized void registerIfAbsent(String instanceId,
+                                               BotChannelKey key,
+                                               Set<BotChannelCapability> capabilities,
+                                               boolean enabled) {
+        if (!channels.containsKey(key)) {
+            register(instanceId, key, capabilities, enabled);
+        }
+    }
+
     public void connecting(BotChannelKey key) {
         update(key, BotChannelStatus.CONNECTING, null);
     }

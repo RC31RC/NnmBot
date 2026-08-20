@@ -21,8 +21,8 @@ public class OneBotMessageSender implements PlatformMessageSender {
         this.channels = properties.isEnabled()
                 ? properties.getInstances().stream()
                 .filter(OneBotProperties.Instance::isEnabled)
-                .map(instance -> new BotChannelKey(
-                        BotPlatform.ONEBOT, instance.getBotAccountId()))
+                .flatMap(instance -> instance.configuredAccountIds().stream()
+                        .map(accountId -> new BotChannelKey(BotPlatform.ONEBOT, accountId)))
                 .collect(Collectors.toUnmodifiableSet())
                 : Set.of();
     }

@@ -14,7 +14,7 @@ import java.util.Set;
 @Configuration(proxyBeanMethods = false)
 public class BotChannelConfiguration {
 
-    private static final Set<BotChannelCapability> ONEBOT_CAPABILITIES =
+    public static final Set<BotChannelCapability> ONEBOT_CAPABILITIES =
             Set.copyOf(EnumSet.of(
                     BotChannelCapability.TEXT_MESSAGE,
                     BotChannelCapability.IMAGE_MESSAGE,
@@ -42,14 +42,13 @@ public class BotChannelConfiguration {
     @PostConstruct
     void registerChannels() {
         for (OneBotProperties.Instance instance : oneBotProperties.getInstances()) {
-            if (!StringUtils.hasText(instance.getBotAccountId())) {
-                continue;
+            for (String accountId : instance.configuredAccountIds()) {
+                registry.register(
+                        instance.channelInstanceId(accountId),
+                        new BotChannelKey(BotPlatform.ONEBOT, accountId),
+                        ONEBOT_CAPABILITIES,
+                        oneBotProperties.isEnabled() && instance.isEnabled());
             }
-            registry.register(
-                    instance.getId(),
-                    new BotChannelKey(BotPlatform.ONEBOT, instance.getBotAccountId()),
-                    ONEBOT_CAPABILITIES,
-                    oneBotProperties.isEnabled() && instance.isEnabled());
         }
         for (QqOfficialProperties.Instance instance : qqOfficialProperties.getInstances()) {
             if (!StringUtils.hasText(instance.botAccountId())) {

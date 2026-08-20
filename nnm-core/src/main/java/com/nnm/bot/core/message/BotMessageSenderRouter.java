@@ -15,6 +15,7 @@ public class BotMessageSenderRouter implements BotMessageSender, MarkdownMessage
     private final List<PlatformMessageSender> platformSenders;
 
     private Map<BotChannelKey, PlatformMessageSender> senders;
+    private Map<BotPlatform, PlatformMessageSender> platformSenderIndex;
 
     public BotMessageSenderRouter(List<PlatformMessageSender> platformSenders) {
         this.platformSenders = List.copyOf(platformSenders);
@@ -23,7 +24,13 @@ public class BotMessageSenderRouter implements BotMessageSender, MarkdownMessage
     @PostConstruct
     void initialize() {
         Map<BotChannelKey, PlatformMessageSender> registry = new HashMap<>();
+        Map<BotPlatform, PlatformMessageSender> platformRegistry = new HashMap<>();
         for (PlatformMessageSender sender : platformSenders) {
+            PlatformMessageSender previousPlatform = platformRegistry.put(sender.platform(), sender);
+            if (previousPlatform != null) {
+                throw new IllegalStateException(
+                        "Duplicate message sender for platform " + sender.platform());
+            }
             for (BotChannelKey channel : sender.channels()) {
                 if (channel.platform() != sender.platform()) {
                     throw new IllegalStateException(
@@ -37,6 +44,7 @@ public class BotMessageSenderRouter implements BotMessageSender, MarkdownMessage
             }
         }
         this.senders = Map.copyOf(registry);
+        this.platformSenderIndex = Map.copyOf(platformRegistry);
     }
 
     @Override
@@ -64,6 +72,9 @@ public class BotMessageSenderRouter implements BotMessageSender, MarkdownMessage
         BotChannelKey key = new BotChannelKey(
                 context.platform(), context.botAccountId());
         PlatformMessageSender sender = senders.get(key);
+        if (sender == null) {
+            sender = platformSenderIndex.get(context.platform());
+        }
         if (sender == null) {
             throw new IllegalStateException("No message sender registered for " + key);
         }

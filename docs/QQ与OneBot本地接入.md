@@ -33,7 +33,8 @@ QQ 官方机器人
 ## 2. SnowLuma / OneBot v11
 
 NnmBot 复用 Shiro 的 OneBot 事件解析能力，并由项目自己的连接管理器建立正向
-WebSocket。一个渠道实例对应一个机器人账号和一个 WebSocket 地址，例如：
+WebSocket。一个 WebSocket 地址可以由 OneBot 实现端复用给多个 QQ；NnmBot 根据每条
+事件的 `self_id` 将消息、机器人实例和回复路由到正确账号，例如：
 
 ```text
 ws://127.0.0.1:3001
@@ -53,7 +54,10 @@ nnm:
         enabled: true
         instances:
           - id: personal-qq
-            bot-account-id: "123456789"
+            account-ids:
+              - "123456789"
+              - "987654321"
+            auto-discover-accounts: false
             enabled: true
             connection:
               url: ws://127.0.0.1:3001
@@ -79,9 +83,21 @@ OneBot connected, botId=<QQ号>
 `Connection refused` 表示目标端口没有监听或被防火墙拒绝。
 `runtime.reconnect-interval` 控制每个实例的重连间隔。
 
-可以在 `instances` 中添加多个地址来连接多个 OneBot 账号。当前 Shiro 客户端的
-会话模型按“一个连接对应一个账号”工作，不支持在一个正向 WebSocket 会话中可靠地
-复用多个账号；如果协议实现端提供了多个账号，请为每个账号暴露独立地址。
+`account-ids` 是该实例允许使用的 QQ 白名单。多个账号共享同一地址和 Token 时，写在
+同一个实例的 `account-ids` 中即可，NnmBot 只会建立一条 WebSocket；收到不同 `self_id`
+后会分别建立渠道状态和 Shiro Bot 实例。不同地址或不同 Token 才需要新增 `instances`
+配置。
+
+账号暂时未知时可使用自动发现：
+
+```yaml
+account-ids: []
+auto-discover-accounts: true
+```
+
+这会接受该 WebSocket 服务端推送的所有数字 `self_id`。公网或多人共用的 OneBot 服务
+不建议使用自动发现，应始终配置明确的 `account-ids` 白名单；否则服务端新增账号后会被
+NnmBot 自动接入。
 
 NnmBot 使用的是标准 OneBot v11 边界，SnowLuma 不要求修改项目内的
 `OneBotMessageContextFactory` 或插件接口。以后切换其他兼容实现端时，业务插件同样无需改动。
@@ -156,7 +172,9 @@ nnm:
         enabled: true
         instances:
           - id: personal-qq
-            bot-account-id: "123456789"
+            account-ids:
+              - "123456789"
+            auto-discover-accounts: false
             connection:
               url: ws://127.0.0.1:3001
               access-token: "SnowLuma 中的原始 Token"

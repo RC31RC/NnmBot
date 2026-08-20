@@ -1,6 +1,9 @@
 package com.nnm.bot.core.onebot;
 
 import com.mikuac.shiro.common.utils.PayloadSender;
+import com.mikuac.shiro.common.utils.JsonObjectWrapper;
+import com.mikuac.shiro.common.utils.JsonUtils;
+import com.mikuac.shiro.constant.Connection;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.core.BotContainer;
 import com.mikuac.shiro.core.BotFactory;
@@ -13,8 +16,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -29,6 +37,7 @@ public class MultiOneBotWebSocketClientHandler extends com.mikuac.shiro.adapter.
     private final BotContainer botContainer;
     private final CoreEvent coreEvent;
     private final ThreadPoolTaskExecutor shiroTaskExecutor;
+    private final ConcurrentMap<String, Set<Long>> sessionAccounts = new ConcurrentHashMap<>();
 
     public MultiOneBotWebSocketClientHandler(
             EventHandler eventHandler,
@@ -46,22 +55,69 @@ public class MultiOneBotWebSocketClientHandler extends com.mikuac.shiro.adapter.
         this.shiroTaskExecutor = shiroTaskExecutor;
     }
 
+    public void trackAccount(WebSocketSession session, long accountId) {
+        sessionAccounts.computeIfAbsent(session.getId(), ignored -> ConcurrentHashMap.newKeySet())
+                .add(accountId);
+    }
+
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+        String accountId = messageAccountId(message);
+        if (accountId != null) {
+            session.getAttributes().put(Connection.X_SELF_ID, accountId);
+            long numericAccountId = parseAccountId(accountId);
+            if (numericAccountId != 0L) {
+                trackAccount(session, numericAccountId);
+                if (!botContainer.robots.containsKey(numericAccountId)) {
+                    afterConnectionEstablished(session);
+                }
+            }
+        }
+        super.handleTextMessage(session, message);
+    }
+
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         PayloadSender.cleanupSessionLock(session.getId());
-        long accountId = accountId(session);
-        AtomicReference<Bot> removed = new AtomicReference<>();
-        if (accountId != 0L) {
-            botContainer.robots.computeIfPresent(accountId, (key, bot) -> {
-                if (bot.getSession().getId().equals(session.getId())) {
-                    removed.set(bot);
-                    return null;
-                }
-                return bot;
-            });
+        Set<Long> accounts = sessionAccounts.remove(session.getId());
+        if (accounts == null || accounts.isEmpty()) {
+            long accountId = accountId(session);
+            accounts = accountId == 0L ? Set.of() : Set.of(accountId);
         }
-        if (removed.get() != null) {
-            shiroTaskExecutor.execute(() -> coreEvent.offline(accountId));
+        for (long accountId : accounts) {
+            removeSessionBot(session, accountId);
+        }
+    }
+
+    private void removeSessionBot(WebSocketSession session, long accountId) {
+        AtomicReference<Bot> removed = new AtomicReference<>();
+        botContainer.robots.computeIfPresent(accountId, (key, bot) -> {
+            if (bot.getSession() != null && session.getId().equals(bot.getSession().getId())) {
+                removed.set(bot);
+                return null;
+            }
+            return bot;
+        });
+        if (removed.get() == null) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> coreEvent.offline(accountId), shiroTaskExecutor);
+    }
+
+    private static String messageAccountId(TextMessage message) {
+        if (!JsonUtils.isValid(message.getPayload())) {
+            return null;
+        }
+        Object value = JsonObjectWrapper.parseObject(message.getPayload()).get(Connection.SELF_ID);
+        return value == null ? null : value.toString();
+    }
+
+    private static long parseAccountId(String accountId) {
+        try {
+            long value = Long.parseLong(accountId);
+            return value > 0L ? value : 0L;
+        } catch (NumberFormatException ignored) {
+            return 0L;
         }
     }
 
