@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.core.channel.BotChannelKey;
 import com.nnm.bot.core.channel.BotChannelRegistry;
+import com.nnm.bot.core.channel.BotChannelInstanceConfiguration;
 import com.nnm.bot.core.message.BotPlatform;
 import com.nnm.bot.core.plugin.PluginDispatcher;
 import com.nnm.bot.core.qqofficial.api.QqOfficialApiClient;
@@ -51,7 +52,8 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             ObjectProvider<PluginDispatcher> pluginDispatcherProvider,
             @Qualifier("applicationTaskExecutor") ThreadPoolTaskExecutor taskExecutor,
             @Qualifier("scheduledExecutor") ThreadPoolTaskScheduler scheduler,
-            BotChannelRegistry channelRegistry) {
+            BotChannelRegistry channelRegistry,
+            BotChannelInstanceConfiguration instanceConfiguration) {
         this.properties = properties;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;

@@ -5,9 +5,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /** OneBot 渠道及其连接实例配置。 */
 @ConfigurationProperties(prefix = "nnm.bot.channels.onebot")
@@ -15,6 +13,7 @@ public class OneBotProperties {
 
     private boolean enabled;
     private List<Instance> instances = new ArrayList<>();
+    private Duration probeTimeout = Duration.ofSeconds(8);
 
     public boolean isEnabled() {
         return enabled;
@@ -32,7 +31,19 @@ public class OneBotProperties {
         this.instances = instances == null ? new ArrayList<>() : new ArrayList<>(instances);
     }
 
+    public Duration getProbeTimeout() {
+        return probeTimeout;
+    }
+
+    public void setProbeTimeout(Duration probeTimeout) {
+        this.probeTimeout = probeTimeout;
+    }
+
     public void validate() {
+        if (probeTimeout == null || probeTimeout.isZero() || probeTimeout.isNegative()) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.probe-timeout must be positive");
+        }
         if (!enabled) {
             return;
         }
@@ -44,13 +55,8 @@ public class OneBotProperties {
     public static class Instance {
 
         private String id = "";
-        /**
-         * 兼容旧版单账号配置。新配置请使用 account-ids。
-         */
-        @Deprecated
+        /** 一个正向 WebSocket 实例绑定的 QQ 账号。 */
         private String botAccountId = "";
-        private List<String> accountIds = new ArrayList<>();
-        private boolean autoDiscoverAccounts;
         private boolean enabled = true;
         private Connection connection = new Connection();
         private Runtime runtime = new Runtime();
@@ -69,22 +75,6 @@ public class OneBotProperties {
 
         public void setBotAccountId(String botAccountId) {
             this.botAccountId = botAccountId;
-        }
-
-        public List<String> getAccountIds() {
-            return accountIds;
-        }
-
-        public void setAccountIds(List<String> accountIds) {
-            this.accountIds = accountIds == null ? new ArrayList<>() : new ArrayList<>(accountIds);
-        }
-
-        public boolean isAutoDiscoverAccounts() {
-            return autoDiscoverAccounts;
-        }
-
-        public void setAutoDiscoverAccounts(boolean autoDiscoverAccounts) {
-            this.autoDiscoverAccounts = autoDiscoverAccounts;
         }
 
         public boolean isEnabled() {
@@ -116,22 +106,16 @@ public class OneBotProperties {
                 return;
             }
             requireText(id, "nnm.bot.channels.onebot.instances[].id");
-            List<String> configuredAccounts = configuredAccountIds();
-            if (configuredAccounts.isEmpty() && !autoDiscoverAccounts) {
-                throw new IllegalArgumentException(
-                        "nnm.bot.channels.onebot.instances[].account-ids must not be empty unless "
-                                + "auto-discover-accounts is enabled");
-            }
-            for (String accountId : configuredAccounts) {
-                try {
-                    if (Long.parseLong(accountId) <= 0L) {
-                        throw new NumberFormatException("account id must be positive");
-                    }
-                } catch (NumberFormatException exception) {
-                    throw new IllegalArgumentException(
-                            "nnm.bot.channels.onebot.instances[].account-ids must contain numeric QQ ids",
-                            exception);
+            requireText(botAccountId,
+                    "nnm.bot.channels.onebot.instances[].bot-account-id");
+            try {
+                if (Long.parseLong(botAccountId.trim()) <= 0L) {
+                    throw new NumberFormatException("account id must be positive");
                 }
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException(
+                        "nnm.bot.channels.onebot.instances[].bot-account-id must be numeric QQ ids",
+                        exception);
             }
             requireText(connection.url, "nnm.bot.channels.onebot.instances[].connection.url");
             if (runtime.reconnectInterval == null || runtime.reconnectInterval.isNegative()
@@ -141,35 +125,22 @@ public class OneBotProperties {
             }
         }
 
-        /**
-         * 返回去重后的配置账号，并把旧版 bot-account-id 纳入兼容范围。
-         */
+        /** 返回实例绑定的单个账号。 */
         public List<String> configuredAccountIds() {
-            Set<String> result = new LinkedHashSet<>();
-            if (accountIds != null) {
-                accountIds.stream()
-                        .filter(StringUtils::hasText)
-                        .map(String::trim)
-                        .forEach(result::add);
-            }
-            if (StringUtils.hasText(botAccountId)) {
-                result.add(botAccountId.trim());
-            }
-            return List.copyOf(result);
+            return StringUtils.hasText(botAccountId)
+                    ? List.of(botAccountId.trim())
+                    : List.of();
         }
 
         public boolean allowsAccount(String accountId) {
             if (!StringUtils.hasText(accountId)) {
                 return false;
             }
-            return autoDiscoverAccounts || configuredAccountIds().contains(accountId.trim());
+            return configuredAccountIds().contains(accountId.trim());
         }
 
         public String channelInstanceId(String accountId) {
-            List<String> accounts = configuredAccountIds();
-            return accounts.size() == 1 && accounts.contains(accountId)
-                    ? id
-                    : id + "-" + accountId;
+            return id;
         }
     }
 

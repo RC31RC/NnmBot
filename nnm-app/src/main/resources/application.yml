@@ -11,9 +11,9 @@ spring:
     timeout-per-shutdown-phase: 30s
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${DB_HOST:123.206.232.72}:${DB_PORT:5432}/${DB_NAME:nnmbot}?currentSchema=${DB_SCHEMA:nnmbot},public
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:12345678}
+    url: jdbc:postgresql://123.206.232.72:5432/nnmbot?currentSchema=nnmbot,public
+    username: postgres
+    password: 12345678
     hikari:
       maximum-pool-size: 5
       minimum-idle: 2
@@ -26,7 +26,7 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        default_schema: ${DB_SCHEMA:nnmbot}
+        default_schema: nnmbot
         query.fail_on_pagination_over_collection_fetch: true
     show-sql: false
   flyway:

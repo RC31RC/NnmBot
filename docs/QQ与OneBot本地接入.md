@@ -33,8 +33,8 @@ QQ 官方机器人
 ## 2. SnowLuma / OneBot v11
 
 NnmBot 复用 Shiro 的 OneBot 事件解析能力，并由项目自己的连接管理器建立正向
-WebSocket。一个 WebSocket 地址可以由 OneBot 实现端复用给多个 QQ；NnmBot 根据每条
-事件的 `self_id` 将消息、机器人实例和回复路由到正确账号，例如：
+WebSocket。项目按“一条渠道实例记录对应一个 QQ 账号和一个 WebSocket 地址”管理连接，
+并使用事件的 `self_id` 校验实际账号，例如：
 
 ```text
 ws://127.0.0.1:3001
@@ -44,25 +44,10 @@ ws://127.0.0.1:3001
 `127.0.0.1:3001`；SnowLuma 与 NnmBot 不在同一台机器时，监听
 `0.0.0.0:3001`，并通过防火墙限制来源地址。
 
-连接实例和敏感令牌统一在 `application-bot.yml` 配置：
-
-```yaml
-nnm:
-  bot:
-    channels:
-      onebot:
-        enabled: true
-        instances:
-          - id: personal-qq
-            account-ids:
-              - "123456789"
-              - "987654321"
-            auto-discover-accounts: false
-            enabled: true
-            connection:
-              url: ws://127.0.0.1:3001
-              access-token: "SnowLuma 中的原始 Token"
-```
+连接实例统一在管理端的“机器人管理”页面创建。先填写 WebSocket 地址和 Token，点击
+“获取账号”；后端会建立一次短连接并调用 OneBot v11 标准动作 `get_login_info`，成功后把
+响应中的 `data.user_id` 回填为机器人 QQ 号。保存后配置进入数据库，重启 NnmBot 后由正式
+连接管理器加载。
 
 `access-token` 填 SnowLuma 中配置的原始 Token，不要手动添加
 `Bearer ` 前缀，NnmBot 会自动生成 `Authorization: Bearer <token>`。
@@ -83,43 +68,22 @@ OneBot connected, botId=<QQ号>
 `Connection refused` 表示目标端口没有监听或被防火墙拒绝。
 `runtime.reconnect-interval` 控制每个实例的重连间隔。
 
-`account-ids` 是该实例允许使用的 QQ 白名单。多个账号共享同一地址和 Token 时，写在
-同一个实例的 `account-ids` 中即可，NnmBot 只会建立一条 WebSocket；收到不同 `self_id`
-后会分别建立渠道状态和 Shiro Bot 实例。不同地址或不同 Token 才需要新增 `instances`
-配置。
+保存的机器人 QQ 号必须与后续 OneBot 事件中的 `self_id` 一致，否则项目会拒绝该连接，
+防止消息被路由到错误账号。接入第二个 QQ 时在管理端新增实例；即使两个协议端恰好使用
+相同地址，NnmBot 也会按两个独立实例建立连接。
 
-账号暂时未知时可使用自动发现：
-
-```yaml
-account-ids: []
-auto-discover-accounts: true
-```
-
-这会接受该 WebSocket 服务端推送的所有数字 `self_id`。公网或多人共用的 OneBot 服务
-不建议使用自动发现，应始终配置明确的 `account-ids` 白名单；否则服务端新增账号后会被
-NnmBot 自动接入。
+正向 WS 不需要等待业务消息才能识别账号，`get_login_info` 就是标准查询方式。反向 WS
+通常也能从握手头 `X-Self-ID` 或首个事件的 `self_id` 识别账号，但反向模式还需要服务端
+鉴权、连接归属和多节点粘性，不应只为账号发现而引入。
 
 NnmBot 使用的是标准 OneBot v11 边界，SnowLuma 不要求修改项目内的
 `OneBotMessageContextFactory` 或插件接口。以后切换其他兼容实现端时，业务插件同样无需改动。
 
 ## 3. QQ 官方机器人
 
-QQ 官方适配器默认关闭。先在 QQ 开放平台取得机器人 `AppID` 和
-`ClientSecret`，在 `application-bot.yml` 中填写实例并启用渠道，再启动应用：
-
-```yaml
-nnm:
-  bot:
-    channels:
-      qq-official:
-        enabled: true
-        instances:
-          - id: official-bot
-            enabled: true
-            connection:
-              app-id: "your-app-id"
-              client-secret: "your-client-secret"
-```
+QQ 官方适配器默认关闭。先在 QQ 开放平台取得机器人 `AppID` 和 `ClientSecret`，再在
+“机器人管理”页面选择“QQ 官方机器人”创建实例。保存后重启 NnmBot，启用的实例会自动
+获取 Token 并连接 Gateway。
 
 启用后 NnmBot 会：
 
@@ -164,47 +128,27 @@ AstrBot 原有连接可以继续保留，但两个业务程序可能同时收到
 
 ## 6. 配置与资源边界
 
-```yaml
-nnm:
-  bot:
-    channels:
-      onebot:
-        enabled: true
-        instances:
-          - id: personal-qq
-            account-ids:
-              - "123456789"
-            auto-discover-accounts: false
-            connection:
-              url: ws://127.0.0.1:3001
-              access-token: "SnowLuma 中的原始 Token"
-            runtime:
-              reconnect-interval: 5s
-      qq-official:
-        enabled: true
-        instances:
-          - id: official-bot
-            connection:
-              app-id: "your-app-id"
-              client-secret: "your-client-secret"
-            runtime:
-              intents: 100663296
-              gateway-connect-timeout: 10s
-              reconnect-delay: 5s
-```
-
-- 渠道或实例的 `enabled=false` 时不建立连接；
+- 实例的 `enabled=false` 时不建立连接；
 - `enabled=true` 时启动阶段校验该协议要求的地址和凭据；
-- Token 只保存在 JVM 内存中，不写入数据库、缓存或日志；
+- OneBot Token 与 QQ Client Secret 使用 AES-GCM 加密后落库，列表和详情接口只返回
+  “已配置”标记，不返回明文；
+- 本地可使用开发密钥，正式部署必须通过 `NNM_BOT_CREDENTIAL_KEY` 提供独立密钥；
 - Gateway 回调、消息分发、心跳和重连复用项目已有有界执行器；
 - 当前不引入 WebClient、额外 SDK 线程池或第二套插件体系。
 
-当前开发阶段不从环境变量或额外配置文件读取这些值。`application.yml` 和
-`application-bot.yml` 都会进入版本管理，填写真实 Token 或密钥后，提交代码前应确认
-不会将其推送到远程仓库。
+连接信息按职责拆成三张表：
+
+- `nnmbot.bot_channel_instance`：公共身份、协议、显示名、账号和启用状态；
+- `nnmbot.bot_onebot_config`：正向 WS 地址、Token 和重连间隔；
+- `nnmbot.bot_qq_official_config`：AppID、Client Secret、官方 API/Gateway 与运行参数。
+
+`application-bot.yml` 不再保存任何机器人实例、账号或协议连接参数；凭据加密主密钥仅是
+进程启动必需的基础设施密钥，不属于机器人实例配置。没有数据库实例时所有机器人渠道保持关闭。当前实例配置在应用
+启动时加载，因此新增、修改、启停或删除后需要重启后端才影响正式连接。
 
 连接状态、最后错误和能力集合属于实时状态，由 `BotChannelRegistry` 保存在内存中，
-不会回写 YAML。管理端后续可以读取该注册表，再将功能分配关系独立持久化。
+不会回写配置表。管理端列表会合并数据库配置和注册表快照；尚未被当前进程加载的配置显示为
+“待重启”。
 
 OneBot 与 QQ 官方事件的原始字段并不相同。OneBot 一般使用 QQ 号、群号并可调用群成员
 列表接口；QQ 官方机器人主要使用 OpenID，能读取的成员信息取决于开放平台事件、权限和

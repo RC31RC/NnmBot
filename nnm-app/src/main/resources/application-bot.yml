@@ -1,39 +1,10 @@
-# 所有机器人渠道都按“协议 -> 渠道实例”组织。
-# connection 保存连接凭据；runtime 保存重连等运行策略；实时连接状态由内存注册表维护。
+# 机器人实例、协议连接参数和运行策略全部从数据库加载；实时连接状态由内存注册表维护。
+# 数据库凭据密文的主密钥属于部署密钥，必须与业务数据分离保存。
 nnm:
   bot:
-    channels:
-      onebot:
-        enabled: false
-        instances:
-          - id: personal-qq
-            # 一个正向 WebSocket 可承载多个 QQ；按 OneBot 事件中的 self_id 分流。
-            # 配置明确账号时仅接受这些 QQ；不确定账号时可改为 account-ids: [] 并开启自动发现。
-            account-ids:
-              - "123456789"
-            auto-discover-accounts: false
-            enabled: true
-            connection:
-              url: ${ONEBOT_WS_URL:ws://123.206.232.72:3001}
-              access-token: ${ONEBOT_ACCESS_TOKEN:QsqrA8oIMJL9tnE-RMaLlZ-2mjjrfZKkyrBfdko65-g}
-            runtime:
-              reconnect-interval: 5s
-        # 同地址、同 Token 的多个实例会复用一条 WebSocket；不同地址才需要新增连接实例。
-      qq-official:
-        enabled: false
-        instances:
-          - id: official-bot
-            enabled: true
-            connection:
-              app-id: ""
-              client-secret: ""
-              token-url: https://bots.qq.com/app/getAppAccessToken
-              api-base-url: https://api.sgroup.qq.com
-              gateway-url: ""
-            runtime:
-              intents: 100663296
-              gateway-connect-timeout: 10s
-              reconnect-delay: 5s
+    credentials:
+      # 仅供本地开发；正式部署必须通过环境变量覆盖。
+      encryption-key: ${NNM_BOT_CREDENTIAL_KEY:local-dev-key-change-before-production}
   warframe:
     polling:
       enabled: true
@@ -56,13 +27,11 @@ nnm:
         capacity: 8
         expire-after-write: 2m
 
-# Shiro 只提供 OneBot 协议解析；多地址连接由 NnmBot 自己管理。
+# Shiro 只提供 OneBot 协议解析；内置 WS 客户端和服务端均不参与连接管理。
 shiro:
   ws:
-    access-token: ${ONEBOT_ACCESS_TOKEN:QsqrA8oIMJL9tnE-RMaLlZ-2mjjrfZKkyrBfdko65-g}
     server:
       enable: false
-      url: /ws/shiro
     client:
       enable: false
 

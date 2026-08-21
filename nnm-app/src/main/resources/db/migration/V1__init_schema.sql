@@ -5,6 +5,53 @@
 
 CREATE SCHEMA IF NOT EXISTS nnmbot;
 
+CREATE TABLE IF NOT EXISTS nnmbot.bot_channel_instance (
+    id             BIGSERIAL PRIMARY KEY,
+    platform       VARCHAR(32) NOT NULL,
+    instance_id    VARCHAR(100) NOT NULL,
+    display_name   VARCHAR(100) NOT NULL,
+    bot_account_id VARCHAR(100) NOT NULL,
+    enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_bot_channel_instance_id UNIQUE (instance_id),
+    CONSTRAINT uq_bot_channel_instance_account UNIQUE (platform, bot_account_id),
+    CONSTRAINT ck_bot_channel_instance_platform
+        CHECK (platform = 'ONEBOT' OR platform = 'QQ_OFFICIAL')
+);
+
+CREATE TABLE IF NOT EXISTS nnmbot.bot_onebot_config (
+    instance_id               BIGINT PRIMARY KEY,
+    connection_url            VARCHAR(500) NOT NULL,
+    access_token              VARCHAR(2000),
+    reconnect_interval_seconds BIGINT NOT NULL DEFAULT 5,
+    CONSTRAINT fk_bot_onebot_config_instance
+        FOREIGN KEY (instance_id) REFERENCES nnmbot.bot_channel_instance (id) ON DELETE CASCADE,
+    CONSTRAINT ck_bot_onebot_reconnect_interval
+        CHECK (reconnect_interval_seconds > 0)
+);
+
+CREATE TABLE IF NOT EXISTS nnmbot.bot_qq_official_config (
+    instance_id                     BIGINT PRIMARY KEY,
+    app_id                          VARCHAR(200) NOT NULL,
+    client_secret                   VARCHAR(2000) NOT NULL,
+    token_url                       VARCHAR(500) NOT NULL,
+    api_base_url                    VARCHAR(500) NOT NULL,
+    gateway_url                     VARCHAR(500),
+    intents                         BIGINT NOT NULL DEFAULT 100663296,
+    gateway_connect_timeout_seconds BIGINT NOT NULL DEFAULT 10,
+    reconnect_delay_seconds         BIGINT NOT NULL DEFAULT 5,
+    CONSTRAINT uq_bot_qq_official_app_id UNIQUE (app_id),
+    CONSTRAINT fk_bot_qq_official_config_instance
+        FOREIGN KEY (instance_id) REFERENCES nnmbot.bot_channel_instance (id) ON DELETE CASCADE,
+    CONSTRAINT ck_bot_qq_official_gateway_timeout
+        CHECK (gateway_connect_timeout_seconds > 0),
+    CONSTRAINT ck_bot_qq_official_reconnect_delay
+        CHECK (reconnect_delay_seconds >= 0),
+    CONSTRAINT ck_bot_qq_official_intents
+        CHECK (intents >= 0)
+);
+
 CREATE TABLE IF NOT EXISTS nnmbot.sys_user (
     id          BIGSERIAL PRIMARY KEY,
     username    VARCHAR(50) NOT NULL UNIQUE,

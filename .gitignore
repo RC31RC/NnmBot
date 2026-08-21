@@ -25,3 +25,11 @@ src/main/resources/application-local.yaml
 # Environment
 .env
 *.env.local
+
+# Local agent and coding-tool metadata
+/.agents/
+/.claude/
+/claude/
+
+# Render module local tests are kept out of repository commits
+/nnm-render/src/test/

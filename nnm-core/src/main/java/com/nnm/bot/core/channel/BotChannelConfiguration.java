@@ -30,13 +30,16 @@ public class BotChannelConfiguration {
     private final BotChannelRegistry registry;
     private final OneBotProperties oneBotProperties;
     private final QqOfficialProperties qqOfficialProperties;
+    private final BotChannelInstanceConfiguration instanceConfiguration;
 
     public BotChannelConfiguration(BotChannelRegistry registry,
                                    OneBotProperties oneBotProperties,
-                                   QqOfficialProperties qqOfficialProperties) {
+                                   QqOfficialProperties qqOfficialProperties,
+                                   BotChannelInstanceConfiguration instanceConfiguration) {
         this.registry = registry;
         this.oneBotProperties = oneBotProperties;
         this.qqOfficialProperties = qqOfficialProperties;
+        this.instanceConfiguration = instanceConfiguration;
     }
 
     @PostConstruct

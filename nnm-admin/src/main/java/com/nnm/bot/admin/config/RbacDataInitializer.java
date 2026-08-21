@@ -139,6 +139,9 @@ public class RbacDataInitializer implements ApplicationRunner {
         menus.add(menu(nestedMenu32.getId(), "NestedMenu3-2-1", "menu3-2-1",
                 "/system/nested/menu3/menu3-2", "menus.system.menu321", null, 27321, true));
 
+        menus.add(menu(null, "BotManagement", "/bot-management", "/bot/instance",
+                "menus.bot.title", "ri:robot-2-line", 28, true));
+
         SysMenu template = menu(null, "Template", "/template", "/index/index",
                 "menus.template.title", "ri:apps-2-line", 30, false);
         menus.add(template);
@@ -283,6 +286,7 @@ public class RbacDataInitializer implements ApplicationRunner {
         SysMenu menuMenu = findMenu(menus, "Menus");
         SysMenu auditMenu = findMenu(menus, "OperationLog");
         SysMenu sessionMenu = findMenu(menus, "OnlineSession");
+        SysMenu botManagementMenu = findMenu(menus, "BotManagement");
         SysMenu buttonAuthMenu = findMenu(menus, "PermissionButtonAuth");
 
         return List.of(
@@ -302,6 +306,11 @@ public class RbacDataInitializer implements ApplicationRunner {
                 permission("system:audit:view", "查看操作日志", auditMenu),
                 permission("system:session:view", "查看在线会话", sessionMenu),
                 permission("system:session:kickout", "强制下线", sessionMenu),
+                permission("bot:instance:view", "查看机器人实例", botManagementMenu),
+                permission("bot:instance:create", "创建机器人实例", botManagementMenu),
+                permission("bot:instance:update", "修改机器人实例", botManagementMenu),
+                permission("bot:instance:delete", "删除机器人实例", botManagementMenu),
+                permission("bot:instance:probe", "获取 OneBot 登录账号", botManagementMenu),
                 permission("add", "新增", buttonAuthMenu),
                 permission("edit", "编辑", buttonAuthMenu),
                 permission("delete", "删除", buttonAuthMenu),

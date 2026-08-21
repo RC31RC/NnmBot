@@ -4,6 +4,7 @@ import com.nnm.bot.core.onebot.config.OneBotProperties;
 import com.nnm.bot.core.channel.BotChannelKey;
 import com.nnm.bot.core.channel.BotChannelCapability;
 import com.nnm.bot.core.channel.BotChannelConfiguration;
+import com.nnm.bot.core.channel.BotChannelInstanceConfiguration;
 import com.nnm.bot.core.channel.BotChannelRegistry;
 import com.nnm.bot.core.message.BotPlatform;
 import com.mikuac.shiro.common.utils.JsonObjectWrapper;
@@ -26,10 +27,8 @@ import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,7 +55,8 @@ public class OneBotWebSocketClient implements SmartLifecycle {
             MultiOneBotWebSocketClientHandler handler,
             @Qualifier("scheduledExecutor") ThreadPoolTaskScheduler scheduler,
             @Qualifier("applicationTaskExecutor") ThreadPoolTaskExecutor taskExecutor,
-            BotChannelRegistry channelRegistry) {
+            BotChannelRegistry channelRegistry,
+            BotChannelInstanceConfiguration instanceConfiguration) {
         this.properties = properties;
         this.handler = handler;
         this.scheduler = scheduler;
@@ -69,20 +69,13 @@ public class OneBotWebSocketClient implements SmartLifecycle {
         if (!properties.isEnabled()) {
             return;
         }
-        Map<ConnectionKey, List<OneBotProperties.Instance>> grouped = new LinkedHashMap<>();
         for (OneBotProperties.Instance instance : properties.getInstances()) {
             if (!instance.isEnabled()) {
                 continue;
             }
-            ConnectionKey key = new ConnectionKey(
-                    instance.getConnection().getUrl(),
-                    instance.getConnection().getAccessToken());
-            grouped.computeIfAbsent(key, ignored -> new ArrayList<>()).add(instance);
+            // OneBot 协议实例按“一个账号、一条连接”管理；即使地址相同也不合并连接。
+            connections.add(new ManagedConnection(List.of(instance)));
         }
-        grouped.values().forEach(instances -> connections.add(new ManagedConnection(instances)));
-    }
-
-    private record ConnectionKey(String url, String accessToken) {
     }
 
     @Override

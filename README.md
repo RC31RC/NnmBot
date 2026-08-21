@@ -25,9 +25,11 @@ Warframe QQ Bot - Modular Architecture
 
 ```bash
 # Configure PostgreSQL in nnm-app/src/main/resources/application.yml
-# Configure robot channels in nnm-app/src/main/resources/application-bot.yml
 ./scripts/run-dev.sh
 ```
+
+Robot instances and protocol connection settings are created in the admin UI and stored in
+PostgreSQL. YAML files are not a robot-instance configuration source.
 
 Database schema changes are managed by Flyway. Hibernate validates entity mappings
 at startup and does not update production or development schemas automatically.

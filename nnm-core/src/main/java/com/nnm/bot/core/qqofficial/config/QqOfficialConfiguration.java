@@ -1,5 +1,6 @@
 package com.nnm.bot.core.qqofficial.config;
 
+import com.nnm.bot.core.channel.BotChannelInstanceConfiguration;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -10,7 +11,8 @@ public class QqOfficialConfiguration {
 
     private final QqOfficialProperties properties;
 
-    public QqOfficialConfiguration(QqOfficialProperties properties) {
+    public QqOfficialConfiguration(QqOfficialProperties properties,
+                                   BotChannelInstanceConfiguration instanceConfiguration) {
         this.properties = properties;
     }
 
