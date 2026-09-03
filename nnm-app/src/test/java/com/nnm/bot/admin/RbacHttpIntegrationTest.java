@@ -7,12 +7,13 @@ import com.nnm.bot.admin.domain.SysRole;
 import com.nnm.bot.admin.domain.SysUser;
 import com.nnm.bot.admin.repository.SysRoleRepository;
 import com.nnm.bot.admin.repository.SysUserRepository;
+import jakarta.annotation.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.jdbc.Sql;
 
 import java.io.IOException;
 import java.net.URI;
@@ -31,16 +32,17 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.datasource.url=jdbc:h2:mem:nnm-rbac-http;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
                 "spring.datasource.username=sa",
                 "spring.datasource.password=",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.jpa.properties.hibernate.default_schema=PUBLIC",
-                "spring.flyway.enabled=false",
-                "nnm.admin.bootstrap.enabled=true",
-                "nnm.admin.bootstrap.username=admin",
-                "nnm.admin.bootstrap.password=admin123",
-                "nnm.warframe.polling.enabled=false",
-                "shiro.ws.server.enable=false",
-                "shiro.ws.client.enable=false"
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.properties.hibernate.default_schema=PUBLIC",
+        "nnm.admin.bootstrap.enabled=false",
+        "nnm.warframe.polling.enabled=false",
+        "shiro.ws.server.enable=false",
+        "shiro.ws.client.enable=false"
         }
+)
+@Sql(
+        scripts = "classpath:db/rbac-http-seed.sql",
+        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
 )
 class RbacHttpIntegrationTest {
 
@@ -50,33 +52,65 @@ class RbacHttpIntegrationTest {
     @LocalServerPort
     private int port;
 
-    @Autowired
+    @Resource
     private SysRoleRepository roleRepository;
 
-    @Autowired
+    @Resource
     private SysUserRepository userRepository;
 
-    @Autowired
+    @Resource
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
-    void createReadOnlyUser() {
-        if (userRepository.findByUsername("readonly").isPresent()) {
-            return;
-        }
-
+    void createTestUsers() {
+        SysRole superRole = roleRepository.findByCode("R_SUPER").orElseThrow();
         SysRole readOnlyRole = roleRepository.findByCode("R_USER").orElseThrow();
-        SysUser user = new SysUser();
-        user.setUsername("readonly");
-        user.setPassword(passwordEncoder.encode("readonly123"));
-        user.setEnabled(true);
-        user.getRoles().add(readOnlyRole);
-        userRepository.save(user);
+        saveUser("admin", "admin123", superRole);
+        saveUser("readonly", "readonly123", readOnlyRole);
+    }
+
+    @Test
+    void enforcesRoleHierarchyForUserStatusAndRoleAssignment() throws Exception {
+        SysRole adminRole = roleRepository.findByCode("R_ADMIN").orElseThrow();
+        SysRole superRole = roleRepository.findByCode("R_SUPER").orElseThrow();
+        SysUser manager = saveUser("hierarchy-manager", "manager123", adminRole);
+        SysUser peer = saveUser("hierarchy-peer", "peer123", adminRole);
+        SysUser superAdmin = saveUser("hierarchy-super", "super123", superRole);
+
+        String managerToken = login("hierarchy-manager", "manager123");
+
+        assertThat(send(
+                "PUT",
+                "/api/admin/v1/users/" + userId("readonly") + "/status",
+                managerToken,
+                "{\"enabled\":false}"
+        ).statusCode()).isEqualTo(200);
+
+        assertThat(send(
+                "PUT",
+                "/api/admin/v1/users/" + peer.getId() + "/status",
+                managerToken,
+                "{\"enabled\":false}"
+        ).statusCode()).isEqualTo(403);
+
+        assertThat(send(
+                "PUT",
+                "/api/admin/v1/users/" + superAdmin.getId() + "/status",
+                managerToken,
+                "{\"enabled\":false}"
+        ).statusCode()).isEqualTo(403);
+
+        assertThat(send(
+                "PUT",
+                "/api/admin/v1/users/" + peer.getId() + "/roles",
+                managerToken,
+                "{\"roleCodes\":[\"R_SUPER\"]}"
+        ).statusCode()).isEqualTo(403);
     }
 
     @Test
     void enforcesSaTokenAuthenticationAndRbacPermissions() throws Exception {
-        HttpResponse<String> unauthenticated = send("GET", "/api/admin/v1/me", null, null);
+        HttpResponse<String> unauthenticated = send("POST", "/api/admin/v1/me", null, "{}");
         assertThat(unauthenticated.statusCode()).isEqualTo(401);
 
         HttpResponse<String> login = send(
@@ -98,23 +132,29 @@ class RbacHttpIntegrationTest {
         assertThat(refresh.statusCode()).isEqualTo(200);
         String adminToken = data(refresh).path("token").asText();
         assertThat(adminToken).isNotBlank().isNotEqualTo(initialAdminToken);
-        assertThat(send("GET", "/api/admin/v1/me", initialAdminToken, null).statusCode()).isEqualTo(401);
+        assertThat(send("POST", "/api/admin/v1/me", initialAdminToken, "{}").statusCode()).isEqualTo(401);
 
-        HttpResponse<String> me = send("GET", "/api/admin/v1/me", adminToken, null);
+        HttpResponse<String> me = send("POST", "/api/admin/v1/me", adminToken, "{}");
         assertThat(me.statusCode()).isEqualTo(200);
         assertThat(data(me).path("roles").toString()).contains("R_SUPER");
         assertThat(data(me).path("buttons").toString()).contains("system:user:view", "system:menu:delete");
 
-        HttpResponse<String> users = send("GET", "/api/admin/v1/users?current=1&size=5", adminToken, null);
+        HttpResponse<String> users = send(
+                "POST",
+                "/api/admin/v1/users/query",
+                adminToken,
+                "{\"current\":1,\"size\":5}"
+        );
         assertThat(users.statusCode()).isEqualTo(200);
 
-        JsonNode menus = data(send("GET", "/api/admin/v1/menus", adminToken, null));
+        JsonNode menus = data(send("POST", "/api/admin/v1/menus/query", adminToken, "{}"));
         List<String> rootMenuNames = StreamSupport.stream(menus.spliterator(), false)
                 .map(menu -> menu.path("name").asText())
                 .toList();
         assertThat(rootMenuNames).containsExactly(
                 "Dashboard",
                 "System",
+                "BotManagement",
                 "Template",
                 "Widgets",
                 "Examples",
@@ -146,13 +186,18 @@ class RbacHttpIntegrationTest {
                 "{\"userName\":\"readonly\",\"password\":\"readonly123\"}"
         );
         String readOnlyToken = data(readOnlyLogin).path("token").asText();
-        HttpResponse<String> forbidden = send("GET", "/api/admin/v1/users?current=1&size=5", readOnlyToken, null);
+        HttpResponse<String> forbidden = send(
+                "POST",
+                "/api/admin/v1/users/query",
+                readOnlyToken,
+                "{\"current\":1,\"size\":5}"
+        );
         assertThat(forbidden.statusCode()).isEqualTo(403);
 
         HttpResponse<String> logout = send("POST", "/api/admin/v1/auth/logout", adminToken, null);
         assertThat(logout.statusCode()).isEqualTo(200);
 
-        HttpResponse<String> afterLogout = send("GET", "/api/admin/v1/me", adminToken, null);
+        HttpResponse<String> afterLogout = send("POST", "/api/admin/v1/me", adminToken, "{}");
         assertThat(afterLogout.statusCode()).isEqualTo(401);
     }
 
@@ -160,7 +205,7 @@ class RbacHttpIntegrationTest {
     void managesUsersRolesAndSelfDataScope() throws Exception {
         String adminToken = login("admin", "admin123");
         long viewUserPermissionId = StreamSupport.stream(
-                        data(send("GET", "/api/admin/v1/permissions", adminToken, null)).spliterator(),
+                        data(send("POST", "/api/admin/v1/permissions/query", adminToken, "{}")).spliterator(),
                         false
                 )
                 .filter(permission -> "system:user:view".equals(permission.path("code").asText()))
@@ -209,10 +254,10 @@ class RbacHttpIntegrationTest {
         assertThat(grantRole.statusCode()).isEqualTo(200);
 
         JsonNode grants = data(send(
-                "GET",
-                "/api/admin/v1/roles/" + roleId + "/grants",
+                "POST",
+                "/api/admin/v1/roles/" + roleId + "/grants/query",
                 adminToken,
-                null
+                "{}"
         ));
         assertThat(grants.path("permissionIds").toString()).contains(String.valueOf(viewUserPermissionId));
 
@@ -252,10 +297,10 @@ class RbacHttpIntegrationTest {
 
         String selfToken = login("self-test", "self-test-123");
         JsonNode selfUsers = data(send(
-                "GET",
-                "/api/admin/v1/users?current=1&size=20",
+                "POST",
+                "/api/admin/v1/users/query",
                 selfToken,
-                null
+                "{\"current\":1,\"size\":20}"
         ));
         assertThat(selfUsers.path("total").asLong()).isEqualTo(1);
         assertThat(selfUsers.path("records").get(0).path("userName").asText()).isEqualTo("self-test");
@@ -267,7 +312,7 @@ class RbacHttpIntegrationTest {
                 "{\"enabled\":false}"
         );
         assertThat(disable.statusCode()).isEqualTo(200);
-        assertThat(send("GET", "/api/admin/v1/me", selfToken, null).statusCode()).isEqualTo(401);
+        assertThat(send("POST", "/api/admin/v1/me", selfToken, "{}").statusCode()).isEqualTo(401);
 
         assertThat(send(
                 "PUT",
@@ -356,7 +401,7 @@ class RbacHttpIntegrationTest {
                         """.formatted(menuId)
         ).statusCode()).isEqualTo(200);
 
-        JsonNode allMenus = data(send("GET", "/api/admin/v1/menus/all", adminToken, null));
+        JsonNode allMenus = data(send("POST", "/api/admin/v1/menus/all/query", adminToken, "{}"));
         JsonNode integrationMenu = StreamSupport.stream(allMenus.spliterator(), false)
                 .filter(menu -> menu.path("id").asLong() == menuId)
                 .findFirst()
@@ -377,10 +422,10 @@ class RbacHttpIntegrationTest {
                 .isEqualTo(200);
 
         JsonNode logs = data(send(
-                "GET",
-                "/api/admin/v1/operation-logs?operatorName=admin&current=1&size=100",
+                "POST",
+                "/api/admin/v1/operation-logs/query",
                 adminToken,
-                null
+                "{\"operatorName\":\"admin\",\"current\":1,\"size\":100}"
         ));
         assertThat(logs.path("records").toString())
                 .contains("MENU_CREATE", "MENU_UPDATE", "PERMISSION_CREATE", "PERMISSION_DELETE", "MENU_DELETE");
@@ -391,7 +436,7 @@ class RbacHttpIntegrationTest {
         String adminToken = login("admin", "admin123");
         String readOnlyToken = login("readonly", "readonly123");
 
-        JsonNode sessions = data(send("GET", "/api/admin/v1/sessions", adminToken, null));
+        JsonNode sessions = data(send("POST", "/api/admin/v1/sessions/query", adminToken, "{}"));
         JsonNode readOnlySession = StreamSupport.stream(sessions.spliterator(), false)
                 .filter(session -> readOnlyToken.equals(session.path("token").asText()))
                 .findFirst()
@@ -404,7 +449,7 @@ class RbacHttpIntegrationTest {
                 adminToken,
                 null
         ).statusCode()).isEqualTo(200);
-        assertThat(send("GET", "/api/admin/v1/me", readOnlyToken, null).statusCode()).isEqualTo(401);
+        assertThat(send("POST", "/api/admin/v1/me", readOnlyToken, "{}").statusCode()).isEqualTo(401);
     }
 
     private String login(String username, String password) throws Exception {
@@ -443,6 +488,20 @@ class RbacHttpIntegrationTest {
 
     private JsonNode data(HttpResponse<String> response) throws IOException {
         return objectMapper.readTree(response.body()).path("data");
+    }
+
+    private SysUser saveUser(String username, String password, SysRole role) {
+        SysUser user = userRepository.findByUsername(username).orElseGet(SysUser::new);
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setEnabled(true);
+        user.getRoles().clear();
+        user.getRoles().add(role);
+        return userRepository.save(user);
+    }
+
+    private long userId(String username) {
+        return userRepository.findByUsername(username).orElseThrow().getId();
     }
 
     private JsonNode findMenu(JsonNode menus, String name) {

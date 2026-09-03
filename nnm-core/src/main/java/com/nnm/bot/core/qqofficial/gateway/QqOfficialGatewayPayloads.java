@@ -1,5 +1,7 @@
 package com.nnm.bot.core.qqofficial.gateway;
 
+import cn.hutool.core.util.ObjectUtil;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -29,7 +31,7 @@ final class QqOfficialGatewayPayloads {
 
     static ObjectNode heartbeat(ObjectMapper objectMapper, Integer sequence) {
         ObjectNode payload = objectMapper.createObjectNode().put("op", 1);
-        if (sequence == null) {
+        if (ObjectUtil.isNull(sequence)) {
             payload.putNull("d");
         } else {
             payload.put("d", sequence);

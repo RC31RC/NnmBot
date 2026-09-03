@@ -12,7 +12,7 @@
 
     <artifactId>nnm-core</artifactId>
     <name>nnm-core</name>
-    <description>Bot core: message dispatching, plugin SPI, permissions</description>
+    <description>Bot core: runtime, system commands, groups and JMComic</description>
 
     <dependencies>
         <dependency>
@@ -24,6 +24,43 @@
         <dependency>
             <groupId>com.mikuac</groupId>
             <artifactId>shiro</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.cache2k</groupId>
+            <artifactId>cache2k-api</artifactId>
+        </dependency>
+
+        <!-- JMComic 下载、WebP 解码与 PDF 生成 -->
+        <dependency>
+            <groupId>io.github.jukomu</groupId>
+            <artifactId>jmcomic-core</artifactId>
+            <exclusions>
+                <!-- 上游版本仅包含 macOS x86_64 原生库，Apple Silicon 无法加载。 -->
+                <exclusion>
+                    <groupId>org.sejda.imageio</groupId>
+                    <artifactId>webp-imageio</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.github.darkxanter</groupId>
+            <artifactId>webp-imageio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
         </dependency>
 
         <!-- Spring Modulith 模块化支持 -->

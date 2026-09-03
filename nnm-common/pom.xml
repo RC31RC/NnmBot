@@ -47,6 +47,34 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+        </dependency>
+
+        <!-- OCR：模型和当前开发/目标服务器的 native runtime -->
+        <dependency>
+            <groupId>net.linlan.tools</groupId>
+            <artifactId>rapidocr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.linlan.tools</groupId>
+            <artifactId>rapidocr-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.linlan.tools</groupId>
+            <artifactId>rapidocr-onnx-models</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.linlan.tools</groupId>
+            <artifactId>rapidocr-onnx-macosx-arm64</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>net.linlan.tools</groupId>
+            <artifactId>rapidocr-onnx-linux-x86_64</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <!-- Lombok 代码生成 -->
         <dependency>

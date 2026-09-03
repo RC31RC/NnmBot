@@ -1,8 +1,13 @@
 package com.nnm.bot.core.qqofficial.api;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nnm.bot.common.http.HttpClient;
-import com.nnm.bot.core.qqofficial.config.QqOfficialProperties;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -15,33 +20,35 @@ public class QqOfficialTokenClient {
     private static final long REFRESH_AHEAD_SECONDS = 300;
 
     private final HttpClient httpClient;
-    private final QqOfficialProperties.Connection connection;
+    private final QqOfficialConnection connection;
     private String accessToken;
     private Instant expiresAt = Instant.MIN;
 
     public QqOfficialTokenClient(HttpClient httpClient,
-                                 QqOfficialProperties.Connection connection) {
+                                 QqOfficialConnection connection) {
         this.httpClient = httpClient;
         this.connection = connection;
     }
 
     public synchronized String getAccessToken() {
-        if (accessToken != null
+        if (ObjectUtil.isNotNull(accessToken)
                 && Instant.now().isBefore(expiresAt.minusSeconds(REFRESH_AHEAD_SECONDS))) {
             return accessToken;
         }
 
         JsonNode json = httpClient.postJson(
-                connection.getTokenUrl(),
+                connection.tokenUrl(),
                 Map.of(
-                        "appId", connection.getAppId(),
-                        "clientSecret", connection.getClientSecret()
+                        "appId", connection.appId(),
+                        "clientSecret", connection.clientSecret()
                 ),
                 Map.of(),
                 JsonNode.class);
         String token = text(json, "access_token");
-        if (token == null) {
-            throw new IllegalStateException("QQ official token response has no access_token");
+        if (ObjectUtil.isNull(token)) {
+            throw new BusinessException(
+                    BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID,
+                    "QQ 官方机器人 Token 响应缺少 access_token");
         }
         long expiresIn = json.path("expires_in").asLong(DEFAULT_EXPIRES_IN_SECONDS);
         accessToken = token;
@@ -55,7 +62,9 @@ public class QqOfficialTokenClient {
     }
 
     static String text(JsonNode node, String field) {
-        JsonNode value = node == null ? null : node.get(field);
-        return value == null || value.isNull() || value.asText().isBlank() ? null : value.asText();
+        JsonNode value = ObjectUtil.isNull(node) ? null : node.get(field);
+        return ObjectUtil.isNull(value) || value.isNull() || StrUtil.isBlank(value.asText())
+                ? null
+                : value.asText();
     }
 }

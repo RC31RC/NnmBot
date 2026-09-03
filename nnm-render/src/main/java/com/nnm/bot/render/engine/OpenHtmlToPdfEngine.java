@@ -1,5 +1,8 @@
 package com.nnm.bot.render.engine;
 
+import cn.hutool.core.util.ObjectUtil;
+
+import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.RenderOptions;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
@@ -26,7 +29,7 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
 
     public OpenHtmlToPdfEngine(String baseUri, List<Path> fontPaths) {
         this.baseUri = baseUri;
-        this.fontPaths = fontPaths == null ? List.of() : List.copyOf(fontPaths);
+        this.fontPaths = CollUtil.isEmpty(fontPaths) ? List.of() : List.copyOf(fontPaths);
     }
 
     @Override
@@ -60,7 +63,7 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
 
     private void registerFonts(PdfRendererBuilder builder) {
         for (Path fontPath : fontPaths) {
-            if (fontPath == null || !Files.isRegularFile(fontPath)) {
+            if (ObjectUtil.isNull(fontPath) || !Files.isRegularFile(fontPath)) {
                 continue;
             }
             try {

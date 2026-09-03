@@ -5,7 +5,57 @@ nnm:
     credentials:
       # 仅供本地开发；正式部署必须通过环境变量覆盖。
       encryption-key: ${NNM_BOT_CREDENTIAL_KEY:local-dev-key-change-before-production}
+    channels:
+      onebot:
+        probe-timeout: 8s
+        # 同一个 OneBot WebSocket 的并发发送统一串行化，超限时关闭异常连接。
+        send-time-limit: 30s
+        send-buffer-size-bytes: 16777216
+        # 远端连接自动通过 NapCat upload_file_stream 分片传输，同机连接直接使用本地路径。
+        file-transfer-mode: ${NNM_ONEBOT_FILE_TRANSFER_MODE:AUTO}
+        file-staging-directory: ${NNM_ONEBOT_FILE_STAGING_DIRECTORY:${user.dir}/data/onebot-files}
+        file-stream-chunk-size-bytes: 524288
+        file-stream-max-bytes: 134217728
+        file-stream-retention: 15m
+  jmcomic:
+    # 涉及较大的外部下载和 PDF 生成，默认关闭；确认上游可用后再通过环境变量启用。
+    enabled: ${NNM_JMCOMIC_ENABLED:true}
+    # 固定在项目运行目录中，避免 OneBot 进程无法访问 macOS 的 /var/folders 临时路径。
+    temporary-directory: ${NNM_JMCOMIC_TEMPORARY_DIRECTORY:${user.dir}/data/jmcomic}
+    request-timeout: 30s
+    image-timeout: 60s
+    retry-times: 2
+    # 优先请求 album_download_2 整本地址；接口不可用时自动回退逐图下载。
+    whole-file-enabled: ${NNM_JMCOMIC_WHOLE_FILE_ENABLED:true}
+    whole-file-timeout: 10m
+    # 整本接口匿名调用可能返回空地址，需要时通过环境变量提供账号。
+    username: ${NNM_JMCOMIC_USERNAME:hhhddc}
+    password: ${NNM_JMCOMIC_PASSWORD:159000}
+    download-threads: 2
+    max-concurrent-tasks: ${NNM_JMCOMIC_MAX_CONCURRENT_TASKS:2}
+    max-pages: 300
+    max-download-bytes: 314572800
+    max-pdf-bytes: 104857600
+    max-image-pixels: 40000000
+    max-image-width: 1600
+    jpeg-quality: 0.72
+    client-cache-bytes: 16777216
   warframe:
+    forum:
+      public-base-url: ${NNM_WARFRAME_FORUM_PUBLIC_BASE_URL:http://localhost:3006}
+      public-detail-path: /#/warframe/forum/detail
+      snowflake-worker-id: ${NNM_WARFRAME_FORUM_SNOWFLAKE_WORKER_ID:1}
+      snowflake-data-center-id: ${NNM_WARFRAME_FORUM_SNOWFLAKE_DATA_CENTER_ID:1}
+    forum-storage:
+      directory: ${NNM_WARFRAME_FORUM_STORAGE_DIRECTORY:/Users/ren/RcGit/NnmBot/data/warframe-forum}
+      temporary-directory: ${NNM_WARFRAME_FORUM_TEMPORARY_DIRECTORY:/Users/ren/RcGit/NnmBot/data/warframe-forum-temp}
+      max-file-bytes: ${NNM_WARFRAME_FORUM_MAX_FILE_BYTES:52428800}
+      public-path: /api/public/v1/warframe/forum/files
+      temporary-public-path: /api/public/v1/warframe/forum/temp-files
+      temporary-retention: 2h
+      cleanup-interval: 2h
+    official-data:
+      cache-directory: ${NNM_WARFRAME_PUBLIC_EXPORT_CACHE_DIRECTORY:${user.dir}/data/warframe/public-export}
     polling:
       enabled: true
       interval: 200m
@@ -13,7 +63,53 @@ nnm:
       world-state-url: https://api.warframe.com/cdn/worldState.php
       market-base-url: https://api.warframe.market/v1
       language: zh
+      english-language: en
       platform: pc
+      # 每个社区 JSON 独立配置，管理端可按数据集分别刷新和上传预览。
+      community-dataset-urls:
+        translation:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/translation.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/translation.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/translation.json
+        alias:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/alias.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/alias.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/alias.json
+        nodes:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/nodes.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/nodes.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/nodes.json
+        reward_pool:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/reward_pool.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/reward_pool.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/reward_pool.json
+        state_translation:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
+        market_element:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_element.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_element.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_element.json
+        market_riven_tion:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
+        market_riven_tion_alias:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
+        riven_analyse_trend:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
+        riven_trend:
+          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
+          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
+          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
+      # 普通 Market 查询通常不需要密钥；如上游要求鉴权，通过环境变量注入。
+      market-api-key: ${NNM_WARFRAME_MARKET_API_KEY:}
+      market-user-agent: ${NNM_WARFRAME_MARKET_USER_AGENT:NnmBot/1.0}
     cache:
       world-state:
         capacity: 1
@@ -26,10 +122,15 @@ nnm:
       data-source-tag:
         capacity: 8
         expire-after-write: 2m
+      world-state-images:
+        capacity: 32
+        expire-after-write: 26h
 
 # Shiro 只提供 OneBot 协议解析；内置 WS 客户端和服务端均不参与连接管理。
 shiro:
   ws:
+    # 文件合并及 QQ 群文件上传可能明显超过 SDK 默认的 10 秒。
+    timeout: 300
     server:
       enable: false
     client:

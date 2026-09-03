@@ -1,7 +1,7 @@
 package com.nnm.bot.core.onebot.config;
 
-import com.nnm.bot.core.channel.BotChannelInstanceConfiguration;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,15 +9,11 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(OneBotProperties.class)
 public class OneBotConfiguration {
 
-    private final OneBotProperties properties;
-
-    public OneBotConfiguration(OneBotProperties properties,
-                               BotChannelInstanceConfiguration instanceConfiguration) {
-        this.properties = properties;
-    }
+    @Resource
+    private OneBotProperties properties;
 
     @PostConstruct
     void validateProperties() {
-        properties.validate();
+        this.properties.validateDefaults();
     }
 }

@@ -4,7 +4,9 @@ import java.util.Map;
 
 public interface ImageService {
 
-    byte[] generate(String templateName, Map<String, Object> data);
+    /** 将数据库 HTML 模板处理后转换为图片。 */
+    byte[] generateHtml(String html, Map<String, Object> data);
 
-    byte[] generate(String templateName, Map<String, Object> data, RenderOptions options);
+    /** 将数据库 HTML 模板处理后按指定参数转换为图片。 */
+    byte[] generateHtml(String html, Map<String, Object> data, RenderOptions options);
 }

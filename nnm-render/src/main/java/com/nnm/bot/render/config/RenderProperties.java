@@ -1,5 +1,9 @@
 package com.nnm.bot.render.config;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
+import com.nnm.bot.render.constant.RenderEngineType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -8,15 +12,15 @@ import java.util.List;
 @ConfigurationProperties(prefix = "render")
 public class RenderProperties {
 
-    private Engine engine = Engine.AUTO;
+    private RenderEngineType engine = RenderEngineType.AUTO;
     private final Playwright playwright = new Playwright();
     private final Fonts fonts = new Fonts();
 
-    public Engine getEngine() {
+    public RenderEngineType getEngine() {
         return engine;
     }
 
-    public void setEngine(Engine engine) {
+    public void setEngine(RenderEngineType engine) {
         this.engine = engine;
     }
 
@@ -29,29 +33,22 @@ public class RenderProperties {
     }
 
     void validate() {
-        if (engine == null) {
+        if (ObjectUtil.isNull(engine)) {
             throw new IllegalArgumentException("render.engine must be configured");
         }
-        if (playwright.chromiumArgs == null) {
+        if (ObjectUtil.isNull(playwright.chromiumArgs)) {
             throw new IllegalArgumentException(
                     "render.playwright.chromium-args must not be null");
         }
         if (playwright.chromiumArgs.stream().anyMatch(argument ->
-                argument == null || argument.isBlank())) {
+                StrUtil.isBlank(argument))) {
             throw new IllegalArgumentException(
                     "render.playwright.chromium-args must not contain blank values");
         }
-        if (fonts.paths == null || fonts.paths.stream().anyMatch(path ->
-                path == null || path.isBlank())) {
+        if (ObjectUtil.isNull(fonts.paths) || fonts.paths.stream().anyMatch(StrUtil::isBlank)) {
             throw new IllegalArgumentException(
                     "render.fonts.paths must not contain blank values");
         }
-    }
-
-    public enum Engine {
-        AUTO,
-        OPENHTMLTOPDF,
-        PLAYWRIGHT
     }
 
     public static class Playwright {

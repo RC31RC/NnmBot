@@ -23,6 +23,10 @@
             <groupId>com.nnm</groupId>
             <artifactId>nnm-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+        </dependency>
 
         <!-- 认证与授权 -->
         <dependency>

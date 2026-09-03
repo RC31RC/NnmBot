@@ -1,20 +1,25 @@
 package com.nnm.bot.admin.controller;
 
+import cn.hutool.core.util.StrUtil;
+
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.dto.auth.UserInfoResponse;
 import com.nnm.bot.admin.dto.system.MenuItem;
 import com.nnm.bot.admin.dto.system.PermissionItem;
+import com.nnm.bot.admin.dto.system.RoleQueryRequest;
 import com.nnm.bot.admin.dto.system.RoleListItem;
+import com.nnm.bot.admin.dto.system.UserQueryRequest;
 import com.nnm.bot.admin.dto.system.UserListItem;
 import com.nnm.bot.admin.service.AuthService;
 import com.nnm.bot.admin.service.RbacQueryService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -28,47 +33,55 @@ public class RbacController {
     @Resource
     private RbacQueryService rbacQueryService;
 
-    @GetMapping("/me")
-    public ApiResponse<UserInfoResponse> me() {
+    @PostMapping("/me")
+    public ApiResponse<UserInfoResponse> me(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(authService.currentUser(StpUtil.getLoginIdAsLong()));
     }
 
-    @GetMapping("/users")
+    @PostMapping("/users/query")
     @SaCheckPermission("system:user:view")
     public ApiResponse<PageResult<UserListItem>> users(
-            @RequestParam(required = false) String userName,
-            @RequestParam(defaultValue = "1") int current,
-            @RequestParam(defaultValue = "20") int size
+            @RequestBody UserQueryRequest request
     ) {
-        return ApiResponse.ok(rbacQueryService.users(StpUtil.getLoginIdAsLong(), userName, current, size));
+        return ApiResponse.ok(rbacQueryService.users(
+                StpUtil.getLoginIdAsLong(),
+                request.userName(),
+                request.current() == null ? 1 : request.current(),
+                request.size() == null ? 20 : request.size()
+        ));
     }
 
-    @GetMapping("/roles")
+    @PostMapping("/roles/query")
     @SaCheckPermission("system:role:view")
     public ApiResponse<PageResult<RoleListItem>> roles(
-            @RequestParam(required = false) String roleName,
-            @RequestParam(required = false) String roleCode,
-            @RequestParam(defaultValue = "1") int current,
-            @RequestParam(defaultValue = "20") int size
+            @RequestBody RoleQueryRequest request
     ) {
-        String keyword = roleName == null || roleName.isBlank() ? roleCode : roleName;
-        return ApiResponse.ok(rbacQueryService.roles(keyword, current, size));
+        String keyword = StrUtil.isBlank(request.roleName()) ? request.roleCode() : request.roleName();
+        return ApiResponse.ok(rbacQueryService.roles(
+                StpUtil.getLoginIdAsLong(),
+                keyword,
+                request.current() == null ? 1 : request.current(),
+                request.size() == null ? 20 : request.size()
+        ));
     }
 
-    @GetMapping("/permissions")
+    @PostMapping("/permissions/query")
     @SaCheckPermission("system:role:assign")
-    public ApiResponse<List<PermissionItem>> permissions() {
+    public ApiResponse<List<PermissionItem>> permissions(
+            @RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(rbacQueryService.permissions());
     }
 
-    @GetMapping("/menus")
-    public ApiResponse<List<MenuItem>> menus() {
+    @PostMapping("/menus/query")
+    public ApiResponse<List<MenuItem>> menus(
+            @RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(rbacQueryService.menus(StpUtil.getLoginIdAsLong()));
     }
 
-    @GetMapping("/menus/all")
+    @PostMapping("/menus/all/query")
     @SaCheckPermission("system:menu:view")
-    public ApiResponse<List<MenuItem>> allMenus() {
+    public ApiResponse<List<MenuItem>> allMenus(
+            @RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(rbacQueryService.allMenus());
     }
 }

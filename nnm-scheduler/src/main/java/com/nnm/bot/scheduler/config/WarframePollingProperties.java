@@ -1,5 +1,7 @@
 package com.nnm.bot.scheduler.config;
 
+import cn.hutool.core.util.ObjectUtil;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
@@ -27,7 +29,7 @@ public class WarframePollingProperties {
     }
 
     public void validate() {
-        if (interval == null || interval.isZero() || interval.isNegative()) {
+        if (ObjectUtil.isNull(interval) || interval.isZero() || interval.isNegative()) {
             throw new IllegalArgumentException("nnm.warframe.polling.interval must be positive");
         }
     }

@@ -1,11 +1,13 @@
 package com.nnm.bot.render.config;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
 import com.sun.management.OperatingSystemMXBean;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.spi.RenderEngineProvider;
 import com.nnm.bot.render.spi.RenderEngineProviderContext;
 import com.nnm.bot.render.spi.RenderEngineProviderLoader;
-import com.nnm.bot.render.spi.RenderPluginProperties;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +54,7 @@ public class RenderEngineConfig {
                 properties.getFonts().getPaths().stream()
                         .map(Path::of)
                         .toList());
-        if (configuredProvider != null && !configuredProvider.isBlank()) {
+        if (StrUtil.isNotBlank(configuredProvider)) {
             return create(configuredProvider.trim(), context);
         }
         return switch (properties.getEngine()) {
@@ -82,7 +84,7 @@ public class RenderEngineConfig {
 
     private RenderEngine create(String id, RenderEngineProviderContext context) {
         RenderEngineProvider provider = find(id);
-        if (provider == null || !provider.isAvailable(context)) {
+        if (ObjectUtil.isNull(provider) || !provider.isAvailable(context)) {
             throw new IllegalStateException("No available render provider: " + id);
         }
         return instantiate(provider, context);

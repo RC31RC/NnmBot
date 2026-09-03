@@ -1,5 +1,8 @@
 package com.nnm.bot.admin.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
 import com.nnm.bot.admin.domain.BotChannelInstance;
 import com.nnm.bot.admin.domain.OneBotChannelConfig;
 import com.nnm.bot.admin.domain.QqOfficialChannelConfig;
@@ -8,21 +11,23 @@ import com.nnm.bot.admin.dto.bot.OneBotAccountProbeRequest;
 import com.nnm.bot.admin.dto.bot.OneBotAccountProbeResponse;
 import com.nnm.bot.admin.dto.bot.OneBotInstanceSaveRequest;
 import com.nnm.bot.admin.dto.bot.QqOfficialInstanceSaveRequest;
-import com.nnm.bot.admin.error.BotManagementErrorCode;
+import com.nnm.bot.admin.constant.BotManagementErrorCode;
 import com.nnm.bot.admin.repository.BotChannelInstanceRepository;
 import com.nnm.bot.admin.security.BotCredentialCipher;
 import com.nnm.bot.admin.service.BotChannelManagementService;
 import com.nnm.bot.admin.service.OperationAuditService;
-import com.nnm.bot.common.error.CommonErrorCode;
+import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.core.channel.BotChannelKey;
-import com.nnm.bot.core.channel.BotChannelRegistry;
-import com.nnm.bot.core.channel.BotChannelSnapshot;
-import com.nnm.bot.core.message.BotPlatform;
-import com.nnm.bot.core.onebot.OneBotAccountProbe;
-import com.nnm.bot.core.onebot.OneBotAccountProbeException;
+import com.nnm.bot.core.channel.model.BotChannelKey;
+import com.nnm.bot.core.channel.registry.BotChannelRegistry;
+import com.nnm.bot.core.channel.runtime.BotChannelRuntimeManager;
+import com.nnm.bot.core.channel.model.BotChannelSnapshot;
+import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.onebot.connection.OneBotAccountProbe;
+import com.nnm.bot.core.onebot.connection.OneBotAccountProbeException;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,24 +36,18 @@ import java.util.List;
 @Service
 public class BotChannelManagementServiceImpl implements BotChannelManagementService {
 
-    private final BotChannelInstanceRepository repository;
-    private final BotChannelRegistry registry;
-    private final OneBotAccountProbe accountProbe;
-    private final BotCredentialCipher credentialCipher;
-    private final OperationAuditService auditService;
-
-    public BotChannelManagementServiceImpl(
-            BotChannelInstanceRepository repository,
-            BotChannelRegistry registry,
-            OneBotAccountProbe accountProbe,
-            BotCredentialCipher credentialCipher,
-            OperationAuditService auditService) {
-        this.repository = repository;
-        this.registry = registry;
-        this.accountProbe = accountProbe;
-        this.credentialCipher = credentialCipher;
-        this.auditService = auditService;
-    }
+    @Resource
+    private BotChannelInstanceRepository repository;
+    @Resource
+    private BotChannelRegistry registry;
+    @Resource
+    private BotChannelRuntimeManager runtimeManager;
+    @Resource
+    private OneBotAccountProbe accountProbe;
+    @Resource
+    private BotCredentialCipher credentialCipher;
+    @Resource
+    private OperationAuditService auditService;
 
     @Override
     public List<BotChannelInstanceItem> instances() {
@@ -76,11 +75,13 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     @Transactional
     public void updateOneBot(long id, OneBotInstanceSaveRequest request) {
         BotChannelInstance instance = instance(id, BotPlatform.ONEBOT);
+        String previousInstanceId = instance.getInstanceId();
         requireUnique(id, request.instanceId(), BotPlatform.ONEBOT, request.botAccountId());
         applyCommon(instance, request.instanceId(), request.displayName(),
                 request.botAccountId(), request.enabled());
         applyOneBot(instance, request, false);
         repository.save(instance);
+        runtimeManager.remove(previousInstanceId);
         auditService.record("BOT_INSTANCE_UPDATE", "BOT_INSTANCE", id,
                 "修改 OneBot 实例 " + instance.getInstanceId());
     }
@@ -106,11 +107,13 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     @Transactional
     public void updateQqOfficial(long id, QqOfficialInstanceSaveRequest request) {
         BotChannelInstance instance = instance(id, BotPlatform.QQ_OFFICIAL);
+        String previousInstanceId = instance.getInstanceId();
         requireUnique(id, request.instanceId(), BotPlatform.QQ_OFFICIAL, request.appId());
         applyCommon(instance, request.instanceId(), request.displayName(),
                 request.appId(), request.enabled());
         applyQqOfficial(instance, request, false);
         repository.save(instance);
+        runtimeManager.remove(previousInstanceId);
         auditService.record("BOT_INSTANCE_UPDATE", "BOT_INSTANCE", id,
                 "修改 QQ 官方机器人实例 " + instance.getInstanceId());
     }
@@ -120,22 +123,51 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     public void delete(long id) {
         BotChannelInstance instance = repository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        runtimeManager.remove(instance.getInstanceId());
         repository.delete(instance);
         auditService.record("BOT_INSTANCE_DELETE", "BOT_INSTANCE", id,
                 "删除机器人实例 " + instance.getInstanceId());
     }
 
     @Override
+    public void start(long id) {
+        BotChannelInstance instance = repository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        BusinessAssert.isTrue(instance.isEnabled(), CommonErrorCode.DATA_CONFLICT,
+                "机器人实例已禁用，请先编辑并启用实例");
+        try {
+            runtimeManager.start(instance.getInstanceId());
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new BusinessException(
+                    BotManagementErrorCode.INSTANCE_START_FAILED,
+                    "机器人实例启动失败：" + exception.getMessage(), exception);
+        }
+        auditService.record("BOT_INSTANCE_START", "BOT_INSTANCE", id,
+                "启动机器人实例 " + instance.getInstanceId());
+    }
+
+    @Override
+    public void stop(long id) {
+        BotChannelInstance instance = repository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        runtimeManager.stop(instance.getInstanceId());
+        auditService.record("BOT_INSTANCE_STOP", "BOT_INSTANCE", id,
+                "停止机器人实例 " + instance.getInstanceId());
+    }
+
+    @Override
     public OneBotAccountProbeResponse probeOneBot(OneBotAccountProbeRequest request) {
         String url = trimToNull(request.connectionUrl());
         String token = trimToNull(request.accessToken());
-        if (request.instanceId() != null) {
+        if (ObjectUtil.isNotNull(request.instanceId())) {
             BotChannelInstance instance = instance(request.instanceId(), BotPlatform.ONEBOT);
             OneBotChannelConfig config = instance.getOneBotConfig();
-            if (url == null) {
+            if (ObjectUtil.isNull(url)) {
                 url = config.getConnectionUrl();
             }
-            if (token == null) {
+            if (ObjectUtil.isNull(token)) {
                 token = credentialCipher.decrypt(config.getAccessToken());
             }
         }
@@ -161,22 +193,22 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
                 instance.getDisplayName(),
                 instance.getBotAccountId(),
                 instance.isEnabled(),
-                oneBot == null ? null : oneBot.getConnectionUrl(),
-                oneBot != null && hasText(oneBot.getAccessToken()),
-                oneBot == null ? null : oneBot.getReconnectIntervalSeconds(),
-                official == null ? null : official.getAppId(),
-                official != null && hasText(official.getClientSecret()),
-                official == null ? null : official.getTokenUrl(),
-                official == null ? null : official.getApiBaseUrl(),
-                official == null ? null : official.getGatewayUrl(),
-                official == null ? null : official.getIntents(),
-                official == null ? null : official.getGatewayConnectTimeoutSeconds(),
-                official == null ? null : official.getReconnectDelaySeconds(),
-                snapshot == null
-                        ? (instance.isEnabled() ? "PENDING_RESTART" : "DISABLED")
+                ObjectUtil.isNull(oneBot) ? null : oneBot.getConnectionUrl(),
+                ObjectUtil.isNotNull(oneBot) && hasText(oneBot.getAccessToken()),
+                ObjectUtil.isNull(oneBot) ? null : oneBot.getReconnectIntervalSeconds(),
+                ObjectUtil.isNull(official) ? null : official.getAppId(),
+                ObjectUtil.isNotNull(official) && hasText(official.getClientSecret()),
+                ObjectUtil.isNull(official) ? null : official.getTokenUrl(),
+                ObjectUtil.isNull(official) ? null : official.getApiBaseUrl(),
+                ObjectUtil.isNull(official) ? null : official.getGatewayUrl(),
+                ObjectUtil.isNull(official) ? null : official.getIntents(),
+                ObjectUtil.isNull(official) ? null : official.getGatewayConnectTimeoutSeconds(),
+                ObjectUtil.isNull(official) ? null : official.getReconnectDelaySeconds(),
+                ObjectUtil.isNull(snapshot)
+                        ? (instance.isEnabled() ? "STOPPED" : "DISABLED")
                         : snapshot.status().name(),
-                snapshot == null ? null : snapshot.statusChangedAt(),
-                snapshot == null ? null : snapshot.lastError(),
+                ObjectUtil.isNull(snapshot) ? null : snapshot.statusChangedAt(),
+                ObjectUtil.isNull(snapshot) ? null : snapshot.lastError(),
                 instance.getCreatedAt(),
                 instance.getUpdatedAt());
     }
@@ -185,7 +217,7 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
                              OneBotInstanceSaveRequest request,
                              boolean create) {
         OneBotChannelConfig config = instance.getOneBotConfig();
-        if (config == null) {
+        if (ObjectUtil.isNull(config)) {
             config = new OneBotChannelConfig();
             instance.setOneBotConfig(config);
         }
@@ -200,7 +232,7 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
                                  QqOfficialInstanceSaveRequest request,
                                  boolean create) {
         QqOfficialChannelConfig config = instance.getQqOfficialConfig();
-        if (config == null) {
+        if (ObjectUtil.isNull(config)) {
             config = new QqOfficialChannelConfig();
             instance.setQqOfficialConfig(config);
         }
@@ -252,10 +284,10 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     }
 
     private static String trimToNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+        return StrUtil.isBlank(value) ? null : value.trim();
     }
 
     private static boolean hasText(String value) {
-        return value != null && !value.isBlank();
+        return StrUtil.isNotBlank(value);
     }
 }

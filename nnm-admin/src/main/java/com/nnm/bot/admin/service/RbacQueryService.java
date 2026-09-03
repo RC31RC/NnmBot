@@ -12,7 +12,7 @@ public interface RbacQueryService {
 
     PageResult<UserListItem> users(long operatorId, String username, int current, int size);
 
-    PageResult<RoleListItem> roles(String keyword, int current, int size);
+    PageResult<RoleListItem> roles(long operatorId, String keyword, int current, int size);
 
     List<PermissionItem> permissions();
 

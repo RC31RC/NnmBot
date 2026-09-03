@@ -1,15 +1,21 @@
 package com.nnm.bot.common.exception;
 
-import com.nnm.bot.common.error.CommonErrorCode;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
+import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.response.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -18,8 +24,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -28,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException e) {
-        log.warn("业务异常 code={}, message={}", e.getCode(), e.getMessage());
+        log.warn("业务异常 code={}, message={}", e.getCode(), e.getMessage(), e);
         return ResponseEntity.status(e.getStatus())
                 .body(ApiResponse.error(e.getCode(), e.getMessage()));
     }
@@ -36,7 +46,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SystemException.class)
     public ResponseEntity<ApiResponse<Void>> handleSystem(SystemException e) {
         log.error("系统或基础设施异常 code={}, message={}", e.getCode(), e.getMessage(), e);
-        return response(CommonErrorCode.SYSTEM_ERROR);
+        return ResponseEntity.status(e.getStatus())
+                .body(ApiResponse.error(e.getCode(), e.getDescription()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -86,7 +97,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
         log.warn("非法参数: {}", e.getMessage());
-        String message = e.getMessage() == null || e.getMessage().isBlank()
+        String message = ObjectUtil.isNull(e.getMessage()) || e.getMessage().isBlank()
                 ? CommonErrorCode.PARAM_INVALID.getMessage()
                 : e.getMessage();
         return response(CommonErrorCode.PARAM_INVALID, message);
@@ -96,6 +107,46 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         log.warn("请求方法不支持: {}", e.getMethod());
         return response(CommonErrorCode.METHOD_NOT_ALLOWED);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException e) {
+        log.warn("请求媒体类型不支持: {}", e.getContentType());
+        return response(CommonErrorCode.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotAcceptable(
+            HttpMediaTypeNotAcceptableException e) {
+        log.warn("请求的响应媒体类型不支持: {}", e.getMessage());
+        return response(CommonErrorCode.NOT_ACCEPTABLE);
+    }
+
+    @ExceptionHandler(HttpMessageNotWritableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMessageNotWritable(
+            HttpMessageNotWritableException e) {
+        log.error("响应内容无法序列化", e);
+        return response(CommonErrorCode.SYSTEM_ERROR);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException e) {
+        log.warn("HTTP 状态异常 status={}, reason={}", e.getStatusCode(), e.getReason(), e);
+        CommonErrorCode errorCode = switch (e.getStatusCode().value()) {
+            case 400 -> CommonErrorCode.PARAM_INVALID;
+            case 401 -> CommonErrorCode.AUTHENTICATION_REQUIRED;
+            case 403 -> CommonErrorCode.PERMISSION_DENIED;
+            case 404 -> CommonErrorCode.DATA_NOT_FOUND;
+            case 405 -> CommonErrorCode.METHOD_NOT_ALLOWED;
+            case 406 -> CommonErrorCode.NOT_ACCEPTABLE;
+            case 409 -> CommonErrorCode.DATA_CONFLICT;
+            case 413 -> CommonErrorCode.FILE_TOO_LARGE;
+            case 415 -> CommonErrorCode.UNSUPPORTED_MEDIA_TYPE;
+            case 422 -> CommonErrorCode.UNPROCESSABLE_ENTITY;
+            default -> CommonErrorCode.SYSTEM_ERROR;
+        };
+        return response(errorCode);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -122,6 +173,26 @@ public class GlobalExceptionHandler {
         return response(CommonErrorCode.DATA_NOT_FOUND, "接口不存在");
     }
 
+    @ExceptionHandler({
+            CompletionException.class,
+            ExecutionException.class,
+            UndeclaredThrowableException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleWrapped(Throwable exception) {
+        Throwable cause = unwrap(exception);
+        if (cause instanceof BusinessException businessException) {
+            return handleBusiness(businessException);
+        }
+        if (cause instanceof SystemException systemException) {
+            return handleSystem(systemException);
+        }
+        if (cause instanceof Exception checkedException) {
+            return handleGeneral(checkedException);
+        }
+        log.error("未处理的系统异常", cause);
+        return response(CommonErrorCode.SYSTEM_ERROR);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception e) {
         log.error("未处理的系统异常", e);
@@ -129,7 +200,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<Void>> validationResponse(String logMessage, String message) {
-        String detail = message == null || message.isBlank()
+        String detail = StrUtil.isBlank(message)
                 ? CommonErrorCode.PARAM_INVALID.getMessage()
                 : message;
         log.warn("{}: {}", logMessage, detail);
@@ -153,5 +224,19 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ApiResponse<Void>> response(CommonErrorCode errorCode, String message) {
         return ResponseEntity.status(errorCode.getStatus())
                 .body(ApiResponse.error(errorCode.getCode(), message));
+    }
+
+    private static Throwable unwrap(Throwable exception) {
+        Throwable current = exception;
+        while (current instanceof CompletionException
+                || current instanceof ExecutionException
+                || current instanceof UndeclaredThrowableException) {
+            Throwable cause = current.getCause();
+            if (cause == null) {
+                break;
+            }
+            current = cause;
+        }
+        return current;
     }
 }

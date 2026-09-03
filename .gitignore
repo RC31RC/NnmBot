@@ -16,6 +16,7 @@ Thumbs.db
 
 # Runtime data
 /data/
+/nnm-warframe/data/
 /logs/
 
 # Local configuration (may contain secrets)
@@ -30,6 +31,9 @@ src/main/resources/application-local.yaml
 /.agents/
 /.claude/
 /claude/
+
+# Test sources
+**/src/test/
 
 # Render module local tests are kept out of repository commits
 /nnm-render/src/test/

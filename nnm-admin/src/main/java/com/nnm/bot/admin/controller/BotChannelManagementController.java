@@ -8,9 +8,10 @@ import com.nnm.bot.admin.dto.bot.OneBotInstanceSaveRequest;
 import com.nnm.bot.admin.dto.bot.QqOfficialInstanceSaveRequest;
 import com.nnm.bot.admin.service.BotChannelManagementService;
 import com.nnm.bot.common.response.ApiResponse;
+import com.nnm.bot.common.web.EmptyRequest;
+import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -24,15 +25,13 @@ import java.util.List;
 @RequestMapping("/api/admin/v1/bot-instances")
 public class BotChannelManagementController {
 
-    private final BotChannelManagementService service;
+    @Resource
+    private BotChannelManagementService service;
 
-    public BotChannelManagementController(BotChannelManagementService service) {
-        this.service = service;
-    }
-
-    @GetMapping
+    @PostMapping("/query")
     @SaCheckPermission("bot:instance:view")
-    public ApiResponse<List<BotChannelInstanceItem>> instances() {
+    public ApiResponse<List<BotChannelInstanceItem>> instances(
+            @RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(service.instances());
     }
 
@@ -72,6 +71,20 @@ public class BotChannelManagementController {
     @SaCheckPermission("bot:instance:delete")
     public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/{id}/start")
+    @SaCheckPermission("bot:instance:operate")
+    public ApiResponse<Void> start(@PathVariable long id) {
+        service.start(id);
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/{id}/stop")
+    @SaCheckPermission("bot:instance:operate")
+    public ApiResponse<Void> stop(@PathVariable long id) {
+        service.stop(id);
         return ApiResponse.ok();
     }
 

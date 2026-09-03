@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
+
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.session.SaTerminalInfo;
 import cn.dev33.satoken.stp.StpLogic;
@@ -34,7 +36,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
         return logic.searchTokenValue("", 0, -1, false).stream()
                 .map(key -> key.startsWith(prefix) ? key.substring(prefix.length()) : key)
                 .map(token -> toSession(logic, token))
-                .filter(item -> item != null)
+                .filter(item -> ObjectUtil.isNotNull(item))
                 .sorted(Comparator.comparing(SessionItem::loginTime).reversed())
                 .toList();
     }
@@ -43,7 +45,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
     public void kickout(String token) {
         StpLogic logic = StpUtil.getStpLogic();
         Object loginId = logic.getLoginIdByToken(token);
-        if (loginId == null) {
+        if (ObjectUtil.isNull(loginId)) {
             throw new BusinessException(404, "在线会话不存在");
         }
         logic.kickoutByTokenValue(token);
@@ -52,7 +54,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
 
     private SessionItem toSession(StpLogic logic, String token) {
         Object loginId = logic.getLoginIdByToken(token);
-        if (loginId == null) {
+        if (ObjectUtil.isNull(loginId)) {
             return null;
         }
         long userId;
@@ -62,12 +64,12 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
             return null;
         }
         SysUser user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
+        if (ObjectUtil.isNull(user)) {
             return null;
         }
 
         SaTerminalInfo terminal = terminal(logic, loginId, token);
-        LocalDateTime loginTime = terminal == null
+        LocalDateTime loginTime = ObjectUtil.isNull(terminal)
                 ? user.getUpdatedAt()
                 : LocalDateTime.ofInstant(
                         Instant.ofEpochMilli(terminal.getCreateTime()),
@@ -77,7 +79,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
                 token,
                 userId,
                 user.getUsername(),
-                terminal == null ? null : terminal.getDeviceType(),
+                ObjectUtil.isNull(terminal) ? null : terminal.getDeviceType(),
                 loginTime,
                 logic.getTokenTimeout(token)
         );
@@ -85,7 +87,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
 
     private SaTerminalInfo terminal(StpLogic logic, Object loginId, String token) {
         SaSession session = logic.getSessionByLoginId(loginId, false);
-        if (session == null) {
+        if (ObjectUtil.isNull(session)) {
             return null;
         }
         return session.getTerminalList().stream()

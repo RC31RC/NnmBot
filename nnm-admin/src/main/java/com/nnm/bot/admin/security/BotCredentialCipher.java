@@ -1,7 +1,11 @@
 package com.nnm.bot.admin.security;
 
+import cn.hutool.core.util.StrUtil;
+
 import com.nnm.bot.admin.config.BotCredentialProperties;
 import com.nnm.bot.common.exception.SystemException;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
@@ -23,15 +27,20 @@ public class BotCredentialCipher {
     private static final int IV_LENGTH = 12;
     private static final int TAG_LENGTH_BITS = 128;
 
-    private final SecretKeySpec key;
+    @Resource
+    private BotCredentialProperties properties;
+    private SecretKeySpec key;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public BotCredentialCipher(BotCredentialProperties properties) {
-        this.key = new SecretKeySpec(sha256(properties.getEncryptionKey()), "AES");
+    @PostConstruct
+    void initialize() {
+        this.key = new SecretKeySpec(
+                sha256(this.properties.getEncryptionKey()),
+                "AES");
     }
 
     public String encrypt(String plaintext) {
-        if (plaintext == null || plaintext.isBlank()) {
+        if (StrUtil.isBlank(plaintext)) {
             return null;
         }
         try {
@@ -51,7 +60,7 @@ public class BotCredentialCipher {
     }
 
     public String decrypt(String ciphertext) {
-        if (ciphertext == null || ciphertext.isBlank()) {
+        if (StrUtil.isBlank(ciphertext)) {
             return null;
         }
         if (!ciphertext.startsWith(PREFIX)) {

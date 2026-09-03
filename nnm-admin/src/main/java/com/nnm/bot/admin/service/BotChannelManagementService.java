@@ -22,5 +22,9 @@ public interface BotChannelManagementService {
 
     void delete(long id);
 
+    void start(long id);
+
+    void stop(long id);
+
     OneBotAccountProbeResponse probeOneBot(OneBotAccountProbeRequest request);
 }

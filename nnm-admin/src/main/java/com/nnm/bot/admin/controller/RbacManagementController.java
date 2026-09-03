@@ -12,10 +12,10 @@ import com.nnm.bot.admin.dto.system.UserSaveRequest;
 import com.nnm.bot.admin.dto.system.UserStatusRequest;
 import com.nnm.bot.admin.service.RbacManagementService;
 import com.nnm.bot.common.response.ApiResponse;
+import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -33,7 +33,7 @@ public class RbacManagementController {
     @PostMapping("/users")
     @SaCheckPermission("system:user:create")
     public ApiResponse<Long> createUser(@Valid @RequestBody UserSaveRequest request) {
-        return ApiResponse.ok(managementService.createUser(request));
+        return ApiResponse.ok(managementService.createUser(StpUtil.getLoginIdAsLong(), request));
     }
 
     @PutMapping("/users/{userId}")
@@ -42,7 +42,7 @@ public class RbacManagementController {
             @PathVariable long userId,
             @Valid @RequestBody UserSaveRequest request
     ) {
-        managementService.updateUser(userId, request);
+        managementService.updateUser(StpUtil.getLoginIdAsLong(), userId, request);
         return ApiResponse.ok();
     }
 
@@ -62,14 +62,14 @@ public class RbacManagementController {
             @PathVariable long userId,
             @Valid @RequestBody UserRoleRequest request
     ) {
-        managementService.assignUserRoles(userId, request);
+        managementService.assignUserRoles(StpUtil.getLoginIdAsLong(), userId, request);
         return ApiResponse.ok();
     }
 
     @PostMapping("/roles")
     @SaCheckPermission("system:role:create")
     public ApiResponse<Long> createRole(@Valid @RequestBody RoleSaveRequest request) {
-        return ApiResponse.ok(managementService.createRole(request));
+        return ApiResponse.ok(managementService.createRole(StpUtil.getLoginIdAsLong(), request));
     }
 
     @PutMapping("/roles/{roleId}")
@@ -78,21 +78,23 @@ public class RbacManagementController {
             @PathVariable long roleId,
             @Valid @RequestBody RoleSaveRequest request
     ) {
-        managementService.updateRole(roleId, request);
+        managementService.updateRole(StpUtil.getLoginIdAsLong(), roleId, request);
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/roles/{roleId}")
     @SaCheckPermission("system:role:delete")
     public ApiResponse<Void> deleteRole(@PathVariable long roleId) {
-        managementService.deleteRole(roleId);
+        managementService.deleteRole(StpUtil.getLoginIdAsLong(), roleId);
         return ApiResponse.ok();
     }
 
-    @GetMapping("/roles/{roleId}/grants")
+    @PostMapping("/roles/{roleId}/grants/query")
     @SaCheckPermission("system:role:assign")
-    public ApiResponse<RoleGrantResponse> roleGrants(@PathVariable long roleId) {
-        return ApiResponse.ok(managementService.roleGrants(roleId));
+    public ApiResponse<RoleGrantResponse> roleGrants(
+            @PathVariable long roleId,
+            @RequestBody(required = false) EmptyRequest ignored) {
+        return ApiResponse.ok(managementService.roleGrants(StpUtil.getLoginIdAsLong(), roleId));
     }
 
     @PutMapping("/roles/{roleId}/grants")
@@ -101,7 +103,7 @@ public class RbacManagementController {
             @PathVariable long roleId,
             @Valid @RequestBody RoleGrantRequest request
     ) {
-        managementService.assignRoleGrants(roleId, request);
+        managementService.assignRoleGrants(StpUtil.getLoginIdAsLong(), roleId, request);
         return ApiResponse.ok();
     }
 

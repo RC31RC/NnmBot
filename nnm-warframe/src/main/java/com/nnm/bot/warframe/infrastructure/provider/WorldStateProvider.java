@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.infrastructure.provider;
 
+import cn.hutool.core.util.StrUtil;
+
 import java.util.Optional;
 
 /**
@@ -11,13 +13,19 @@ public interface WorldStateProvider {
 
     Optional<WorldStatePayload> fetch();
 
+    /**
+     * 数据源返回的原始世界状态载荷。
+     *
+     * @param source 数据源编码
+     * @param body 数据源返回的原始 JSON
+     */
     record WorldStatePayload(String source, String body) {
 
         public WorldStatePayload {
-            if (source == null || source.isBlank()) {
+            if (StrUtil.isBlank(source)) {
                 throw new IllegalArgumentException("source must not be blank");
             }
-            if (body == null || body.isBlank()) {
+            if (StrUtil.isBlank(body)) {
                 throw new IllegalArgumentException("body must not be blank");
             }
         }

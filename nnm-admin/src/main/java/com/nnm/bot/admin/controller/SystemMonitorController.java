@@ -7,12 +7,14 @@ import com.nnm.bot.admin.service.OnlineSessionService;
 import com.nnm.bot.admin.service.OperationAuditService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.admin.dto.system.OperationLogQueryRequest;
+import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -26,19 +28,22 @@ public class SystemMonitorController {
     @Resource
     private OnlineSessionService onlineSessionService;
 
-    @GetMapping("/operation-logs")
+    @PostMapping("/operation-logs/query")
     @SaCheckPermission("system:audit:view")
     public ApiResponse<PageResult<OperationLogItem>> operationLogs(
-            @RequestParam(required = false) String operatorName,
-            @RequestParam(defaultValue = "1") int current,
-            @RequestParam(defaultValue = "20") int size
+            @RequestBody OperationLogQueryRequest request
     ) {
-        return ApiResponse.ok(auditService.logs(operatorName, current, size));
+        return ApiResponse.ok(auditService.logs(
+                request.operatorName(),
+                request.current() == null ? 1 : request.current(),
+                request.size() == null ? 20 : request.size()
+        ));
     }
 
-    @GetMapping("/sessions")
+    @PostMapping("/sessions/query")
     @SaCheckPermission("system:session:view")
-    public ApiResponse<List<SessionItem>> sessions() {
+    public ApiResponse<List<SessionItem>> sessions(
+            @RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(onlineSessionService.sessions());
     }
 

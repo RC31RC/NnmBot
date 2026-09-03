@@ -11,23 +11,23 @@ import com.nnm.bot.admin.dto.system.UserStatusRequest;
 
 public interface RbacManagementService {
 
-    long createUser(UserSaveRequest request);
+    long createUser(long operatorId, UserSaveRequest request);
 
-    void updateUser(long userId, UserSaveRequest request);
+    void updateUser(long operatorId, long userId, UserSaveRequest request);
 
     void updateUserStatus(long operatorId, long userId, UserStatusRequest request);
 
-    void assignUserRoles(long userId, UserRoleRequest request);
+    void assignUserRoles(long operatorId, long userId, UserRoleRequest request);
 
-    long createRole(RoleSaveRequest request);
+    long createRole(long operatorId, RoleSaveRequest request);
 
-    void updateRole(long roleId, RoleSaveRequest request);
+    void updateRole(long operatorId, long roleId, RoleSaveRequest request);
 
-    void deleteRole(long roleId);
+    void deleteRole(long operatorId, long roleId);
 
-    RoleGrantResponse roleGrants(long roleId);
+    RoleGrantResponse roleGrants(long operatorId, long roleId);
 
-    void assignRoleGrants(long roleId, RoleGrantRequest request);
+    void assignRoleGrants(long operatorId, long roleId, RoleGrantRequest request);
 
     long createMenu(MenuSaveRequest request);
 

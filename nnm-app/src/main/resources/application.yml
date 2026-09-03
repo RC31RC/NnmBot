@@ -5,15 +5,23 @@ server:
 spring:
   application:
     name: NnmBot
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+  thymeleaf:
+    # 业务模板来自数据库 HTML，不使用 classpath:/templates/ 下的资源模板。
+    check-template-location: false
   config:
     import: optional:classpath:application-bot.yml
   lifecycle:
     timeout-per-shutdown-phase: 30s
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://123.206.232.72:5432/nnmbot?currentSchema=nnmbot,public
-    username: postgres
-    password: 12345678
+#    url: jdbc:postgresql://123.206.232.72:5432/nnmbot?currentSchema=nnmbot,public
+    url: jdbc:postgresql://127.0.0.1:5432/nnmbot?currentSchema=nnmbot,public
+    username: nnmbot
+    password: nnmbot
     hikari:
       maximum-pool-size: 5
       minimum-idle: 2
@@ -27,15 +35,12 @@ spring:
     properties:
       hibernate:
         default_schema: nnmbot
+        format_sql: true
         query.fail_on_pagination_over_collection_fetch: true
     show-sql: false
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    default-schema: public
-    baseline-on-migrate: true
   cache:
-    # 当前实际 CacheManager 为 cache2k，Caffeine 仅保留为评估回退配置。
+    # 当前实际 CacheManager 由 cache2k 配置类显式提供；以下 Caffeine 配置仅保留作评估回退，
+    # 不会覆盖显式 CacheManager Bean。
     type: caffeine
     caffeine:
       spec: maximumSize=500,expireAfterWrite=600s
@@ -56,7 +61,8 @@ logging:
   level:
     com.nnm.bot: DEBUG
     com.mikuac.shiro: INFO
-    org.hibernate.SQL: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: INFO
     org.springframework: INFO
 
 management:
@@ -69,6 +75,32 @@ management:
       show-details: when-authorized
 
 nnm:
+  web:
+    cors:
+      # 精确来源用于本机开发；来源模式覆盖常见私有局域网地址和任意开发端口。
+      allowed-origins: ${NNM_WEB_CORS_ALLOWED_ORIGINS:http://localhost:3006,http://127.0.0.1:3006}
+      allowed-origin-patterns: ${NNM_WEB_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:[*],http://127.0.0.1:[*],http://10.*:[*],http://192.168.*:[*],http://172.16.*:[*],http://172.17.*:[*],http://172.18.*:[*],http://172.19.*:[*],http://172.20.*:[*],http://172.21.*:[*],http://172.22.*:[*],http://172.23.*:[*],http://172.24.*:[*],http://172.25.*:[*],http://172.26.*:[*],http://172.27.*:[*],http://172.28.*:[*],http://172.29.*:[*],http://172.30.*:[*],http://172.31.*:[*]}
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
+      allow-credentials: false
+      max-age: 3600
+  ocr:
+    # OCR native 库只在后续紫卡分析启用时打开，避免普通启动加载模型。
+    enabled: false
+    max-input-bytes: 8388608
+    max-image-pixels: 25000000
+    enhanced-recognition: true
+    max-side-length: 960
+    box-score-threshold: 0.6
+    box-threshold: 0.3
+    un-clip-ratio: 2.5
   admin:
     bootstrap:
       enabled: true

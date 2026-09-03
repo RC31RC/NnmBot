@@ -21,6 +21,9 @@ public interface SysUserRepository extends JpaRepository<SysUser, Long> {
     @EntityGraph(SysUser.GRAPH_AUTHORITIES)
     Optional<SysUser> findWithAuthoritiesById(Long id);
 
+    @EntityGraph(SysUser.GRAPH_ROLES)
+    Optional<SysUser> findWithRolesById(Long id);
+
     boolean existsByIdAndEnabledTrue(Long id);
 
     boolean existsByUsernameIgnoreCase(String username);
@@ -34,6 +37,9 @@ public interface SysUserRepository extends JpaRepository<SysUser, Long> {
 
     @EntityGraph(SysUser.GRAPH_ROLES)
     List<SysUser> findPageDetailsByIdIn(Collection<Long> ids);
+
+    @EntityGraph(SysUser.GRAPH_ROLES)
+    List<SysUser> findAllWithRolesByIdIn(Collection<Long> ids);
 
     interface IdOnly {
 

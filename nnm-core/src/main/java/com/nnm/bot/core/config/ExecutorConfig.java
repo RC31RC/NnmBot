@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration(proxyBeanMethods = false)
@@ -43,5 +45,11 @@ public class ExecutorConfig {
                 Math.toIntExact(properties.getAwaitTermination().toSeconds()));
         scheduler.setRemoveOnCancelPolicy(true);
         return scheduler;
+    }
+
+    @Bean(name = "memberDiscoveryExecutor", destroyMethod = "close")
+    public ExecutorService memberDiscoveryExecutor(ExecutorProperties properties) {
+        properties.validate();
+        return Executors.newVirtualThreadPerTaskExecutor();
     }
 }

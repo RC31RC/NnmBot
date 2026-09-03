@@ -1,19 +1,24 @@
 package com.nnm.bot.core.qqofficial.gateway;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.http.HttpClient;
-import com.nnm.bot.core.channel.BotChannelKey;
-import com.nnm.bot.core.channel.BotChannelRegistry;
-import com.nnm.bot.core.channel.BotChannelInstanceConfiguration;
-import com.nnm.bot.core.message.BotPlatform;
-import com.nnm.bot.core.plugin.PluginDispatcher;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.channel.model.BotChannelKey;
+import com.nnm.bot.core.channel.registry.BotChannelRegistry;
+import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.plugin.execution.CommandDispatcher;
 import com.nnm.bot.core.qqofficial.api.QqOfficialApiClient;
 import com.nnm.bot.core.qqofficial.api.QqOfficialTokenClient;
-import com.nnm.bot.core.qqofficial.config.QqOfficialProperties;
+import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
 import com.nnm.bot.core.qqofficial.message.QqOfficialMessageContextFactory;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -24,62 +29,54 @@ import java.net.URI;
 import java.net.http.WebSocket;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** 管理所有 QQ 官方机器人实例的 Gateway 与 API 客户端。 */
+/**
+ * 管理所有 QQ 官方机器人实例的 Gateway 连接及其配套 API 客户端。
+ *
+ * <p>该类负责连接、鉴权、心跳、恢复和重连；只有消息类 DISPATCH 事件会被转换为
+ * 核心消息上下文并交给命令执行器。</p>
+ */
 @Slf4j
 @Component
 public class QqOfficialGatewayClient implements SmartLifecycle {
 
-    private final QqOfficialProperties properties;
-    private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
-    private final ObjectProvider<PluginDispatcher> pluginDispatcherProvider;
-    private final ThreadPoolTaskExecutor taskExecutor;
-    private final ThreadPoolTaskScheduler scheduler;
-    private final BotChannelRegistry channelRegistry;
-    private final Map<String, OfficialConnection> connections;
+    @Resource
+    private HttpClient httpClient;
+    @Resource
+    private ObjectMapper objectMapper;
+    @Resource
+    private ObjectProvider<CommandDispatcher> commandDispatcherProvider;
+    @Resource(name = "applicationTaskExecutor")
+    private ThreadPoolTaskExecutor taskExecutor;
+    @Resource(name = "scheduledExecutor")
+    private ThreadPoolTaskScheduler scheduler;
+    @Resource
+    private BotChannelRegistry channelRegistry;
+    private final ConcurrentHashMap<String, OfficialConnection> connections =
+            new ConcurrentHashMap<>();
     private volatile boolean running;
 
-    public QqOfficialGatewayClient(
-            QqOfficialProperties properties,
-            HttpClient httpClient,
-            ObjectMapper objectMapper,
-            ObjectProvider<PluginDispatcher> pluginDispatcherProvider,
-            @Qualifier("applicationTaskExecutor") ThreadPoolTaskExecutor taskExecutor,
-            @Qualifier("scheduledExecutor") ThreadPoolTaskScheduler scheduler,
-            BotChannelRegistry channelRegistry,
-            BotChannelInstanceConfiguration instanceConfiguration) {
-        this.properties = properties;
-        this.httpClient = httpClient;
-        this.objectMapper = objectMapper;
-        this.pluginDispatcherProvider = pluginDispatcherProvider;
-        this.taskExecutor = taskExecutor;
-        this.scheduler = scheduler;
-        this.channelRegistry = channelRegistry;
-        this.connections = createConnections();
-    }
-
     public QqOfficialApiClient apiClient(String botAccountId) {
-        OfficialConnection connection = connections.get(botAccountId);
-        if (connection == null) {
-            throw new IllegalStateException(
-                    "No QQ official channel registered for botAccountId=" + botAccountId);
-        }
-        return connection.apiClient;
+        return this.connections.values().stream()
+                .filter(connection -> connection.instance.botAccountId().equals(botAccountId))
+                .findFirst()
+                .map(connection -> connection.apiClient)
+                .orElseThrow(() -> new BusinessException(
+                        BotChannelErrorCode.CHANNEL_NOT_REGISTERED,
+                        "未注册 QQ 官方机器人渠道: " + botAccountId));
     }
 
     @Override
     public void start() {
-        if (!properties.isEnabled() || running) {
+        if (this.running) {
             return;
         }
-        running = true;
-        connections.values().forEach(OfficialConnection::start);
+        this.running = true;
+        this.connections.values().forEach(OfficialConnection::start);
     }
 
     @Override
@@ -89,43 +86,47 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
 
     @Override
     public void stop(Runnable callback) {
-        running = false;
-        connections.values().forEach(OfficialConnection::stop);
+        this.running = false;
+        this.connections.values().forEach(OfficialConnection::stop);
         callback.run();
+    }
+
+    public synchronized void startInstance(BotChannelInstanceRecord record) {
+        if (record.platform() != BotPlatform.QQ_OFFICIAL) {
+            throw new BusinessException(
+                    BotChannelErrorCode.PLATFORM_MISMATCH,
+                    "QQ 官方客户端不能启动协议: " + record.platform());
+        }
+        this.validate(record);
+        OfficialConnection replacement = new OfficialConnection(record);
+        OfficialConnection previous = this.connections.put(record.instanceId(), replacement);
+        if (ObjectUtil.isNotNull(previous)) {
+            previous.stop();
+        }
+        this.running = true;
+        replacement.start();
+    }
+
+    public synchronized void stopInstance(String instanceId) {
+        OfficialConnection connection = this.connections.remove(instanceId);
+        if (ObjectUtil.isNotNull(connection)) {
+            connection.stop();
+        }
     }
 
     @Override
     public boolean isRunning() {
-        return running;
+        return this.running;
     }
 
     @Override
     public boolean isAutoStartup() {
-        return properties.isEnabled();
+        return false;
     }
 
     @Override
     public int getPhase() {
         return Integer.MAX_VALUE;
-    }
-
-    private Map<String, OfficialConnection> createConnections() {
-        if (!properties.isEnabled()) {
-            return Map.of();
-        }
-        Map<String, OfficialConnection> result = new LinkedHashMap<>();
-        for (QqOfficialProperties.Instance instance : properties.getInstances()) {
-            if (!instance.isEnabled()) {
-                continue;
-            }
-            OfficialConnection connection = new OfficialConnection(instance);
-            OfficialConnection previous = result.put(instance.botAccountId(), connection);
-            if (previous != null) {
-                throw new IllegalStateException(
-                        "Duplicate QQ official botAccountId: " + instance.botAccountId());
-            }
-        }
-        return Map.copyOf(result);
     }
 
     private final class OfficialConnection implements WebSocket.Listener {
@@ -135,12 +136,14 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
         private static final int INVALID_SESSION = 9;
         private static final int HELLO = 10;
 
-        private final QqOfficialProperties.Instance instance;
+        private final BotChannelInstanceRecord instance;
+        private final QqOfficialConnection connection;
         private final QqOfficialTokenClient tokenClient;
         private final QqOfficialApiClient apiClient;
         private final java.net.http.HttpClient webSocketClient;
         private final BotChannelKey channelKey;
         private final AtomicBoolean connecting = new AtomicBoolean();
+        private final AtomicBoolean active = new AtomicBoolean();
         private final StringBuilder incoming = new StringBuilder();
 
         private volatile WebSocket webSocket;
@@ -149,29 +152,39 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
         private volatile String sessionId;
         private volatile Integer sequence;
 
-        private OfficialConnection(QqOfficialProperties.Instance instance) {
+        private OfficialConnection(BotChannelInstanceRecord instance) {
             this.instance = instance;
-            this.tokenClient = new QqOfficialTokenClient(httpClient, instance.getConnection());
+            this.connection = new QqOfficialConnection(
+                    instance.appId(),
+                    instance.clientSecret(),
+                    instance.tokenUrl(),
+                    instance.apiBaseUrl(),
+                    instance.gatewayUrl());
+            this.tokenClient = new QqOfficialTokenClient(httpClient, this.connection);
             this.apiClient = new QqOfficialApiClient(
-                    httpClient, objectMapper, tokenClient, instance.getConnection());
+                    httpClient, objectMapper, tokenClient, this.connection);
             this.webSocketClient = java.net.http.HttpClient.newBuilder()
                     .executor(taskExecutor)
-                    .connectTimeout(instance.getRuntime().getGatewayConnectTimeout())
+                    .connectTimeout(instance.gatewayConnectTimeout())
                     .build();
             this.channelKey = new BotChannelKey(
                     BotPlatform.QQ_OFFICIAL, instance.botAccountId());
         }
 
         private void start() {
+            if (!active.compareAndSet(false, true)) {
+                return;
+            }
             taskExecutor.execute(this::connect);
         }
 
         private void stop() {
+            active.set(false);
             cancel(reconnect);
             cancel(heartbeat);
             WebSocket socket = webSocket;
             webSocket = null;
-            if (socket != null) {
+            if (ObjectUtil.isNotNull(socket)) {
                 socket.sendClose(WebSocket.NORMAL_CLOSURE, "shutdown");
             }
             channelRegistry.disconnected(channelKey);
@@ -179,7 +192,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
 
         @Override
         public void onOpen(WebSocket socket) {
-            if (!running) {
+            if (!running || !active.get()) {
                 connecting.set(false);
                 socket.sendClose(WebSocket.NORMAL_CLOSURE, "disabled");
                 return;
@@ -189,11 +202,12 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             socket.request(1);
             channelRegistry.connected(channelKey);
             log.info("QQ official Gateway connected, instanceId={}, botAccountId={}",
-                    instance.getId(), instance.botAccountId());
+                    instance.instanceId(), instance.botAccountId());
         }
 
         @Override
         public CompletionStage<?> onText(WebSocket socket, CharSequence data, boolean last) {
+            // JDK WebSocket 可能分片回调；只有收到最后一片后才能解析完整 JSON。
             synchronized (incoming) {
                 incoming.append(data);
                 if (last) {
@@ -213,28 +227,33 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             if (webSocket == socket) {
                 webSocket = null;
             }
-            channelRegistry.disconnected(channelKey);
-            if (running) {
+            if (active.get()) {
+                channelRegistry.disconnected(channelKey);
+            }
+            if (running && active.get()) {
                 scheduleReconnect();
             }
             log.warn("QQ official Gateway closed, instanceId={}: {} {}",
-                    instance.getId(), statusCode, reason);
+                    instance.instanceId(), statusCode, reason);
             return null;
         }
 
         @Override
         public void onError(WebSocket socket, Throwable error) {
+            if (!active.get()) {
+                return;
+            }
             channelRegistry.failed(channelKey, error);
             log.warn("QQ official Gateway error, instanceId={}: {}",
-                    instance.getId(), error.getMessage());
-            if (running) {
+                    instance.instanceId(), error);
+            if (running && active.get()) {
                 socket.abort();
                 scheduleReconnect();
             }
         }
 
         private void connect() {
-            if (!running || !connecting.compareAndSet(false, true)) {
+            if (!running || !active.get() || !connecting.compareAndSet(false, true)) {
                 return;
             }
             channelRegistry.connecting(channelKey);
@@ -243,19 +262,25 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
                 webSocketClient.newWebSocketBuilder()
                         .buildAsync(URI.create(apiClient.gatewayUrl()), this)
                         .whenComplete((socket, error) -> {
-                            if (error != null) {
+                            if (ObjectUtil.isNotNull(error)) {
                                 connecting.set(false);
+                                if (!active.get()) {
+                                    return;
+                                }
                                 channelRegistry.failed(channelKey, error);
-                                log.warn("QQ official Gateway connection failed, instanceId={}: {}",
-                                        instance.getId(), error.getMessage());
+                                log.warn("QQ official Gateway connection failed, instanceId={}",
+                                        instance.instanceId(), error);
                                 scheduleReconnect();
                             }
                         });
             } catch (Exception exception) {
                 connecting.set(false);
+                if (!active.get()) {
+                    return;
+                }
                 channelRegistry.failed(channelKey, exception);
-                log.warn("QQ official Gateway setup failed, instanceId={}: {}",
-                        instance.getId(), exception.getMessage());
+                log.warn("QQ official Gateway setup failed, instanceId={}",
+                        instance.instanceId(), exception);
                 scheduleReconnect();
             }
         }
@@ -287,8 +312,9 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
                     default -> { }
                 }
             } catch (Exception exception) {
-                log.warn("QQ official Gateway payload handling failed, instanceId={}: {}",
-                        instance.getId(), exception.getMessage());
+                channelRegistry.failed(channelKey, exception);
+                log.warn("QQ official Gateway payload handling failed, instanceId={}",
+                        instance.instanceId(), exception);
             }
         }
 
@@ -296,11 +322,11 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             long interval = Math.max(1000L,
                     data.path("heartbeat_interval").asLong(45000L));
             String token = tokenClient.getAccessToken();
-            JsonNode payload = sessionId != null && !sessionId.isBlank() && sequence != null
+            JsonNode payload = StrUtil.isNotBlank(sessionId) && ObjectUtil.isNotNull(sequence)
                     ? QqOfficialGatewayPayloads.resume(
                             objectMapper, token, sessionId, sequence)
                     : QqOfficialGatewayPayloads.identify(
-                            objectMapper, token, instance.getRuntime().getIntents());
+                            objectMapper, token, instance.intents());
             socket.sendText(payload.toString(), true);
             cancel(heartbeat);
             heartbeat = scheduler.scheduleAtFixedRate(
@@ -314,6 +340,10 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             }
         }
 
+        /**
+         * 只把 QQ 消息事件送入命令执行器；连接生命周期事件在 Gateway 层内部消费。
+         * 命令使用应用任务执行器运行，避免阻塞 WebSocket 回调线程。
+         */
         private void handleDispatch(String eventType, JsonNode data) {
             if ("READY".equals(eventType)) {
                 sessionId = data.path("session_id").asText(null);
@@ -325,22 +355,61 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             QqOfficialMessageContextFactory
                     .from(instance.botAccountId(), eventType, data)
                     .ifPresent(context -> taskExecutor.execute(
-                            () -> pluginDispatcherProvider.getObject().dispatch(context)));
+                            () -> commandDispatcherProvider.getObject().dispatch(context)));
         }
 
         private void scheduleReconnect() {
-            if (!running) {
+            if (!running || !active.get()) {
                 return;
             }
             cancel(reconnect);
             reconnect = scheduler.schedule(this::connect,
-                    Instant.now().plus(instance.getRuntime().getReconnectDelay()));
+                    Instant.now().plus(instance.reconnectDelay()));
         }
     }
 
     private static void cancel(ScheduledFuture<?> future) {
-        if (future != null) {
+        if (ObjectUtil.isNotNull(future)) {
             future.cancel(false);
+        }
+    }
+
+    private void validate(BotChannelInstanceRecord record) {
+        if (ObjectUtil.isNull(record)) {
+            throw new BusinessException(
+                    BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
+                    "QQ 官方机器人实例记录不能为空");
+        }
+        this.requireText(record.instanceId(), "QQ 官方机器人实例标识");
+        this.requireText(record.botAccountId(), "QQ 官方机器人 App ID");
+        this.requireText(record.appId(), "QQ 官方机器人 App ID");
+        this.requireText(record.clientSecret(), "QQ 官方机器人 Client Secret");
+        this.requireText(record.tokenUrl(), "QQ 官方机器人 Token 地址");
+        this.requireText(record.apiBaseUrl(), "QQ 官方机器人 API 地址");
+        if (record.intents() < 0) {
+            throw new BusinessException(
+                    BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
+                    "QQ 官方机器人 intents 不能为负数");
+        }
+        if (ObjectUtil.isNull(record.gatewayConnectTimeout())
+                || record.gatewayConnectTimeout().isZero()
+                || record.gatewayConnectTimeout().isNegative()) {
+            throw new BusinessException(
+                    BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
+                    "QQ 官方机器人 Gateway 连接超时必须为正数");
+        }
+        if (ObjectUtil.isNull(record.reconnectDelay()) || record.reconnectDelay().isNegative()) {
+            throw new BusinessException(
+                    BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
+                    "QQ 官方机器人重连延迟不能为负数");
+        }
+    }
+
+    private void requireText(String value, String field) {
+        if (StrUtil.isBlank(value)) {
+            throw new BusinessException(
+                    BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
+                    field + "不能为空");
         }
     }
 }

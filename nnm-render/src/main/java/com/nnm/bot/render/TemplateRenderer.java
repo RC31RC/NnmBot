@@ -4,5 +4,6 @@ import java.util.Map;
 
 public interface TemplateRenderer {
 
-    String render(String templateName, Map<String, Object> variables);
+    /** 处理数据库中保存的 HTML 模板。 */
+    String renderHtml(String html, Map<String, Object> variables);
 }

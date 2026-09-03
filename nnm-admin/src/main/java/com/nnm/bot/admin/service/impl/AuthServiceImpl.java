@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
+
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.domain.SysUser;
 import com.nnm.bot.admin.dto.auth.LoginRequest;
@@ -41,7 +43,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse refresh(RefreshTokenRequest request) {
         Object loginId = StpUtil.getLoginIdByToken(request.refreshToken());
-        if (loginId == null) {
+        if (ObjectUtil.isNull(loginId)) {
             throw new BusinessException(401, "刷新令牌无效");
         }
 
@@ -84,8 +86,8 @@ public class AuthServiceImpl implements AuthService {
                 buttons,
                 roles,
                 user.getId(),
-                user.getNickname() == null ? user.getUsername() : user.getNickname(),
-                user.getEmail() == null ? "" : user.getEmail(),
+                ObjectUtil.isNull(user.getNickname()) ? user.getUsername() : user.getNickname(),
+                ObjectUtil.isNull(user.getEmail()) ? "" : user.getEmail(),
                 user.getAvatar()
         );
     }

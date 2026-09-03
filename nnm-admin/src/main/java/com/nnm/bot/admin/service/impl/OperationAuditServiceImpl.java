@@ -1,5 +1,8 @@
 package com.nnm.bot.admin.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
 import cn.dev33.satoken.context.SaHolder;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.domain.SysOperationLog;
@@ -40,7 +43,7 @@ public class OperationAuditServiceImpl implements OperationAuditService {
         log.setOperatorName(operatorName);
         log.setAction(action);
         log.setTargetType(targetType);
-        log.setTargetId(targetId == null ? null : String.valueOf(targetId));
+        log.setTargetId(ObjectUtil.isNull(targetId) ? null : String.valueOf(targetId));
         log.setDetail(detail);
         log.setIpAddress(clientIp());
         logRepository.save(log);
@@ -53,7 +56,7 @@ public class OperationAuditServiceImpl implements OperationAuditService {
                 Math.min(Math.max(size, 1), 100),
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
-        Page<SysOperationLog> page = operatorName == null || operatorName.isBlank()
+        Page<SysOperationLog> page = StrUtil.isBlank(operatorName)
                 ? logRepository.findAll(pageable)
                 : logRepository.findByOperatorNameContainingIgnoreCase(operatorName.trim(), pageable);
         List<OperationLogItem> records = page.getContent().stream()
@@ -83,7 +86,7 @@ public class OperationAuditServiceImpl implements OperationAuditService {
             return null;
         }
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
+        if (StrUtil.isNotBlank(forwarded)) {
             return forwarded.split(",")[0].trim();
         }
         return request.getRemoteAddr();

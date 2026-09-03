@@ -15,7 +15,8 @@
 - Java 代码保持精简，参考 `charge-operator` 的分层方式。
 - Controller 只负责协议转换、参数接收和权限声明，业务逻辑放入 Service。
 - Service 接口与实现分离；DTO、响应对象和实体职责明确。
-- 使用构造注入，避免字段注入。
+- Spring 管理的 Service、Repository、Provider 等协作依赖优先使用 `@Resource`；
+  不可变值对象、命令元数据和需要在构造阶段完成校验的非 Spring 对象继续使用构造器传参。
 - 跨模块分页响应统一使用 `nnm-common` 的 `PageResult`，不要在业务模块重复定义同构分页 DTO。
 - 业务前置条件优先使用 `BusinessAssert` 并配合稳定 `ErrorCode`，不要散落重复的异常构造逻辑。
 - 查询方法暂不统一添加事务注解；写操作按实际原子性边界直接使用 Spring
@@ -24,6 +25,10 @@
 - Spring Security 仅可通过 `spring-security-crypto` 提供 BCrypt 密码哈希实现。
 - 后端是权限安全边界，管理接口使用 `@SaCheckPermission` 校验稳定权限码。
 - MapStruct 仅用于字段较多或存在复用价值的对象映射，简单映射直接构造。
+- 字符串、集合和对象的通用防御性判断可以使用 Hutool `StrUtil`、`CollUtil`、
+  `ObjUtil`；仅在能提升可读性时使用，文件、协议和业务状态校验仍保留显式判断。
+- 在连接生命周期、并发状态、协议边界和非直观业务约束等关键位置添加精简注释，说明设计意图或
+  风险；自解释代码和普通 CRUD 不添加重复代码含义的注释。
 - 优先沿用现有模块边界，不为单一场景提前增加抽象。
 
 ## Common 与 Core 约定
@@ -55,19 +60,25 @@
 - 常规 CRUD 和实体关联通过 Repository 完成，动态条件优先使用 JPA Specification。
 - 只有出现多表动态筛选、复杂统计等明确需求时才引入 QueryDSL，不为简单查询提前增加依赖。
 - 业务代码不得拼接原生 SQL；确需报表、批处理或数据库特有能力时，放入独立查询实现并补充集成测试。
-- Flyway SQL 仅用于表结构和基础数据迁移，统一放在 `nnm-app/src/main/resources/db/migration`。
-- 测试可使用 SQL 验证迁移结果，但测试夹具应放在 `src/test/resources`，不得混入生产业务逻辑。
-- 表结构由 Flyway 管理；当前开发阶段使用
-  `nnm-app/src/main/resources/db/migration/V1__init_schema.sql` 作为唯一可编辑基线，
-  直接在该文件中维护结构，不新增版本号。正式发布前再将基线拆分为不可变的版本迁移。
+- 当前开发阶段不使用 Flyway。数据库初始化 SQL 统一聚合在
+  `docs/sql/01_init.sql`，已有数据库修复脚本放在 `docs/sql/` 根目录，由开发者手工执行；
+  应用不会自动建表或自动修改数据库结构。
+- 所有建表和改表 SQL 都必须写清楚注释：表使用 `COMMENT ON TABLE`，字段使用
+  `COMMENT ON COLUMN`；新增约束、索引或枚举值时，在 SQL 上方补充其业务目的，避免只看字段名
+  才能理解结构。
+- 测试可使用 SQL 验证数据库结构，但测试夹具应放在 `src/test/resources`，不得混入生产业务逻辑。
+- 当前开发阶段可以直接修改或重建 `docs/sql/01_init.sql`；后续新增结构脚本按
+  `docs/sql/02_*.sql`、`docs/sql/03_*.sql` 顺序维护，不增加自动迁移版本成本。
 - Hibernate 使用 `ddl-auto: validate`，不得依赖 `update` 修改数据库。
 - H2 仅作为测试依赖，用于自动化测试；开发和生产数据库统一优先 PostgreSQL。
-- 当前迁移脚本以 PostgreSQL 为目标；若正式选择 MySQL 8，使用独立的数据库迁移目录，不编写伪兼容 SQL。
-- PostgreSQL 使用 `database=nnmbot`、`schema=nnmbot`；Flyway 历史表固定保留在 `public`。
-- 新增迁移必须显式使用 `nnmbot.<table>`，不要依赖连接的 `search_path` 隐式决定业务对象位置。
+- 当前手工脚本以 PostgreSQL 为目标；若正式选择 MySQL 8，使用独立的 MySQL 脚本目录，不编写
+  伪兼容 SQL。
+- PostgreSQL 使用 `database=nnmbot`、`schema=nnmbot`；业务表放在 `nnmbot` schema，`public`
+  仅作为数据库默认 schema，不承载本项目业务表。
+- SQL 必须显式使用 `nnmbot.<table>`，不要依赖连接的 `search_path` 隐式决定业务对象位置。
 - 数据库连接池默认上限为 5。新增线程池、缓存或渲染并发时，必须评估 4GB 内存机器的资源预算。
-- 当前开发阶段不要求保留测试数据库数据；结构调整直接修改唯一基线 SQL 文件。不要修改无关的
-  本地日志文件。正式发布前再恢复“新增版本脚本、不修改历史迁移”的生产迁移约定。
+- 当前开发阶段不要求保留测试数据库数据；结构调整直接修改对应手工 SQL 文件。不要修改无关的
+  本地日志文件。
 - Warframe 外部数据源、代理和缓存演进遵循
   `docs/Warframe外部数据源、代理与缓存演进任务.md`；目标 JVM 业务缓存为 cache2k，
   cache2k 已作为生效的 `CacheManager`。Caffeine 依赖和 YAML 配置仅为评估回退暂留，
@@ -80,6 +91,11 @@
 - 菜单决定导航可见性，权限码决定按钮和 API 操作，两者不要混为一体。
 - 前端 `v-auth`、`v-roles` 只改善交互体验，不能代替后端鉴权。
 - 前端按钮权限以 `/api/admin/v1/me` 返回的 `buttons` 为准。
+- 机器人能力角色使用 `bot_robot_role`、`bot_command_robot_role`、
+  `bot_robot_role_instance`，只表达“命令由哪些机器人实例处理”，不得复用
+  `sys_role` 或把机器人实例绑定到后台用户角色。
+- 群组发现只通过管理端按钮主动查询；发现结果不自动写入 `bot_scope`，只有用户点击添加
+  后才创建作用域。OneBot 可同步平台返回的群成员角色，未知平台用户不得自动创建系统用户。
 
 ## 验证
 

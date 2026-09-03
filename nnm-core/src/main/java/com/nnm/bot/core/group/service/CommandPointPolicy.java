@@ -1,0 +1,107 @@
+package com.nnm.bot.core.group.service;
+
+import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.plugin.model.CommandDescriptor;
+import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * 集中定义命令积分的幂等和响应规则，避免特殊命令把记账逻辑带回插件。
+ */
+@Component
+public class CommandPointPolicy {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
+
+    public String costIdempotencyKey(BotMessageContext context,
+                                     CommandDescriptor descriptor,
+                                     long groupId,
+                                     long memberId) {
+        return messageIdempotencyKey(
+                "COMMAND_COST", context, descriptor, groupId, memberId);
+    }
+
+    public String rewardIdempotencyKey(BotMessageContext context,
+                                       CommandDescriptor descriptor,
+                                       long groupId,
+                                       long memberId) {
+        if (isSignIn(descriptor)) {
+            // 沿用历史键格式，升级当天不会把旧签到记录再次奖励。
+            return "SIGN_IN:" + groupId + ":" + memberId + ":"
+                    + LocalDate.now(BUSINESS_ZONE);
+        }
+        return messageIdempotencyKey(
+                "COMMAND_REWARD", context, descriptor, groupId, memberId);
+    }
+
+    public boolean allowsRepeatedReward(CommandDescriptor descriptor) {
+        return isSignIn(descriptor);
+    }
+
+    public PointOperation rewardOperation(long groupId,
+                                          long memberId,
+                                          CommandDescriptor descriptor,
+                                          long rewardPoints,
+                                          String idempotencyKey) {
+        boolean signIn = isSignIn(descriptor);
+        return new PointOperation(
+                groupId,
+                memberId,
+                descriptor.code(),
+                signIn ? "SIGN_IN" : "COMMAND_REWARD",
+                rewardPoints,
+                idempotencyKey,
+                signIn ? "群组签到" : "命令成功奖励");
+    }
+
+    public CommandResult completeReward(CommandDescriptor descriptor,
+                                        CommandResult result,
+                                        PointChangeResult change) {
+        if (!isSignIn(descriptor)) {
+            return result;
+        }
+        PointBalance balance = change.balance();
+        Map<String, Object> data = new LinkedHashMap<>(result.data());
+        data.put("points", balance.points());
+        data.put("totalEarned", balance.totalEarned());
+        data.put("totalSpent", balance.totalSpent());
+        String text = change.applied()
+                ? "签到成功，当前积分：" + balance.points()
+                : "今天已经签到，当前积分：" + balance.points();
+        return new CommandResult(text, data, result.attachments(), result.status());
+    }
+
+    private String messageIdempotencyKey(String type,
+                                         BotMessageContext context,
+                                         CommandDescriptor descriptor,
+                                         long groupId,
+                                         long memberId) {
+        String eventId = context.messageId();
+        if (StrUtil.isBlank(eventId)) {
+            String fallback = context.rawMessage() + "|" + context.senderId()
+                    + "|" + context.conversationId();
+            eventId = UUID.nameUUIDFromBytes(fallback.getBytes(
+                    java.nio.charset.StandardCharsets.UTF_8)).toString();
+        }
+        String key = type + ":" + groupId + ":" + memberId + ":"
+                + context.platform().name() + ":" + descriptor.code() + ":" + eventId;
+        if (key.length() <= 160) {
+            return key;
+        }
+        String digest = UUID.nameUUIDFromBytes(key.getBytes(
+                java.nio.charset.StandardCharsets.UTF_8)).toString();
+        return type + ":" + groupId + ":" + memberId + ":" + digest;
+    }
+
+    private boolean isSignIn(CommandDescriptor descriptor) {
+        return SystemCommandCodes.SIGN_IN.equalsIgnoreCase(descriptor.code());
+    }
+}

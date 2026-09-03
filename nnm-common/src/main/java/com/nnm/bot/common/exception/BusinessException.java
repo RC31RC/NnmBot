@@ -1,5 +1,7 @@
 package com.nnm.bot.common.exception;
 
+import cn.hutool.core.util.ObjectUtil;
+
 import com.nnm.bot.common.error.ErrorCode;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
@@ -9,12 +11,6 @@ public class BusinessException extends RuntimeException {
 
     private final int code;
     private final HttpStatus status;
-
-    public BusinessException(String message) {
-        super(message);
-        this.code = 500;
-        this.status = HttpStatus.INTERNAL_SERVER_ERROR;
-    }
 
     public BusinessException(int code, String message) {
         super(message);
@@ -48,6 +44,6 @@ public class BusinessException extends RuntimeException {
 
     private static HttpStatus resolveStatus(int code) {
         HttpStatus status = HttpStatus.resolve(code);
-        return status == null ? HttpStatus.INTERNAL_SERVER_ERROR : status;
+        return ObjectUtil.isNull(status) ? HttpStatus.INTERNAL_SERVER_ERROR : status;
     }
 }

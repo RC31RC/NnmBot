@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.infrastructure.provider;
 
+import cn.hutool.core.util.ObjectUtil;
+
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.warframe.infrastructure.client.WarframeApiClient;
 import jakarta.annotation.Resource;
@@ -21,7 +23,7 @@ public class OfficialWorldStateProvider implements WorldStateProvider {
     @Override
     public Optional<WorldStatePayload> fetch() {
         HttpClient.HttpResult result = apiClient.fetchWorldStateResult();
-        if (!result.isSuccess() || result.body() == null || result.body().isBlank()) {
+        if (!result.isSuccess() || ObjectUtil.isNull(result.body()) || result.body().isBlank()) {
             return Optional.empty();
         }
         return Optional.of(new WorldStatePayload(SOURCE, result.body()));

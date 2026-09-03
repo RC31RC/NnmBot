@@ -1,5 +1,8 @@
 package com.nnm.bot.warframe.infrastructure.parser;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.warframe.domain.model.WorldState;
@@ -32,12 +35,12 @@ public class WorldStateParser {
     }
 
     public WorldState parse(String json, String source) {
-        if (json == null || json.isBlank()) {
+        if (StrUtil.isBlank(json)) {
             throw new IllegalArgumentException("world state response must not be blank");
         }
         try {
             JsonNode root = objectMapper.readTree(json);
-            if (root == null || !root.isObject()) {
+            if (ObjectUtil.isNull(root) || !root.isObject()) {
                 throw new IllegalArgumentException("world state response must be a JSON object");
             }
             Instant providerTimestamp = instant(root, "timestamp", "time", "serverTime");
@@ -71,10 +74,12 @@ public class WorldStateParser {
             );
             validate(state);
             return state;
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("failed to parse world state JSON", e);
+        } catch (Exception exception) {
+            if (exception instanceof IllegalArgumentException illegalArgumentException) {
+                throw illegalArgumentException;
+            }
+            throw new IllegalArgumentException(
+                    "failed to parse world state JSON", exception);
         }
     }
 
@@ -362,11 +367,11 @@ public class WorldStateParser {
     }
 
     private List<JsonNode> exactArray(JsonNode root, String field) {
-        if (root == null || !root.isObject()) {
+        if (ObjectUtil.isNull(root) || !root.isObject()) {
             return List.of();
         }
         JsonNode value = root.get(field);
-        if (value == null || value.isNull()) {
+        if (ObjectUtil.isNull(value) || value.isNull()) {
             return List.of();
         }
         if (value.isArray()) {
@@ -378,7 +383,7 @@ public class WorldStateParser {
     }
 
     private JsonNode first(JsonNode root, String... paths) {
-        if (root == null) {
+        if (ObjectUtil.isNull(root)) {
             return com.fasterxml.jackson.databind.node.MissingNode.getInstance();
         }
         for (String path : paths) {
@@ -417,7 +422,7 @@ public class WorldStateParser {
 
     private int integerOrZero(JsonNode root, String... paths) {
         Integer value = integer(root, paths);
-        return value == null ? 0 : value;
+        return ObjectUtil.isNull(value) ? 0 : value;
     }
 
     private float decimal(JsonNode root, String... paths) {
@@ -453,7 +458,7 @@ public class WorldStateParser {
                 value.forEach(item -> {
                     String text = item.isValueNode() ? item.asText(null)
                             : text(item, "name", "item", "itemType", "uniqueName", "jobType", "rewards");
-                    if (text != null && !text.isBlank()) {
+                    if (StrUtil.isNotBlank(text)) {
                         result.add(text);
                     }
                 });
@@ -462,7 +467,7 @@ public class WorldStateParser {
                 }
             } else {
                 String text = text(root, path);
-                if (text != null && !text.isBlank()) {
+                    if (StrUtil.isNotBlank(text)) {
                     return List.of(text);
                 }
             }
@@ -473,7 +478,7 @@ public class WorldStateParser {
     private Instant instant(JsonNode root, String... paths) {
         for (String path : paths) {
             Instant parsed = instant(first(root, path));
-            if (parsed != null) {
+            if (ObjectUtil.isNotNull(parsed)) {
                 return parsed;
             }
         }
@@ -519,19 +524,19 @@ public class WorldStateParser {
     }
 
     private void validate(WorldState state) {
-        boolean hasData = state.timestamp() != null
+        boolean hasData = ObjectUtil.isNotNull(state.timestamp())
                 || !state.alerts().isEmpty()
                 || !state.fissures().isEmpty()
                 || !state.invasions().isEmpty()
                 || !state.allSorties().isEmpty()
                 || !state.archonHunts().isEmpty()
                 || !state.allVoidTraders().isEmpty()
-                || state.cetusCycle() != null
-                || state.vallisCycle() != null
-                || state.cambionCycle() != null
-                || state.earthCycle() != null
-                || state.duviriCycle() != null
-                || state.zarimanCycle() != null
+                || ObjectUtil.isNotNull(state.cetusCycle())
+                || ObjectUtil.isNotNull(state.vallisCycle())
+                || ObjectUtil.isNotNull(state.cambionCycle())
+                || ObjectUtil.isNotNull(state.earthCycle())
+                || ObjectUtil.isNotNull(state.duviriCycle())
+                || ObjectUtil.isNotNull(state.zarimanCycle())
                 || !state.events().isEmpty()
                 || !state.news().isEmpty()
                 || !state.dailyDeals().isEmpty()
@@ -539,7 +544,7 @@ public class WorldStateParser {
                 || !state.syndicateMissions().isEmpty()
                 || !state.steelPathOfferings().isEmpty()
                 || !state.allActiveMissions().isEmpty()
-                || state.arbitration() != null;
+                || ObjectUtil.isNotNull(state.arbitration());
         if (!hasData) {
             throw new IllegalArgumentException("world state response contains no recognized data");
         }
@@ -547,7 +552,7 @@ public class WorldStateParser {
 
     private String eventTitle(JsonNode item) {
         String direct = text(item, "title", "name", "message");
-        if (direct != null) {
+        if (ObjectUtil.isNotNull(direct)) {
             return direct;
         }
         String english = null;
@@ -555,22 +560,22 @@ public class WorldStateParser {
         for (JsonNode message : array(item, "messages")) {
             String value = text(message, "message", "text");
             String language = text(message, "languageCode", "language");
-            if (fallback == null) {
+            if (ObjectUtil.isNull(fallback)) {
                 fallback = value;
             }
-            if (language != null && (language.equalsIgnoreCase("zh") || language.equalsIgnoreCase("zh-hans"))) {
+            if (ObjectUtil.isNotNull(language) && (language.equalsIgnoreCase("zh") || language.equalsIgnoreCase("zh-hans"))) {
                 return value;
             }
-            if (language != null && language.equalsIgnoreCase("en")) {
+            if (ObjectUtil.isNotNull(language) && language.equalsIgnoreCase("en")) {
                 english = value;
             }
         }
-        return english == null ? fallback : english;
+        return ObjectUtil.isNull(english) ? fallback : english;
     }
 
     private String rewardSummary(JsonNode reward) {
         String direct = text(reward, "asString", "description", "string");
-        if (direct != null) {
+        if (ObjectUtil.isNotNull(direct)) {
             return direct;
         }
         List<String> items = strings(reward, "items", "countedItems");
@@ -589,10 +594,10 @@ public class WorldStateParser {
             JsonNode value = first(root, path);
             if (value.isArray() && !value.isEmpty()) {
                 String item = text(value.get(0), "value", "name", "node");
-                return item == null && value.get(0).isValueNode() ? value.get(0).asText(null) : item;
+                return ObjectUtil.isNull(item) && value.get(0).isValueNode() ? value.get(0).asText(null) : item;
             }
             String item = text(root, path);
-            if (item != null) {
+            if (ObjectUtil.isNotNull(item)) {
                 return item;
             }
         }

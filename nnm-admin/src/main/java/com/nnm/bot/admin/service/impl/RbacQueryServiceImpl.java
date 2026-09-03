@@ -1,6 +1,9 @@
 package com.nnm.bot.admin.service.impl;
 
-import com.nnm.bot.admin.domain.DataScope;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
+import com.nnm.bot.admin.constant.DataScope;
 import com.nnm.bot.admin.domain.SysMenu;
 import com.nnm.bot.admin.domain.SysPermission;
 import com.nnm.bot.admin.domain.SysRole;
@@ -15,6 +18,7 @@ import com.nnm.bot.admin.repository.SysPermissionRepository;
 import com.nnm.bot.admin.repository.SysRoleRepository;
 import com.nnm.bot.admin.repository.SysUserRepository;
 import com.nnm.bot.admin.repository.SysMenuRepository;
+import com.nnm.bot.admin.service.RbacHierarchyService;
 import com.nnm.bot.admin.service.RbacQueryService;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.response.PageResult;
@@ -42,6 +46,8 @@ public class RbacQueryServiceImpl implements RbacQueryService {
     private SysPermissionRepository permissionRepository;
     @Resource
     private SysMenuRepository menuRepository;
+    @Resource
+    private RbacHierarchyService hierarchyService;
 
     @Override
     public PageResult<UserListItem> users(long operatorId, String username, int current, int size) {
@@ -52,11 +58,11 @@ public class RbacQueryServiceImpl implements RbacQueryService {
                 .filter(SysRole::isEnabled)
                 .anyMatch(role -> role.getDataScope() == DataScope.ALL);
         if (!canViewAll) {
-            boolean matches = username == null
+            boolean matches = ObjectUtil.isNull(username)
                     || username.isBlank()
                     || operator.getUsername().toLowerCase().contains(username.trim().toLowerCase());
             List<UserListItem> records = current <= 1 && matches
-                    ? List.of(toUserItem(operator))
+                    ? List.of(toUserItem(operator, operator))
                     : List.of();
             return PageResult.of(
                     records,
@@ -67,7 +73,7 @@ public class RbacQueryServiceImpl implements RbacQueryService {
         }
 
         PageRequest pageable = pageable(current, size, "createdAt");
-        Page<SysUserRepository.IdOnly> page = username == null || username.isBlank()
+        Page<SysUserRepository.IdOnly> page = StrUtil.isBlank(username)
                 ? userRepository.findPageBy(pageable)
                 : userRepository.findPageByUsernameContainingIgnoreCase(username.trim(), pageable);
 
@@ -79,7 +85,7 @@ public class RbacQueryServiceImpl implements RbacQueryService {
         List<UserListItem> records = userIds.stream()
                 .map(usersById::get)
                 .filter(Objects::nonNull)
-                .map(this::toUserItem)
+                .map(user -> toUserItem(user, operator))
                 .toList();
         return PageResult.of(
                 records,
@@ -90,9 +96,10 @@ public class RbacQueryServiceImpl implements RbacQueryService {
     }
 
     @Override
-    public PageResult<RoleListItem> roles(String keyword, int current, int size) {
+    public PageResult<RoleListItem> roles(long operatorId, String keyword, int current, int size) {
+        SysUser operator = hierarchyService.operator(operatorId);
         PageRequest pageable = pageable(current, size, "createdAt");
-        Page<SysRole> page = keyword == null || keyword.isBlank()
+        Page<SysRole> page = StrUtil.isBlank(keyword)
                 ? roleRepository.findAll(pageable)
                 : roleRepository.findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
                         keyword.trim(),
@@ -108,6 +115,9 @@ public class RbacQueryServiceImpl implements RbacQueryService {
                         role.getDescription(),
                         role.isEnabled(),
                         role.getDataScope().name(),
+                        role.getAuthorityLevel(),
+                        hierarchyService.canManageRole(operator, role),
+                        hierarchyService.canAssignRole(operator, role),
                         role.getCreatedAt()
                 ))
                 .toList();
@@ -153,16 +163,16 @@ public class RbacQueryServiceImpl implements RbacQueryService {
 
         Map<Long, List<SysPermission>> permissionsByMenu = permissionRepository.findAllByOrderByCodeAsc().stream()
                 .filter(SysPermission::isEnabled)
-                .filter(permission -> permission.getMenuId() != null)
+                .filter(permission -> ObjectUtil.isNotNull(permission.getMenuId()))
                 .filter(permission -> grantedPermissionCodes.contains(permission.getCode()))
                 .collect(Collectors.groupingBy(SysPermission::getMenuId));
 
         Map<Long, List<SysMenu>> childrenByParent = menus.stream()
-                .filter(menu -> menu.getParentId() != null)
+                .filter(menu -> ObjectUtil.isNotNull(menu.getParentId()))
                 .collect(Collectors.groupingBy(SysMenu::getParentId));
 
         return menus.stream()
-                .filter(menu -> menu.getParentId() == null || menus.stream()
+                .filter(menu -> ObjectUtil.isNull(menu.getParentId()) || menus.stream()
                         .noneMatch(parent -> Objects.equals(parent.getId(), menu.getParentId())))
                 .sorted(menuComparator())
                 .map(menu -> toMenuItem(menu, childrenByParent, permissionsByMenu))
@@ -173,13 +183,13 @@ public class RbacQueryServiceImpl implements RbacQueryService {
     public List<MenuItem> allMenus() {
         Set<SysMenu> menus = Set.copyOf(menuRepository.findAllByOrderBySortOrderAscIdAsc());
         Map<Long, List<SysPermission>> permissionsByMenu = permissionRepository.findAllByOrderByCodeAsc().stream()
-                .filter(permission -> permission.getMenuId() != null)
+                .filter(permission -> ObjectUtil.isNotNull(permission.getMenuId()))
                 .collect(Collectors.groupingBy(SysPermission::getMenuId));
         Map<Long, List<SysMenu>> childrenByParent = menus.stream()
-                .filter(menu -> menu.getParentId() != null)
+                .filter(menu -> ObjectUtil.isNotNull(menu.getParentId()))
                 .collect(Collectors.groupingBy(SysMenu::getParentId));
         return menus.stream()
-                .filter(menu -> menu.getParentId() == null || menus.stream()
+                .filter(menu -> ObjectUtil.isNull(menu.getParentId()) || menus.stream()
                         .noneMatch(parent -> Objects.equals(parent.getId(), menu.getParentId())))
                 .sorted(menuComparator())
                 .map(menu -> toMenuItem(menu, childrenByParent, permissionsByMenu))
@@ -240,20 +250,21 @@ public class RbacQueryServiceImpl implements RbacQueryService {
         return Comparator.comparingInt(SysMenu::getSortOrder).thenComparing(SysMenu::getId);
     }
 
-    private UserListItem toUserItem(SysUser user) {
+    private UserListItem toUserItem(SysUser user, SysUser operator) {
         return new UserListItem(
                 user.getId(),
                 value(user.getAvatar()),
                 user.isEnabled() ? "1" : "4",
                 user.getUsername(),
                 value(user.getGender()),
-                user.getNickname() == null ? user.getUsername() : user.getNickname(),
+                ObjectUtil.isNull(user.getNickname()) ? user.getUsername() : user.getNickname(),
                 value(user.getPhone()),
                 value(user.getEmail()),
                 user.getRoles().stream()
                         .map(SysRole::getCode)
                         .sorted()
                         .toList(),
+                hierarchyService.canManageUser(operator, user),
                 "system",
                 user.getCreatedAt(),
                 "system",
@@ -262,6 +273,6 @@ public class RbacQueryServiceImpl implements RbacQueryService {
     }
 
     private String value(String value) {
-        return value == null ? "" : value;
+        return ObjectUtil.isNull(value) ? "" : value;
     }
 }

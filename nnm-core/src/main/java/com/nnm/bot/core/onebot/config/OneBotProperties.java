@@ -1,35 +1,29 @@
 package com.nnm.bot.core.onebot.config;
 
+import cn.hutool.core.util.ObjectUtil;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.util.StringUtils;
 
+import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 
-/** OneBot 渠道及其连接实例配置。 */
+/**
+ * OneBot 协议级配置。
+ *
+ * <p>实例的连接信息和启停状态由数据库管理，Properties 只保留协议级参数。</p>
+ */
 @ConfigurationProperties(prefix = "nnm.bot.channels.onebot")
 public class OneBotProperties {
 
-    private boolean enabled;
-    private List<Instance> instances = new ArrayList<>();
     private Duration probeTimeout = Duration.ofSeconds(8);
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public List<Instance> getInstances() {
-        return instances;
-    }
-
-    public void setInstances(List<Instance> instances) {
-        this.instances = instances == null ? new ArrayList<>() : new ArrayList<>(instances);
-    }
+    private Duration sendTimeLimit = Duration.ofSeconds(30);
+    private int sendBufferSizeBytes = 16 * 1024 * 1024;
+    private FileTransferMode fileTransferMode = FileTransferMode.AUTO;
+    private Path fileStagingDirectory =
+            Path.of(System.getProperty("user.dir"), "data", "onebot-files");
+    private int fileStreamChunkSizeBytes = 512 * 1024;
+    private long fileStreamMaxBytes = 128L * 1024 * 1024;
+    private Duration fileStreamRetention = Duration.ofMinutes(15);
 
     public Duration getProbeTimeout() {
         return probeTimeout;
@@ -39,149 +33,140 @@ public class OneBotProperties {
         this.probeTimeout = probeTimeout;
     }
 
-    public void validate() {
-        if (probeTimeout == null || probeTimeout.isZero() || probeTimeout.isNegative()) {
+    public Duration getSendTimeLimit() {
+        return sendTimeLimit;
+    }
+
+    public void setSendTimeLimit(Duration sendTimeLimit) {
+        this.sendTimeLimit = sendTimeLimit;
+    }
+
+    public int getSendBufferSizeBytes() {
+        return sendBufferSizeBytes;
+    }
+
+    public void setSendBufferSizeBytes(int sendBufferSizeBytes) {
+        this.sendBufferSizeBytes = sendBufferSizeBytes;
+    }
+
+    public FileTransferMode getFileTransferMode() {
+        return fileTransferMode;
+    }
+
+    public void setFileTransferMode(FileTransferMode fileTransferMode) {
+        this.fileTransferMode = fileTransferMode;
+    }
+
+    public Path getFileStagingDirectory() {
+        return fileStagingDirectory;
+    }
+
+    public void setFileStagingDirectory(Path fileStagingDirectory) {
+        this.fileStagingDirectory = fileStagingDirectory;
+    }
+
+    public int getFileStreamChunkSizeBytes() {
+        return fileStreamChunkSizeBytes;
+    }
+
+    public void setFileStreamChunkSizeBytes(int fileStreamChunkSizeBytes) {
+        this.fileStreamChunkSizeBytes = fileStreamChunkSizeBytes;
+    }
+
+    public long getFileStreamMaxBytes() {
+        return fileStreamMaxBytes;
+    }
+
+    public void setFileStreamMaxBytes(long fileStreamMaxBytes) {
+        this.fileStreamMaxBytes = fileStreamMaxBytes;
+    }
+
+    public Duration getFileStreamRetention() {
+        return fileStreamRetention;
+    }
+
+    public void setFileStreamRetention(Duration fileStreamRetention) {
+        this.fileStreamRetention = fileStreamRetention;
+    }
+
+    public int sendTimeLimitMillis() {
+        if (ObjectUtil.isNull(sendTimeLimit)) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.send-time-limit must not be null");
+        }
+        long millis = durationMillis(
+                sendTimeLimit, "nnm.bot.channels.onebot.send-time-limit");
+        if (millis <= 0L || millis > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.send-time-limit must be between 1ms and "
+                            + Integer.MAX_VALUE + "ms");
+        }
+        return (int) millis;
+    }
+
+    public long fileStreamRetentionMillis() {
+        if (ObjectUtil.isNull(fileStreamRetention)) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.file-stream-retention must not be null");
+        }
+        long millis = durationMillis(
+                fileStreamRetention, "nnm.bot.channels.onebot.file-stream-retention");
+        if (millis <= 0L) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.file-stream-retention must be positive");
+        }
+        return millis;
+    }
+
+    public void validateDefaults() {
+        if (ObjectUtil.isNull(probeTimeout) || probeTimeout.isZero() || probeTimeout.isNegative()) {
             throw new IllegalArgumentException(
                     "nnm.bot.channels.onebot.probe-timeout must be positive");
         }
-        if (!enabled) {
-            return;
+        sendTimeLimitMillis();
+        if (sendBufferSizeBytes <= 0) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.send-buffer-size-bytes must be positive");
         }
-        for (Instance instance : instances) {
-            instance.validate();
+        if (ObjectUtil.isNull(fileTransferMode)) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.file-transfer-mode must not be null");
+        }
+        if (ObjectUtil.isNull(fileStagingDirectory)) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.file-staging-directory must not be null");
+        }
+        if (fileStreamChunkSizeBytes <= 0) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.file-stream-chunk-size-bytes must be positive");
+        }
+        long encodedChunkBytes = ((long) fileStreamChunkSizeBytes + 2L) / 3L * 4L;
+        if (encodedChunkBytes + 64L * 1024L > sendBufferSizeBytes) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.file-stream-chunk-size-bytes exceeds "
+                            + "the configured WebSocket send buffer");
+        }
+        if (fileStreamMaxBytes <= 0L) {
+            throw new IllegalArgumentException(
+                    "nnm.bot.channels.onebot.file-stream-max-bytes must be positive");
+        }
+        fileStreamRetentionMillis();
+    }
+
+    private static long durationMillis(Duration duration, String propertyName) {
+        try {
+            return duration.toMillis();
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException(propertyName + " is too large", exception);
         }
     }
 
-    public static class Instance {
-
-        private String id = "";
-        /** 一个正向 WebSocket 实例绑定的 QQ 账号。 */
-        private String botAccountId = "";
-        private boolean enabled = true;
-        private Connection connection = new Connection();
-        private Runtime runtime = new Runtime();
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getBotAccountId() {
-            return botAccountId;
-        }
-
-        public void setBotAccountId(String botAccountId) {
-            this.botAccountId = botAccountId;
-        }
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public Connection getConnection() {
-            return connection;
-        }
-
-        public void setConnection(Connection connection) {
-            this.connection = connection == null ? new Connection() : connection;
-        }
-
-        public Runtime getRuntime() {
-            return runtime;
-        }
-
-        public void setRuntime(Runtime runtime) {
-            this.runtime = runtime == null ? new Runtime() : runtime;
-        }
-
-        void validate() {
-            if (!enabled) {
-                return;
-            }
-            requireText(id, "nnm.bot.channels.onebot.instances[].id");
-            requireText(botAccountId,
-                    "nnm.bot.channels.onebot.instances[].bot-account-id");
-            try {
-                if (Long.parseLong(botAccountId.trim()) <= 0L) {
-                    throw new NumberFormatException("account id must be positive");
-                }
-            } catch (NumberFormatException exception) {
-                throw new IllegalArgumentException(
-                        "nnm.bot.channels.onebot.instances[].bot-account-id must be numeric QQ ids",
-                        exception);
-            }
-            requireText(connection.url, "nnm.bot.channels.onebot.instances[].connection.url");
-            if (runtime.reconnectInterval == null || runtime.reconnectInterval.isNegative()
-                    || runtime.reconnectInterval.isZero()) {
-                throw new IllegalArgumentException(
-                        "nnm.bot.channels.onebot.instances[].runtime.reconnect-interval must be positive");
-            }
-        }
-
-        /** 返回实例绑定的单个账号。 */
-        public List<String> configuredAccountIds() {
-            return StringUtils.hasText(botAccountId)
-                    ? List.of(botAccountId.trim())
-                    : List.of();
-        }
-
-        public boolean allowsAccount(String accountId) {
-            if (!StringUtils.hasText(accountId)) {
-                return false;
-            }
-            return configuredAccountIds().contains(accountId.trim());
-        }
-
-        public String channelInstanceId(String accountId) {
-            return id;
-        }
-    }
-
-    public static class Connection {
-
-        private String url = "";
-        private String accessToken = "";
-
-        public String getUrl() {
-            return url;
-        }
-
-        public void setUrl(String url) {
-            this.url = url;
-        }
-
-        public String getAccessToken() {
-            return accessToken;
-        }
-
-        public void setAccessToken(String accessToken) {
-            this.accessToken = accessToken;
-        }
-    }
-
-    public static class Runtime {
-
-        private Duration reconnectInterval = Duration.ofSeconds(5);
-
-        public Duration getReconnectInterval() {
-            return reconnectInterval;
-        }
-
-        public void setReconnectInterval(Duration reconnectInterval) {
-            this.reconnectInterval = reconnectInterval;
-        }
-    }
-
-    private static void requireText(String value, String name) {
-        if (!StringUtils.hasText(value)) {
-            throw new IllegalArgumentException(name + " must not be blank when enabled");
-        }
+    public enum FileTransferMode {
+        /** 本机连接使用路径，远端连接使用 NapCat WebSocket 分片上传。 */
+        AUTO,
+        /** 文件路径在 NnmBot 与 OneBot 进程间可见时使用。 */
+        LOCAL_PATH,
+        /** 通过 NapCat upload_file_stream 将文件传到 OneBot 主机。 */
+        STREAM
     }
 }

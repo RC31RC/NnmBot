@@ -41,6 +41,16 @@
             <artifactId>nnm-admin</artifactId>
         </dependency>
 
+        <!-- OCR native runtime：同时覆盖本机 macOS ARM64 和目标 Linux x86_64 -->
+        <dependency>
+            <groupId>net.linlan.tools</groupId>
+            <artifactId>rapidocr-onnx-macosx-arm64</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.linlan.tools</groupId>
+            <artifactId>rapidocr-onnx-linux-x86_64</artifactId>
+        </dependency>
+
         <!-- 数据库 -->
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -52,17 +62,6 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <!-- Flyway 数据库迁移 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-flyway</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <!-- Actuator（健康检查和指标） -->

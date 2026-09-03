@@ -4,5 +4,8 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.Set;
 
-public record UserRoleRequest(@NotNull Set<String> roleCodes) {
+/** 修改用户系统角色的请求。 */
+public record UserRoleRequest(
+        /** 要分配的角色编码。 */
+        @NotNull Set<String> roleCodes) {
 }

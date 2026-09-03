@@ -1,5 +1,9 @@
 package com.nnm.bot.admin.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.domain.SysMenu;
 import com.nnm.bot.admin.domain.SysPermission;
@@ -18,9 +22,10 @@ import com.nnm.bot.admin.repository.SysPermissionRepository;
 import com.nnm.bot.admin.repository.SysRoleRepository;
 import com.nnm.bot.admin.repository.SysUserRepository;
 import com.nnm.bot.admin.service.OperationAuditService;
+import com.nnm.bot.admin.service.RbacHierarchyService;
 import com.nnm.bot.admin.service.RbacManagementService;
 import com.nnm.bot.admin.service.RbacQueryService;
-import com.nnm.bot.common.error.CommonErrorCode;
+import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -54,10 +59,12 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     private RbacQueryService queryService;
     @Resource
     private OperationAuditService auditService;
+    @Resource
+    private RbacHierarchyService hierarchyService;
 
     @Override
     @Transactional
-    public long createUser(UserSaveRequest request) {
+    public long createUser(long operatorId, UserSaveRequest request) {
         String username = request.userName().trim();
         BusinessAssert.isFalse(
                 userRepository.existsByUsernameIgnoreCase(username),
@@ -70,11 +77,15 @@ public class RbacManagementServiceImpl implements RbacManagementService {
                 "新增用户必须设置密码"
         );
 
+        SysUser operator = hierarchyService.operator(operatorId);
+        Set<SysRole> roles = resolveRoles(request.roleCodes());
+        hierarchyService.checkCanAssignRoles(operator, roles);
+
         SysUser user = new SysUser();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(request.password()));
         applyUser(user, request);
-        user.getRoles().addAll(resolveRoles(request.roleCodes()));
+        user.getRoles().addAll(roles);
         userRepository.save(user);
         auditService.record("USER_CREATE", "USER", user.getId(), "创建用户 " + username);
         return user.getId();
@@ -82,8 +93,10 @@ public class RbacManagementServiceImpl implements RbacManagementService {
 
     @Override
     @Transactional
-    public void updateUser(long userId, UserSaveRequest request) {
+    public void updateUser(long operatorId, long userId, UserSaveRequest request) {
+        SysUser operator = hierarchyService.operator(operatorId);
         SysUser user = user(userId);
+        hierarchyService.checkCanManageUser(operator, user);
         String username = request.userName().trim();
         userRepository.findByUsernameIgnoreCase(username)
                 .filter(existing -> !existing.getId().equals(userId))
@@ -92,13 +105,15 @@ public class RbacManagementServiceImpl implements RbacManagementService {
                 });
 
         user.setUsername(username);
-        if (request.password() != null && !request.password().isBlank()) {
+        if (StrUtil.isNotBlank(request.password())) {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
         applyUser(user, request);
-        if (request.roleCodes() != null) {
+        if (ObjectUtil.isNotNull(request.roleCodes())) {
+            Set<SysRole> roles = resolveRoles(request.roleCodes());
+            hierarchyService.checkCanAssignRoles(operator, roles);
             user.getRoles().clear();
-            user.getRoles().addAll(resolveRoles(request.roleCodes()));
+            user.getRoles().addAll(roles);
         }
         userRepository.save(user);
         auditService.record("USER_UPDATE", "USER", userId, "修改用户 " + username);
@@ -112,7 +127,9 @@ public class RbacManagementServiceImpl implements RbacManagementService {
                 CommonErrorCode.PARAM_INVALID,
                 "不能禁用当前登录账号"
         );
+        SysUser operator = hierarchyService.operator(operatorId);
         SysUser user = user(userId);
+        hierarchyService.checkCanManageUser(operator, user);
         user.setEnabled(request.enabled());
         userRepository.save(user);
         if (!request.enabled()) {
@@ -128,23 +145,30 @@ public class RbacManagementServiceImpl implements RbacManagementService {
 
     @Override
     @Transactional
-    public void assignUserRoles(long userId, UserRoleRequest request) {
+    public void assignUserRoles(long operatorId, long userId, UserRoleRequest request) {
+        SysUser operator = hierarchyService.operator(operatorId);
         SysUser user = user(userId);
+        hierarchyService.checkCanManageUser(operator, user);
+        Set<SysRole> roles = resolveRoles(request.roleCodes());
+        hierarchyService.checkCanAssignRoles(operator, roles);
         user.getRoles().clear();
-        user.getRoles().addAll(resolveRoles(request.roleCodes()));
+        user.getRoles().addAll(roles);
         userRepository.save(user);
         auditService.record("USER_ROLE_ASSIGN", "USER", userId, "分配角色 " + request.roleCodes());
     }
 
     @Override
     @Transactional
-    public long createRole(RoleSaveRequest request) {
+    public long createRole(long operatorId, RoleSaveRequest request) {
+        SysUser operator = hierarchyService.operator(operatorId);
+        int authorityLevel = requestedAuthorityLevel(request, 0);
+        hierarchyService.checkRequestedLevel(operator, authorityLevel);
         String code = request.roleCode().trim();
         if (roleRepository.existsByCodeIgnoreCase(code)) {
             throw new BusinessException(409, "角色编码已存在");
         }
         SysRole role = new SysRole();
-        applyRole(role, request);
+        applyRole(role, request, authorityLevel);
         roleRepository.save(role);
         auditService.record("ROLE_CREATE", "ROLE", role.getId(), "创建角色 " + code);
         return role.getId();
@@ -152,23 +176,29 @@ public class RbacManagementServiceImpl implements RbacManagementService {
 
     @Override
     @Transactional
-    public void updateRole(long roleId, RoleSaveRequest request) {
+    public void updateRole(long operatorId, long roleId, RoleSaveRequest request) {
+        SysUser operator = hierarchyService.operator(operatorId);
         SysRole role = role(roleId);
+        hierarchyService.checkCanManageRole(operator, role);
+        int authorityLevel = requestedAuthorityLevel(request, role.getAuthorityLevel());
+        hierarchyService.checkRequestedLevel(operator, authorityLevel);
         String code = request.roleCode().trim();
         roleRepository.findByCode(code)
                 .filter(existing -> !existing.getId().equals(roleId))
                 .ifPresent(existing -> {
                     throw new BusinessException(409, "角色编码已存在");
                 });
-        applyRole(role, request);
+        applyRole(role, request, authorityLevel);
         roleRepository.save(role);
         auditService.record("ROLE_UPDATE", "ROLE", roleId, "修改角色 " + code);
     }
 
     @Override
     @Transactional
-    public void deleteRole(long roleId) {
+    public void deleteRole(long operatorId, long roleId) {
+        SysUser operator = hierarchyService.operator(operatorId);
         SysRole role = role(roleId);
+        hierarchyService.checkCanManageRole(operator, role);
         if ("R_SUPER".equals(role.getCode())) {
             throw new BusinessException(400, "超级管理员角色不能删除");
         }
@@ -180,9 +210,11 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     @Override
-    public RoleGrantResponse roleGrants(long roleId) {
+    public RoleGrantResponse roleGrants(long operatorId, long roleId) {
+        SysUser operator = hierarchyService.operator(operatorId);
         SysRole role = roleRepository.findWithGrantsById(roleId)
                 .orElseThrow(() -> new DataNotFoundException("角色不存在"));
+        hierarchyService.checkCanManageRole(operator, role);
         return new RoleGrantResponse(
                 queryService.allMenus(),
                 role.getMenus().stream().map(SysMenu::getId).collect(Collectors.toSet()),
@@ -192,14 +224,18 @@ public class RbacManagementServiceImpl implements RbacManagementService {
 
     @Override
     @Transactional
-    public void assignRoleGrants(long roleId, RoleGrantRequest request) {
+    public void assignRoleGrants(long operatorId, long roleId, RoleGrantRequest request) {
+        SysUser operator = hierarchyService.operator(operatorId);
         SysRole role = role(roleId);
+        hierarchyService.checkCanManageRole(operator, role);
         Set<SysMenu> menus = loadAll(menuRepository.findAllById(request.menuIds()), request.menuIds(), "菜单");
         Set<SysPermission> permissions = loadAll(
                 permissionRepository.findAllById(request.permissionIds()),
                 request.permissionIds(),
                 "权限"
         );
+        hierarchyService.checkCanAssignMenus(operator, menus);
+        hierarchyService.checkCanAssignPermissions(operator, permissions);
         role.getMenus().clear();
         role.getMenus().addAll(menus);
         role.getPermissions().clear();
@@ -320,17 +356,22 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         user.setEmail(trimToNull(request.userEmail()));
         user.setGender(trimToNull(request.userGender()));
         user.setAvatar(trimToNull(request.avatar()));
-        if (request.enabled() != null) {
+        if (ObjectUtil.isNotNull(request.enabled())) {
             user.setEnabled(request.enabled());
         }
     }
 
-    private void applyRole(SysRole role, RoleSaveRequest request) {
+    private void applyRole(SysRole role, RoleSaveRequest request, int authorityLevel) {
         role.setName(request.roleName().trim());
         role.setCode(request.roleCode().trim());
         role.setDescription(trimToNull(request.description()));
         role.setEnabled(request.enabled());
         role.setDataScope(request.dataScope());
+        role.setAuthorityLevel(authorityLevel);
+    }
+
+    private int requestedAuthorityLevel(RoleSaveRequest request, int defaultLevel) {
+        return ObjectUtil.isNull(request.authorityLevel()) ? defaultLevel : request.authorityLevel();
     }
 
     private void applyMenu(SysMenu menu, MenuSaveRequest request) {
@@ -355,7 +396,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     private Set<SysRole> resolveRoles(Collection<String> roleCodes) {
-        if (roleCodes == null || roleCodes.isEmpty()) {
+        if (CollUtil.isEmpty(roleCodes)) {
             return new LinkedHashSet<>();
         }
         Set<String> codes = roleCodes.stream()
@@ -380,7 +421,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     private void validateParent(Long parentId, Long menuId) {
-        if (parentId == null) {
+        if (ObjectUtil.isNull(parentId)) {
             return;
         }
         if (Objects.equals(parentId, menuId)) {
@@ -388,7 +429,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         }
         SysMenu parent = menu(parentId);
         Set<Long> visited = new HashSet<>();
-        while (parent.getParentId() != null) {
+        while (ObjectUtil.isNotNull(parent.getParentId())) {
             if (!visited.add(parent.getId()) || Objects.equals(parent.getParentId(), menuId)) {
                 throw new BusinessException(400, "菜单父级关系不能形成循环");
             }
@@ -417,6 +458,6 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     private String trimToNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+        return StrUtil.isBlank(value) ? null : value.trim();
     }
 }

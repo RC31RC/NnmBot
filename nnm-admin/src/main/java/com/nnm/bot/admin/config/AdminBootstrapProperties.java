@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.config;
 
+import cn.hutool.core.util.StrUtil;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "nnm.admin.bootstrap")
@@ -33,15 +35,15 @@ public class AdminBootstrapProperties {
         this.password = password;
     }
 
-    void validateWhenEnabled() {
+    public void validateWhenEnabled() {
         if (!enabled) {
             return;
         }
-        if (username == null || username.isBlank()) {
+        if (StrUtil.isBlank(username)) {
             throw new IllegalStateException(
                     "nnm.admin.bootstrap.username must be configured");
         }
-        if (password == null || password.isBlank()) {
+        if (StrUtil.isBlank(password)) {
             throw new IllegalStateException(
                     "nnm.admin.bootstrap.password must be configured");
         }

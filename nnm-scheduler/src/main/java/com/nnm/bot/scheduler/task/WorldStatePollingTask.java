@@ -38,11 +38,9 @@ public class WorldStatePollingTask {
     @Scheduled(fixedDelayString = "${nnm.warframe.polling.interval:2m}")
     public void poll() {
         try {
-            worldStateProvider.fetch().ifPresent(payload -> {
-                worldStateService.processNewState(worldStateParser.parse(
-                        payload.body(), payload.source()));
-                log.debug("World state fetched, validated and processed successfully");
-            });
+            // 统一走 refresh，保留原始 JSON，管理端才能展示未建模的动态字段。
+            worldStateService.refresh(worldStateProvider, worldStateParser);
+            log.debug("World state fetched, validated and processed successfully");
         } catch (Exception e) {
             log.error("World state polling failed", e);
         }

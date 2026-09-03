@@ -1,6 +1,6 @@
 package com.nnm.bot.common.validation;
 
-import com.nnm.bot.common.error.CommonErrorCode;
+import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 

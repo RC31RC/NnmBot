@@ -43,10 +43,17 @@
 
         <!-- 缓存 -->
         <caffeine.version>3.1.8</caffeine.version>
+        <cache2k.version>2.6.1.Final</cache2k.version>
 
         <!-- 渲染 -->
         <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
         <playwright.version>1.49.0</playwright.version>
+        <pdfbox.version>2.0.24</pdfbox.version>
+
+        <!-- JMComic -->
+        <jmcomic.version>1.1.8</jmcomic.version>
+        <okhttp.version>4.12.0</okhttp.version>
+        <webp-imageio.version>0.3.3</webp-imageio.version>
 
         <!-- 认证 -->
         <sa-token.version>1.45.0</sa-token.version>
@@ -54,6 +61,11 @@
         <!-- 通用工具 -->
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <commons-text.version>1.13.0</commons-text.version>
+        <hutool.version>5.8.27</hutool.version>
+
+        <!-- OCR -->
+        <rapidocr.version>1.0.1</rapidocr.version>
+        <rapidocr.native.version>1.2.2</rapidocr.native.version>
 
         <!-- 文档 -->
         <springdoc.version>3.0.3</springdoc.version>
@@ -120,6 +132,28 @@
                 <artifactId>openhtmltopdf-svg-support</artifactId>
                 <version>${openhtmltopdf.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>pdfbox</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+
+            <!-- JMComic 下载客户端 -->
+            <dependency>
+                <groupId>io.github.jukomu</groupId>
+                <artifactId>jmcomic-core</artifactId>
+                <version>${jmcomic.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.darkxanter</groupId>
+                <artifactId>webp-imageio</artifactId>
+                <version>${webp-imageio.version}</version>
+            </dependency>
 
             <!-- 渲染：Playwright -->
             <dependency>
@@ -146,6 +180,37 @@
                 <artifactId>commons-text</artifactId>
                 <version>${commons-text.version}</version>
             </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.linlan.tools</groupId>
+                <artifactId>rapidocr</artifactId>
+                <version>${rapidocr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.linlan.tools</groupId>
+                <artifactId>rapidocr-common</artifactId>
+                <version>${rapidocr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.linlan.tools</groupId>
+                <artifactId>rapidocr-onnx-models</artifactId>
+                <version>${rapidocr.native.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.linlan.tools</groupId>
+                <artifactId>rapidocr-onnx-macosx-arm64</artifactId>
+                <version>${rapidocr.native.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.linlan.tools</groupId>
+                <artifactId>rapidocr-onnx-linux-x86_64</artifactId>
+                <version>${rapidocr.native.version}</version>
+            </dependency>
 
             <!-- API 文档 -->
             <dependency>
@@ -159,6 +224,13 @@
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
                 <version>${caffeine.version}</version>
+            </dependency>
+
+            <!-- JVM 业务缓存 -->
+            <dependency>
+                <groupId>org.cache2k</groupId>
+                <artifactId>cache2k-api</artifactId>
+                <version>${cache2k.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

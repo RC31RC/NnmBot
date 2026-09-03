@@ -21,6 +21,11 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.tukaani</groupId>
+            <artifactId>xz</artifactId>
+            <version>1.10</version>
+        </dependency>
+        <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-common</artifactId>
         </dependency>
@@ -31,6 +36,10 @@
         <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-render</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-spring-boot4-starter</artifactId>
         </dependency>
 
         <!-- JPA 数据访问 -->

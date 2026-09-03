@@ -1,4 +1,4 @@
-package com.nnm.bot.common.http;
+package com.nnm.bot.common.config.http;
 
 import org.junit.jupiter.api.Test;
 

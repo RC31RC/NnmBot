@@ -1,7 +1,11 @@
 package com.nnm.bot.common.http;
 
+import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.common.config.http.HttpClientProperties;
 import com.nnm.bot.common.retry.RetryBackoff;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -13,12 +17,21 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.lang.reflect.Type;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * 统一同步 HTTP 客户端。
@@ -52,6 +65,51 @@ public class HttpClient {
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             last = doGetResult(requestUrl, requestHeaders);
+            if (!last.isRetryable() || attempt == maxAttempts) {
+                return last;
+            }
+            logRetry("GET", requestUrl, attempt, maxAttempts, last.statusCode());
+            if (!sleepBackoff(attempt)) {
+                return last;
+            }
+        }
+        return last;
+    }
+
+    /** 下载需要保留原始字节的响应，例如官方 PublicExport 的 LZMA 和 JSON 文件。 */
+    public ByteResult getBytes(String url, Map<String, String> headers) {
+        String requestUrl = requireUrl(url);
+        Map<String, String> requestHeaders = normalizedHeaders(headers);
+        int maxAttempts = Math.max(1, properties.getMaxAttempts());
+        ByteResult last = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            last = doGetBytesResult(requestUrl, requestHeaders);
+            if (!last.isRetryable() || attempt == maxAttempts) {
+                return last;
+            }
+            logRetry("GET", requestUrl, attempt, maxAttempts, last.statusCode());
+            if (!sleepBackoff(attempt)) {
+                return last;
+            }
+        }
+        return last;
+    }
+
+    /**
+     * 流式下载到文件。响应先写入目标文件同目录的临时文件，完整成功后再原子替换目标。
+     * 这样既避免大响应一次性进入堆内存，也不会把半截文件暴露给后续解析逻辑。
+     */
+    public DownloadResult downloadTo(
+            String url, Map<String, String> headers, Path target) {
+        String requestUrl = requireUrl(url);
+        Map<String, String> requestHeaders = normalizedHeaders(headers);
+        Objects.requireNonNull(target, "target must not be null");
+        Path normalizedTarget = target.toAbsolutePath().normalize();
+        int maxAttempts = Math.max(1, properties.getMaxAttempts());
+        DownloadResult last = null;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            last = doDownload(requestUrl, requestHeaders, normalizedTarget);
             if (!last.isRetryable() || attempt == maxAttempts) {
                 return last;
             }
@@ -138,22 +196,19 @@ public class HttpClient {
         String requestUrl = requireUrl(url);
         Map<String, String> requestHeaders = normalizedHeaders(headers);
         Objects.requireNonNull(responseTypeReference, "responseType must not be null");
-        String requestBody = serialize("POST", requestUrl, body == null ? Map.of() : body);
+        String requestBody = serialize("POST", requestUrl, ObjectUtil.isNull(body) ? Map.of() : body);
         logRequest("POST", requestUrl, body);
-        long startedAt = System.nanoTime();
-        try {
-            ResponseEntity<String> response = restClient.post()
-                    .uri(requestUrl)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .headers(httpHeaders -> requestHeaders.forEach(httpHeaders::set))
-                    .body(requestBody)
-                    .retrieve()
-                    .toEntity(String.class);
-            logResponse("POST", requestUrl, response, startedAt);
-            return deserialize("POST", requestUrl, response.getBody(), responseType);
-        } catch (RuntimeException exception) {
-            throw normalizeAndLog("POST", requestUrl, exception, startedAt);
-        }
+        return executeTypedRequest(
+                "POST",
+                requestUrl,
+                responseType,
+                () -> restClient.post()
+                        .uri(requestUrl)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .headers(httpHeaders -> requestHeaders.forEach(httpHeaders::set))
+                        .body(requestBody)
+                        .retrieve()
+                        .toEntity(String.class));
     }
 
     /**
@@ -163,44 +218,163 @@ public class HttpClient {
         String requestUrl = requireUrl(url);
         Map<String, String> requestHeaders = normalizedHeaders(headers);
         logRequest("POST", requestUrl, body);
-        long startedAt = System.nanoTime();
-        try {
-            ResponseEntity<String> response = restClient.post()
-                    .uri(requestUrl)
-                    .headers(httpHeaders -> requestHeaders.forEach(httpHeaders::set))
-                    .body(body)
-                    .retrieve()
-                    .toEntity(String.class);
-            logResponse("POST", requestUrl, response, startedAt);
-            return new HttpResult(response.getStatusCode().value(), response.getBody(), null);
-        } catch (RestClientResponseException exception) {
-            logFailure("POST", requestUrl, exception.getStatusCode().value(), exception, startedAt);
-            return new HttpResult(exception.getStatusCode().value(),
-                    exception.getResponseBodyAsString(), exception);
-        } catch (RuntimeException exception) {
-            logFailure("POST", requestUrl, -1, exception, startedAt);
-            return new HttpResult(-1, null, exception);
-        }
+        return executeTextResult(
+                "POST",
+                requestUrl,
+                () -> restClient.post()
+                        .uri(requestUrl)
+                        .headers(httpHeaders -> requestHeaders.forEach(httpHeaders::set))
+                        .body(body)
+                        .retrieve()
+                        .toEntity(String.class));
+    }
+
+    /**
+     * 发送原始字节 PUT。预签名上传不自动重试，避免网络结果不明确时重复写入同一分片。
+     */
+    public HttpResult putBytes(String url, byte[] body, Map<String, String> headers) {
+        String requestUrl = requireUrl(url);
+        Map<String, String> requestHeaders = normalizedHeaders(headers);
+        Objects.requireNonNull(body, "body must not be null");
+        logRequest("PUT", requestUrl, null);
+        return executeTextResult(
+                "PUT",
+                requestUrl,
+                () -> restClient.put()
+                        .uri(requestUrl)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .headers(httpHeaders -> requestHeaders.forEach(httpHeaders::set))
+                        .body(body)
+                        .retrieve()
+                        .toEntity(String.class));
     }
 
     private HttpResult doGetResult(String url, Map<String, String> headers) {
         logRequest("GET", url, null);
+        return executeTextResult(
+                "GET",
+                url,
+                () -> restClient.get()
+                        .uri(url)
+                        .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                        .retrieve()
+                        .toEntity(String.class));
+    }
+
+    /**
+     * 结果型调用在此统一把 HTTP 状态和传输异常转换为值对象，调用方自行决定业务语义。
+     */
+    private HttpResult executeTextResult(
+            String method,
+            String url,
+            Supplier<ResponseEntity<String>> request) {
         long startedAt = System.nanoTime();
         try {
-            ResponseEntity<String> response = restClient.get()
-                    .uri(url)
-                    .headers(httpHeaders -> headers.forEach(httpHeaders::set))
-                    .retrieve()
-                    .toEntity(String.class);
-            logResponse("GET", url, response, startedAt);
+            ResponseEntity<String> response = request.get();
+            logResponse(method, url, response, startedAt);
             return new HttpResult(response.getStatusCode().value(), response.getBody(), null);
         } catch (RestClientResponseException exception) {
-            logFailure("GET", url, exception.getStatusCode().value(), exception, startedAt);
+            logFailure(method, url, exception.getStatusCode().value(), exception, startedAt);
             return new HttpResult(exception.getStatusCode().value(),
                     exception.getResponseBodyAsString(), exception);
         } catch (RuntimeException exception) {
-            logFailure("GET", url, -1, exception, startedAt);
+            logFailure(method, url, -1, exception, startedAt);
             return new HttpResult(-1, null, exception);
+        }
+    }
+
+    private ByteResult doGetBytesResult(String url, Map<String, String> headers) {
+        logRequest("GET", url, null);
+        long startedAt = System.nanoTime();
+        try {
+            ResponseEntity<byte[]> response = restClient.get()
+                    .uri(url)
+                    .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                    .retrieve()
+                    .toEntity(byte[].class);
+            logResponse("GET", url, response, startedAt);
+            return new ByteResult(response.getStatusCode().value(), response.getBody(), null);
+        } catch (RestClientResponseException exception) {
+            logFailure("GET", url, exception.getStatusCode().value(), exception, startedAt);
+            return new ByteResult(exception.getStatusCode().value(), null, exception);
+        } catch (RuntimeException exception) {
+            logFailure("GET", url, -1, exception, startedAt);
+            return new ByteResult(-1, null, exception);
+        }
+    }
+
+    private DownloadResult doDownload(
+            String url, Map<String, String> headers, Path target) {
+        logRequest("GET", url, null);
+        long startedAt = System.nanoTime();
+        Path temporary = null;
+        try {
+            Files.createDirectories(target.getParent());
+            temporary = Files.createTempFile(
+                    target.getParent(), "." + target.getFileName() + ".", ".download");
+            Path temporaryFile = temporary;
+            DownloadResult result = restClient.get()
+                    .uri(url)
+                    .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                    .exchange((request, response) -> {
+                        int statusCode = response.getStatusCode().value();
+                        if (statusCode < 200 || statusCode >= 300) {
+                            return new DownloadResult(statusCode, 0, null);
+                        }
+                        long bytes = 0;
+                        try (InputStream input = response.getBody();
+                             OutputStream output = Files.newOutputStream(
+                                     temporaryFile,
+                                     StandardOpenOption.TRUNCATE_EXISTING,
+                                     StandardOpenOption.WRITE)) {
+                            byte[] buffer = new byte[32 * 1024];
+                            int read;
+                            while ((read = input.read(buffer)) >= 0) {
+                                if (read == 0) {
+                                    continue;
+                                }
+                                output.write(buffer, 0, read);
+                                bytes += read;
+                            }
+                        }
+                        return new DownloadResult(statusCode, bytes, null);
+                    });
+            if (result.isSuccess()) {
+                try (FileChannel channel = FileChannel.open(
+                        temporary,
+                        StandardOpenOption.WRITE)) {
+                    channel.force(true);
+                }
+                try {
+                    Files.move(temporary, target,
+                            StandardCopyOption.ATOMIC_MOVE,
+                            StandardCopyOption.REPLACE_EXISTING);
+                } catch (java.nio.file.AtomicMoveNotSupportedException exception) {
+                    Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+                }
+                temporary = null;
+            }
+            log.debug("[GET] <<< url={}, status={}, bytes={}, elapsedMs={}",
+                    sanitizeUrl(url),
+                    result.statusCode(),
+                    result.bytes(),
+                    TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startedAt)));
+            return result;
+        } catch (IOException | RuntimeException exception) {
+            DownloadResult result = new DownloadResult(-1, 0, exception);
+            RuntimeException failure = exception instanceof RuntimeException runtime
+                    ? runtime
+                    : new IllegalStateException("Streaming download failed", exception);
+            logFailure("GET", url, -1, failure, startedAt);
+            return result;
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (IOException cleanupFailure) {
+                    log.debug("Could not remove temporary download {}", temporary, cleanupFailure);
+                }
+            }
         }
     }
 
@@ -208,17 +382,32 @@ public class HttpClient {
                         Map<String, String> headers,
                         Type responseType) {
         logRequest("GET", url, null);
+        return executeTypedRequest(
+                "GET",
+                url,
+                responseType,
+                () -> restClient.get()
+                        .uri(url)
+                        .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                        .retrieve()
+                        .toEntity(String.class));
+    }
+
+    /**
+     * 类型化调用在此统一记录耗时并转换外部 HTTP、超时、传输和载荷异常。
+     */
+    private <T> T executeTypedRequest(
+            String method,
+            String url,
+            Type responseType,
+            Supplier<ResponseEntity<String>> request) {
         long startedAt = System.nanoTime();
         try {
-            ResponseEntity<String> response = restClient.get()
-                    .uri(url)
-                    .headers(httpHeaders -> headers.forEach(httpHeaders::set))
-                    .retrieve()
-                    .toEntity(String.class);
-            logResponse("GET", url, response, startedAt);
-            return deserialize("GET", url, response.getBody(), responseType);
+            ResponseEntity<String> response = request.get();
+            logResponse(method, url, response, startedAt);
+            return deserialize(method, url, response.getBody(), responseType);
         } catch (RuntimeException exception) {
-            throw normalizeAndLog("GET", url, exception, startedAt);
+            throw normalizeAndLog(method, url, exception, startedAt);
         }
     }
 
@@ -273,7 +462,7 @@ public class HttpClient {
                               String body,
                               Type responseType) {
         if (responseType == Void.class || responseType == void.class
-                || body == null || body.isBlank()) {
+                || StrUtil.isBlank(body)) {
             return null;
         }
         if (responseType == String.class) {
@@ -292,7 +481,7 @@ public class HttpClient {
 
     private void logRequest(String method, String url, Object payload) {
         log.debug("[{}] >>> url={}", method, sanitizeUrl(url));
-        if (properties.isPayloadLoggingEnabled() && payload != null && log.isDebugEnabled()) {
+        if (properties.isPayloadLoggingEnabled() && ObjectUtil.isNotNull(payload) && log.isDebugEnabled()) {
             log.debug("[{}] >>> payload={}", method, truncate(String.valueOf(payload)));
         }
     }
@@ -312,7 +501,7 @@ public class HttpClient {
                     method, sanitizeUrl(url), response.getStatusCode().value(), elapsedMillis);
         }
         if (properties.isPayloadLoggingEnabled()
-                && response.getBody() != null
+                && ObjectUtil.isNotNull(response.getBody())
                 && log.isDebugEnabled()) {
             log.debug("[{}] <<< payload={}", method, truncate(String.valueOf(response.getBody())));
         }
@@ -356,7 +545,7 @@ public class HttpClient {
     }
 
     static String sanitizeUrl(String url) {
-        if (url == null) {
+        if (ObjectUtil.isNull(url)) {
             return "";
         }
         int queryIndex = url.indexOf('?');
@@ -372,7 +561,7 @@ public class HttpClient {
     }
 
     private String truncate(String value) {
-        if (value == null) {
+        if (ObjectUtil.isNull(value)) {
             return "";
         }
         int maxLength = properties.getMaxPayloadLogLength();
@@ -384,14 +573,14 @@ public class HttpClient {
     }
 
     private static String requireUrl(String url) {
-        if (url == null || url.isBlank()) {
+        if (StrUtil.isBlank(url)) {
             throw new IllegalArgumentException("url must not be blank");
         }
         return url;
     }
 
     private static Map<String, String> normalizedHeaders(Map<String, String> headers) {
-        return headers == null ? Map.of() : headers;
+        return MapUtil.isEmpty(headers) ? Map.of() : headers;
     }
 
     private static boolean isRetryable(RuntimeException exception) {
@@ -410,7 +599,7 @@ public class HttpClient {
     private static boolean containsCause(Throwable throwable,
                                          Class<? extends Throwable> causeType) {
         Throwable current = throwable;
-        while (current != null) {
+        while (ObjectUtil.isNotNull(current)) {
             if (causeType.isInstance(current)) {
                 return true;
             }
@@ -425,6 +614,10 @@ public class HttpClient {
 
     /**
      * {@code statusCode == -1} 表示没有收到 HTTP 响应。
+     *
+     * @param statusCode HTTP 状态码；未收到响应时为 -1
+     * @param body 响应正文
+     * @param error 请求过程中捕获的异常
      */
     public record HttpResult(int statusCode, String body, Exception error) {
 
@@ -444,6 +637,30 @@ public class HttpClient {
         public boolean is2xx() {
             return HttpStatusCode.valueOf(statusCode == -1 ? 599 : statusCode)
                     .is2xxSuccessful();
+        }
+    }
+
+    public record ByteResult(int statusCode, byte[] body, Exception error) {
+
+        public boolean isSuccess() {
+            return statusCode >= 200 && statusCode < 300;
+        }
+
+        public boolean isRetryable() {
+            return statusCode == -1 || statusCode == 429
+                    || statusCode >= 500 && statusCode < 600;
+        }
+    }
+
+    public record DownloadResult(int statusCode, long bytes, Exception error) {
+
+        public boolean isSuccess() {
+            return statusCode >= 200 && statusCode < 300;
+        }
+
+        public boolean isRetryable() {
+            return statusCode == -1 || statusCode == 429
+                    || statusCode >= 500 && statusCode < 600;
         }
     }
 }

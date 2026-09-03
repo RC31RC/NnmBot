@@ -1,7 +1,11 @@
 package com.nnm.bot.render.spi;
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjectUtil;
+
 import com.nnm.bot.render.engine.OpenHtmlToPdfEngine;
 import com.nnm.bot.render.engine.PlaywrightEngine;
+import com.nnm.bot.render.config.RenderPluginProperties;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
@@ -88,19 +92,19 @@ public class RenderEngineProviderLoader {
     }
 
     private void add(LinkedHashMap<String, RenderEngineProvider> providers, RenderEngineProvider provider) {
-        if (provider == null) {
+        if (ObjectUtil.isNull(provider)) {
             log.warn("Ignoring null render provider");
             return;
         }
         try {
             String rawId = provider.id();
-            if (rawId == null || rawId.isBlank()) {
+            if (StrUtil.isBlank(rawId)) {
                 log.warn("Ignoring render provider with blank id");
                 return;
             }
             String id = rawId.trim().toLowerCase(java.util.Locale.ROOT);
             RenderEngineProvider registered = new RegisteredProvider(id, provider.order(), provider);
-            if (providers.putIfAbsent(id, registered) != null) {
+            if (ObjectUtil.isNotNull(providers.putIfAbsent(id, registered))) {
                 log.warn("Ignoring duplicate render provider id [{}]", id);
             }
         } catch (RuntimeException | LinkageError e) {
