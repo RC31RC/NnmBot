@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.adapter.command;
 
+import java.util.Comparator;
 import cn.hutool.core.util.ObjectUtil;
 
 import com.nnm.bot.admin.domain.BotCommand;
@@ -118,7 +119,7 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         }
         Map<Long, List<CommandExecutionConfiguration.CommandTemplate>> result = new HashMap<>();
         templates.forEach((commandId, items) -> {
-            items.sort(java.util.Comparator
+            items.sort(Comparator
                     .comparingInt(BotCommandTemplate::getSortOrder)
                     .thenComparing(BotCommandTemplate::getId));
             result.put(commandId, items.stream()

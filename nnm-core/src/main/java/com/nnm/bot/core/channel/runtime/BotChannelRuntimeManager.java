@@ -1,5 +1,6 @@
 package com.nnm.bot.core.channel.runtime;
 
+import org.springframework.beans.factory.ObjectProvider;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.common.constant.CommonErrorCode;
@@ -30,8 +31,23 @@ public class BotChannelRuntimeManager {
     private OneBotWebSocketClient oneBotClient;
     @Resource
     private QqOfficialGatewayClient qqOfficialClient;
+    @Resource
+    private ObjectProvider<ClusterBotRuntime> cluster;
 
-    public synchronized void start(String instanceId) {
+    public void start(String instanceId) {
+        BotChannelInstanceRecord record = this.find(instanceId);
+        if (!record.enabled()) {
+            throw new BusinessException(BotChannelErrorCode.INSTANCE_DISABLED);
+        }
+        var coordinator = cluster == null ? null : cluster.getIfAvailable();
+        if (coordinator != null) {
+            coordinator.request(instanceId, true);
+        } else {
+            startLocal(instanceId);
+        }
+    }
+
+    synchronized void startLocal(String instanceId) {
         BotChannelInstanceRecord record = this.find(instanceId);
         if (!record.enabled()) {
             throw new BusinessException(
@@ -57,18 +73,27 @@ public class BotChannelRuntimeManager {
         }
     }
 
-    public synchronized void stop(String instanceId) {
+    public void stop(String instanceId) {
+        var coordinator = cluster == null ? null : cluster.getIfAvailable();
+        if (coordinator != null) coordinator.request(instanceId, false);
+        else stopLocal(instanceId);
+    }
+
+    synchronized void stopLocal(String instanceId) {
         this.oneBotClient.stopInstance(instanceId);
         this.qqOfficialClient.stopInstance(instanceId);
         this.registry.stopped(instanceId);
     }
 
-    public synchronized void remove(String instanceId) {
-        this.removeRuntime(instanceId);
-        this.registry.unregister(instanceId);
+    public void remove(String instanceId) {
+        var coordinator = cluster == null ? null : cluster.getIfAvailable();
+        if (coordinator != null) coordinator.request(instanceId, false);
+        else synchronized (this) {
+            this.removeRuntime(instanceId);
+        }
     }
 
-    private void removeRuntime(String instanceId) {
+    synchronized void removeRuntime(String instanceId) {
         this.oneBotClient.stopInstance(instanceId);
         this.qqOfficialClient.stopInstance(instanceId);
         this.registry.unregister(instanceId);

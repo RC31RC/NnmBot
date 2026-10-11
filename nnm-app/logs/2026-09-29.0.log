@@ -1,0 +1,11 @@
+INFO  2026-09-30 00:00:00 [virtual-278315] i.g.r.s.s.RedissonScheduledTaskTemplate  : Task started id=warframe-worldstate-poll-v1 name=Warframe 世界数据刷新 scheduledAt=2026-09-29T16:00:00Z occurrence=1790697600000 instance=23148a6b-e008-45a7-9b1f-2999baba281b
+INFO  2026-09-30 00:00:00 [virtual-278315] i.g.r.s.s.RedissonScheduledTaskTemplate  : Task completed id=warframe-worldstate-poll-v1 name=Warframe 世界数据刷新 occurrence=1790697600000 success=true durationMs=21 nextAt=2026-09-29T16:02:00Z
+INFO  2026-09-30 00:02:00 [virtual-278792] i.g.r.s.s.RedissonScheduledTaskTemplate  : Task started id=warframe-worldstate-poll-v1 name=Warframe 世界数据刷新 scheduledAt=2026-09-29T16:02:00Z occurrence=1790697720000 instance=23148a6b-e008-45a7-9b1f-2999baba281b
+INFO  2026-09-30 00:02:00 [virtual-278792] i.g.r.s.s.RedissonScheduledTaskTemplate  : Task completed id=warframe-worldstate-poll-v1 name=Warframe 世界数据刷新 occurrence=1790697720000 success=true durationMs=3 nextAt=2026-09-29T16:04:00Z
+INFO  2026-09-30 00:04:00 [virtual-279268] i.g.r.s.s.RedissonScheduledTaskTemplate  : Task started id=warframe-worldstate-poll-v1 name=Warframe 世界数据刷新 scheduledAt=2026-09-29T16:04:00Z occurrence=1790697840000 instance=23148a6b-e008-45a7-9b1f-2999baba281b
+INFO  2026-09-30 00:04:00 [virtual-279268] i.g.r.s.s.RedissonScheduledTaskTemplate  : Task completed id=warframe-worldstate-poll-v1 name=Warframe 世界数据刷新 occurrence=1790697840000 success=true durationMs=5 nextAt=2026-09-29T16:06:00Z
+INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+INFO  2026-09-30 00:04:00 [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

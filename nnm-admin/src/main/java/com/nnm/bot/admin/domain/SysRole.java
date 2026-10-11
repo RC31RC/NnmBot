@@ -61,8 +61,10 @@ public class SysRole {
     @ManyToMany
     @JoinTable(
             name = "sys_role_permission",
-            joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id")
+            joinColumns =
+                    @JoinColumn(name = "role_id"),
+            inverseJoinColumns =
+                    @JoinColumn(name = "permission_id")
     )
     private Set<SysPermission> permissions = new LinkedHashSet<>();
 
@@ -70,8 +72,10 @@ public class SysRole {
     @ManyToMany
     @JoinTable(
             name = "sys_role_menu",
-            joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "menu_id")
+            joinColumns =
+                    @JoinColumn(name = "role_id"),
+            inverseJoinColumns =
+                    @JoinColumn(name = "menu_id")
     )
     private Set<SysMenu> menus = new LinkedHashSet<>();
 

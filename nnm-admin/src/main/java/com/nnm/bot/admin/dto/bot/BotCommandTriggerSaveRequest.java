@@ -7,7 +7,10 @@ import jakarta.validation.constraints.Size;
 
 /** 保存命令触发词的请求。 */
 public record BotCommandTriggerSaveRequest(
-        @NotBlank @Size(max = 100) String name,
-        @NotNull CommandBoundaryPolicy boundaryPolicy
+        @NotBlank
+        @Size(max = 100)
+        String name,
+        @NotNull
+        CommandBoundaryPolicy boundaryPolicy
 ) {
 }

@@ -34,14 +34,17 @@ public class RbacController {
     private RbacQueryService rbacQueryService;
 
     @PostMapping("/me")
-    public ApiResponse<UserInfoResponse> me(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<UserInfoResponse> me(
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(authService.currentUser(StpUtil.getLoginIdAsLong()));
     }
 
     @PostMapping("/users/query")
     @SaCheckPermission("system:user:view")
     public ApiResponse<PageResult<UserListItem>> users(
-            @RequestBody UserQueryRequest request
+            @RequestBody
+            UserQueryRequest request
     ) {
         return ApiResponse.ok(rbacQueryService.users(
                 StpUtil.getLoginIdAsLong(),
@@ -54,7 +57,8 @@ public class RbacController {
     @PostMapping("/roles/query")
     @SaCheckPermission("system:role:view")
     public ApiResponse<PageResult<RoleListItem>> roles(
-            @RequestBody RoleQueryRequest request
+            @RequestBody
+            RoleQueryRequest request
     ) {
         String keyword = StrUtil.isBlank(request.roleName()) ? request.roleCode() : request.roleName();
         return ApiResponse.ok(rbacQueryService.roles(
@@ -68,20 +72,23 @@ public class RbacController {
     @PostMapping("/permissions/query")
     @SaCheckPermission("system:role:assign")
     public ApiResponse<List<PermissionItem>> permissions(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(rbacQueryService.permissions());
     }
 
     @PostMapping("/menus/query")
     public ApiResponse<List<MenuItem>> menus(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(rbacQueryService.menus(StpUtil.getLoginIdAsLong()));
     }
 
     @PostMapping("/menus/all/query")
     @SaCheckPermission("system:menu:view")
     public ApiResponse<List<MenuItem>> allMenus(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(rbacQueryService.allMenus());
     }
 }

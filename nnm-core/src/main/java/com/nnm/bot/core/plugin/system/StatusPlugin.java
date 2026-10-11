@@ -5,16 +5,17 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
+import com.nnm.bot.core.constant.MatchType;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
-import java.util.Map;
 
 @BotPluginCommand(
         code = SystemCommandCodes.STATUS,
-        matchType = com.nnm.bot.core.constant.MatchType.EXACT,
+        matchType = MatchType.EXACT,
         name = "状态",
         gameCode = "system",
         order = Integer.MIN_VALUE + 1)
@@ -38,34 +39,24 @@ public class StatusPlugin extends BotPlugin {
         long usedMemoryMiB = usedMemory / MEBIBYTE;
         long maxMemoryMiB = runtime.maxMemory() / MEBIBYTE;
         int pluginCount = this.commandRegistryProvider.getObject().size();
-        String status = """
-                NnmBot 运行正常
-
-                机器人账号：%s
-                会话类型：%s
-                运行时长：%s
-                JVM：%s
-                内存：%d MiB / %d MiB
-                插件数量：%d
-                """.formatted(
-                accountId,
-                scope,
-                uptimeText,
-                javaVersion,
-                usedMemoryMiB,
-                maxMemoryMiB,
-                pluginCount
-        ).strip();
-
-        return CommandResult.of(status, Map.of(
-                "accountId", accountId,
-                "scope", scope,
-                "uptime", uptimeText,
-                "javaVersion", javaVersion,
-                "memory", "%d MiB / %d MiB".formatted(usedMemoryMiB, maxMemoryMiB),
-                "pluginCount", pluginCount
-        ));
+        return CommandResult.of("NnmBot 运行正常", new StatusDisplay(accountId, scope, uptimeText,
+                javaVersion, "%d MiB / %d MiB".formatted(usedMemoryMiB, maxMemoryMiB), pluginCount));
     }
+
+    /** 运行状态只展示一份，摘要不再重复全部数据。 */
+    public record StatusDisplay(
+            @JsonPropertyDescription("机器人账号")
+            String accountId,
+            @JsonPropertyDescription("会话")
+            String scope,
+            @JsonPropertyDescription("运行时长")
+            String uptime,
+            @JsonPropertyDescription("JVM")
+            String javaVersion,
+            @JsonPropertyDescription("内存")
+            String memory,
+            @JsonPropertyDescription("插件数量")
+            int pluginCount) {}
 
     private static String formatDuration(Duration duration) {
         long days = duration.toDays();

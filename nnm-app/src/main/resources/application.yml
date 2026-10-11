@@ -5,6 +5,10 @@ server:
 spring:
   application:
     name: NnmBot
+  threads:
+    # Tomcat 和 Spring 默认异步执行器使用虚拟线程；CPU 密集型任务仍显式使用平台线程池。
+    virtual:
+      enabled: true
   servlet:
     multipart:
       max-file-size: 50MB
@@ -13,15 +17,17 @@ spring:
     # 业务模板来自数据库 HTML，不使用 classpath:/templates/ 下的资源模板。
     check-template-location: false
   config:
-    import: optional:classpath:application-bot.yml
+    import:
+      - optional:classpath:application-bot.yml
+      - classpath:application-distributed.yml
   lifecycle:
     timeout-per-shutdown-phase: 30s
   datasource:
     driver-class-name: org.postgresql.Driver
 #    url: jdbc:postgresql://123.206.232.72:5432/nnmbot?currentSchema=nnmbot,public
     url: jdbc:postgresql://127.0.0.1:5432/nnmbot?currentSchema=nnmbot,public
-    username: nnmbot
-    password: nnmbot
+    username: postgres
+    password: root
     hikari:
       maximum-pool-size: 5
       minimum-idle: 2
@@ -49,7 +55,8 @@ sa-token:
   token-name: Authorization
   token-prefix: Bearer
   timeout: 7200
-  active-timeout: 1800
+  # 访问期间自动续签；连续 30 天没有访问才失效。
+  active-timeout: 2592000
   is-concurrent: true
   is-share: false
   max-login-count: 5
@@ -59,10 +66,11 @@ sa-token:
 
 logging:
   level:
-    com.nnm.bot: DEBUG
+    com.nnm.bot: INFO
+    com.nnm.bot.common.http.HttpClient: INFO
     com.mikuac.shiro: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
     org.springframework: INFO
 
 management:
@@ -93,7 +101,7 @@ nnm:
       max-age: 3600
   ocr:
     # OCR native 库只在后续紫卡分析启用时打开，避免普通启动加载模型。
-    enabled: false
+    enabled: true
     max-input-bytes: 8388608
     max-image-pixels: 25000000
     enhanced-recognition: true
@@ -115,11 +123,27 @@ nnm:
     slow-request-threshold: 3s
     payload-logging-enabled: false
     max-payload-log-length: 2048
+    # 单位为字节：普通响应 16 MiB，流式下载 512 MiB。
+    max-response-body-bytes: 16777216
+    max-download-bytes: 536870912
+    request-id-header: X-Request-Id
+    request-id-mdc-key: requestId
+    trace-header: traceparent
+    trace-mdc-key: traceparent
+    metrics-enabled: true
     trust-all-certs: false
   executor:
+    # 通用 I/O 任务使用虚拟线程，数值限制的是同时运行的业务任务数。
+    application-concurrency: 64
+    # 独立虚拟线程执行器在提交入口限流，不创建无限等待的发现线程。
+    discovery-concurrency: 4
+    # 建连任务与业务任务隔离，防止业务等待握手时耗尽同一执行器的许可。
+    connection-concurrency: 4
+    # 下载和解析隔离于父刷新任务；工作线程不访问数据库，兼顾 4GB 内存预算。
+    community-source-concurrency: 2
+    community-source-queue-capacity: 8
     task:
-      core-size: 2
-      max-size: 8
+      # CPU 线程数默认取 JVM 可见核心数，可用 core-size / max-size 显式覆盖。
       queue-capacity: 100
       keep-alive: 60s
     scheduler:

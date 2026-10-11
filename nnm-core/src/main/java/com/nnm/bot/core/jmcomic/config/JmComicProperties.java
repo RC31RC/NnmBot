@@ -38,7 +38,7 @@ public class JmComicProperties {
     /** 可选 JM 密码，只允许通过外部配置注入。 */
     private String password;
     /** JMComic 内部图片下载线程数。 */
-    private int downloadThreads = 2;
+    private int downloadThreads = 4;
     /** 同一 JVM 允许同时处理的漫画任务数。 */
     private int maxConcurrentTasks = 2;
     /** 单个漫画允许的最大页数。 */

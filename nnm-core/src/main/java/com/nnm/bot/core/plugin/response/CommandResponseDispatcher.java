@@ -3,6 +3,8 @@ package com.nnm.bot.core.plugin.response;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.core.constant.ChannelOutputMode;
 import com.nnm.bot.core.message.model.BotMarkdownMessage;
 import com.nnm.bot.core.message.model.BotMessageContext;
@@ -22,9 +24,11 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 
 /**
- * 将命令结果转换为渠道消息。输出顺序固定为图片后文字。
+ * 将命令结果转换为渠道消息。摘要文字始终先于图片或文件发送。
  */
 @Slf4j
 @Component
@@ -36,15 +40,17 @@ public class CommandResponseDispatcher {
     private ObjectProvider<BotImageRenderer> imageRendererProvider;
     @Resource
     private List<CommandImageCache> imageCaches = List.of();
-
+    @Resource
+    private CommandDataTextFormatter dataTextFormatter;
+    @Resource
+    private ObjectMapper objectMapper;
     /**
      * 生成响应计划并完成发送，同时接管 {@link CommandResult} 附件的最终清理责任。
      *
      * <p>这里显式保留原始异常并把清理失败加入 suppressed，避免临时文件删除失败
      * 覆盖真正的渲染或平台发送异常。</p>
      */
-    public void dispatch(BotMessageContext context, RuntimeCommand command,
-                         CommandResult result) {
+    public void dispatch(BotMessageContext context, RuntimeCommand command, CommandResult result) {
         RuntimeException runtimeFailure = null;
         Error errorFailure = null;
         try {
@@ -55,29 +61,51 @@ public class CommandResponseDispatcher {
             }
 
             ChannelOutputMode outputMode = configuration.outputMode(context.platform());
+            // NONE 只关闭附加数据载体；命令摘要仍然必须发送。
             if (outputMode == ChannelOutputMode.NONE) {
+                this.strategyRouter.send(context, new ResponsePlan(
+                        ChannelOutputMode.NONE,
+                        result.text(),
+                        null,
+                        List.of(),
+                        null,
+                        configuration.mentionInvoker() && context.isGroupMessage()
+                                ? context.senderId()
+                                : null));
                 return;
             }
-
+            // 只在输出边界展开 POJO；所有载体共享同一份展开结果，不做业务字段裁剪。
+            Map<String, Object> data = displayData(result.data());
             byte[] image = null;
-            if ((outputMode == ChannelOutputMode.IMAGE
-                    || outputMode == ChannelOutputMode.TEXT_IMAGE)
+            if (outputMode == ChannelOutputMode.IMAGE
                     && result.hasData()) {
-                image = this.renderImage(command, result.data());
+                image = this.renderImage(command, data);
             }
 
             ChannelOutputMode effectiveMode = outputMode;
-            if ((outputMode == ChannelOutputMode.IMAGE
-                    || outputMode == ChannelOutputMode.TEXT_IMAGE) && ObjectUtil.isNull(image)) {
-                effectiveMode = result.hasText() ? ChannelOutputMode.TEXT : ChannelOutputMode.NONE;
+            if (outputMode == ChannelOutputMode.IMAGE && ObjectUtil.isNull(image)) {
+                effectiveMode = ChannelOutputMode.TEXT;
+            }
+            String text = result.text();
+            // 保留原始对象类型以读取字段展示说明；序列化字段及值与图片使用的数据相同。
+            String formattedData = result.hasData() ? dataTextFormatter.format(result.data(), text) : "";
+            if (effectiveMode == ChannelOutputMode.TEXT && result.hasData()) {
+                if (StrUtil.isNotBlank(formattedData)) {
+                    text = StrUtil.isBlank(text) ? formattedData : text + "\n" + formattedData;
+                }
+            }
+            List<CommandAttachment> attachments = new ArrayList<>(result.attachments());
+            if (effectiveMode == ChannelOutputMode.FILE && !formattedData.isBlank()) {
+                attachments.add(new CommandAttachment(descriptor.code() + ".txt",
+                        "text/plain; charset=utf-8", formattedData.getBytes(StandardCharsets.UTF_8)));
             }
             ResponsePlan plan = new ResponsePlan(
                     effectiveMode,
-                    result.text(),
+                    text,
                     image,
-                    result.attachments(),
-                    effectiveMode == ChannelOutputMode.MARKDOWN && result.hasText()
-                            ? BotMarkdownMessage.content(result.text())
+                    attachments,
+                    effectiveMode == ChannelOutputMode.MARKDOWN && StrUtil.isNotBlank(formattedData)
+                            ? BotMarkdownMessage.content(formattedData)
                             : null,
                     configuration.mentionInvoker() && context.isGroupMessage()
                             ? context.senderId()
@@ -101,6 +129,16 @@ public class CommandResponseDispatcher {
                 }
             }
         }
+    }
+
+    /** Jackson 统一处理 record、普通 POJO 及嵌套集合，图片模板仍可按原有字段名读取。 */
+    private Map<String, Object> displayData(Object data) {
+        Object value = objectMapper.convertValue(data, Object.class);
+        if (value == null) return Map.of();
+        if (value instanceof Map<?, ?>) {
+            return objectMapper.convertValue(value, new TypeReference<>() {});
+        }
+        return Map.of("items", value);
     }
 
     /**

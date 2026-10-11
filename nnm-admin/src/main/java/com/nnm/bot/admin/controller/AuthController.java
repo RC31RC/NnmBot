@@ -20,12 +20,18 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ApiResponse<LoginResponse> login(
+            @Valid
+            @RequestBody
+    LoginRequest request) {
         return ApiResponse.ok(authService.login(request));
     }
 
     @PostMapping("/refresh")
-    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ApiResponse<LoginResponse> refresh(
+            @Valid
+            @RequestBody
+    RefreshTokenRequest request) {
         return ApiResponse.ok(authService.refresh(request));
     }
 

@@ -1,5 +1,8 @@
 package com.nnm.bot.warframe.application;
 
+import java.util.HexFormat;
+import java.util.Locale;
+import java.util.Objects;
 import cn.hutool.core.util.StrUtil;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -7,8 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.core.message.render.BotImageRenderer;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
 import com.nnm.bot.core.plugin.response.CommandImageCache;
-import com.nnm.bot.warframe.application.plugin.AbstractWorldStateCommandPlugin;
-import com.nnm.bot.warframe.infrastructure.cache.WarframeCacheNames;
+import com.nnm.bot.warframe.plugin.AbstractWorldStateCommandPlugin;
+import com.nnm.bot.warframe.plugin.AbstractArbitrationCommandPlugin;
+import com.nnm.bot.warframe.cache.WarframeCacheNames;
 import jakarta.annotation.Resource;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -39,8 +43,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WorldStateCommandImageCache implements CommandImageCache {
 
     private static final ZoneId CHINA_ZONE = ZoneId.of("Asia/Shanghai");
-    private static final Set<String> VOLATILE_DATA_KEYS = Set.of(
-            "remaining", "fetchedAt", "providerTimestamp", "updatedAt");
     private static final Set<String> DAILY_COMMANDS = Set.of(
             "arbitration", "arbitration-table");
 
@@ -56,7 +58,8 @@ public class WorldStateCommandImageCache implements CommandImageCache {
     public Optional<byte[]> renderIfSupported(RuntimeCommand command,
                                               Map<String, Object> data,
                                               BotImageRenderer renderer) {
-        if (!(command.plugin() instanceof AbstractWorldStateCommandPlugin)) {
+        if (!(command.plugin() instanceof AbstractWorldStateCommandPlugin)
+                && !(command.plugin() instanceof AbstractArbitrationCommandPlugin)) {
             return Optional.empty();
         }
         String templateHtml = command.configuration().templateHtml();
@@ -83,7 +86,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
                 created.complete(copy(rechecked));
                 return Optional.of(copy(rechecked));
             }
-            byte[] rendered = java.util.Objects.requireNonNull(
+            byte[] rendered = Objects.requireNonNull(
                     renderer.renderHtml(templateHtml, data),
                     "world state image renderer returned null");
             byte[] cacheValue = copy(rendered);
@@ -110,7 +113,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
     private ImageCacheKey cacheKey(String commandCode,
                                    String templateHtml,
                                    Map<String, Object> data) {
-        String normalizedCode = commandCode.trim().toLowerCase(java.util.Locale.ROOT);
+        String normalizedCode = commandCode.trim().toLowerCase(Locale.ROOT);
         String dayBucket = DAILY_COMMANDS.contains(normalizedCode)
                 ? LocalDate.now(CHINA_ZONE).toString()
                 : "";
@@ -134,9 +137,8 @@ public class WorldStateCommandImageCache implements CommandImageCache {
             Map<String, Object> stable = new TreeMap<>();
             map.forEach((key, nestedValue) -> {
                 String name = String.valueOf(key);
-                if (!VOLATILE_DATA_KEYS.contains(name)) {
-                    stable.put(name, stableValue(nestedValue));
-                }
+                // 输入已是用户展示数据，倒计时等字段变化也必须使图片失效。
+                stable.put(name, stableValue(nestedValue));
             });
             return stable;
         }
@@ -169,7 +171,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(value.getBytes(StandardCharsets.UTF_8));
-            return java.util.HexFormat.of().formatHex(digest);
+            return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }

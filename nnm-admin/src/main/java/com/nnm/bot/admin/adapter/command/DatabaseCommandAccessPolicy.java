@@ -1,5 +1,9 @@
 package com.nnm.bot.admin.adapter.command;
 
+import com.nnm.bot.admin.domain.BotCommandRobotRole;
+import com.nnm.bot.admin.domain.BotCommandRole;
+import com.nnm.bot.admin.domain.BotRobotRole;
+import java.util.stream.Collectors;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
@@ -28,6 +32,7 @@ import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Locale;
@@ -41,6 +46,7 @@ import java.util.Set;
  * 能力角色决定机器人能不能提供命令，系统角色和群组角色决定当前用户能不能使用命令。</p>
  */
 @Component
+@Slf4j
 public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
 
     private final BotCommandRepository commandRepository;
@@ -90,7 +96,10 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
         BotCommand command = this.commandRepository.findByCodeIgnoreCase(descriptor.code())
                 .orElse(null);
         if (ObjectUtil.isNull(command)) {
-            return CommandAccessDecision.permit();
+            String commandCode = descriptor.code().strip().toLowerCase(Locale.ROOT);
+            return SystemCommandCodes.ALL.contains(commandCode)
+                    ? CommandAccessDecision.permit()
+                    : CommandAccessDecision.denied("当前业务命令未完成数据库配置");
         }
 
         CommandAccessDecision instanceDecision = this.checkBotInstance(context, command);
@@ -112,24 +121,38 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
         if (SystemCommandCodes.ALL.contains(command.getCode().toLowerCase(Locale.ROOT))) {
             return CommandAccessDecision.permit();
         }
-        List<com.nnm.bot.admin.domain.BotCommandRobotRole> bindings =
+        List<BotCommandRobotRole> bindings =
                 this.commandRoleRepository.findAllByCommandId(command.getId());
         if (bindings.isEmpty()) {
-            return CommandAccessDecision.permit();
+            log.debug("机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, "
+                            + "reason=未配置机器人能力角色",
+                    command.getCode(), command.getId(), context.platform(), context.botAccountId());
+            return CommandAccessDecision.denied("当前命令未配置机器人能力角色");
         }
         var instance = this.instanceRepository.findByPlatformAndBotAccountId(
                 context.platform(), context.botAccountId()).orElse(null);
         if (ObjectUtil.isNull(instance)) {
+            log.debug("机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, "
+                            + "bindingCount={}, reason=机器人实例不存在",
+                    command.getCode(), command.getId(), context.platform(), context.botAccountId(),
+                    bindings.size());
             return CommandAccessDecision.denied("当前机器人实例不存在");
         }
-        boolean allowed = bindings.stream()
-                .map(item -> item.getRobotRoleId())
+        Set<Long> enabledRoleIds = bindings.stream()
+                .map(BotCommandRobotRole::getRobotRoleId)
                 .filter(roleId -> this.roleRepository.findById(roleId)
-                        .map(com.nnm.bot.admin.domain.BotRobotRole::isEnabled)
+                        .map(BotRobotRole::isEnabled)
                         .orElse(false))
-                .flatMap(roleId -> this.roleInstanceRepository
-                        .findAllByRobotRoleId(roleId).stream())
-                .anyMatch(item -> item.getBotInstanceId().equals(instance.getId()));
+                .collect(Collectors.toSet());
+        Set<Long> boundRoleIds = enabledRoleIds.stream()
+                .filter(roleId -> this.roleInstanceRepository.findAllByRobotRoleId(roleId).stream()
+                        .anyMatch(item -> item.getBotInstanceId().equals(instance.getId())))
+                .collect(Collectors.toSet());
+        boolean allowed = !boundRoleIds.isEmpty();
+        log.debug("机器人能力角色校验：commandCode={}, commandId={}, platform={}, botAccountId={}, "
+                        + "bindingCount={}, instanceId={}, enabledRoleIds={}, boundRoleIds={}, allowed={}",
+                command.getCode(), command.getId(), context.platform(), context.botAccountId(),
+                bindings.size(), instance.getId(), enabledRoleIds, boundRoleIds, allowed);
         return allowed
                 ? CommandAccessDecision.permit()
                 : CommandAccessDecision.denied("当前机器人未绑定该命令能力");
@@ -137,7 +160,7 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
 
     private CommandAccessDecision checkSystemRole(BotMessageContext context,
                                                    BotCommand command) {
-        List<com.nnm.bot.admin.domain.BotCommandRole> bindings =
+        List<BotCommandRole> bindings =
                 this.systemRoleBindingRepository.findAllByCommandId(command.getId());
         if (bindings.isEmpty()) {
             return CommandAccessDecision.permit();
@@ -149,8 +172,8 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
             return CommandAccessDecision.denied("当前平台身份未绑定启用的系统用户");
         }
         Set<Long> requiredRoleIds = bindings.stream()
-                .map(com.nnm.bot.admin.domain.BotCommandRole::getRoleId)
-                .collect(java.util.stream.Collectors.toSet());
+                .map(BotCommandRole::getRoleId)
+                .collect(Collectors.toSet());
         boolean allowed = user.get().getRoles().stream()
                 .anyMatch(role -> role.isEnabled() && requiredRoleIds.contains(role.getId()));
         return allowed

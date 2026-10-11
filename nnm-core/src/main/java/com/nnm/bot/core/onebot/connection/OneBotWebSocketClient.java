@@ -4,6 +4,9 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.core.channel.model.BotChannelKey;
+import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
+import org.springframework.beans.factory.ObjectProvider;
+import java.util.function.BooleanSupplier;
 import com.nnm.bot.core.constant.BotChannelCapability;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
@@ -18,8 +21,8 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.http.HttpHeaders;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketHttpHeaders;
@@ -54,12 +57,14 @@ public class OneBotWebSocketClient implements SmartLifecycle {
     private MultiOneBotWebSocketClientHandler handler;
     @Resource(name = "scheduledExecutor")
     private ThreadPoolTaskScheduler scheduler;
-    @Resource(name = "applicationTaskExecutor")
-    private ThreadPoolTaskExecutor taskExecutor;
+    @Resource(name = "webSocketConnectExecutor")
+    private AsyncTaskExecutor taskExecutor;
     @Resource
     private BotChannelRegistry channelRegistry;
     @Resource
     private OneBotProperties properties;
+    @Resource
+    private ObjectProvider<ClusterBotRuntime> clusterProvider;
 
     private final ConcurrentHashMap<String, ManagedConnection> connections =
             new ConcurrentHashMap<>();
@@ -144,6 +149,7 @@ public class OneBotWebSocketClient implements SmartLifecycle {
         private final Set<Long> knownAccounts = ConcurrentHashMap.newKeySet();
         private final BotChannelInstanceRecord primaryInstance;
         private final AtomicBoolean active = new AtomicBoolean();
+        private final BooleanSupplier ownership;
         private volatile CompletableFuture<WebSocketSession> connectionFuture;
         private volatile WebSocketSession session;
         private ScheduledFuture<?> reconnectTask;
@@ -151,6 +157,10 @@ public class OneBotWebSocketClient implements SmartLifecycle {
         private ManagedConnection(List<BotChannelInstanceRecord> instances) {
             this.instances = List.copyOf(instances);
             this.primaryInstance = this.instances.getFirst();
+            ClusterBotRuntime cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
+            BooleanSupplier lease = cluster == null ? () -> true : cluster.guard(
+                    new BotChannelKey(primaryInstance.platform(), primaryInstance.botAccountId()));
+            this.ownership = () -> active.get() && lease.getAsBoolean();
             this.client = new StandardWebSocketClient();
             this.client.setTaskExecutor(OneBotWebSocketClient.this.taskExecutor);
             this.headers = new WebSocketHttpHeaders();
@@ -179,14 +189,14 @@ public class OneBotWebSocketClient implements SmartLifecycle {
         }
 
         private void connect() {
-            if (!running || !active.get() || connected.get()
+            if (!running || !ownership.getAsBoolean() || connected.get()
                     || !connecting.compareAndSet(false, true)) {
                 return;
             }
             connectionFuture = client.execute(new ConnectionHandler(), headers, uri);
             connectionFuture.whenComplete((connectedSession, error) -> {
                 connecting.set(false);
-                if (!active.get()) {
+                if (!ownership.getAsBoolean()) {
                     closeQuietly(connectedSession);
                     return;
                 }
@@ -333,7 +343,7 @@ public class OneBotWebSocketClient implements SmartLifecycle {
 
             @Override
             public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-                if (!active.get()) {
+                if (!ownership.getAsBoolean()) {
                     session.close(CloseStatus.NORMAL);
                     return;
                 }
@@ -342,7 +352,7 @@ public class OneBotWebSocketClient implements SmartLifecycle {
                         properties.sendTimeLimitMillis(),
                         properties.getSendBufferSizeBytes());
                 WebSocketSession serializedSession =
-                        new SerializedWebSocketSession(concurrentSession);
+                        new SerializedWebSocketSession(concurrentSession, ownership);
                 this.shiroSession = serializedSession;
                 super.afterConnectionEstablished(serializedSession);
                 ManagedConnection.this.session = serializedSession;
@@ -353,6 +363,10 @@ public class OneBotWebSocketClient implements SmartLifecycle {
             @Override
             public void handleMessage(WebSocketSession session,
                                       WebSocketMessage<?> message) throws Exception {
+                if (!ownership.getAsBoolean()) {
+                    session.close(CloseStatus.POLICY_VIOLATION);
+                    return;
+                }
                 WebSocketSession concurrentSession = sessionForShiro(session);
                 String actualAccount = messageAccountId(message);
                 if (ObjectUtil.isNotNull(actualAccount)) {

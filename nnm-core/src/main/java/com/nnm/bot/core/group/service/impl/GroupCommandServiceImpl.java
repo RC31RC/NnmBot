@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.model.PointCommandDisplay;
 import com.nnm.bot.core.group.domain.BotGroup;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
@@ -20,8 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * 群组系统命令服务。平台身份是积分和幂等判断的依据，QQ 号绑定只是成员资料。
@@ -54,7 +53,7 @@ public class GroupCommandServiceImpl implements GroupCommandService {
                         groupContext.group().getId(), member.getId())
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
         // 签到奖励由命令积分守卫统一结算，这里只提供成员和当前账户快照。
-        return result("当前积分：" + balance.points(), member, balance);
+        return result("当前积分：" + balance.points(), balance);
     }
 
     @Override
@@ -71,7 +70,7 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         PointBalance balance = pointAccountService.balance(
                         groupContext.group().getId(), member.getId())
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
-        return result("当前积分：" + balance.points(), member, balance);
+        return result("当前积分：" + balance.points(), balance);
     }
 
     private BotGroupMember resolveMember(
@@ -177,14 +176,9 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         }
     }
 
-    private CommandResult result(String text, BotGroupMember member, PointBalance balance) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("points", balance.points());
-        data.put("qqId", StrUtil.blankToDefault(member.getQqId(), ""));
-        data.put("memberOpenid", StrUtil.blankToDefault(member.getMemberOpenid(), ""));
-        data.put("kookId", StrUtil.blankToDefault(member.getKookId(), ""));
-        data.put("qqIdVerified", member.isQqIdVerified());
-        return CommandResult.of(text, data);
+    private CommandResult result(String text, PointBalance balance) {
+        return CommandResult.of(text,
+                new PointCommandDisplay(balance.points(), balance.totalEarned(), balance.totalSpent()));
     }
 
 }

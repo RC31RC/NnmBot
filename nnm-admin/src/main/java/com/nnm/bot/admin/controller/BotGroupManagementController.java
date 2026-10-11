@@ -38,14 +38,16 @@ public class BotGroupManagementController {
     @PostMapping("/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotGroupItem>> list(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.list());
     }
 
     @PostMapping("/discovery/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotScopeDiscoveryItem>> discovery(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.discover());
     }
 
@@ -60,7 +62,9 @@ public class BotGroupManagementController {
 
     @PostMapping("/{id}/members/refresh")
     @SaCheckPermission("bot:group:update")
-    public ApiResponse<AdminTaskSubmission> refreshMembers(@PathVariable long id) {
+    public ApiResponse<AdminTaskSubmission> refreshMembers(
+            @PathVariable
+            long id) {
         return ApiResponse.ok(submitTask(
                 "BOT_GROUP_MEMBER_REFRESH:" + id,
                 "bot:group:update",
@@ -81,21 +85,30 @@ public class BotGroupManagementController {
 
     @PostMapping
     @SaCheckPermission("bot:group:update")
-    public ApiResponse<Long> create(@Valid @RequestBody BotGroupCreateRequest request) {
+    public ApiResponse<Long> create(
+            @Valid
+            @RequestBody
+    BotGroupCreateRequest request) {
         return ApiResponse.ok(service.create(request));
     }
 
     @PutMapping("/{id}")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> update(
-            @PathVariable long id, @Valid @RequestBody BotGroupUpdateRequest request) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            BotGroupUpdateRequest request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/{id}")
     @SaCheckPermission("bot:group:delete")
-    public ApiResponse<Void> delete(@PathVariable long id) {
+    public ApiResponse<Void> delete(
+            @PathVariable
+            long id) {
         service.delete(id);
         return ApiResponse.ok();
     }
@@ -103,7 +116,11 @@ public class BotGroupManagementController {
     @PostMapping("/{id}/bots")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> bindBot(
-            @PathVariable long id, @Valid @RequestBody BotGroupBotSaveRequest request) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            BotGroupBotSaveRequest request) {
         service.bindBot(id, request);
         return ApiResponse.ok();
     }
@@ -111,7 +128,10 @@ public class BotGroupManagementController {
     @DeleteMapping("/{id}/bots/{bindingId}")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> unbindBot(
-            @PathVariable long id, @PathVariable long bindingId) {
+            @PathVariable
+            long id,
+            @PathVariable
+            long bindingId) {
         service.unbindBot(id, bindingId);
         return ApiResponse.ok();
     }
@@ -119,17 +139,23 @@ public class BotGroupManagementController {
     @PostMapping("/{id}/members/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotGroupMemberItem>> members(
-            @PathVariable long id,
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @PathVariable
+            long id,
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.members(id));
     }
 
     @PutMapping("/{groupId}/members/{memberId}")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> updateMember(
-            @PathVariable long groupId,
-            @PathVariable long memberId,
-            @Valid @RequestBody BotGroupMemberUpdateRequest request) {
+            @PathVariable
+            long groupId,
+            @PathVariable
+            long memberId,
+            @Valid
+            @RequestBody
+            BotGroupMemberUpdateRequest request) {
         service.updateMember(groupId, memberId, request);
         return ApiResponse.ok();
     }
@@ -137,9 +163,13 @@ public class BotGroupManagementController {
     @PutMapping("/{groupId}/members/{memberId}/points")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> updateMemberPoints(
-            @PathVariable long groupId,
-            @PathVariable long memberId,
-            @Valid @RequestBody BotGroupMemberPointsUpdateRequest request) {
+            @PathVariable
+            long groupId,
+            @PathVariable
+            long memberId,
+            @Valid
+            @RequestBody
+            BotGroupMemberPointsUpdateRequest request) {
         service.updateMemberPoints(groupId, memberId, request);
         return ApiResponse.ok();
     }

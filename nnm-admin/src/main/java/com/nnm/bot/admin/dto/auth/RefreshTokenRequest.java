@@ -2,9 +2,10 @@ package com.nnm.bot.admin.dto.auth;
 
 import jakarta.validation.constraints.NotBlank;
 
-/** 刷新登录令牌请求。 */
+/** 使用当前 Sa-Token 令牌续签请求。 */
 public record RefreshTokenRequest(
-        /** 用于换取新访问令牌的刷新令牌。 */
-        @NotBlank(message = "刷新令牌不能为空") String refreshToken
+        /** 当前访问令牌；普通 Sa-Token 模式不再使用独立刷新令牌。 */
+        @NotBlank(message = "登录令牌不能为空")
+        String token
 ) {
 }

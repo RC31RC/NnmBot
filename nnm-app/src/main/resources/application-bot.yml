@@ -31,7 +31,7 @@ nnm:
     # 整本接口匿名调用可能返回空地址，需要时通过环境变量提供账号。
     username: ${NNM_JMCOMIC_USERNAME:hhhddc}
     password: ${NNM_JMCOMIC_PASSWORD:159000}
-    download-threads: 2
+    download-threads: ${NNM_JMCOMIC_DOWNLOAD_THREADS:4}
     max-concurrent-tasks: ${NNM_JMCOMIC_MAX_CONCURRENT_TASKS:2}
     max-pages: 300
     max-download-bytes: 314572800
@@ -58,58 +58,251 @@ nnm:
       cache-directory: ${NNM_WARFRAME_PUBLIC_EXPORT_CACHE_DIRECTORY:${user.dir}/data/warframe/public-export}
     polling:
       enabled: true
-      interval: 200m
-    api:
+      cron: "0 */2 * * * *"
+      zone: Asia/Shanghai
+    cycles:
+      # 本地周期校准来源：warframe-worldstate-parser；双衍到期保留秒级偏移，不提前截断。
+      vallis-warm-epoch: "2026-02-04T19:46:48Z"
+      zariman-corpus-epoch: "2022-06-14T05:00:00Z"
+      zariman-bounty-offset: 5s
+      duviri-epoch: "1970-01-01T00:00:52Z"
+      cetus-anchor-max-age: 24h
+    arbitration:
+      # 每天 04:00 由 RDT 在集群内选择一个实例检查；成功数据 7 天内不重复抓取，失败后集群级延迟 1 分钟重试。
+      url: "https://browse.wf/arbys.txt"
+      cron: "0 0 4 * * *"
+      zone: Asia/Shanghai
+      refresh-interval: 7d
+      retry-interval: 1m
+      max-records: 50000
+    official-api:
       world-state-url: https://api.warframe.com/cdn/worldState.php
-      market-base-url: https://api.warframe.market/v1
+      public-export-index-url: https://origin.warframe.com/PublicExport/index_{language}.txt.lzma
+      public-export-manifest-url: https://content.warframe.com/PublicExport/Manifest/{file}
       language: zh
       english-language: en
+    market-api:
+      # 物品目录和订单默认使用 v2；仍仅提供 v1 的统计/拍卖接口由独立能力补充。
+      version: ${NNM_WARFRAME_MARKET_API_VERSION:v2}
+      v1-base-url: https://api.warframe.market/v1
+      v2-base-url: https://api.warframe.market/v2
+      language: zh-hans
       platform: pc
-      # 每个社区 JSON 独立配置，管理端可按数据集分别刷新和上传预览。
-      community-dataset-urls:
-        translation:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/translation.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/translation.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/translation.json
+      # 普通市场订单默认每页 5 单，允许配置 1 至 10；拍卖仍为每页 10 单。
+      order-page-size: 5
+      api-key: ${NNM_WARFRAME_MARKET_API_KEY:}
+      user-agent: ${NNM_WARFRAME_MARKET_USER_AGENT:NnmBot/1.0}
+    community-data:
+      # 每个社区数据集配置一个或多个来源，管理端可按数据集分别刷新和上传预览。
+      # 列表只有一项时表示单来源；多项表示同一业务数据集的多个来源。
+      # 每个来源可用 url 或 urls 配置；urls 表示同一来源的候选/故障转移地址。
+      # 每个来源用稳定 source-code 隔离身份和删除比对范围。
+      datasets:
+        bounty_definition:
+          - source-code: warframe-public-export-plus:ExportBounties.json
+            url: https://raw.githubusercontent.com/calamity-inc/warframe-public-export-plus/senpai/ExportBounties.json
+        arbitration_essence:
+          - source-code: warframe-info-api:routes/arbitrationEssence.js
+            url: https://raw.githubusercontent.com/mmxd12/warframe-info-api/main/routes/arbitrationEssence.js
+        arbitration_schedule:
+          - source-code: browse.wf:arbys.txt
+            url: https://browse.wf/arbys.txt
+        term:
+          - source-code: kingprimes:warframe/term.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/term.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/term.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/term.json
         alias:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/alias.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/alias.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/alias.json
+          - source-code: kingprimes:warframe/alias.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/alias.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/alias.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/alias.json
         nodes:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/nodes.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/nodes.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/nodes.json
-        reward_pool:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/reward_pool.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/reward_pool.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/reward_pool.json
+          - source-code: kingprimes:warframe/nodes.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/nodes.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/nodes.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/nodes.json
         state_translation:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
+          - source-code: kingprimes:warframe/state_translation.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/state_translation.json
         market_element:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_element.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_element.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_element.json
+          - source-code: kingprimes:warframe/market_element.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_element.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_element.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_element.json
         market_riven_tion:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
+          - source-code: kingprimes:warframe/market_riven_tion.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion.json
         market_riven_tion_alias:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
+          - source-code: kingprimes:warframe/market_riven_tion_alias.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/market_riven_tion_alias.json
         riven_analyse_trend:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
+          - source-code: kingprimes:warframe/riven_analyse_trend.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_analyse_trend.json
         riven_trend:
-          - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
-          - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
-          - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
-      # 普通 Market 查询通常不需要密钥；如上游要求鉴权，通过环境变量注入。
-      market-api-key: ${NNM_WARFRAME_MARKET_API_KEY:}
-      market-user-agent: ${NNM_WARFRAME_MARKET_USER_AGENT:NnmBot/1.0}
+          - source-code: kingprimes:warframe/riven_trend.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
+              - https://jsd.onmicrosoft.cn/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
+              - https://cdn.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/riven_trend.json
+        riven_unrollable:
+          - source-code: warframe-public-export-plus:supplementals/riven_unrollables.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-public-export-plus/master/supplementals/riven_unrollables.json
+        worldstate_rule:
+          - source-code: warframe-info-api:api/dataSource/state_translation_local.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-info-api/master/api/dataSource/state_translation_local.json
+        worldstate_mission_type:
+          - source-code: warframe-worldstate-data:data/zh/missionTypes.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/missionTypes.json
+        worldstate_node:
+          - source-code: warframe-worldstate-data:data/zh/solNodes.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/solNodes.json
+        worldstate_faction:
+          - source-code: warframe-worldstate-data:data/zh/factionsData.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/factionsData.json
+        worldstate_syndicate:
+          - source-code: warframe-worldstate-data:data/zh/syndicatesData.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/syndicatesData.json
+        worldstate_operation_type:
+          - source-code: warframe-worldstate-data:data/zh/operationTypes.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/operationTypes.json
+        worldstate_upgrade_type:
+          - source-code: warframe-worldstate-data:data/zh/upgradeTypes.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/upgradeTypes.json
+        worldstate_persistent_enemy:
+          - source-code: warframe-worldstate-data:data/zh/persistentEnemyData.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/persistentEnemyData.json
+        worldstate_fissure_modifier:
+          - source-code: warframe-worldstate-data:data/zh/fissureModifiers.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/fissureModifiers.json
+        worldstate_sortie:
+          - source-code: warframe-worldstate-data:data/zh/sortieData.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/sortieData.json
+        worldstate_language:
+          - source-code: warframe-worldstate-data:data/zh/languages.json
+            url: https://raw.githubusercontent.com/wfcd/warframe-worldstate-data/master/data/zh/languages.json
+        translation:
+          - source-code: warframe-public-export-plus:dict.zh.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/calamity-inc/warframe-public-export-plus@senpai/dict.zh.json
+              - https://jsd.onmicrosoft.cn/gh/calamity-inc/warframe-public-export-plus@senpai/dict.zh.json
+              - https://cdn.jsdelivr.net/gh/calamity-inc/warframe-public-export-plus@senpai/dict.zh.json
+              - https://raw.githubusercontent.com/calamity-inc/warframe-public-export-plus/senpai/dict.zh.json
+          - source-code: warframe-public-export-plus:dict.en.json
+            urls:
+              - https://testingcf.jsdelivr.net/gh/calamity-inc/warframe-public-export-plus@senpai/dict.en.json
+              - https://jsd.onmicrosoft.cn/gh/calamity-inc/warframe-public-export-plus@senpai/dict.en.json
+              - https://cdn.jsdelivr.net/gh/calamity-inc/warframe-public-export-plus@senpai/dict.en.json
+              - https://raw.githubusercontent.com/calamity-inc/warframe-public-export-plus/senpai/dict.en.json
+        relic:
+          - source-code: warframe-relic-data:data/Relics.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-relic-data/master/data/Relics.json
+        reward_pool:
+          - source-code: warframe-public-export-plus:ExportRewards.json
+            url: https://raw.githubusercontent.com/calamity-inc/warframe-public-export-plus/senpai/ExportRewards.json
+          - source-code: kingprimes:warframe/reward_pool.json
+            url: https://testingcf.jsdelivr.net/gh/KingPrimes/DataSource@latest/warframe/reward_pool.json
+          - source-code: warframe-info-api:reward_pool_local.json
+            url: https://raw.githubusercontent.com/mmxd12/warframe-info-api/main/api/dataSource/reward_pool_local.json
+        fish_guide:
+          - source-code: warframe-hub:data/json/fish/poe.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/fish/poe.json
+          - source-code: warframe-hub:data/json/fish/vallis.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/fish/vallis.json
+          - source-code: warframe-hub:data/json/fish/deimos.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/fish/deimos.json
+        map_feature:
+          - source-code: warframe-hub:data/json/geo/vallis/toroidcave.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/toroidcave.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/labels.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/labels.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/toroids.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/toroids.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/fishing-recommend.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/fishing-recommend.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/toroidfishcave.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/toroidfishcave.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/memoryfrag.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/memoryfrag.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/fishcave.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/fishcave.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/fishing.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/fishing.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/kdrive.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/kdrive.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/somachord.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/somachord.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/vallis/mining-recommend.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/vallis/mining-recommend.json
+            world: vallis
+          - source-code: warframe-hub:data/json/geo/deimos/labels.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/deimos/labels.json
+            world: deimos
+          - source-code: warframe-hub:data/json/geo/deimos/necramech.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/deimos/necramech.json
+            world: deimos
+          - source-code: warframe-hub:data/json/geo/deimos/cave.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/deimos/cave.json
+            world: deimos
+          - source-code: warframe-hub:data/json/geo/deimos/teleporter.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/deimos/teleporter.json
+            world: deimos
+          - source-code: warframe-hub:data/json/geo/deimos/bounty.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/deimos/bounty.json
+            world: deimos
+          - source-code: warframe-hub:data/json/geo/deimos/kdrive.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/deimos/kdrive.json
+            world: deimos
+          - source-code: warframe-hub:data/json/geo/plains/labels.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/plains/labels.json
+            world: plains
+          - source-code: warframe-hub:data/json/geo/plains/lure.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/plains/lure.json
+            world: plains
+          - source-code: warframe-hub:data/json/geo/plains/grineer.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/plains/grineer.json
+            world: plains
+          - source-code: warframe-hub:data/json/geo/plains/lorefish.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/plains/lorefish.json
+            world: plains
+          - source-code: warframe-hub:data/json/geo/plains/cave.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/plains/cave.json
+            world: plains
+          - source-code: warframe-hub:data/json/geo/plains/wisp.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/plains/wisp.json
+            world: plains
+          - source-code: warframe-hub:data/json/geo/plains/fishing.json
+            url: https://raw.githubusercontent.com/WFCD/warframe-hub/dev/data/json/geo/plains/fishing.json
+            world: plains
+    worldstate-data:
+      # WorldState 代码簿只从数据库读取，数据库由手工 SQL 脚本维护。
+      locale: zh
     cache:
       world-state:
         capacity: 1

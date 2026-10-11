@@ -14,10 +14,13 @@ import com.nnm.bot.core.plugin.model.CommandMatch;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
 import com.nnm.bot.core.plugin.response.CommandResponseDispatcher;
+import com.nnm.bot.core.plugin.system.SystemCommandCodes;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+
+import java.util.Locale;
 
 /**
  * 命令统一执行链：配置、能力权限、冷却、可选积分、插件和响应。
@@ -55,7 +58,15 @@ public class CommandExecutionPipeline {
         this.groupMemberIdentityResolver.findOrCreateForCommand(context);
 
         CommandAccessPolicy accessPolicy = this.accessPolicyProvider.getIfAvailable();
-        if (ObjectUtil.isNotNull(accessPolicy)) {
+        if (ObjectUtil.isNull(accessPolicy)) {
+            String commandCode = descriptor.code().strip().toLowerCase(Locale.ROOT);
+            if (!SystemCommandCodes.ALL.contains(commandCode)) {
+                // 管理模块或权限策略装配异常时必须默认拒绝，不能让业务命令绕过能力角色校验。
+                log.warn("Command [{}] rejected because no access policy is available for sender [{}]",
+                        descriptor.code(), context.senderId());
+                return;
+            }
+        } else {
             var accessDecision = accessPolicy.check(context, descriptor, configuration);
             if (!accessDecision.allowed()) {
                 log.debug("Command [{}] rejected by access policy for sender [{}]: {}",
@@ -90,8 +101,7 @@ public class CommandExecutionPipeline {
             CommandResult result = command.plugin().handle(match.invocation());
             if (ObjectUtil.isNotNull(costGuard)) {
                 if (ObjectUtil.isNotNull(result) && result.successful()) {
-                    result = costGuard.commit(
-                            context, descriptor, reservation, result);
+                    result = costGuard.commit(context, descriptor, reservation, result);
                 } else {
                     costGuard.refund(reservation, null);
                 }

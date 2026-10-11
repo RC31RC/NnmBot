@@ -9,22 +9,33 @@ public record MenuSaveRequest(
         /** 父菜单主键。 */
         Long parentId,
         /** 前端路由名称。 */
-        @NotBlank @Size(max = 100) String name,
+        @NotBlank
+        @Size(max = 100)
+        String name,
         /** 前端路由路径。 */
-        @NotBlank @Size(max = 255) String path,
+        @NotBlank
+        @Size(max = 255)
+        String path,
         /** 页面组件路径。 */
-        @Size(max = 255) String component,
+        @Size(max = 255)
+        String component,
         /** 菜单标题。 */
-        @NotBlank @Size(max = 100) String title,
+        @NotBlank
+        @Size(max = 100)
+        String title,
         /** 菜单图标。 */
-        @Size(max = 100) String icon,
+        @Size(max = 100)
+        String icon,
         /** 同级菜单排序值。 */
         int sortOrder,
         /** 是否缓存页面。 */
-        @NotNull Boolean keepAlive,
+        @NotNull
+        Boolean keepAlive,
         /** 是否显示菜单。 */
-        @NotNull Boolean visible,
+        @NotNull
+        Boolean visible,
         /** 是否启用菜单。 */
-        @NotNull Boolean enabled
+        @NotNull
+        Boolean enabled
 ) {
 }

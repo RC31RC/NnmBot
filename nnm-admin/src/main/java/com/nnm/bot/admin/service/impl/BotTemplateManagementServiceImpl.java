@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.impl;
 
+import java.util.Comparator;
+import java.util.Locale;
 import com.nnm.bot.admin.domain.BotCommandTemplate;
 import com.nnm.bot.admin.dto.bot.BotTemplateItem;
 import com.nnm.bot.admin.dto.bot.BotTemplateSaveRequest;
@@ -27,7 +29,7 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
     @Override
     public List<BotTemplateItem> list() {
         return templateRepository.findAll().stream()
-                .sorted(java.util.Comparator.comparing(BotCommandTemplate::getTemplateCode))
+                .sorted(Comparator.comparing(BotCommandTemplate::getTemplateCode))
                 .map(template -> new BotTemplateItem(
                         template.getId(),
                         template.getTemplateCode(),
@@ -101,6 +103,6 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
     }
 
     private String normalize(String code) {
-        return code.trim().toLowerCase(java.util.Locale.ROOT);
+        return code.trim().toLowerCase(Locale.ROOT);
     }
 }

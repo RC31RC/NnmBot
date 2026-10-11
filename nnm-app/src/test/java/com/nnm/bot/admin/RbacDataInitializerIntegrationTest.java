@@ -1,6 +1,9 @@
 package com.nnm.bot.admin;
 
-import com.nnm.bot.admin.config.AdminBootstrapProperties;
+import io.github.rdt.lock.DistributedLockManager;
+import io.github.rdt.cache.CacheService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.nnm.bot.admin.config.properties.AdminBootstrapProperties;
 import com.nnm.bot.admin.bootstrap.RbacDataInitializer;
 import com.nnm.bot.admin.constant.DataScope;
 import com.nnm.bot.admin.domain.SysRole;
@@ -28,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         "shiro.ws.server.enable=false",
         "shiro.ws.client.enable=false"
 })
+@MockitoBean(types = {DistributedLockManager.class, CacheService.class})
 class RbacDataInitializerIntegrationTest {
 
     @Resource
@@ -87,6 +91,6 @@ class RbacDataInitializerIntegrationTest {
 
         assertThatThrownBy(() -> initializer.run(null))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("docs/sql/01_init.sql");
+                .hasMessageContaining("docs/sql/init.sql");
     }
 }

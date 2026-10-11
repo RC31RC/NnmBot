@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.repository;
 
+import java.util.Optional;
 import com.nnm.bot.admin.domain.BotScope;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -9,6 +10,6 @@ public interface BotScopeRepository extends JpaRepository<BotScope, Long> {
 
     List<BotScope> findAllByOrderByPlatformAscScopeTypeAscScopeKeyAsc();
 
-    java.util.Optional<BotScope> findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
+    Optional<BotScope> findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
             String platform, String scopeType, String scopeKey, Long botInstanceId);
 }

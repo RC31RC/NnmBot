@@ -21,6 +21,7 @@ import org.springframework.util.Assert;
 
 import java.io.IOException;
 
+/** OneBot 消息传输及远端确认校验；发送失败不重试，避免确认超时时重复投递。 */
 @Component
 public class OneBotMessageSender implements BotMessageSender {
 
@@ -39,10 +40,7 @@ public class OneBotMessageSender implements BotMessageSender {
 
     @Override
     public void sendText(BotMessageContext context, String text) {
-        Assert.notNull(context, "context must not be null");
-        Assert.hasText(text, "text must not be blank");
-        OneBotMessageSource source = context.nativeSource(OneBotMessageSource.class);
-        ensureSuccess(source.bot().sendMsg(source.event(), text, true));
+        sendText(context, text, null);
     }
 
     @Override
@@ -51,9 +49,18 @@ public class OneBotMessageSender implements BotMessageSender {
         Assert.hasText(text, "text must not be blank");
         OneBotMessageSource source = context.nativeSource(OneBotMessageSource.class);
         boolean hasMention = mentionUserIdIsUsable(context, mentionUserId);
-        ensureSuccess(source.bot().sendMsg(
-                source.event(), hasMention ? withMention(context, text, mentionUserId) : text,
-                !hasMention));
+        // 不设应用层字符上限或分段；超时不代表未投递，不能截短后重发。
+        try {
+            ActionData<MsgId> result = source.bot().sendMsg(source.event(),
+                    hasMention ? withMention(context, text, mentionUserId) : text, !hasMention);
+            ensureSuccess(result);
+        } catch (RuntimeException exception) {
+            throw new BusinessException(BotChannelErrorCode.MESSAGE_SEND_FAILED,
+                    "OneBot 文本发送失败: chars=" + text.length()
+                            + ", scope=" + context.scope()
+                            + ", conversation=" + context.conversationId()
+                            + "; 未自动重试", exception);
+        }
     }
 
     @Override
@@ -167,7 +174,9 @@ public class OneBotMessageSender implements BotMessageSender {
 
     private static String withMention(BotMessageContext context, String text,
                                       String mentionUserId) {
-        return messageBuilder(context, mentionUserId).text(text).build();
+        // 附加 at 后 auto_escape 必须关闭；正文单独转义，避免用户文本被解释为 CQ 指令。
+        String escaped = text.replace("&", "&amp;").replace("[", "&#91;").replace("]", "&#93;");
+        return messageBuilder(context, mentionUserId).text(escaped).build();
     }
 
     private static MsgUtils messageBuilder(BotMessageContext context, String mentionUserId) {

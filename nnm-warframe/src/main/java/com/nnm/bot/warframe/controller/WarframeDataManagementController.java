@@ -1,43 +1,48 @@
 package com.nnm.bot.warframe.controller;
 
+import com.nnm.bot.warframe.constant.WarframeCommunityDataset;
+import com.nnm.bot.warframe.constant.WarframeCommunityRecordChangeType;
+import com.nnm.bot.common.exception.BusinessException;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.task.AdminTaskService;
 import com.nnm.bot.common.task.AdminTaskSubmission;
 import com.nnm.bot.warframe.application.WarframeDataManagementService;
+import com.nnm.bot.warframe.application.WarframeArbitrationAdminService;
 import com.nnm.bot.warframe.application.WarframeCommunityDatasetService;
 import com.nnm.bot.warframe.application.WarframeOfficialDataService;
 import com.nnm.bot.warframe.application.WarframeOfficialDataQueryService;
 import com.nnm.bot.warframe.application.WarframeWorldStateManagementService;
-import com.nnm.bot.warframe.application.WorldStateService;
+import com.nnm.bot.warframe.application.WarframeWorldStateService;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
-import com.nnm.bot.warframe.dto.WarframeCommunityDatasetInfo;
-import com.nnm.bot.warframe.dto.WarframeCommunityDatasetItem;
-import com.nnm.bot.warframe.dto.WarframeCommunityDatasetMergeRequest;
-import com.nnm.bot.warframe.dto.WarframeCommunityDatasetPreview;
-import com.nnm.bot.warframe.dto.WarframeCommunityDatasetQueryRequest;
-import com.nnm.bot.warframe.dto.WarframeItemAliasItem;
-import com.nnm.bot.warframe.dto.WarframeAliasQueryRequest;
-import com.nnm.bot.warframe.dto.WarframeItemAliasSaveRequest;
-import com.nnm.bot.warframe.dto.WarframeItemItem;
-import com.nnm.bot.warframe.dto.WarframeItemQueryRequest;
-import com.nnm.bot.warframe.dto.WarframeOfficialRefreshResult;
-import com.nnm.bot.warframe.dto.WarframeOfficialRecordItem;
-import com.nnm.bot.warframe.dto.WarframeOfficialRecordQueryRequest;
-import com.nnm.bot.warframe.dto.WarframeWorldStateItem;
-import com.nnm.bot.warframe.dto.WarframeWorldStateRawItem;
-import com.nnm.bot.warframe.infrastructure.parser.WorldStateParser;
-import com.nnm.bot.warframe.infrastructure.provider.WorldStateProvider;
+import com.nnm.bot.warframe.pojo.WarframeCommunityDatasetInfo;
+import com.nnm.bot.warframe.pojo.WarframeCommunityDatasetItem;
+import com.nnm.bot.warframe.pojo.WarframeCommunityDatasetMergeRequest;
+import com.nnm.bot.warframe.pojo.WarframeCommunityDatasetPreview;
+import com.nnm.bot.warframe.pojo.WarframeCommunityDatasetPreviewPage;
+import com.nnm.bot.warframe.pojo.WarframeCommunityDatasetQueryRequest;
+import com.nnm.bot.warframe.pojo.WarframeCommunityDatasetRefreshSummary;
+import com.nnm.bot.warframe.pojo.WarframeArbitrationMergeRequest;
+import com.nnm.bot.warframe.pojo.WarframeArbitrationPreview;
+import com.nnm.bot.warframe.pojo.WarframeItemAliasItem;
+import com.nnm.bot.warframe.pojo.WarframeAliasQueryRequest;
+import com.nnm.bot.warframe.pojo.WarframeItemAliasSaveRequest;
+import com.nnm.bot.warframe.pojo.WarframeItemItem;
+import com.nnm.bot.warframe.pojo.WarframeItemQueryRequest;
+import com.nnm.bot.warframe.pojo.WarframeOfficialRefreshResult;
+import com.nnm.bot.warframe.pojo.WarframeOfficialRecordItem;
+import com.nnm.bot.warframe.pojo.WarframeOfficialRecordQueryRequest;
+import com.nnm.bot.warframe.pojo.WarframeWorldStateItem;
+import com.nnm.bot.warframe.pojo.WarframeWorldStateRawItem;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -54,24 +59,23 @@ public class WarframeDataManagementController {
     @Resource
     private WarframeCommunityDatasetService communityDatasetService;
     @Resource
+    private WarframeArbitrationAdminService arbitrationAdminService;
+    @Resource
     private WarframeOfficialDataService officialDataService;
     @Resource
     private WarframeOfficialDataQueryService officialDataQueryService;
     @Resource
-    private WorldStateService worldStateService;
+    private WarframeWorldStateService worldStateService;
     @Resource
     private WarframeWorldStateManagementService worldStateManagementService;
-    @Resource
-    private WorldStateProvider worldStateProvider;
-    @Resource
-    private WorldStateParser worldStateParser;
     @Resource
     private AdminTaskService taskService;
 
     @PostMapping("/items/query")
     @SaCheckPermission("warframe:game:view")
     public ApiResponse<PageResult<WarframeItemItem>> items(
-            @RequestBody WarframeItemQueryRequest request) {
+            @RequestBody
+            WarframeItemQueryRequest request) {
         return ApiResponse.ok(this.service.items(
                 request.keyword(),
                 request.sourceType(),
@@ -82,7 +86,8 @@ public class WarframeDataManagementController {
     @PostMapping("/aliases/query")
     @SaCheckPermission("warframe:community:view")
     public ApiResponse<PageResult<WarframeItemAliasItem>> aliases(
-            @RequestBody WarframeAliasQueryRequest request) {
+            @RequestBody
+            WarframeAliasQueryRequest request) {
         return ApiResponse.ok(this.service.aliases(
                 request.keyword(),
                 request.itemId(),
@@ -94,22 +99,29 @@ public class WarframeDataManagementController {
     @PostMapping("/aliases")
     @SaCheckPermission("warframe:community:update")
     public ApiResponse<Long> createAlias(
-            @Valid @RequestBody WarframeItemAliasSaveRequest request) {
+            @Valid
+            @RequestBody
+            WarframeItemAliasSaveRequest request) {
         return ApiResponse.ok(this.service.createAlias(request));
     }
 
-    @PutMapping("/aliases/{id}")
+    @PostMapping("/aliases/{id}")
     @SaCheckPermission("warframe:community:update")
     public ApiResponse<Void> updateAlias(
-            @PathVariable long id,
-            @Valid @RequestBody WarframeItemAliasSaveRequest request) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            WarframeItemAliasSaveRequest request) {
         this.service.updateAlias(id, request);
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/aliases/{id}")
-    @SaCheckPermission("warframe:community:update")
-    public ApiResponse<Void> deleteAlias(@PathVariable long id) {
+    @PostMapping("/aliases/{id}/delete")
+    @SaCheckPermission("warframe:community:delete")
+    public ApiResponse<Void> deleteAlias(
+            @PathVariable
+            long id) {
         this.service.deleteAlias(id);
         return ApiResponse.ok();
     }
@@ -123,21 +135,36 @@ public class WarframeDataManagementController {
     @PostMapping("/community/{dataset}/query")
     @SaCheckPermission("warframe:community:view")
     public ApiResponse<PageResult<WarframeCommunityDatasetItem>> communityDatasetRecords(
-            @PathVariable String dataset,
-            @RequestBody(required = false) WarframeCommunityDatasetQueryRequest request) {
+            @PathVariable
+            String dataset,
+            @RequestBody(required = false)
+            WarframeCommunityDatasetQueryRequest request) {
         return ApiResponse.ok(communityDatasetService.query(dataset, request));
     }
 
     @PostMapping("/community/{dataset}/refresh")
     @SaCheckPermission("warframe:community:sync")
     public ApiResponse<AdminTaskSubmission> refreshCommunityDataset(
-            @PathVariable String dataset) {
+            @PathVariable
+            String dataset) {
         String taskType = "WARFRAME_COMMUNITY_DATASET_REFRESH_"
                 + dataset.trim().toUpperCase(Locale.ROOT);
         return ApiResponse.ok(submitTask(
                 taskType,
                 "warframe:community:sync",
-                reporter -> communityDatasetService.refresh(dataset, reporter)));
+                reporter -> {
+                    WarframeCommunityDatasetPreview preview =
+                            communityDatasetService.refresh(dataset, reporter);
+                    String label = WarframeCommunityDataset.parse(preview.dataset()).label();
+                    return new WarframeCommunityDatasetRefreshSummary(
+                            preview.previewId(),
+                            preview.dataset(),
+                            label,
+                            preview.recordCount(),
+                            preview.addedCount(),
+                            preview.changedCount(),
+                            preview.conflictCount());
+                }));
     }
 
     @PostMapping("/community/refresh")
@@ -153,34 +180,102 @@ public class WarframeDataManagementController {
             value = "/community/{dataset}/upload-preview",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @SaCheckPermission("warframe:community:update")
-    public ApiResponse<WarframeCommunityDatasetPreview> previewCommunityDatasetUpload(
-            @PathVariable String dataset,
-            @RequestPart("file") MultipartFile file) {
-        return ApiResponse.ok(communityDatasetService.uploadPreview(dataset, file));
+    public ApiResponse<WarframeCommunityDatasetPreviewPage> previewCommunityDatasetUpload(
+            @PathVariable
+            String dataset,
+            @RequestPart("file")
+            MultipartFile file) {
+        WarframeCommunityDatasetPreview preview = communityDatasetService.uploadPreview(dataset, file);
+        return ApiResponse.ok(communityDatasetService.previewPage(
+                dataset, preview.previewId(), 1, 20));
+    }
+
+    @PostMapping("/community/{dataset}/preview/{previewId}")
+    @SaCheckPermission("warframe:community:view")
+    public ApiResponse<WarframeCommunityDatasetPreviewPage> previewCommunityDataset(
+            @PathVariable
+            String dataset,
+            @PathVariable
+            String previewId,
+            @RequestParam(defaultValue = "1")
+            int current,
+            @RequestParam(defaultValue = "20")
+            int size,
+            @RequestParam(required = false)
+            String sourceCode,
+            @RequestParam(required = false)
+            WarframeCommunityRecordChangeType changeType) {
+        return ApiResponse.ok(communityDatasetService.previewPage(
+                dataset, previewId, current, size, sourceCode, changeType));
     }
 
     @PostMapping("/community/{dataset}/merge")
     @SaCheckPermission("warframe:community:apply")
     public ApiResponse<WarframeCommunityDatasetPreview> mergeCommunityDataset(
-            @PathVariable String dataset,
-            @Valid @RequestBody WarframeCommunityDatasetMergeRequest request) {
+            @PathVariable
+            String dataset,
+            @Valid
+            @RequestBody
+            WarframeCommunityDatasetMergeRequest request) {
         return ApiResponse.ok(communityDatasetService.merge(dataset, request));
     }
 
-    @PutMapping("/community/{dataset}/records/{id}")
+    @PostMapping("/arbitration/refresh-preview")
+    @SaCheckPermission("warframe:community:sync")
+    public ApiResponse<AdminTaskSubmission> refreshArbitrationPreview() {
+        return ApiResponse.ok(submitTask(
+                "WARFRAME_ARBITRATION_REFRESH_PREVIEW",
+                "warframe:community:sync",
+                arbitrationAdminService::refreshPreview));
+    }
+
+    @PostMapping("/arbitration/preview/{previewId}")
+    @SaCheckPermission("warframe:community:view")
+    public ApiResponse<WarframeArbitrationPreview> arbitrationPreview(
+            @PathVariable
+            String previewId) {
+        return ApiResponse.ok(arbitrationAdminService.preview(previewId));
+    }
+
+    @PostMapping("/arbitration/merge")
+    @SaCheckPermission("warframe:community:apply")
+    public ApiResponse<WarframeArbitrationPreview> mergeArbitration(
+            @Valid
+            @RequestBody
+            WarframeArbitrationMergeRequest request) {
+        return ApiResponse.ok(arbitrationAdminService.merge(request));
+    }
+
+    @PostMapping("/community/{dataset}/records/{id}")
     @SaCheckPermission("warframe:community:update")
     public ApiResponse<WarframeCommunityDatasetItem> updateCommunityDatasetRecord(
-            @PathVariable String dataset,
-            @PathVariable long id,
-            @RequestBody String currentJson) {
+            @PathVariable
+            String dataset,
+            @PathVariable
+            long id,
+            @RequestBody
+            String currentJson) {
         return ApiResponse.ok(communityDatasetService.updateManual(dataset, id, currentJson));
+    }
+
+    @PostMapping("/community/{dataset}/records/{id}/delete")
+    @SaCheckPermission("warframe:community:delete")
+    public ApiResponse<Void> deleteCommunityDatasetRecord(
+            @PathVariable
+            String dataset,
+            @PathVariable
+            long id) {
+        communityDatasetService.deleteManual(dataset, id);
+        return ApiResponse.ok();
     }
 
     @PostMapping("/community/{dataset}/records")
     @SaCheckPermission("warframe:community:update")
     public ApiResponse<WarframeCommunityDatasetItem> createCommunityDatasetRecord(
-            @PathVariable String dataset,
-            @RequestBody String currentJson) {
+            @PathVariable
+            String dataset,
+            @RequestBody
+            String currentJson) {
         return ApiResponse.ok(communityDatasetService.createSelfMaintained(dataset, currentJson));
     }
 
@@ -196,7 +291,8 @@ public class WarframeDataManagementController {
     @PostMapping("/official/records/query")
     @SaCheckPermission("warframe:game:view")
     public ApiResponse<PageResult<WarframeOfficialRecordItem>> officialRecords(
-            @RequestBody WarframeOfficialRecordQueryRequest request) {
+            @RequestBody
+            WarframeOfficialRecordQueryRequest request) {
         return ApiResponse.ok(officialDataQueryService.query(request));
     }
 
@@ -220,10 +316,10 @@ public class WarframeDataManagementController {
                 "warframe:world:refresh",
                 reporter -> {
                     try {
-                        worldStateService.refresh(worldStateProvider, worldStateParser, reporter);
+                        worldStateService.refresh(reporter);
                         return currentWorldState();
                     } catch (RuntimeException exception) {
-                        throw new com.nnm.bot.common.exception.BusinessException(
+                        throw new BusinessException(
                                 WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED,
                                 "Warframe 世界数据刷新失败", exception);
                     }

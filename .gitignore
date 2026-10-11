@@ -33,7 +33,25 @@ src/main/resources/application-local.yaml
 /claude/
 
 # Test sources
-**/src/test/
+**/src/test/**
+!**/src/test/**/
+
+# RDT integration regression tests are part of this change, not local-only fixtures.
+!nnm-core/src/test/java/com/nnm/bot/core/task/**
+!nnm-app/src/test/resources/application.properties
+!nnm-app/src/test/resources/logback-test.xml
+!nnm-app/src/test/java/com/nnm/bot/DistributedApplicationTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/channel/runtime/ClusterBotRuntimeTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/onebot/connection/SerializedWebSocketSessionTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/application/WorldStateWatchListenerTest.java
+
+# 线程、HTTP 与锁接入回归测试需要随实现保留。
+!nnm-common/src/test/java/com/nnm/bot/common/http/HttpClientTest.java
+!nnm-common/src/test/java/com/nnm/bot/common/http/NnmRestClientFactoryTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/config/ExecutorConfigTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/group/service/impl/PointAccountServiceImplTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/service/impl/BotRobotRoleManagementServiceImplTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/service/impl/BotGroupManagementServiceImplTest.java
 
 # Render module local tests are kept out of repository commits
 /nnm-render/src/test/

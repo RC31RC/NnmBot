@@ -1,9 +1,9 @@
 package com.nnm.bot.warframe.application;
 
 import com.nnm.bot.common.response.PageResult;
-import com.nnm.bot.warframe.dto.WarframeItemAliasItem;
-import com.nnm.bot.warframe.dto.WarframeItemAliasSaveRequest;
-import com.nnm.bot.warframe.dto.WarframeItemItem;
+import com.nnm.bot.warframe.pojo.WarframeItemAliasItem;
+import com.nnm.bot.warframe.pojo.WarframeItemAliasSaveRequest;
+import com.nnm.bot.warframe.pojo.WarframeItemItem;
 
 public interface WarframeDataManagementService {
 

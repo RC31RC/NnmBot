@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.bootstrap;
 
-import com.nnm.bot.admin.config.AdminBootstrapProperties;
+import com.nnm.bot.admin.config.properties.AdminBootstrapProperties;
 import com.nnm.bot.admin.domain.SysRole;
 import com.nnm.bot.admin.domain.SysUser;
 import com.nnm.bot.admin.repository.SysRoleRepository;
@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Creates only the first administrator account when explicitly enabled.
- * RBAC menus, permissions and roles are maintained by the database seed SQL.
+ * 仅在明确启用时创建第一个管理员账户。
+ * RBAC 菜单、权限和角色由数据库初始化 SQL 维护。
  */
 @Component
 public class RbacDataInitializer implements ApplicationRunner {
@@ -38,7 +38,7 @@ public class RbacDataInitializer implements ApplicationRunner {
 
         SysRole superAdmin = roleRepository.findByCode("R_SUPER")
                 .orElseThrow(() -> new IllegalStateException(
-                        "RBAC seed data is missing: execute docs/sql/01_init.sql first"));
+                        "RBAC seed data is missing: execute docs/sql/init.sql first"));
 
         String username = bootstrapProperties.getUsername();
         if (userRepository.findByUsername(username).isPresent()) {

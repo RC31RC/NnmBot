@@ -1,5 +1,6 @@
 package com.nnm.bot.core.group.service;
 
+import java.time.LocalDateTime;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.group.domain.BotGroupMember;
@@ -56,7 +57,7 @@ public class BotGroupMemberIdentityResolver {
         member.setGroupId(groupId);
         member.setQqId(context.senderId());
         member.setQqIdVerified(true);
-        member.setQqBoundAt(java.time.LocalDateTime.now());
+        member.setQqBoundAt(LocalDateTime.now());
         member.setMemberRole("MEMBER");
         member.setEnabled(true);
         return Optional.of(memberRepository.save(member));

@@ -15,6 +15,11 @@
     <description>Application entry point - assembles all modules</description>
 
     <dependencies>
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-redis-template</artifactId>
+            <version>${sa-token.version}</version>
+        </dependency>
         <!-- 组装全部模块 -->
         <dependency>
             <groupId>com.nnm</groupId>
@@ -31,10 +36,6 @@
         <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-warframe</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.nnm</groupId>
-            <artifactId>nnm-scheduler</artifactId>
         </dependency>
         <dependency>
             <groupId>com.nnm</groupId>
@@ -98,9 +99,6 @@
                         </additionalClasspathElement>
                         <additionalClasspathElement>
                             ${maven.multiModuleProjectDirectory}/nnm-warframe/target/classes
-                        </additionalClasspathElement>
-                        <additionalClasspathElement>
-                            ${maven.multiModuleProjectDirectory}/nnm-scheduler/target/classes
                         </additionalClasspathElement>
                         <additionalClasspathElement>
                             ${maven.multiModuleProjectDirectory}/nnm-admin/target/classes

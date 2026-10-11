@@ -19,6 +19,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     @Resource
     private JmComicWholeFileService wholeFileService;
     @Resource
-    private AbstractJmClient jmClient;
+    private ObjectProvider<AbstractJmClient> jmClientProvider;
 
     private final Object loginMonitor = new Object();
     private volatile boolean loggedIn;
@@ -85,13 +86,15 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             Path downloadDirectory = workspace.resolve("images");
             Files.createDirectories(downloadDirectory);
 
-            this.loginIfConfigured();
-            JmAlbum album = this.jmClient.getAlbum(normalizedAlbumId);
+            // 客户端构造会触发上游域名探活，只在真正执行 JM 下载时创建。
+            AbstractJmClient client = this.jmClientProvider.getObject();
+            this.loginIfConfigured(client);
+            JmAlbum album = client.getAlbum(normalizedAlbumId);
             this.validateAlbum(album);
             JmComicWholeFileException wholeFileFailure = null;
             try {
                 var wholeFile = this.wholeFileService.download(
-                        this.jmClient,
+                        client,
                         normalizedAlbumId,
                         album.getTitle(),
                         workspace);
@@ -108,7 +111,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             }
             try {
                 return this.downloadImagesAsPdf(
-                        this.jmClient,
+                        client,
                         album,
                         normalizedAlbumId,
                         downloadDirectory,
@@ -169,7 +172,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
                 workspace);
     }
 
-    private void loginIfConfigured() {
+    private void loginIfConfigured(AbstractJmClient client) {
         if (this.loggedIn || StrUtil.isBlank(this.properties.getUsername())) {
             return;
         }
@@ -177,7 +180,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             if (this.loggedIn) {
                 return;
             }
-            this.jmClient.login(
+            client.login(
                     this.properties.getUsername(),
                     this.properties.getPassword());
             this.loggedIn = true;
@@ -227,6 +230,8 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
         List<Path> imageFiles = result.getSuccessfulFiles().stream()
                 .filter(ObjectUtil::isNotNull)
                 .map(path -> path.toAbsolutePath().normalize())
+                .distinct()
+                .sorted((left, right) -> JmPageOrder.compare(left.toString(), right.toString()))
                 .toList();
         if (imageFiles.size() > this.properties.getMaxPages()) {
             throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE);

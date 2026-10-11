@@ -1,5 +1,7 @@
 package com.nnm.bot.render.spi;
 
+import com.nnm.bot.render.RenderEngine;
+import java.util.Locale;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.ObjectUtil;
 
@@ -102,7 +104,7 @@ public class RenderEngineProviderLoader {
                 log.warn("Ignoring render provider with blank id");
                 return;
             }
-            String id = rawId.trim().toLowerCase(java.util.Locale.ROOT);
+            String id = rawId.trim().toLowerCase(Locale.ROOT);
             RenderEngineProvider registered = new RegisteredProvider(id, provider.order(), provider);
             if (ObjectUtil.isNotNull(providers.putIfAbsent(id, registered))) {
                 log.warn("Ignoring duplicate render provider id [{}]", id);
@@ -141,7 +143,7 @@ public class RenderEngineProviderLoader {
         }
 
         @Override
-        public com.nnm.bot.render.RenderEngine create(RenderEngineProviderContext context) {
+        public RenderEngine create(RenderEngineProviderContext context) {
             return new OpenHtmlToPdfEngine(context.templateBaseUri(), context.fontPaths());
         }
     }
@@ -163,7 +165,7 @@ public class RenderEngineProviderLoader {
         }
 
         @Override
-        public com.nnm.bot.render.RenderEngine create(RenderEngineProviderContext context) {
+        public RenderEngine create(RenderEngineProviderContext context) {
             return new PlaywrightEngine(context.chromiumArgs());
         }
     }
@@ -177,7 +179,7 @@ public class RenderEngineProviderLoader {
         }
 
         @Override
-        public com.nnm.bot.render.RenderEngine create(RenderEngineProviderContext context) {
+        public RenderEngine create(RenderEngineProviderContext context) {
             return delegate.create(context);
         }
     }

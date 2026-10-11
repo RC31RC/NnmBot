@@ -15,8 +15,7 @@ public interface AdminTaskService {
     /**
      * 创建任务并立即返回任务标识，工作负载由实现选择的执行器异步运行。
      */
-    AdminTaskSubmission submit(
-            String taskType, String requiredPermission, AdminTaskWork work);
+    AdminTaskSubmission submit(String taskType, String requiredPermission, AdminTaskWork work);
 
     /** 返回任务当前快照，用于首次加载和 SSE 断线后的状态补偿。 */
     Optional<AdminTaskEvent> find(UUID taskId);

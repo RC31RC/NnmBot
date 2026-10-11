@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.application;
 
-import com.nnm.bot.warframe.dto.WarframeForumFileItem;
+import com.nnm.bot.warframe.pojo.WarframeForumFileItem;
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
 

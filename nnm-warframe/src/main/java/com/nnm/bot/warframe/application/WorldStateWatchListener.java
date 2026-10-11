@@ -1,11 +1,14 @@
 package com.nnm.bot.warframe.application;
 
+import java.util.Objects;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.port.BotChannelInstanceIdentityResolver;
 import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
+import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
+import org.springframework.beans.factory.ObjectProvider;
 import com.nnm.bot.core.constant.BotChannelStatus;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupBot;
@@ -14,10 +17,11 @@ import com.nnm.bot.core.group.repository.BotGroupBotRepository;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import com.nnm.bot.core.message.model.BotProactiveGroupMessage;
 import com.nnm.bot.core.message.sender.BotProactiveMessageSenderRouter;
-import com.nnm.bot.warframe.application.plugin.AbstractWorldStateCommandPlugin.WorldStateCommandOutput;
-import com.nnm.bot.warframe.application.plugin.WarframeCommandData;
-import com.nnm.bot.warframe.domain.entity.WarframeGroupWatchRule;
-import com.nnm.bot.warframe.domain.model.WorldState;
+import com.nnm.bot.warframe.plugin.AbstractWorldStateCommandPlugin.WorldStateCommandOutput;
+import com.nnm.bot.warframe.plugin.WarframeCommandData;
+import com.nnm.bot.warframe.model.entity.WarframeGroupWatchRule;
+import com.nnm.bot.warframe.model.WorldState;
+import com.nnm.bot.warframe.service.WarframeReferenceProjectionEnrichmentService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -66,6 +70,9 @@ public class WorldStateWatchListener {
             Map.entry("平原", "cycles"),
             Map.entry("周期", "cycles"),
             Map.entry("电波", "nightwave"),
+            Map.entry("科研", "archimedeas"),
+            Map.entry("深层科研", "deep-archimedeas"),
+            Map.entry("时光科研", "hex-archimedeas"),
             Map.entry("希图斯", "ostrons"),
             Map.entry("索拉里斯", "solaris"),
             Map.entry("英择谛", "entrati"));
@@ -73,7 +80,7 @@ public class WorldStateWatchListener {
     @Resource
     private WarframeGroupWatchRuleService ruleService;
     @Resource
-    private WarframeReferenceProjectionEnricher projectionEnricher;
+    private WarframeReferenceProjectionEnrichmentService projectionEnricher;
     @Resource
     private BotGroupBotRepository groupBotRepository;
     @Resource
@@ -86,16 +93,32 @@ public class WorldStateWatchListener {
     private BotChannelRegistry channelRegistry;
     @Resource
     private BotProactiveMessageSenderRouter messageSenderRouter;
+    @Resource
+    private ObjectProvider<ClusterBotRuntime> clusterProvider;
 
     @EventListener
     public void onWorldStateUpdated(WorldStateUpdatedEvent event) {
-        if (event == null || event.previous() == null || event.current() == null) {
+        if (event == null || event.current() == null) {
             return;
         }
         List<WatchCandidate> candidates = candidates(event.current());
+        ClusterBotRuntime cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
+        List<WarframeGroupWatchRule> rules = ruleService.findEnabledRules();
+        Map<Long, Boolean> locallyRoutable = new LinkedHashMap<>();
+        if (cluster != null) {
+            Map<Long, BotChannelInstanceRecord> instances = loadInstancesByDatabaseId();
+            Map<Long, List<BotGroupBot>> bindings = groupBotRepository.findAllByGroupIdInAndEnabledTrue(
+                    rules.stream().map(WarframeGroupWatchRule::getGroupId).collect(Collectors.toSet()))
+                    .stream().collect(Collectors.groupingBy(BotGroupBot::getGroupId));
+            bindings.forEach((groupId, values) -> locallyRoutable.put(groupId,
+                    selectChannel(values, instances).isPresent()));
+        }
         Map<Long, GroupNotification> notifications = new LinkedHashMap<>();
-        for (WarframeGroupWatchRule rule : ruleService.findEnabledRules()) {
+        for (WarframeGroupWatchRule rule : rules) {
             try {
+                // A node without a sending connection must not consume the database cursor.
+                if (cluster != null && rule.isNotifyEnabled()
+                        && !locallyRoutable.getOrDefault(rule.getGroupId(), false)) continue;
                 List<WatchCandidate> matches = candidates.stream()
                         .filter(candidate -> matches(rule, candidate))
                         .toList();
@@ -203,7 +226,7 @@ public class WorldStateWatchListener {
                 List<String> mentions = channel.platform() == BotPlatform.ONEBOT
                         ? notification.memberIds().stream()
                                 .map(members::get)
-                                .filter(java.util.Objects::nonNull)
+                                .filter(Objects::nonNull)
                                 .map(BotGroupMember::getQqId)
                                 .filter(StrUtil::isNotBlank)
                                 .distinct()
@@ -269,8 +292,10 @@ public class WorldStateWatchListener {
     }
 
     private boolean connected(SelectedChannel channel) {
-        return channelRegistry.find(new BotChannelKey(
-                        channel.platform(), channel.instance().botAccountId()))
+        BotChannelKey key = new BotChannelKey(channel.platform(), channel.instance().botAccountId());
+        ClusterBotRuntime cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
+        if (cluster != null && !cluster.isLocalOwner(key)) return false;
+        return channelRegistry.find(key)
                 .map(snapshot -> snapshot.status() == BotChannelStatus.CONNECTED)
                 .orElse(false);
     }
@@ -293,6 +318,18 @@ public class WorldStateWatchListener {
                 new TypedProjection("steel-path", WarframeCommandData.steelPath(state)),
                 new TypedProjection("cycles", WarframeCommandData.cycles(state)),
                 new TypedProjection("nightwave", WarframeCommandData.nightwave(state)),
+                new TypedProjection("archimedeas", WarframeCommandData.archimedeas(
+                        state, "科研", conquest -> true)),
+                new TypedProjection("deep-archimedeas", WarframeCommandData.archimedeas(
+                        state, "深层科研",
+                        conquest -> "CTLAB".equals(normalize(conquest.typeKey())))),
+                new TypedProjection("hex-archimedeas", WarframeCommandData.archimedeas(
+                        state, "时光科研",
+                        conquest -> "CTHEX".equals(normalize(conquest.typeKey())))),
+                new TypedProjection("descents", WarframeCommandData.descents(state)),
+                new TypedProjection("global-upgrades", WarframeCommandData.globalUpgrades(state)),
+                new TypedProjection("flash-sales", WarframeCommandData.flashSales(state)),
+                new TypedProjection("persistent-enemies", WarframeCommandData.persistentEnemies(state)),
                 new TypedProjection("ostrons", WarframeCommandData.syndicate(
                         state, "ostrons", value -> contains(value, "ostrons", "cetus", "希图斯"))),
                 new TypedProjection("solaris", WarframeCommandData.syndicate(
@@ -422,6 +459,7 @@ public class WorldStateWatchListener {
             case "steel-path" -> "钢铁奖励";
             case "cycles" -> "世界周期";
             case "nightwave" -> "电波";
+            case "descents" -> "深层下降";
             case "ostrons" -> "希图斯";
             case "solaris" -> "索拉里斯";
             case "entrati" -> "英择谛";

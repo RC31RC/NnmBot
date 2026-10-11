@@ -7,5 +7,6 @@ public record BotScopeUpdateRequest(
         /** 作用域显示名称。 */
         String displayName,
         /** 是否启用。 */
-        @NotNull Boolean enabled) {
+        @NotNull
+        Boolean enabled) {
 }

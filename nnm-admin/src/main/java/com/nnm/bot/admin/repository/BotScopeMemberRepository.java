@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.repository;
 
+import java.util.Optional;
 import com.nnm.bot.admin.domain.BotScopeMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,6 +12,6 @@ public interface BotScopeMemberRepository extends JpaRepository<BotScopeMember, 
 
     long countByScopeId(Long scopeId);
 
-    java.util.Optional<BotScopeMember> findByScopeIdAndPlatformUserId(
+    Optional<BotScopeMember> findByScopeIdAndPlatformUserId(
             Long scopeId, String platformUserId);
 }

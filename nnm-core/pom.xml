@@ -16,6 +16,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.github.rdt</groupId>
+            <artifactId>rdt-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-common</artifactId>
         </dependency>

@@ -4,13 +4,13 @@ import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.warframe.constant.WarframeOfficialDataDomain;
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialExportRecord;
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialRecipe;
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialRegion;
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialRelicArcane;
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialUpgrade;
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialWarframe;
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialWeapon;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialExportRecord;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialRecipe;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialRegion;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialRelicArcane;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialUpgrade;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialWarframe;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialWeapon;
 import com.nnm.bot.warframe.repository.WarframeOfficialRecipeRepository;
 import com.nnm.bot.warframe.repository.WarframeOfficialRegionRepository;
 import com.nnm.bot.warframe.repository.WarframeOfficialRelicArcaneRepository;
@@ -21,6 +21,7 @@ import jakarta.annotation.Resource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -39,6 +40,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class WarframeOfficialDetailService {
+
+    private static final int DETAIL_BATCH_SIZE = 500;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -129,7 +132,7 @@ public class WarframeOfficialDetailService {
     private void loadWeapons(
             Collection<Long> recordIds,
             Map<Long, Map<String, Object>> result) {
-        weaponRepository.findAllById(recordIds).forEach(item -> {
+        findAllByIdInBatches(weaponRepository, recordIds).forEach(item -> {
             Map<String, Object> values = values(result, item.getOfficialRecordId());
             put(values, "masteryReq", item.getMasteryReq());
             put(values, "totalDamage", item.getTotalDamage());
@@ -159,7 +162,7 @@ public class WarframeOfficialDetailService {
     private void loadWarframes(
             Collection<Long> recordIds,
             Map<Long, Map<String, Object>> result) {
-        warframeRepository.findAllById(recordIds).forEach(item -> {
+        findAllByIdInBatches(warframeRepository, recordIds).forEach(item -> {
             Map<String, Object> values = values(result, item.getOfficialRecordId());
             put(values, "health", item.getHealth());
             put(values, "shield", item.getShield());
@@ -179,7 +182,7 @@ public class WarframeOfficialDetailService {
     private void loadUpgrades(
             Collection<Long> recordIds,
             Map<Long, Map<String, Object>> result) {
-        upgradeRepository.findAllById(recordIds).forEach(item -> {
+        findAllByIdInBatches(upgradeRepository, recordIds).forEach(item -> {
             Map<String, Object> values = values(result, item.getOfficialRecordId());
             put(values, "baseDrain", item.getBaseDrain());
             put(values, "fusionLimit", item.getFusionLimit());
@@ -204,7 +207,7 @@ public class WarframeOfficialDetailService {
     private void loadRelicArcanes(
             Collection<Long> recordIds,
             Map<Long, Map<String, Object>> result) {
-        relicArcaneRepository.findAllById(recordIds).forEach(item -> {
+        findAllByIdInBatches(relicArcaneRepository, recordIds).forEach(item -> {
             Map<String, Object> values = values(result, item.getOfficialRecordId());
             put(values, "type", item.getType());
             put(values, "rarity", item.getRarity());
@@ -216,7 +219,7 @@ public class WarframeOfficialDetailService {
     private void loadRegions(
             Collection<Long> recordIds,
             Map<Long, Map<String, Object>> result) {
-        regionRepository.findAllById(recordIds).forEach(item -> {
+        findAllByIdInBatches(regionRepository, recordIds).forEach(item -> {
             Map<String, Object> values = values(result, item.getOfficialRecordId());
             put(values, "systemName", item.getSystemName());
             put(values, "systemIndex", item.getSystemIndex());
@@ -232,7 +235,7 @@ public class WarframeOfficialDetailService {
     private void loadRecipes(
             Collection<Long> recordIds,
             Map<Long, Map<String, Object>> result) {
-        recipeRepository.findAllById(recordIds).forEach(item -> {
+        findAllByIdInBatches(recipeRepository, recordIds).forEach(item -> {
             Map<String, Object> values = values(result, item.getOfficialRecordId());
             put(values, "resultType", item.getResultType());
             put(values, "buildPrice", item.getBuildPrice());
@@ -264,22 +267,44 @@ public class WarframeOfficialDetailService {
                 .map(idExtractor)
                 .collect(Collectors.toSet());
         Set<Long> staleIds = new HashSet<>(disabledIds);
-        if (!importedIds.isEmpty()) {
-            // 各领域详情表远小于官方基础表。读取当前领域后在内存比对，
-            // 避免为每个领域构造一次包含近两万个参数的 IN 查询。
+        if (!importedIds.isEmpty() || !desiredIds.isEmpty()) {
             repository.findAll().stream()
-                    .filter(item -> importedIds.contains(idExtractor.apply(item)))
-                    .filter(item -> !desiredIds.contains(idExtractor.apply(item)))
                     .map(idExtractor)
+                    .filter(Objects::nonNull)
+                    .filter(importedIds::contains)
+                    .filter(id -> !desiredIds.contains(id))
                     .forEach(staleIds::add);
         }
         staleIds.removeAll(desiredIds);
-        if (!staleIds.isEmpty()) {
-            repository.deleteAllByIdInBatch(staleIds);
+        List<Long> staleIdList = List.copyOf(staleIds);
+        for (int from = 0; from < staleIdList.size(); from += DETAIL_BATCH_SIZE) {
+            int to = Math.min(from + DETAIL_BATCH_SIZE, staleIdList.size());
+            List<Long> batch = staleIdList.subList(from, to);
+            repository.deleteAllByIdInBatch(batch.size() == staleIdList.size()
+                    ? staleIds : batch);
         }
-        if (!desired.isEmpty()) {
-            repository.saveAll(desired);
+        for (int from = 0; from < desired.size(); from += DETAIL_BATCH_SIZE) {
+            int to = Math.min(from + DETAIL_BATCH_SIZE, desired.size());
+            repository.saveAll(desired.subList(from, to));
         }
+        if (!desired.isEmpty() || !staleIdList.isEmpty()) {
+            repository.flush();
+        }
+    }
+
+    private <T, ID> List<T> findAllByIdInBatches(
+            JpaRepository<T, ID> repository,
+            Collection<ID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        List<ID> idList = new ArrayList<>(ids);
+        List<T> result = new ArrayList<>(idList.size());
+        for (int from = 0; from < idList.size(); from += DETAIL_BATCH_SIZE) {
+            int to = Math.min(from + DETAIL_BATCH_SIZE, idList.size());
+            result.addAll(repository.findAllById(idList.subList(from, to)));
+        }
+        return result;
     }
 
     private WarframeOfficialWeapon weapon(WarframeOfficialExportRecord record) {

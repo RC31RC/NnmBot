@@ -23,6 +23,8 @@ import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import com.nnm.bot.core.channel.runtime.BotChannelRuntimeManager;
+import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
+import org.springframework.beans.factory.ObjectProvider;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.onebot.connection.OneBotAccountProbe;
@@ -48,6 +50,8 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     private BotCredentialCipher credentialCipher;
     @Resource
     private OperationAuditService auditService;
+    @Resource
+    private ObjectProvider<ClusterBotRuntime> clusterProvider;
 
     @Override
     public List<BotChannelInstanceItem> instances() {
@@ -184,8 +188,9 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     private BotChannelInstanceItem toItem(BotChannelInstance instance) {
         OneBotChannelConfig oneBot = instance.getOneBotConfig();
         QqOfficialChannelConfig official = instance.getQqOfficialConfig();
-        BotChannelSnapshot snapshot = registry.find(new BotChannelKey(
-                instance.getPlatform(), instance.getBotAccountId())).orElse(null);
+        BotChannelKey key = new BotChannelKey(instance.getPlatform(), instance.getBotAccountId());
+        ClusterBotRuntime cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
+        BotChannelSnapshot snapshot = (cluster == null ? registry.find(key) : cluster.snapshot(key)).orElse(null);
         return new BotChannelInstanceItem(
                 instance.getId(),
                 instance.getPlatform(),

@@ -15,17 +15,22 @@ public record BotCommandSaveRequest(
         /** 命令说明。 */
         String description,
         /** 是否启用。 */
-        @NotNull Boolean enabled,
+        @NotNull
+        Boolean enabled,
         /** 是否显示在帮助菜单。 */
-        @NotNull Boolean showInHelp,
+        @NotNull
+        Boolean showInHelp,
         /** 默认输出方式。 */
-        @NotNull CommandOutputMode outputMode,
+        @NotNull
+        CommandOutputMode outputMode,
         /** 自定义触发词。 */
-        @Valid List<BotCommandTriggerSaveRequest> triggers,
+        @Valid
+        List<BotCommandTriggerSaveRequest> triggers,
         /** 冷却秒数。 */
         Long cooldownSeconds,
         /** 是否在支持的平台回复中提及命令触发者。 */
-        @NotNull Boolean mentionInvoker,
+        @NotNull
+        Boolean mentionInvoker,
         /** 覆盖权限码。 */
         String permissionOverride,
         /** 群组内最低角色要求：OWNER、ADMIN。 */

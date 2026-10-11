@@ -1,11 +1,13 @@
 package com.nnm.bot.common.config.http;
 
+import com.nnm.bot.common.http.ResponseSizeLimitInterceptor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.Resource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
@@ -33,8 +35,8 @@ public class RestClientConfig {
     private HttpClientProperties properties;
 
     @Bean
-    @ConditionalOnMissingBean(RestClient.class)
-    public RestClient restClient() {
+    @ConditionalOnMissingBean(ClientHttpRequestFactory.class)
+    public ClientHttpRequestFactory nnmClientHttpRequestFactory() {
         properties.validate();
         HttpClient.Builder httpClientBuilder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
@@ -48,9 +50,17 @@ public class RestClientConfig {
         JdkClientHttpRequestFactory requestFactory =
                 new JdkClientHttpRequestFactory(httpClientBuilder.build());
         requestFactory.setReadTimeout(properties.getReadTimeout());
+        return requestFactory;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(RestClient.class)
+    public RestClient restClient(ClientHttpRequestFactory requestFactory) {
+        properties.validate();
 
         return RestClient.builder()
                 .requestFactory(requestFactory)
+                .requestInterceptor(new ResponseSizeLimitInterceptor(properties))
                 .build();
     }
 

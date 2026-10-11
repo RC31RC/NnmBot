@@ -1,5 +1,6 @@
 package com.nnm.bot.core.plugin.execution;
 
+import java.util.Locale;
 import cn.hutool.core.util.ObjectUtil;
 
 import com.nnm.bot.core.message.model.BotMessageContext;
@@ -52,7 +53,7 @@ public class Cache2kCommandCooldownGuard implements CommandCooldownGuard, AutoCl
                 context.scope().name(),
                 context.conversationId(),
                 context.senderId(),
-                descriptor.code().toLowerCase(java.util.Locale.ROOT));
+                descriptor.code().toLowerCase(Locale.ROOT));
         long now = System.currentTimeMillis();
         Long previous = executions.peek(key);
         if (ObjectUtil.isNotNull(previous) && now - previous < cooldownSeconds * 1000L) {

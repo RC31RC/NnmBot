@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.impl;
 
+import java.util.Comparator;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.collection.CollUtil;
@@ -18,7 +19,12 @@ import com.nnm.bot.admin.repository.BotRobotRoleRepository;
 import com.nnm.bot.admin.service.BotRobotRoleManagementService;
 import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
+import com.nnm.bot.core.plugin.model.CommandDescriptor;
+import com.nnm.bot.core.constant.CommandOutputMode;
 import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import io.github.rdt.lock.LockOptions;
+import io.github.rdt.lock.RdtLock;
+import io.github.rdt.lock.DistributedLockManager;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,11 +52,13 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     private BotCommandRepository commandRepository;
     @Resource
     private CommandRegistry commandRegistry;
+    @Resource
+    private DistributedLockManager lockManager;
 
     @Override
     public List<BotRobotRoleItem> list() {
         return roleRepository.findAll().stream()
-                .sorted(java.util.Comparator.comparing(BotRobotRole::getCode))
+                .sorted(Comparator.comparing(BotRobotRole::getCode))
                 .map(this::toItem)
                 .toList();
     }
@@ -89,9 +97,11 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
 
     @Override
     @Transactional
+    @RdtLock
     public void assignInstanceRoles(long instanceId, List<Long> roleIds) {
-        // 锁住实例行，使同一实例的“目标角色全集”同步在数据库层串行执行。
-        instanceRepository.findOneById(instanceId)
+        // 使用 RDT 锁保护同一实例的角色全集，数据库只负责普通查询和唯一约束。
+        lockManager.lock("bot-instance-role:" + instanceId, LockOptions.defaults());
+        instanceRepository.findById(instanceId)
                 .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
         Set<Long> targetRoleIds = CollUtil.isEmpty(roleIds)
                 ? Set.of()
@@ -202,7 +212,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
                 assignedCommandIds.stream()
                         .map(commandsById::get)
                         .filter(command -> ObjectUtil.isNotNull(command))
-                        .sorted(java.util.Comparator.comparing(BotCommand::getGameCode)
+                        .sorted(Comparator.comparing(BotCommand::getGameCode)
                                 .thenComparing(BotCommand::getCode))
                         .map(command -> new BotRobotRoleItem.CommandBinding(
                                 command.getCode(), command.getName(), command.getGameCode()))
@@ -254,7 +264,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     }
 
     private BotCommand createDefaultCommand(
-            com.nnm.bot.core.plugin.model.CommandDescriptor descriptor) {
+            CommandDescriptor descriptor) {
         BotCommand command = new BotCommand();
         command.setCode(descriptor.code());
         command.setName(descriptor.name());
@@ -262,13 +272,13 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         command.setDescription(descriptor.description());
         command.setEnabled(true);
         command.setShowInHelp(true);
-        command.setOutputMode(com.nnm.bot.core.constant.CommandOutputMode.TEXT);
+        command.setOutputMode(CommandOutputMode.TEXT);
         command.setCooldownSeconds(0);
         return commandRepository.save(command);
     }
 
     private String normalize(String value) {
-        return StrUtil.trim(value).toLowerCase(java.util.Locale.ROOT);
+        return StrUtil.trim(value).toLowerCase(Locale.ROOT);
     }
 
     private String trimToNull(String value) {

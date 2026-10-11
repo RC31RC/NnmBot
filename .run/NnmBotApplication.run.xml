@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="NnmBotApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="nnm-app" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.nnm.bot.NnmBotApplication" />
+    <option name="VM_PARAMETERS" value="-Xms512m -Xmx1536m" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

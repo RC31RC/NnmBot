@@ -9,6 +9,7 @@ import com.nnm.bot.admin.dto.bot.BotCommandSaveRequest;
 import com.nnm.bot.admin.dto.bot.BotCommandRoleItem;
 import com.nnm.bot.admin.dto.bot.BotCommandRoleSaveRequest;
 import com.nnm.bot.admin.dto.bot.BotCommandSystemRoleSaveRequest;
+import com.nnm.bot.core.constant.BotPlatform;
 
 import java.util.List;
 
@@ -20,7 +21,7 @@ public interface BotCommandManagementService {
 
     List<BotCommandChannelOutputItem> channelOutputs(String code);
 
-    void updateChannelOutput(String code, com.nnm.bot.core.constant.BotPlatform platform,
+    void updateChannelOutput(String code, BotPlatform platform,
                              BotCommandChannelOutputSaveRequest request);
 
     List<BotCommandRoleItem> roles(String code);

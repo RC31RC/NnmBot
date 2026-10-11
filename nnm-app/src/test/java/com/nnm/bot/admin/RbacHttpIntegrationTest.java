@@ -1,10 +1,13 @@
 package com.nnm.bot.admin;
 
+import io.github.rdt.lock.DistributedLockManager;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.nnm.bot.admin.domain.SysRole;
 import com.nnm.bot.admin.domain.SysUser;
+import io.github.rdt.cache.CacheService;
 import com.nnm.bot.admin.repository.SysRoleRepository;
 import com.nnm.bot.admin.repository.SysUserRepository;
 import jakarta.annotation.Resource;
@@ -44,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         scripts = "classpath:db/rbac-http-seed.sql",
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
 )
+@MockitoBean(types = {DistributedLockManager.class, CacheService.class})
 class RbacHttpIntegrationTest {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -122,17 +126,20 @@ class RbacHttpIntegrationTest {
         assertThat(login.statusCode()).isEqualTo(200);
         String initialAdminToken = data(login).path("token").asText();
         assertThat(initialAdminToken).isNotBlank();
+        assertThat(data(login).size()).isEqualTo(1);
+        assertThat(data(login).has("refreshToken")).isFalse();
 
         HttpResponse<String> refresh = send(
                 "POST",
                 "/api/admin/v1/auth/refresh",
                 null,
-                "{\"refreshToken\":\"" + initialAdminToken + "\"}"
+                "{\"token\":\"" + initialAdminToken + "\"}"
         );
         assertThat(refresh.statusCode()).isEqualTo(200);
         String adminToken = data(refresh).path("token").asText();
-        assertThat(adminToken).isNotBlank().isNotEqualTo(initialAdminToken);
-        assertThat(send("POST", "/api/admin/v1/me", initialAdminToken, "{}").statusCode()).isEqualTo(401);
+        assertThat(adminToken).isNotBlank().isEqualTo(initialAdminToken);
+        assertThat(data(refresh).size()).isEqualTo(1);
+        assertThat(data(refresh).has("refreshToken")).isFalse();
 
         HttpResponse<String> me = send("POST", "/api/admin/v1/me", adminToken, "{}");
         assertThat(me.statusCode()).isEqualTo(200);
@@ -199,6 +206,23 @@ class RbacHttpIntegrationTest {
 
         HttpResponse<String> afterLogout = send("POST", "/api/admin/v1/me", adminToken, "{}");
         assertThat(afterLogout.statusCode()).isEqualTo(401);
+        assertThat(send(
+                "POST", "/api/admin/v1/auth/refresh", null,
+                "{\"token\":\"" + adminToken + "\"}"
+        ).statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void rejectsInvalidTokensAndLegacyRefreshPayload() throws Exception {
+        assertThat(send(
+                "POST", "/api/admin/v1/auth/refresh", null,
+                "{\"token\":\"invalid-login-token\"}"
+        ).statusCode()).isEqualTo(401);
+        String token = login("admin", "admin123");
+        assertThat(send(
+                "POST", "/api/admin/v1/auth/refresh", null,
+                "{\"refreshToken\":\"" + token + "\"}"
+        ).statusCode()).isEqualTo(400);
     }
 
     @Test

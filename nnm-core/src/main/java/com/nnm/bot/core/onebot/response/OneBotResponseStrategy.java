@@ -30,43 +30,34 @@ public class OneBotResponseStrategy implements BotChannelResponseStrategy {
     @Override
     public void send(BotMessageContext context, ResponsePlan plan) {
         if (plan.outputMode() == ChannelOutputMode.NONE) {
+            if (plan.hasText()) {
+                sendText(context, plan);
+            }
             return;
         }
         if (plan.outputMode() == ChannelOutputMode.IMAGE
                 && plan.hasImage()) {
+            sendText(context, plan);
             this.sendImageWithFallback(context, plan);
             return;
         }
-        if (plan.outputMode() == ChannelOutputMode.TEXT_IMAGE
-                && plan.hasImage()) {
-            if (plan.hasText()) {
-                this.sendOrFallback(
-                        context,
-                        plan,
-                        "当前渠道不支持图文消息",
-                        () -> sendImageWithText(context, plan));
-            } else {
-                this.sendImageWithFallback(context, plan);
+        if (plan.outputMode() == ChannelOutputMode.FILE) {
+            sendText(context, plan);
+            try {
+                for (int index = 0; index < plan.attachments().size(); index++) {
+                    sendFile(context, plan, plan.attachments().get(index),
+                            index == 0 ? plan.mentionUserId() : null);
+                }
+            } catch (BotChannelCapabilityException exception) {
+                // 摘要已经发送过，能力降级时只记录并结束，不能再次发送摘要。
+                return;
             }
             return;
         }
-        if (plan.outputMode() == ChannelOutputMode.FILE
-                || plan.outputMode() == ChannelOutputMode.TEXT_FILE) {
-            boolean sent = this.sendOrFallback(
-                    context,
-                    plan,
-                    "当前渠道不支持文件消息",
-                    () -> {
-                        for (int index = 0; index < plan.attachments().size(); index++) {
-                            sendFile(context, plan, plan.attachments().get(index),
-                                    index == 0 ? plan.mentionUserId() : null);
-                        }
-                    });
-            if (!sent) {
-                return;
-            }
-            if (plan.hasText()) {
-                sendText(context, plan);
+        if (plan.outputMode() == ChannelOutputMode.MARKDOWN) {
+            if (plan.hasText()) sendText(context, plan);
+            if (plan.markdown() != null) {
+                messageSenderRouter.sendText(context, plan.markdown().content());
             }
             return;
         }
@@ -76,37 +67,10 @@ public class OneBotResponseStrategy implements BotChannelResponseStrategy {
     }
 
     private void sendImageWithFallback(BotMessageContext context, ResponsePlan plan) {
-        this.sendOrFallback(
-                context,
-                plan,
-                "当前渠道不支持图片消息",
-                () -> sendImage(context, plan));
-    }
-
-    /**
-     * 只吞掉明确的能力不足异常；网络、协议和业务失败继续交给命令异常边界。
-     */
-    private boolean sendOrFallback(
-            BotMessageContext context,
-            ResponsePlan plan,
-            String defaultText,
-            Runnable sendAction) {
         try {
-            sendAction.run();
-            return true;
+            sendImage(context, plan);
         } catch (BotChannelCapabilityException exception) {
-            this.sendTextFallback(context, plan, defaultText);
-            return false;
-        }
-    }
-
-    private void sendTextFallback(BotMessageContext context, ResponsePlan plan,
-                                  String defaultText) {
-        if (StrUtil.isBlank(plan.mentionUserId())) {
-            messageSenderRouter.sendText(context, plan.hasText() ? plan.text() : defaultText);
-        } else {
-            messageSenderRouter.sendText(
-                    context, plan.hasText() ? plan.text() : defaultText, plan.mentionUserId());
+            // 摘要已经发送过，避免能力异常导致同一摘要重复发送。
         }
     }
 
@@ -123,15 +87,6 @@ public class OneBotResponseStrategy implements BotChannelResponseStrategy {
             messageSenderRouter.sendImage(context, plan.image());
         } else {
             messageSenderRouter.sendImage(context, plan.image(), plan.mentionUserId());
-        }
-    }
-
-    private void sendImageWithText(BotMessageContext context, ResponsePlan plan) {
-        if (StrUtil.isBlank(plan.mentionUserId())) {
-            messageSenderRouter.sendImageWithText(context, plan.text(), plan.image());
-        } else {
-            messageSenderRouter.sendImageWithText(
-                    context, plan.text(), plan.image(), plan.mentionUserId());
         }
     }
 

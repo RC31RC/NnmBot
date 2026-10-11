@@ -3,6 +3,8 @@ package com.nnm.bot.admin.config;
 import cn.dev33.satoken.fun.SaParamFunction;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
+import com.nnm.bot.admin.config.properties.AdminBootstrapProperties;
+import com.nnm.bot.admin.config.properties.WebCorsProperties;
 import com.nnm.bot.admin.service.RbacAccountService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.DispatcherType;

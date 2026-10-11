@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 public class QqOfficialApiClient {
 
@@ -39,15 +40,23 @@ public class QqOfficialApiClient {
     private final QqOfficialTokenClient tokenClient;
     private final QqOfficialConnection connection;
     private final AtomicInteger messageSequence = new AtomicInteger(1);
+    private final BooleanSupplier ownership;
 
     public QqOfficialApiClient(HttpClient httpClient,
                                ObjectMapper objectMapper,
                                QqOfficialTokenClient tokenClient,
                                QqOfficialConnection connection) {
+        this(httpClient, objectMapper, tokenClient, connection, () -> true);
+    }
+
+    public QqOfficialApiClient(HttpClient httpClient, ObjectMapper objectMapper,
+                               QqOfficialTokenClient tokenClient, QqOfficialConnection connection,
+                               BooleanSupplier ownership) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.tokenClient = tokenClient;
         this.connection = connection;
+        this.ownership = ownership;
     }
 
     public String gatewayUrl() {
@@ -199,6 +208,7 @@ public class QqOfficialApiClient {
                 byte[] chunk = chunkLength == buffer.length
                         ? buffer
                         : Arrays.copyOf(buffer, chunkLength);
+                requireOwnership();
                 HttpClient.HttpResult putResult = httpClient.putBytes(
                         presignedUrl, chunk, Map.of());
                 if (!putResult.isSuccess()) {
@@ -337,10 +347,12 @@ public class QqOfficialApiClient {
     }
 
     private JsonNode request(String method, String path, ObjectNode body) {
+        requireOwnership();
         String token = tokenClient.getAccessToken();
         String url = connection.apiBaseUrl().replaceAll("/$", "") + path;
         Map<String, String> headers = Map.of("Authorization", "QQBot " + token);
         try {
+            requireOwnership();
             if ("GET".equals(method)) {
                 return emptyIfNull(httpClient.get(url, headers, JsonNode.class));
             }
@@ -354,6 +366,13 @@ public class QqOfficialApiClient {
                 tokenClient.clear();
             }
             throw exception;
+        }
+    }
+
+    private void requireOwnership() {
+        if (!ownership.getAsBoolean()) {
+            throw new BusinessException(BotChannelErrorCode.CHANNEL_NOT_REGISTERED,
+                    "机器人连接租约已失效，已阻止发送");
         }
     }
 

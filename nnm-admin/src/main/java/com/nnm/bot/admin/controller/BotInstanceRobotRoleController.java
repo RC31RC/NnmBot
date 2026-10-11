@@ -23,8 +23,11 @@ public class BotInstanceRobotRoleController {
     @PutMapping("/{id}/robot-roles")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> assignRobotRoles(
-            @PathVariable long id,
-            @Valid @RequestBody BotInstanceRobotRoleSaveRequest request) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            BotInstanceRobotRoleSaveRequest request) {
         service.assignInstanceRoles(id, request.roleIds());
         return ApiResponse.ok();
     }

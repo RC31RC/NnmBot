@@ -1,16 +1,16 @@
 package com.nnm.bot.core.group.service;
 
+import java.nio.charset.StandardCharsets;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.model.PointCommandDisplay;
 import com.nnm.bot.core.plugin.system.SystemCommandCodes;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -69,10 +69,7 @@ public class CommandPointPolicy {
             return result;
         }
         PointBalance balance = change.balance();
-        Map<String, Object> data = new LinkedHashMap<>(result.data());
-        data.put("points", balance.points());
-        data.put("totalEarned", balance.totalEarned());
-        data.put("totalSpent", balance.totalSpent());
+        var data = new PointCommandDisplay(balance.points(), balance.totalEarned(), balance.totalSpent());
         String text = change.applied()
                 ? "签到成功，当前积分：" + balance.points()
                 : "今天已经签到，当前积分：" + balance.points();
@@ -89,7 +86,7 @@ public class CommandPointPolicy {
             String fallback = context.rawMessage() + "|" + context.senderId()
                     + "|" + context.conversationId();
             eventId = UUID.nameUUIDFromBytes(fallback.getBytes(
-                    java.nio.charset.StandardCharsets.UTF_8)).toString();
+                    StandardCharsets.UTF_8)).toString();
         }
         String key = type + ":" + groupId + ":" + memberId + ":"
                 + context.platform().name() + ":" + descriptor.code() + ":" + eventId;
@@ -97,7 +94,7 @@ public class CommandPointPolicy {
             return key;
         }
         String digest = UUID.nameUUIDFromBytes(key.getBytes(
-                java.nio.charset.StandardCharsets.UTF_8)).toString();
+                StandardCharsets.UTF_8)).toString();
         return type + ":" + groupId + ":" + memberId + ":" + digest;
     }
 

@@ -2,6 +2,7 @@ package com.nnm.bot.admin.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nnm.bot.admin.dto.bot.BotChannelStatusEvent;
+import com.nnm.bot.admin.service.BotChannelStatusService;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import jakarta.annotation.Resource;
@@ -29,6 +30,8 @@ public class BotChannelStatusController {
     private BotChannelRegistry registry;
     @Resource(name = "taskScheduler")
     private ThreadPoolTaskScheduler taskScheduler;
+    @Resource
+    private BotChannelStatusService statusService;
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SaCheckPermission("bot:instance:view")
@@ -39,6 +42,7 @@ public class BotChannelStatusController {
         AtomicReference<BotChannelRegistry.Subscription> subscription =
                 new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> keepAlive = new AtomicReference<>();
+        AtomicReference<ScheduledFuture<?>> sharedPoll = new AtomicReference<>();
 
         // 完成、超时和发送异常可能并发发生，清理动作必须只执行一次。
         Runnable cleanup = () -> {
@@ -49,6 +53,8 @@ public class BotChannelStatusController {
             if (task != null) {
                 task.cancel(false);
             }
+            ScheduledFuture<?> poll = sharedPoll.getAndSet(null);
+            if (poll != null) poll.cancel(false);
             BotChannelRegistry.Subscription value = subscription.getAndSet(null);
             if (value != null) {
                 value.close();
@@ -58,24 +64,47 @@ public class BotChannelStatusController {
         emitter.onTimeout(cleanup);
         emitter.onError(ignored -> cleanup.run());
 
-        ScheduledFuture<?> scheduledKeepAlive = taskScheduler.scheduleAtFixedRate(
-                () -> sendKeepAlive(emitter, sendLock, cleanup),
-                Duration.ofSeconds(25));
-        keepAlive.set(scheduledKeepAlive);
-        if (closed.get() && keepAlive.compareAndSet(scheduledKeepAlive, null)) {
-            scheduledKeepAlive.cancel(false);
-        }
+        try {
+            ScheduledFuture<?> scheduledKeepAlive = taskScheduler.scheduleAtFixedRate(
+                    () -> sendKeepAlive(emitter, sendLock, cleanup),
+                    Duration.ofSeconds(25));
+            keepAlive.set(scheduledKeepAlive);
+            if (closed.get() && keepAlive.compareAndSet(scheduledKeepAlive, null)) {
+                scheduledKeepAlive.cancel(false);
+            }
 
-        BotChannelRegistry.Subscription registered = registry.subscribe(snapshot ->
-                sendSnapshot(emitter, sendLock, cleanup, snapshot));
-        subscription.set(registered);
-        if (closed.get() && subscription.compareAndSet(registered, null)) {
-            registered.close();
-        }
+            boolean distributed = statusService != null && statusService.isDistributed();
+            // Only the shared owner snapshot is authoritative in cluster mode.
+            if (!distributed) {
+                BotChannelRegistry.Subscription registered = registry.subscribe(snapshot ->
+                        sendSnapshot(emitter, sendLock, cleanup, snapshot));
+                subscription.set(registered);
+                if (closed.get() && subscription.compareAndSet(registered, null)) {
+                    registered.close();
+                }
+            }
 
-        // 先推送当前快照，页面打开时无需等待下一次连接状态变化。
-        registry.snapshots().forEach(snapshot ->
-                sendSnapshot(emitter, sendLock, cleanup, snapshot));
+            // 先推送当前快照，页面打开时无需等待下一次连接状态变化。
+            (statusService == null ? registry.snapshots() : statusService.snapshots()).forEach(snapshot ->
+                    sendSnapshot(emitter, sendLock, cleanup, snapshot));
+            if (distributed) {
+                ScheduledFuture<?> poll = taskScheduler.scheduleWithFixedDelay(() -> {
+                    if (closed.get()) return;
+                    try {
+                        statusService.snapshots().forEach(snapshot ->
+                                sendSnapshot(emitter, sendLock, cleanup, snapshot));
+                    } catch (RuntimeException exception) {
+                        cleanup.run();
+                        emitter.completeWithError(exception);
+                    }
+                }, Duration.ofSeconds(2));
+                sharedPoll.set(poll);
+                if (closed.get() && sharedPoll.compareAndSet(poll, null)) poll.cancel(false);
+            }
+        } catch (RuntimeException exception) {
+            cleanup.run();
+            emitter.completeWithError(exception);
+        }
         return emitter;
     }
 

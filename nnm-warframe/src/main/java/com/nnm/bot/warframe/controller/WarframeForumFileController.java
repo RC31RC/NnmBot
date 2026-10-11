@@ -4,7 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaMode;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.warframe.application.WarframeForumFileService;
-import com.nnm.bot.warframe.dto.WarframeForumFileItem;
+import com.nnm.bot.warframe.pojo.WarframeForumFileItem;
 import jakarta.annotation.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -32,15 +32,19 @@ public class WarframeForumFileController {
             value = {"warframe:forum:create", "warframe:forum:update"},
             mode = SaMode.OR)
     public ApiResponse<WarframeForumFileItem> upload(
-            @RequestPart("file") MultipartFile file) {
+            @RequestPart("file")
+            MultipartFile file) {
         return ApiResponse.ok(fileService.storeTemporary(file));
     }
 
     @GetMapping("/api/public/v1/warframe/forum/files/{year}/{month}/{fileName:.+}")
     public ResponseEntity<org.springframework.core.io.Resource> file(
-            @PathVariable String year,
-            @PathVariable String month,
-            @PathVariable String fileName) {
+            @PathVariable
+            String year,
+            @PathVariable
+            String month,
+            @PathVariable
+            String fileName) {
         WarframeForumFileService.StoredFile storedFile =
                 fileService.loadPermanent(year, month, fileName);
         return ResponseEntity.ok()
@@ -53,9 +57,12 @@ public class WarframeForumFileController {
 
     @GetMapping("/api/public/v1/warframe/forum/temp-files/{year}/{month}/{fileName:.+}")
     public ResponseEntity<org.springframework.core.io.Resource> temporaryFile(
-            @PathVariable String year,
-            @PathVariable String month,
-            @PathVariable String fileName) {
+            @PathVariable
+            String year,
+            @PathVariable
+            String month,
+            @PathVariable
+            String fileName) {
         WarframeForumFileService.StoredFile storedFile =
                 fileService.loadTemporary(year, month, fileName);
         return ResponseEntity.ok()

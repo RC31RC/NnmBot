@@ -7,14 +7,17 @@ import com.nnm.bot.core.message.render.BotImageRenderer;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.warframe.application.plugin.WarframeCommandData;
-import com.nnm.bot.warframe.domain.model.WorldState;
+import com.nnm.bot.warframe.plugin.ArbitrationCommandHandler;
+import com.nnm.bot.warframe.model.ArbitrationQuery;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.Map;
 
 /**
  * 复用正常命令缓存入口预热每日仲裁图片。
@@ -24,21 +27,17 @@ import java.util.Optional;
 public class WorldStateImagePrewarmService {
 
     @Resource
-    private WorldStateService worldStateService;
+    private ArbitrationCommandHandler arbitrationHandler;
     @Resource
     private CommandRegistry commandRegistry;
     @Resource
     private WorldStateCommandImageCache imageCache;
     @Resource
     private ObjectProvider<BotImageRenderer> imageRendererProvider;
+    @Resource
+    private ObjectMapper objectMapper;
 
     public boolean prewarmDailyArbitrationImage() {
-        WorldState state = worldStateService.getCurrentState();
-        if (state == null) {
-            log.info("Skip arbitration image prewarm because world state is not available");
-            return false;
-        }
-
         Optional<RuntimeCommand> command = commandRegistry.command("arbitration");
         if (command.isEmpty()
                 || !command.get().configuration().enabled()
@@ -54,8 +53,9 @@ public class WorldStateImagePrewarmService {
             return false;
         }
 
-        var output = WarframeCommandData.arbitration(state, false);
-        return imageCache.renderIfSupported(command.get(), output.data(), renderer).isPresent();
+        var output = arbitrationHandler.handle(ArbitrationQuery.CURRENT);
+        Map<String, Object> data = objectMapper.convertValue(output.data(), new TypeReference<>() {});
+        return imageCache.renderIfSupported(command.get(), data, renderer).isPresent();
     }
 
     private boolean hasImageOutput(CommandExecutionConfiguration configuration) {
@@ -67,7 +67,6 @@ public class WorldStateImagePrewarmService {
     }
 
     private boolean isImageOutput(ChannelOutputMode outputMode) {
-        return outputMode == ChannelOutputMode.IMAGE
-                || outputMode == ChannelOutputMode.TEXT_IMAGE;
+        return outputMode == ChannelOutputMode.IMAGE;
     }
 }

@@ -8,14 +8,21 @@ import jakarta.validation.constraints.Size;
 /** 保存权限的请求。 */
 public record PermissionSaveRequest(
         /** 所属菜单主键。 */
-        @NotNull Long menuId,
+        @NotNull
+        Long menuId,
         /** 稳定权限码。 */
-        @NotBlank @Size(max = 100) String code,
+        @NotBlank
+        @Size(max = 100)
+        String code,
         /** 权限名称。 */
-        @NotBlank @Size(max = 100) String name,
+        @NotBlank
+        @Size(max = 100)
+        String name,
         /** 权限类型。 */
-        @NotNull PermissionType type,
+        @NotNull
+        PermissionType type,
         /** 是否启用。 */
-        @NotNull Boolean enabled
+        @NotNull
+        Boolean enabled
 ) {
 }

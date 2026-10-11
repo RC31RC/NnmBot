@@ -1,5 +1,6 @@
 package com.nnm.bot.core.onebot.message;
 
+import java.util.Arrays;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
@@ -101,7 +102,7 @@ public class OneBotFileTransferService {
                 Map<String, Object> params = new LinkedHashMap<>();
                 params.put("stream_id", streamId);
                 params.put("chunk_data", Base64.getEncoder().encodeToString(
-                        read == buffer.length ? buffer : java.util.Arrays.copyOf(buffer, read)));
+                        read == buffer.length ? buffer : Arrays.copyOf(buffer, read)));
                 params.put("chunk_index", chunkIndex);
                 params.put("total_chunks", totalChunks);
                 params.put("file_size", fileSize);

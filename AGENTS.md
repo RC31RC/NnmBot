@@ -12,6 +12,10 @@
 
 ## 后端风格
 
+- Java 注解与被注解的字段、方法、参数或类型声明必须分行书写；例如 `@PathVariable`
+  单独占一行，下一行再写参数类型和名称。
+- 无特殊命名冲突时，使用 `import` 导入类型，不在业务代码中直接书写类的全限定名。
+  只有同名类型无法通过 import 清晰区分时才保留全限定名，并保持范围最小。
 - Java 代码保持精简，参考 `charge-operator` 的分层方式。
 - Controller 只负责协议转换、参数接收和权限声明，业务逻辑放入 Service。
 - Service 接口与实现分离；DTO、响应对象和实体职责明确。
@@ -51,6 +55,14 @@
   和规范化命令稳定确定。
 - 插件的 `match()` 异常不得阻断其他插件匹配；已匹配插件的 `handle()` 异常不得继续交给
   其他插件重复处理同一消息。
+- RDT 的使用方式按职责选择：定时任务、消息消费者和方法级互斥优先使用声明式注解；
+  分布式 ID 获取、消息投递和跨连接生命周期的 owner lease 优先使用编程式 API。
+- 当前 RDT `@RdtLock` 是方法级锁，不等同于事务级锁；不要假设它会自动延长到外层事务
+  最终提交。事务级锁累积管理器暂未实现，新增需求必须先明确事务传播和释放边界。
+- 不使用 `ThreadLocal` 跨 WebSocket、线程池、CompletableFuture 或调度回调传播会话、事务、
+  锁或业务身份。当前 WebSocket 处理链存在 `applicationTaskExecutor`、
+  `shiroTaskExecutor` 和异步完成回调；跨线程上下文必须显式传递，并在同步短调用链结束后
+  清理任何临时 ThreadLocal。
 - 全局 `RestClient` 默认校验 TLS 证书。`nnm.http.trust-all-certs=true` 只能用于临时排查
   本地代理或证书链问题，不得成为开发共享配置或生产默认值。
 
@@ -61,14 +73,14 @@
 - 只有出现多表动态筛选、复杂统计等明确需求时才引入 QueryDSL，不为简单查询提前增加依赖。
 - 业务代码不得拼接原生 SQL；确需报表、批处理或数据库特有能力时，放入独立查询实现并补充集成测试。
 - 当前开发阶段不使用 Flyway。数据库初始化 SQL 统一聚合在
-  `docs/sql/01_init.sql`，已有数据库修复脚本放在 `docs/sql/` 根目录，由开发者手工执行；
+  `docs/sql/init.sql`，已有数据库修复脚本放在 `docs/sql/` 根目录，由开发者手工执行；
   应用不会自动建表或自动修改数据库结构。
 - 所有建表和改表 SQL 都必须写清楚注释：表使用 `COMMENT ON TABLE`，字段使用
   `COMMENT ON COLUMN`；新增约束、索引或枚举值时，在 SQL 上方补充其业务目的，避免只看字段名
   才能理解结构。
 - 测试可使用 SQL 验证数据库结构，但测试夹具应放在 `src/test/resources`，不得混入生产业务逻辑。
-- 当前开发阶段可以直接修改或重建 `docs/sql/01_init.sql`；后续新增结构脚本按
-  `docs/sql/02_*.sql`、`docs/sql/03_*.sql` 顺序维护，不增加自动迁移版本成本。
+- 当前开发阶段可以直接修改或重建 `docs/sql/init.sql`；合并基线后的新增脚本按
+  `docs/sql/01_*.sql`、`docs/sql/02_*.sql` 顺序维护，不增加自动迁移版本成本。
 - Hibernate 使用 `ddl-auto: validate`，不得依赖 `update` 修改数据库。
 - H2 仅作为测试依赖，用于自动化测试；开发和生产数据库统一优先 PostgreSQL。
 - 当前手工脚本以 PostgreSQL 为目标；若正式选择 MySQL 8，使用独立的 MySQL 脚本目录，不编写
@@ -80,7 +92,7 @@
 - 当前开发阶段不要求保留测试数据库数据；结构调整直接修改对应手工 SQL 文件。不要修改无关的
   本地日志文件。
 - Warframe 外部数据源、代理和缓存演进遵循
-  `docs/Warframe外部数据源、代理与缓存演进任务.md`；目标 JVM 业务缓存为 cache2k，
+  `docs/Warframe数据与命令实现.md`；目标 JVM 业务缓存为 cache2k，
   cache2k 已作为生效的 `CacheManager`。Caffeine 依赖和 YAML 配置仅为评估回退暂留，
   不得在两个框架上并行新增业务缓存。
 

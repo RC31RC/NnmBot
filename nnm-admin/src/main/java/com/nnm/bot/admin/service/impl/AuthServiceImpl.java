@@ -1,7 +1,9 @@
 package com.nnm.bot.admin.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 
+import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.domain.SysUser;
 import com.nnm.bot.admin.dto.auth.LoginRequest;
@@ -42,18 +44,18 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse refresh(RefreshTokenRequest request) {
-        Object loginId = StpUtil.getLoginIdByToken(request.refreshToken());
-        if (ObjectUtil.isNull(loginId)) {
-            throw new BusinessException(401, "刷新令牌无效");
+        String token = request.token().trim();
+        Object loginId = StrUtil.isBlank(token) ? null : StpUtil.getLoginIdByToken(token);
+        if (loginId == null || StrUtil.isBlank(String.valueOf(loginId))) {
+            throw new BusinessException(401, "登录令牌无效");
         }
-
-        SysUser user = userRepository.findWithAuthoritiesById(parseLoginId(loginId))
+        long userId = parseLoginId(loginId);
+        SysUser user = userRepository.findWithAuthoritiesById(userId)
                 .filter(SysUser::isEnabled)
                 .orElseThrow(() -> new BusinessException(401, "账号不可用"));
 
-        LoginResponse response = login(user.getId());
-        StpUtil.logoutByTokenValue(request.refreshToken());
-        return response;
+        StpUtil.renewTimeout(token, SaManager.getConfig().getTimeout());
+        return new LoginResponse(token);
     }
 
     @Override
@@ -94,15 +96,16 @@ public class AuthServiceImpl implements AuthService {
 
     private LoginResponse login(long userId) {
         StpUtil.login(userId);
-        String token = StpUtil.getTokenValue();
-        return new LoginResponse(token, token);
+        String accessToken = StpUtil.getTokenValue();
+        return new LoginResponse(accessToken);
     }
 
     private long parseLoginId(Object loginId) {
         try {
             return Long.parseLong(String.valueOf(loginId));
         } catch (NumberFormatException e) {
-            throw new BusinessException(401, "刷新令牌无效");
+            throw new BusinessException(401, "登录令牌无效");
         }
     }
+
 }

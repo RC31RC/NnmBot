@@ -1,5 +1,8 @@
 package com.nnm.bot.core.jmcomic.service.impl;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -176,7 +179,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
                 .filter(ObjectUtil::isNotNull)
                 .filter(cookie -> cookie.matches(url))
                 .map(cookie -> cookie.name() + "=" + cookie.value())
-                .collect(java.util.stream.Collectors.joining("; "));
+                .collect(Collectors.joining("; "));
     }
 
     private JmComicDocument convertPayload(
@@ -237,6 +240,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
     private List<Path> extractImages(Path archive, Path imageDirectory) throws IOException {
         List<Path> images = new ArrayList<>();
         long extractedBytes = 0;
+        Map<Path, String> entryNames = new HashMap<>();
         int inspectedEntries = 0;
         int maxEntries = Math.addExact(Math.multiplyExact(this.properties.getMaxPages(), 2), 32);
         try (ZipInputStream input = new ZipInputStream(new BufferedInputStream(
@@ -274,9 +278,11 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
                             "JM 整本压缩包解压后超过大小限制");
                 }
                 images.add(image);
+                entryNames.put(image, entry.getName());
                 input.closeEntry();
             }
         }
+        images.sort((left, right) -> JmPageOrder.compare(entryNames.get(left), entryNames.get(right)));
         return images;
     }
 

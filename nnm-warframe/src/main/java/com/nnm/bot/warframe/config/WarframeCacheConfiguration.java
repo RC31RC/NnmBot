@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.config;
 
 import com.nnm.bot.warframe.config.properties.WarframeCacheProperties;
-import com.nnm.bot.warframe.infrastructure.cache.WarframeCacheNames;
+import com.nnm.bot.warframe.cache.WarframeCacheNames;
 import org.cache2k.extra.spring.SpringCache2kCacheManager;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
@@ -33,6 +33,22 @@ public class WarframeCacheConfiguration {
                                 .name(WarframeCacheNames.METADATA)
                                 .entryCapacity(properties.getMetadata().getCapacity())
                                 .expireAfterWrite(properties.getMetadata().getExpireAfterWrite()),
+                        builder -> builder
+                                .name(WarframeCacheNames.MARKET_ORDERS)
+                                .entryCapacity(properties.getMarketOrders().getCapacity())
+                                .expireAfterWrite(properties.getMarketOrders().getExpireAfterWrite()),
+                        builder -> builder
+                                .name(WarframeCacheNames.MARKET_AUCTIONS)
+                                .entryCapacity(properties.getMarketAuctions().getCapacity())
+                                .expireAfterWrite(properties.getMarketAuctions().getExpireAfterWrite()),
+                        builder -> builder
+                                .name(WarframeCacheNames.MARKET_STATISTICS)
+                                .entryCapacity(properties.getMarketStatistics().getCapacity())
+                                .expireAfterWrite(properties.getMarketStatistics().getExpireAfterWrite()),
+                        builder -> builder
+                                .name(WarframeCacheNames.ITEM_RESOLUTION_INDEX)
+                                .entryCapacity(properties.getItemResolutionIndex().getCapacity())
+                                .expireAfterWrite(properties.getItemResolutionIndex().getExpireAfterWrite()),
                         builder -> builder
                                 .name(WarframeCacheNames.TRANSLATIONS)
                                 .entryCapacity(properties.getTranslations().getCapacity())

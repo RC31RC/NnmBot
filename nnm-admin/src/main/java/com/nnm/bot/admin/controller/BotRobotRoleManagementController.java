@@ -28,28 +28,37 @@ public class BotRobotRoleManagementController {
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<List<BotRobotRoleItem>> list(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.list());
     }
 
     @PostMapping
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Long> create(@Valid @RequestBody BotRobotRoleSaveRequest request) {
+    public ApiResponse<Long> create(
+            @Valid
+            @RequestBody
+    BotRobotRoleSaveRequest request) {
         return ApiResponse.ok(service.create(request));
     }
 
     @PutMapping("/{id}")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> update(
-            @PathVariable long id,
-            @Valid @RequestBody BotRobotRoleSaveRequest request) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            BotRobotRoleSaveRequest request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/{id}")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> delete(@PathVariable long id) {
+    public ApiResponse<Void> delete(
+            @PathVariable
+            long id) {
         service.delete(id);
         return ApiResponse.ok();
     }

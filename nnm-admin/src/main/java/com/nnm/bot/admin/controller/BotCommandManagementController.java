@@ -35,14 +35,19 @@ public class BotCommandManagementController {
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<List<BotCommandItem>> commands(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.commands());
     }
 
     @PutMapping("/{code}")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> update(@PathVariable String code,
-                                    @Valid @RequestBody BotCommandSaveRequest request) {
+    public ApiResponse<Void> update(
+            @PathVariable
+            String code,
+                                    @Valid
+                                    @RequestBody
+                                    BotCommandSaveRequest request) {
         service.update(code, request);
         return ApiResponse.ok();
     }
@@ -50,17 +55,23 @@ public class BotCommandManagementController {
     @PostMapping("/{code}/outputs/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<List<BotCommandChannelOutputItem>> channelOutputs(
-            @PathVariable String code,
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @PathVariable
+            String code,
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.channelOutputs(code));
     }
 
     @PutMapping("/{code}/outputs/{platform}")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> updateChannelOutput(
-            @PathVariable String code,
-            @PathVariable BotPlatform platform,
-            @Valid @RequestBody BotCommandChannelOutputSaveRequest request) {
+            @PathVariable
+            String code,
+            @PathVariable
+            BotPlatform platform,
+            @Valid
+            @RequestBody
+            BotCommandChannelOutputSaveRequest request) {
         service.updateChannelOutput(code, platform, request);
         return ApiResponse.ok();
     }
@@ -68,16 +79,21 @@ public class BotCommandManagementController {
     @PostMapping("/{code}/robot-roles/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<List<BotCommandRoleItem>> roles(
-            @PathVariable String code,
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @PathVariable
+            String code,
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.roles(code));
     }
 
     @PutMapping("/{code}/robot-roles")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> updateRoles(
-            @PathVariable String code,
-            @Valid @RequestBody BotCommandRoleSaveRequest request) {
+            @PathVariable
+            String code,
+            @Valid
+            @RequestBody
+            BotCommandRoleSaveRequest request) {
         service.updateRoles(code, request);
         return ApiResponse.ok();
     }
@@ -85,8 +101,10 @@ public class BotCommandManagementController {
     @PostMapping("/{code}/system-role-ids/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<List<Long>> systemRoleIds(
-            @PathVariable String code,
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @PathVariable
+            String code,
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         // 角色详情复用系统管理的 /roles；这里仅返回命令已绑定的主键。
         return ApiResponse.ok(service.systemRoleIds(code));
     }
@@ -94,8 +112,11 @@ public class BotCommandManagementController {
     @PutMapping("/{code}/system-roles")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> updateSystemRoles(
-            @PathVariable String code,
-            @Valid @RequestBody BotCommandSystemRoleSaveRequest request) {
+            @PathVariable
+            String code,
+            @Valid
+            @RequestBody
+            BotCommandSystemRoleSaveRequest request) {
         service.updateSystemRoles(code, request);
         return ApiResponse.ok();
     }
@@ -103,16 +124,21 @@ public class BotCommandManagementController {
     @PostMapping("/{code}/cost/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<BotCommandCostItem> cost(
-            @PathVariable String code,
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @PathVariable
+            String code,
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.cost(code));
     }
 
     @PutMapping("/{code}/cost")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> updateCost(
-            @PathVariable String code,
-            @Valid @RequestBody BotCommandCostSaveRequest request) {
+            @PathVariable
+            String code,
+            @Valid
+            @RequestBody
+            BotCommandCostSaveRequest request) {
         service.updateCost(code, request);
         return ApiResponse.ok();
     }

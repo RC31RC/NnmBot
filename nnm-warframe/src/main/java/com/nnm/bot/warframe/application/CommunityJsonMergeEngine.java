@@ -3,7 +3,7 @@ package com.nnm.bot.warframe.application;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.nnm.bot.warframe.dto.WarframeCommunityFieldDiff;
+import com.nnm.bot.warframe.pojo.WarframeCommunityFieldDiff;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

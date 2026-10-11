@@ -31,4 +31,21 @@ class HttpClientPropertiesTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("retry-max-backoff");
     }
+
+    @Test
+    void validatesResponseSizeLimits() {
+        HttpClientProperties properties = new HttpClientProperties();
+        properties.setMaxResponseBodyBytes(0);
+
+        assertThatThrownBy(properties::validate)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("max-response-body-bytes");
+
+        properties.setMaxResponseBodyBytes(1024);
+        properties.setMaxDownloadBytes(0);
+
+        assertThatThrownBy(properties::validate)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("max-download-bytes");
+    }
 }

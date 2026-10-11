@@ -9,6 +9,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -126,6 +128,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotWritableException.class)
     public ResponseEntity<ApiResponse<Void>> handleMessageNotWritable(
             HttpMessageNotWritableException e) {
+        if (isClientDisconnect(e)) {
+            log.debug("客户端已断开连接，停止写回响应: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
         log.error("响应内容无法序列化", e);
         return response(CommonErrorCode.SYSTEM_ERROR);
     }
@@ -173,6 +179,17 @@ public class GlobalExceptionHandler {
         return response(CommonErrorCode.DATA_NOT_FOUND, "接口不存在");
     }
 
+    /**
+     * 客户端提前断开连接后，异步响应继续写回会触发该异常。
+     * 此时响应通道已经不可用，不再按服务器故障记录错误堆栈。
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleClientDisconnect(
+            AsyncRequestNotUsableException e) {
+        log.debug("客户端已断开连接，停止写回响应: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
     @ExceptionHandler({
             CompletionException.class,
             ExecutionException.class,
@@ -180,6 +197,10 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<ApiResponse<Void>> handleWrapped(Throwable exception) {
         Throwable cause = unwrap(exception);
+        if (isClientDisconnect(cause)) {
+            log.debug("客户端已断开连接，停止写回响应: {}", cause.getMessage());
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
         if (cause instanceof BusinessException businessException) {
             return handleBusiness(businessException);
         }
@@ -195,6 +216,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception e) {
+        if (isClientDisconnect(e)) {
+            log.debug("客户端已断开连接，停止写回响应: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
         log.error("未处理的系统异常", e);
         return response(CommonErrorCode.SYSTEM_ERROR);
     }
@@ -238,5 +263,23 @@ public class GlobalExceptionHandler {
             current = cause;
         }
         return current;
+    }
+
+    private static boolean isClientDisconnect(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String className = current.getClass().getName();
+            String message = current.getMessage();
+            String normalizedMessage = message == null ? "" : message.toLowerCase();
+            if (current instanceof AsyncRequestNotUsableException
+                    || className.endsWith("ClientAbortException")
+                    || normalizedMessage.contains("broken pipe")
+                    || normalizedMessage.contains("connection reset by peer")
+                    || normalizedMessage.contains("客户端已断开")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

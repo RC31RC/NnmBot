@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.dto.bot;
 
+import java.time.LocalDateTime;
+
 /** 逻辑群组成员展示对象。 */
 public record BotGroupMemberItem(
         /** 成员主键。 */
@@ -13,7 +15,7 @@ public record BotGroupMemberItem(
         /** QQ 号是否已通过可信渠道核验。 */
         boolean qqIdVerified,
         /** QQ 号最近一次绑定时间。 */
-        java.time.LocalDateTime qqBoundAt,
+        LocalDateTime qqBoundAt,
         /** 成员显示名称。 */
         String displayName,
         /** 群组成员角色。 */

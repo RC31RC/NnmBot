@@ -32,35 +32,45 @@ public class BotScopeManagementController {
     @PostMapping("/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotScopeItem>> scopes(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.scopes());
     }
 
     @PostMapping("/discovery/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotScopeDiscoveryItem>> discovery(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.discover());
     }
 
     @PostMapping
     @SaCheckPermission("bot:group:update")
-    public ApiResponse<Long> create(@Valid @RequestBody BotScopeCreateRequest request) {
+    public ApiResponse<Long> create(
+            @Valid
+            @RequestBody
+    BotScopeCreateRequest request) {
         return ApiResponse.ok(service.create(request));
     }
 
     @PutMapping("/{id}")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> update(
-            @PathVariable long id,
-            @Valid @RequestBody BotScopeUpdateRequest request) {
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            BotScopeUpdateRequest request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/{id}")
     @SaCheckPermission("bot:group:delete")
-    public ApiResponse<Void> delete(@PathVariable long id) {
+    public ApiResponse<Void> delete(
+            @PathVariable
+            long id) {
         service.delete(id);
         return ApiResponse.ok();
     }
@@ -68,17 +78,23 @@ public class BotScopeManagementController {
     @PostMapping("/{id}/members/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotScopeMemberItem>> members(
-            @PathVariable long id,
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @PathVariable
+            long id,
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(service.members(id));
     }
 
     @PutMapping("/{scopeId}/members/{memberId}")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> updateMember(
-            @PathVariable long scopeId,
-            @PathVariable long memberId,
-            @Valid @RequestBody BotScopeMemberUpdateRequest request) {
+            @PathVariable
+            long scopeId,
+            @PathVariable
+            long memberId,
+            @Valid
+            @RequestBody
+            BotScopeMemberUpdateRequest request) {
         service.updateMember(scopeId, memberId, request);
         return ApiResponse.ok();
     }

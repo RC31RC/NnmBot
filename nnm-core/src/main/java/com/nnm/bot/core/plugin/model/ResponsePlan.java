@@ -39,7 +39,7 @@ public record ResponsePlan(ChannelOutputMode outputMode,
     }
 
     public ResponsePlan {
-        outputMode = ObjectUtil.isNull(outputMode) ? ChannelOutputMode.NONE : outputMode;
+        outputMode = ObjectUtil.isNull(outputMode) ? ChannelOutputMode.TEXT : outputMode;
         text = StrUtil.blankToDefault(text, "");
         image = image == null ? null : Arrays.copyOf(image, image.length);
         attachments = CollUtil.isEmpty(attachments) ? List.of() : List.copyOf(attachments);

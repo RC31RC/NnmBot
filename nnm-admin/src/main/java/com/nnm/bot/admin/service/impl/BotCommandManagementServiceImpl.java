@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.impl;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.collection.CollUtil;
@@ -35,6 +37,7 @@ import com.nnm.bot.admin.repository.SysRoleRepository;
 import com.nnm.bot.admin.service.BotCommandManagementService;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.constant.CommandBoundaryPolicy;
+import com.nnm.bot.core.constant.CommandOutputMode;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
 import com.nnm.bot.core.constant.ChannelOutputMode;
@@ -42,6 +45,7 @@ import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.admin.repository.BotRobotRoleRepository;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +79,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Resource
     private BotCommandTemplateRepository templateRepository;
     @Resource
-    private com.nnm.bot.admin.repository.BotRobotRoleRepository roleRepository;
+    private BotRobotRoleRepository roleRepository;
     @Resource
     private BotCommandRoleRepository systemRoleBindingRepository;
     @Resource
@@ -84,13 +88,13 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     public List<BotCommandItem> commands() {
         Map<String, BotCommand> configured = commandRepository.findAll().stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         command -> normalize(command.getCode()),
                         command -> command,
                         (left, right) -> right,
                         LinkedHashMap::new));
         Map<String, BotPlugin> plugins = commandRegistry.allPlugins().stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         plugin -> normalize(commandRegistry.metadata(plugin).code()),
                         plugin -> plugin,
                         (left, right) -> left,
@@ -162,12 +166,12 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         Map<String, BotCommandChannel> configured = commandChannelRepository
                 .findAllByCommandId(command.getId())
                 .stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         item -> item.getPlatform().toUpperCase(Locale.ROOT),
                         item -> item,
                         (left, right) -> right));
 
-        return java.util.Arrays.stream(BotPlatform.values())
+        return Arrays.stream(BotPlatform.values())
                 .map(platform -> {
                     BotCommandChannel channel = configured.get(platform.name());
                     return new BotCommandChannelOutputItem(
@@ -210,10 +214,10 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
                 .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
         Map<Long, BotCommandRobotRole> assigned = commandRoleRepository.findAllByCommandId(command.getId())
                 .stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         BotCommandRobotRole::getRobotRoleId, item -> item));
         return roleRepository.findAll().stream()
-                .sorted(java.util.Comparator.comparing(BotRobotRole::getCode))
+                .sorted(Comparator.comparing(BotRobotRole::getCode))
                 .map(role -> new BotCommandRoleItem(
                         role.getId(),
                         role.getCode(),
@@ -229,7 +233,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         BotCommand command = commandRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
         Map<Long, BotRobotRole> roles = roleRepository.findAllById(request.roleIds()).stream()
-                .collect(java.util.stream.Collectors.toMap(BotRobotRole::getId, item -> item));
+                .collect(Collectors.toMap(BotRobotRole::getId, item -> item));
         if (roles.size() != request.roleIds().size()) {
             throw new IllegalArgumentException("命令角色包含不存在的角色");
         }
@@ -264,7 +268,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
                 ? List.of()
                 : request.roleIds().stream().distinct().toList();
         Map<Long, SysRole> roles = systemRoleRepository.findAllById(roleIds).stream()
-                .collect(java.util.stream.Collectors.toMap(SysRole::getId, item -> item));
+                .collect(Collectors.toMap(SysRole::getId, item -> item));
         if (roles.size() != roleIds.size()) {
             throw new IllegalArgumentException("命令系统角色包含不存在的角色");
         }
@@ -315,7 +319,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
                         .toList();
         Map<Long, BotCommandTemplate> selected = templateRepository.findAllById(templateIds)
                 .stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         BotCommandTemplate::getId, item -> item));
         if (selected.size() != templateIds.size()) {
             throw new IllegalArgumentException("命令模板包含不存在的模板");
@@ -390,7 +394,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
                 ObjectUtil.isNull(command) ? "" : command.getDescription(),
                 ObjectUtil.isNull(command) ? false : command.isEnabled(),
                 ObjectUtil.isNull(command) ? false : command.isShowInHelp(),
-                ObjectUtil.isNull(command) ? com.nnm.bot.core.constant.CommandOutputMode.TEXT : command.getOutputMode(),
+                ObjectUtil.isNull(command) ? CommandOutputMode.TEXT : command.getOutputMode(),
                 triggers,
                 ObjectUtil.isNull(command) ? 0 : command.getCooldownSeconds(),
                 ObjectUtil.isNotNull(command) && command.isMentionInvoker(),

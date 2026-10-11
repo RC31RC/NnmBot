@@ -3,7 +3,7 @@ package com.nnm.bot.warframe.application;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 
-import com.nnm.bot.warframe.domain.entity.WarframeItem;
+import com.nnm.bot.warframe.model.entity.WarframeItem;
 
 import java.util.List;
 

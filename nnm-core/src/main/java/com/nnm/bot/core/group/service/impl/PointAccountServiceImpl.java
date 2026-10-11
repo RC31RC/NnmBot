@@ -9,6 +9,9 @@ import com.nnm.bot.core.group.service.PointAccountService;
 import com.nnm.bot.core.group.service.PointBalance;
 import com.nnm.bot.core.group.service.PointChangeResult;
 import com.nnm.bot.core.group.service.PointOperation;
+import io.github.rdt.lock.DistributedLockManager;
+import io.github.rdt.lock.LockOptions;
+import io.github.rdt.lock.RdtLock;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +27,18 @@ public class PointAccountServiceImpl implements PointAccountService {
     private BotGroupMemberRepository memberRepository;
     @Resource
     private BotGroupPointTransactionRepository transactionRepository;
+    @Resource
+    private DistributedLockManager lockManager;
 
     @Override
     @Transactional
+    @RdtLock
     public PointChangeResult earn(PointOperation operation) {
+        lockManager.lock("group-member:" + operation.memberId());
         if (existsByIdempotencyKey(operation.idempotencyKey())) {
             return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
         }
         BotGroupMember member = lockedMember(operation);
-        // 同一成员的并发请求会在行锁处串行，获得锁后必须再次检查幂等流水。
-        if (existsByIdempotencyKey(operation.idempotencyKey())) {
-            return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
-        }
         long points = Math.addExact(member.getPoints(), operation.amount());
         member.setPoints(points);
         member.setTotalEarned(Math.addExact(member.getTotalEarned(), operation.amount()));
@@ -47,15 +50,13 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     @Override
     @Transactional
+    @RdtLock
     public PointChangeResult spend(PointOperation operation) {
+        lockManager.lock("group-member:" + operation.memberId());
         if (existsByIdempotencyKey(operation.idempotencyKey())) {
             return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
         }
         BotGroupMember member = lockedMember(operation);
-        // 防止两个并发命令在锁外都通过首次幂等检查后重复扣费。
-        if (existsByIdempotencyKey(operation.idempotencyKey())) {
-            return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
-        }
         if (member.getPoints() < operation.amount()) {
             return PointChangeResult.denied(
                     "积分不足，需要 " + operation.amount() + " 分", snapshot(member));
@@ -70,7 +71,9 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     @Override
     @Transactional
+    @RdtLock
     public PointChangeResult refund(String originalIdempotencyKey, String description) {
+        lockManager.lock("point-refund:" + originalIdempotencyKey);
         BotGroupPointTransaction original = transactionRepository
                 .findByIdempotencyKey(originalIdempotencyKey)
                 .orElseThrow(() -> new IllegalStateException("原积分扣费流水不存在"));
@@ -82,7 +85,10 @@ public class PointAccountServiceImpl implements PointAccountService {
         if (existsByIdempotencyKey(refundKey)) {
             return repeated(refundKey, original.getGroupId(), original.getMemberId());
         }
-        BotGroupMember member = memberRepository.findWithLockById(original.getMemberId())
+        lockManager.lock(
+                "group-member:" + original.getMemberId(),
+                LockOptions.defaults());
+        BotGroupMember member = memberRepository.findById(original.getMemberId())
                 .filter(item -> item.getGroupId().equals(original.getGroupId()))
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
         long refund = Math.abs(original.getAmount());
@@ -106,11 +112,13 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     @Override
     @Transactional
+    @RdtLock
     public PointChangeResult adjust(long groupId,
                                     long memberId,
                                     long targetPoints,
                                     String idempotencyKey,
                                     String description) {
+        lockManager.lock("group-member:" + memberId);
         if (groupId <= 0 || memberId <= 0) {
             throw new IllegalArgumentException("积分账户标识必须为正数");
         }
@@ -121,13 +129,9 @@ public class PointAccountServiceImpl implements PointAccountService {
         if (existsByIdempotencyKey(normalizedIdempotencyKey)) {
             return repeated(normalizedIdempotencyKey, groupId, memberId);
         }
-        BotGroupMember member = memberRepository.findWithLockById(memberId)
+        BotGroupMember member = memberRepository.findById(memberId)
                 .filter(item -> item.getGroupId().equals(groupId))
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
-        // 管理端重复提交也必须在获得账户锁后复查，避免覆盖其他积分变化。
-        if (existsByIdempotencyKey(normalizedIdempotencyKey)) {
-            return repeated(normalizedIdempotencyKey, groupId, memberId);
-        }
         long amount = Math.subtractExact(targetPoints, member.getPoints());
         if (amount == 0) {
             return PointChangeResult.applied(snapshot(member), null);
@@ -164,7 +168,7 @@ public class PointAccountServiceImpl implements PointAccountService {
     }
 
     private BotGroupMember lockedMember(PointOperation operation) {
-        return memberRepository.findWithLockById(operation.memberId())
+        return memberRepository.findById(operation.memberId())
                 .filter(member -> member.getGroupId().equals(operation.groupId()))
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
     }

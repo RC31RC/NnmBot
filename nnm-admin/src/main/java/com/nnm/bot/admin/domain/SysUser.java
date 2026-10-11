@@ -29,12 +29,15 @@ import java.util.Set;
 @NamedEntityGraphs({
         @NamedEntityGraph(
                 name = SysUser.GRAPH_ROLES,
-                attributeNodes = @NamedAttributeNode("roles")
+                attributeNodes =
+                        @NamedAttributeNode("roles")
         ),
         @NamedEntityGraph(
                 name = SysUser.GRAPH_AUTHORITIES,
-                attributeNodes = @NamedAttributeNode(value = "roles", subgraph = "roleAuthorities"),
-                subgraphs = @NamedSubgraph(
+                attributeNodes =
+                        @NamedAttributeNode(value = "roles", subgraph = "roleAuthorities"),
+                subgraphs =
+                        @NamedSubgraph(
                         name = "roleAuthorities",
                         attributeNodes = {
                                 @NamedAttributeNode("permissions"),
@@ -89,8 +92,10 @@ public class SysUser {
     @ManyToMany
     @JoinTable(
             name = "sys_user_role",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+            joinColumns =
+                    @JoinColumn(name = "user_id"),
+            inverseJoinColumns =
+                    @JoinColumn(name = "role_id")
     )
     private Set<SysRole> roles = new LinkedHashSet<>();
 

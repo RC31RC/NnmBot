@@ -31,7 +31,8 @@ public class SystemMonitorController {
     @PostMapping("/operation-logs/query")
     @SaCheckPermission("system:audit:view")
     public ApiResponse<PageResult<OperationLogItem>> operationLogs(
-            @RequestBody OperationLogQueryRequest request
+            @RequestBody
+            OperationLogQueryRequest request
     ) {
         return ApiResponse.ok(auditService.logs(
                 request.operatorName(),
@@ -43,13 +44,16 @@ public class SystemMonitorController {
     @PostMapping("/sessions/query")
     @SaCheckPermission("system:session:view")
     public ApiResponse<List<SessionItem>> sessions(
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         return ApiResponse.ok(onlineSessionService.sessions());
     }
 
     @DeleteMapping("/sessions/{token}")
     @SaCheckPermission("system:session:kickout")
-    public ApiResponse<Void> kickout(@PathVariable String token) {
+    public ApiResponse<Void> kickout(
+            @PathVariable
+            String token) {
         onlineSessionService.kickout(token);
         return ApiResponse.ok();
     }

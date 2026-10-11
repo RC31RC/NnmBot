@@ -7,6 +7,7 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
+import com.nnm.bot.core.constant.MatchType;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.ObjectProvider;
 
@@ -15,7 +16,7 @@ import java.util.Locale;
 
 @BotPluginCommand(
         code = SystemCommandCodes.HELP,
-        matchType = com.nnm.bot.core.constant.MatchType.EXACT,
+        matchType = MatchType.EXACT,
         name = "帮助",
         gameCode = "system",
         order = Integer.MIN_VALUE)

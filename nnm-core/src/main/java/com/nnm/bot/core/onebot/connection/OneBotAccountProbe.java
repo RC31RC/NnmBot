@@ -10,7 +10,7 @@ import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants;
 import com.nnm.bot.core.onebot.config.OneBotProperties;
 import jakarta.annotation.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -36,8 +36,8 @@ public class OneBotAccountProbe {
     private OneBotProperties properties;
     @Resource
     private ObjectMapper objectMapper;
-    @Resource(name = "applicationTaskExecutor")
-    private ThreadPoolTaskExecutor taskExecutor;
+    @Resource(name = "webSocketConnectExecutor")
+    private AsyncTaskExecutor taskExecutor;
 
     public String probe(String connectionUrl, String accessToken) {
         URI uri = websocketUri(connectionUrl);

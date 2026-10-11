@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.channel.model.BotChannelKey;
+import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
+import java.util.function.BooleanSupplier;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
@@ -21,7 +23,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.SmartLifecycle;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 
@@ -51,11 +53,15 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
     @Resource
     private ObjectProvider<CommandDispatcher> commandDispatcherProvider;
     @Resource(name = "applicationTaskExecutor")
-    private ThreadPoolTaskExecutor taskExecutor;
+    private AsyncTaskExecutor taskExecutor;
+    @Resource(name = "webSocketConnectExecutor")
+    private AsyncTaskExecutor connectionExecutor;
     @Resource(name = "scheduledExecutor")
     private ThreadPoolTaskScheduler scheduler;
     @Resource
     private BotChannelRegistry channelRegistry;
+    @Resource
+    private ObjectProvider<ClusterBotRuntime> clusterProvider;
     private final ConcurrentHashMap<String, OfficialConnection> connections =
             new ConcurrentHashMap<>();
     private volatile boolean running;
@@ -142,6 +148,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
         private final QqOfficialApiClient apiClient;
         private final java.net.http.HttpClient webSocketClient;
         private final BotChannelKey channelKey;
+        private final BooleanSupplier ownership;
         private final AtomicBoolean connecting = new AtomicBoolean();
         private final AtomicBoolean active = new AtomicBoolean();
         private final StringBuilder incoming = new StringBuilder();
@@ -154,6 +161,10 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
 
         private OfficialConnection(BotChannelInstanceRecord instance) {
             this.instance = instance;
+            this.channelKey = new BotChannelKey(BotPlatform.QQ_OFFICIAL, instance.botAccountId());
+            ClusterBotRuntime cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
+            BooleanSupplier lease = cluster == null ? () -> true : cluster.guard(channelKey);
+            this.ownership = () -> active.get() && lease.getAsBoolean();
             this.connection = new QqOfficialConnection(
                     instance.appId(),
                     instance.clientSecret(),
@@ -162,20 +173,18 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
                     instance.gatewayUrl());
             this.tokenClient = new QqOfficialTokenClient(httpClient, this.connection);
             this.apiClient = new QqOfficialApiClient(
-                    httpClient, objectMapper, tokenClient, this.connection);
+                    httpClient, objectMapper, tokenClient, this.connection, ownership);
+            // 协议调度交给 JDK 管理，不能占用业务并发许可后再向同一执行器提交业务。
             this.webSocketClient = java.net.http.HttpClient.newBuilder()
-                    .executor(taskExecutor)
                     .connectTimeout(instance.gatewayConnectTimeout())
                     .build();
-            this.channelKey = new BotChannelKey(
-                    BotPlatform.QQ_OFFICIAL, instance.botAccountId());
         }
 
         private void start() {
             if (!active.compareAndSet(false, true)) {
                 return;
             }
-            taskExecutor.execute(this::connect);
+            connectionExecutor.execute(this::connect);
         }
 
         private void stop() {
@@ -185,16 +194,16 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             WebSocket socket = webSocket;
             webSocket = null;
             if (ObjectUtil.isNotNull(socket)) {
-                socket.sendClose(WebSocket.NORMAL_CLOSURE, "shutdown");
+                socket.abort();
             }
             channelRegistry.disconnected(channelKey);
         }
 
         @Override
         public void onOpen(WebSocket socket) {
-            if (!running || !active.get()) {
+            if (!running || !ownership.getAsBoolean()) {
                 connecting.set(false);
-                socket.sendClose(WebSocket.NORMAL_CLOSURE, "disabled");
+                socket.abort();
                 return;
             }
             webSocket = socket;
@@ -253,7 +262,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
         }
 
         private void connect() {
-            if (!running || !active.get() || !connecting.compareAndSet(false, true)) {
+            if (!running || !ownership.getAsBoolean() || !connecting.compareAndSet(false, true)) {
                 return;
             }
             channelRegistry.connecting(channelKey);
@@ -286,6 +295,10 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
         }
 
         private void handlePayload(WebSocket socket, String payload) {
+            if (!ownership.getAsBoolean()) {
+                socket.abort();
+                return;
+            }
             try {
                 JsonNode root = objectMapper.readTree(payload);
                 if (root.hasNonNull("s")) {
@@ -327,6 +340,10 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
                             objectMapper, token, sessionId, sequence)
                     : QqOfficialGatewayPayloads.identify(
                             objectMapper, token, instance.intents());
+            if (!ownership.getAsBoolean()) {
+                socket.abort();
+                return;
+            }
             socket.sendText(payload.toString(), true);
             cancel(heartbeat);
             heartbeat = scheduler.scheduleAtFixedRate(
@@ -334,6 +351,10 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
         }
 
         private void sendHeartbeat(WebSocket socket) {
+            if (!ownership.getAsBoolean()) {
+                socket.abort();
+                return;
+            }
             if (!socket.isOutputClosed() && !socket.isInputClosed()) {
                 socket.sendText(QqOfficialGatewayPayloads
                         .heartbeat(objectMapper, sequence).toString(), true);
@@ -342,7 +363,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
 
         /**
          * 只把 QQ 消息事件送入命令执行器；连接生命周期事件在 Gateway 层内部消费。
-         * 命令使用应用任务执行器运行，避免阻塞 WebSocket 回调线程。
+         * 命令在业务虚拟线程运行；并发达到上限时提交入口背压，不创建无界消息积压。
          */
         private void handleDispatch(String eventType, JsonNode data) {
             if ("READY".equals(eventType)) {
@@ -355,7 +376,11 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
             QqOfficialMessageContextFactory
                     .from(instance.botAccountId(), eventType, data)
                     .ifPresent(context -> taskExecutor.execute(
-                            () -> commandDispatcherProvider.getObject().dispatch(context)));
+                            () -> {
+                                if (ownership.getAsBoolean()) {
+                                    commandDispatcherProvider.getObject().dispatch(context);
+                                }
+                            }));
         }
 
         private void scheduleReconnect() {
@@ -363,7 +388,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle {
                 return;
             }
             cancel(reconnect);
-            reconnect = scheduler.schedule(this::connect,
+            reconnect = scheduler.schedule(() -> connectionExecutor.execute(this::connect),
                     Instant.now().plus(instance.reconnectDelay()));
         }
     }

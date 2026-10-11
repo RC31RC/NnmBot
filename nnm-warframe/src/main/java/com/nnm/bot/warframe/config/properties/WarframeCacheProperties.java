@@ -14,6 +14,16 @@ public class WarframeCacheProperties {
     private final CacheRegion translations = new CacheRegion(16, Duration.ofHours(12));
     private final CacheRegion dataSourceTag = new CacheRegion(8, Duration.ofMinutes(2));
     private final CacheRegion worldStateImages = new CacheRegion(32, Duration.ofHours(26));
+    private final CacheRegion marketOrders = new CacheRegion(256, Duration.ofSeconds(60));
+    private final CacheRegion marketAuctions = new CacheRegion(128, Duration.ofSeconds(60));
+    private final CacheRegion marketStatistics = new CacheRegion(64, Duration.ofHours(1));
+    private final CacheRegion itemResolutionIndex = new CacheRegion(1, Duration.ofHours(8));
+
+    public CacheRegion getItemResolutionIndex() { return itemResolutionIndex; }
+
+    public CacheRegion getMarketOrders() { return marketOrders; }
+    public CacheRegion getMarketAuctions() { return marketAuctions; }
+    public CacheRegion getMarketStatistics() { return marketStatistics; }
 
     public CacheRegion getWorldState() {
         return worldState;
@@ -41,6 +51,10 @@ public class WarframeCacheProperties {
         validate(translations, "nnm.warframe.cache.translations", true);
         validate(dataSourceTag, "nnm.warframe.cache.data-source-tag", true);
         validate(worldStateImages, "nnm.warframe.cache.world-state-images", true);
+        validate(marketOrders, "nnm.warframe.cache.market-orders", true);
+        validate(marketAuctions, "nnm.warframe.cache.market-auctions", true);
+        validate(marketStatistics, "nnm.warframe.cache.market-statistics", true);
+        validate(itemResolutionIndex, "nnm.warframe.cache.item-resolution-index", true);
     }
 
     private void validate(CacheRegion region, String name, boolean expiryRequired) {

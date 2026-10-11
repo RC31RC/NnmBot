@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -43,8 +44,10 @@ public class AdminTaskController {
 
     @PostMapping("/{taskId}")
     public ApiResponse<AdminTaskEvent> get(
-            @PathVariable UUID taskId,
-            @RequestBody(required = false) EmptyRequest ignored) {
+            @PathVariable
+            UUID taskId,
+            @RequestBody(required = false)
+            EmptyRequest ignored) {
         AdminTaskEvent event = findAuthorized(taskId);
         return ApiResponse.ok(event);
     }
@@ -52,43 +55,59 @@ public class AdminTaskController {
     @GetMapping(
             value = "/{taskId}/events",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter events(@PathVariable UUID taskId) {
+    public SseEmitter events(
+            @PathVariable
+            UUID taskId) {
         findAuthorized(taskId);
         SseEmitter emitter = new SseEmitter(0L);
+        log.info("管理端 SSE 建立, taskId={}", taskId);
         AtomicReference<AdminTaskService.TaskSubscription> subscription =
                 new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> keepAlive = new AtomicReference<>();
         Object sendLock = new Object();
-        Runnable cleanup = () -> close(subscription, keepAlive);
+        AtomicBoolean closed = new AtomicBoolean();
+        Runnable cleanup = () -> {
+            if (closed.compareAndSet(false, true)) {
+                log.info("管理端 SSE 关闭, taskId={}", taskId);
+            }
+            close(subscription, keepAlive);
+        };
         emitter.onCompletion(cleanup);
         emitter.onTimeout(cleanup);
         emitter.onError(ignored -> cleanup.run());
 
-        ScheduledFuture<?> keepAliveTask = taskScheduler.scheduleAtFixedRate(
-                () -> sendKeepAlive(emitter, taskId, sendLock, subscription, keepAlive),
-                Duration.ofSeconds(25));
-        keepAlive.set(keepAliveTask);
+        try {
+            ScheduledFuture<?> keepAliveTask = taskScheduler.scheduleAtFixedRate(
+                    () -> sendKeepAlive(emitter, taskId, sendLock, cleanup),
+                    Duration.ofSeconds(25));
+            keepAlive.set(keepAliveTask);
+            if (closed.get()) cleanup.run();
 
-        AdminTaskService.TaskSubscription registered = taskService.subscribe(taskId, event -> {
-            boolean sent = send(
-                    emitter,
-                    taskId,
-                    sendLock,
-                    SseEmitter.event()
-                            .id(String.valueOf(event.sequence()))
-                            .name(event.status().name().toLowerCase())
-                            .data(event),
-                    cleanup,
-                    "事件发送失败");
-            if (sent && isTerminal(event)) {
+            AdminTaskService.TaskSubscription registered = taskService.subscribe(taskId, event -> {
+                boolean sent = send(
+                        emitter,
+                        taskId,
+                        sendLock,
+                        SseEmitter.event()
+                                .id(String.valueOf(event.sequence()))
+                                .name(event.status().name().toLowerCase())
+                                .data(event),
+                        cleanup,
+                        "事件发送失败");
+                if (sent && isTerminal(event)) {
+                    emitter.complete();
+                }
+            });
+            subscription.set(registered);
+            if (closed.get()) cleanup.run();
+            AdminTaskEvent current = taskService.find(taskId).orElse(null);
+            if (current != null && isTerminal(current)) {
+                cleanup.run();
                 emitter.complete();
             }
-        });
-        subscription.set(registered);
-        AdminTaskEvent current = taskService.find(taskId).orElse(null);
-        if (current != null && isTerminal(current)) {
+        } catch (RuntimeException exception) {
             cleanup.run();
-            emitter.complete();
+            emitter.completeWithError(exception);
         }
         return emitter;
     }
@@ -97,8 +116,7 @@ public class AdminTaskController {
             SseEmitter emitter,
             UUID taskId,
             Object sendLock,
-            AtomicReference<AdminTaskService.TaskSubscription> subscription,
-            AtomicReference<ScheduledFuture<?>> keepAlive) {
+            Runnable cleanup) {
         send(
                 emitter,
                 taskId,
@@ -106,7 +124,7 @@ public class AdminTaskController {
                 SseEmitter.event()
                         .name("keepalive")
                         .data("ping"),
-                () -> close(subscription, keepAlive),
+                cleanup,
                 "保活发送失败");
     }
 
@@ -136,8 +154,8 @@ public class AdminTaskController {
     private AdminTaskEvent findAuthorized(UUID taskId) {
         AdminTaskEvent event = taskService.find(taskId)
                 .orElseThrow(() -> new DataNotFoundException("管理端任务不存在"));
-        taskService.requiredPermission(taskId)
-                .ifPresent(StpUtil::checkPermission);
+        StpUtil.checkPermission(taskService.requiredPermission(taskId)
+                .orElseThrow(() -> new DataNotFoundException("管理端任务不存在")));
         return event;
     }
 

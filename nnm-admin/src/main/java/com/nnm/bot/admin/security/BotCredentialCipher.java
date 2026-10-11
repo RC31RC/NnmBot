@@ -2,7 +2,7 @@ package com.nnm.bot.admin.security;
 
 import cn.hutool.core.util.StrUtil;
 
-import com.nnm.bot.admin.config.BotCredentialProperties;
+import com.nnm.bot.admin.config.properties.BotCredentialProperties;
 import com.nnm.bot.common.exception.SystemException;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;

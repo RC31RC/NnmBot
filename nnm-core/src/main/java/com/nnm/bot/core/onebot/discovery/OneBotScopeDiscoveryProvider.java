@@ -19,6 +19,8 @@ import com.nnm.bot.core.constant.BotPlatform;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.ObjectProvider;
+import com.nnm.bot.core.channel.runtime.ClusterScopeDiscovery;
 
 import java.util.List;
 
@@ -31,6 +33,8 @@ public class OneBotScopeDiscoveryProvider implements BotScopeDiscoveryProvider {
 
     @Resource
     private BotContainer botContainer;
+    @Resource
+    private ObjectProvider<ClusterScopeDiscovery> clusterProvider;
 
     @Override
     public BotPlatform platform() {
@@ -39,13 +43,18 @@ public class OneBotScopeDiscoveryProvider implements BotScopeDiscoveryProvider {
 
     @Override
     public BotScopeDiscoveryResult discover(BotChannelInstanceRecord instance) {
+        ClusterScopeDiscovery cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
+        return cluster == null ? discoverLocal(instance.botAccountId()) : cluster.discover(instance);
+    }
+
+    public BotScopeDiscoveryResult discoverLocal(String botAccountId) {
         long accountId;
         try {
-            accountId = Long.parseLong(instance.botAccountId());
+            accountId = Long.parseLong(botAccountId);
         } catch (NumberFormatException exception) {
             throw new BusinessException(
                     BotChannelErrorCode.INVALID_ACCOUNT_ID,
-                    "OneBot 账号不是有效的 QQ 号: " + instance.botAccountId(),
+                    "OneBot 账号不是有效的 QQ 号: " + botAccountId,
                     exception);
         }
         Bot bot = this.botContainer.robots.get(accountId);

@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.repository;
 
-import com.nnm.bot.warframe.domain.entity.WarframeGroupWatchRule;
+import java.util.Optional;
+import com.nnm.bot.warframe.model.entity.WarframeGroupWatchRule;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +16,22 @@ public interface WarframeGroupWatchRuleRepository
 
     List<WarframeGroupWatchRule> findAllByGroupIdAndEnabledTrue(Long groupId);
 
+    List<WarframeGroupWatchRule> findAllByGroupIdAndMemberIdAndEnabledTrue(
+            Long groupId,
+            Long memberId);
+
+    Optional<WarframeGroupWatchRule>
+    findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(
+            Long groupId, Long memberId, String watchType, String watchKey, String watchValue);
+
+    List<WarframeGroupWatchRule>
+    findAllByGroupIdAndMemberIdAndWatchTypeAndWatchValueAndEnabledTrue(
+            Long groupId, Long memberId, String watchType, String watchValue);
+
+    List<WarframeGroupWatchRule>
+    findAllByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValueAndEnabledTrue(
+            Long groupId, Long memberId, String watchType, String watchKey, String watchValue);
+
     @Modifying
     @Query("""
             update WarframeGroupWatchRule rule
@@ -24,6 +41,8 @@ public interface WarframeGroupWatchRuleRepository
                and (rule.lastMatchKey is null or rule.lastMatchKey <> :matchKey)
             """)
     int updateLastMatchKeyIfChanged(
-            @Param("ruleId") long ruleId,
-            @Param("matchKey") String matchKey);
+            @Param("ruleId")
+            long ruleId,
+            @Param("matchKey")
+            String matchKey);
 }

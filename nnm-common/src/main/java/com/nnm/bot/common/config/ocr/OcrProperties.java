@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "nnm.ocr")
 public class OcrProperties {
 
-    private boolean enabled;
+    private boolean enabled = true;
     private long maxInputBytes = 8L * 1024 * 1024;
     private long maxImagePixels = 25_000_000L;
     private boolean enhancedRecognition = true;

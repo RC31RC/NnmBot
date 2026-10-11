@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.repository;
 
-import com.nnm.bot.warframe.domain.entity.WarframeOfficialExportRecord;
+import com.nnm.bot.warframe.model.entity.WarframeOfficialExportRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 

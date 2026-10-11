@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.impl;
 
+import java.util.Locale;
+import java.util.UUID;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
@@ -11,7 +13,9 @@ import com.nnm.bot.admin.dto.bot.BotGroupMemberItem;
 import com.nnm.bot.admin.dto.bot.BotGroupMemberPointsUpdateRequest;
 import com.nnm.bot.admin.dto.bot.BotGroupMemberUpdateRequest;
 import com.nnm.bot.admin.dto.bot.BotGroupUpdateRequest;
+import com.nnm.bot.admin.dto.bot.BotScopeDiscoveryMemberItem;
 import com.nnm.bot.admin.dto.bot.BotScopeDiscoveryItem;
+import com.nnm.bot.admin.dto.bot.BotScopeDiscoveryScopeItem;
 import com.nnm.bot.admin.repository.BotChannelInstanceRepository;
 import com.nnm.bot.admin.service.BotGroupManagementService;
 import com.nnm.bot.common.exception.DataNotFoundException;
@@ -49,8 +53,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -79,16 +81,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     @Resource
     private BotChannelRegistry channelRegistry;
     @Resource(name = "memberDiscoveryExecutor")
-    private ExecutorService memberDiscoveryExecutor;
-    @Resource
-    private com.nnm.bot.core.config.ExecutorProperties executorProperties;
-
-    private volatile Semaphore discoverySemaphore;
-
-    @jakarta.annotation.PostConstruct
-    void initializeDiscoveryLimiter() {
-        discoverySemaphore = new Semaphore(executorProperties.getDiscoveryConcurrency());
-    }
+    private Executor memberDiscoveryExecutor;
 
     @Override
     public List<BotGroupItem> list() {
@@ -229,7 +222,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     @Override
     @Transactional
     public long create(BotGroupCreateRequest request) {
-        String code = request.code().trim().toLowerCase(java.util.Locale.ROOT);
+        String code = request.code().trim().toLowerCase(Locale.ROOT);
         if (groupRepository.findByCodeIgnoreCase(code).isPresent()) {
             throw new IllegalArgumentException("群组编码已存在");
         }
@@ -339,16 +332,16 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     }
 
     @Override
-    @Transactional
     public void updateMemberPoints(long groupId, long memberId,
                                    BotGroupMemberPointsUpdateRequest request) {
+        // 账户服务自行开启短事务，确保事务提交后才退出其 RDT 锁作用域。
         group(groupId);
         pointAccountService.adjust(
                 groupId,
                 memberId,
                 request.points(),
                 "ADMIN_ADJUSTMENT:" + groupId + ":" + memberId + ":"
-                        + java.util.UUID.randomUUID(),
+                        + UUID.randomUUID(),
                 "后台管理员调整成员积分");
     }
 
@@ -408,7 +401,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
                                                 scope.members(),
                                                 scope.membersComplete()));
                             }
-                            return new com.nnm.bot.admin.dto.bot.BotScopeDiscoveryScopeItem(
+                            return new BotScopeDiscoveryScopeItem(
                                     scope.scopeType(),
                                     scope.scopeKey(),
                                     scope.displayName(),
@@ -416,12 +409,10 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
                                     binding.isPresent(),
                                     binding.map(BotGroupBot::getGroupId).orElse(null),
                                     scope.members().stream()
-                                            .map(member ->
-                                                    new com.nnm.bot.admin.dto.bot
-                                                            .BotScopeDiscoveryMemberItem(
-                                                            member.platformUserId(),
-                                                            member.displayName(),
-                                                            member.role()))
+                                            .map(member -> new BotScopeDiscoveryMemberItem(
+                                                    member.platformUserId(),
+                                                    member.displayName(),
+                                                    member.role()))
                                             .toList());
                         })
                         .toList());
@@ -463,7 +454,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         List<CompletableFuture<DiscoveryExecution>> futures = instances.stream()
                 .map(instance -> CompletableFuture.supplyAsync(
                         () -> discoverInstance(instance, records.get(instance.getInstanceId())),
-                        discoveryExecutor()))
+                        memberDiscoveryExecutor))
                 .toList();
         return futures.stream()
                 .map(CompletableFuture::join)
@@ -476,10 +467,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
 
     private DiscoveryExecution discoverInstance(
             BotChannelInstance instance, BotChannelInstanceRecord record) {
-        boolean acquired = false;
         try {
-            discoveryLimiter().acquire();
-            acquired = true;
             BotScopeDiscoveryProvider provider = discoveryProviders.stream()
                     .filter(item -> item.platform() == instance.getPlatform())
                     .findFirst()
@@ -489,43 +477,10 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
                             ? BotScopeDiscoveryResult.unsupported("渠道未提供发现能力")
                             : provider.discover(record);
             return new DiscoveryExecution(instance, result);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            return new DiscoveryExecution(
-                    instance, BotScopeDiscoveryResult.unsupported("发现任务被中断"));
         } catch (RuntimeException exception) {
             return new DiscoveryExecution(
                     instance, BotScopeDiscoveryResult.unsupported(
                             StrUtil.blankToDefault(exception.getMessage(), "发现失败")));
-        } finally {
-            if (acquired) {
-                discoveryLimiter().release();
-            }
-        }
-    }
-
-    private Executor discoveryExecutor() {
-        // 允许纯单元测试直接实例化服务；Spring 运行时始终使用虚拟线程 Bean。
-        return ObjectUtil.isNull(memberDiscoveryExecutor)
-                ? Runnable::run
-                : memberDiscoveryExecutor;
-    }
-
-    private Semaphore discoveryLimiter() {
-        Semaphore limiter = discoverySemaphore;
-        if (limiter != null) {
-            return limiter;
-        }
-        synchronized (this) {
-            limiter = discoverySemaphore;
-            if (limiter == null) {
-                int concurrency = ObjectUtil.isNull(executorProperties)
-                        ? 4
-                        : executorProperties.getDiscoveryConcurrency();
-                limiter = new Semaphore(Math.max(1, concurrency));
-                discoverySemaphore = limiter;
-            }
-            return limiter;
         }
     }
 

@@ -30,45 +30,30 @@ public class QqOfficialResponseStrategy implements BotChannelResponseStrategy {
     @Override
     public void send(BotMessageContext context, ResponsePlan plan) {
         if (plan.outputMode() == ChannelOutputMode.NONE) {
+            if (plan.hasText()) {
+                messageSenderRouter.sendText(context, plan.text());
+            }
             return;
         }
-        if (plan.outputMode() == ChannelOutputMode.MARKDOWN && plan.hasText()) {
-            this.sendOrFallback(
-                    context,
-                    plan,
-                    "当前渠道不支持 Markdown 消息",
-                    () -> messageSenderRouter.sendMarkdown(context, plan.markdown()));
+        if (plan.outputMode() == ChannelOutputMode.MARKDOWN) {
+            if (plan.hasText()) messageSenderRouter.sendText(context, plan.text());
+            if (plan.markdown() != null) {
+                try {
+                    messageSenderRouter.sendMarkdown(context, plan.markdown());
+                } catch (BotChannelCapabilityException exception) {
+                    messageSenderRouter.sendText(context, plan.markdown().content());
+                }
+            }
             return;
         }
         if (plan.outputMode() == ChannelOutputMode.IMAGE && plan.hasImage()) {
+            messageSenderRouter.sendText(context, plan.text());
             sendImage(context, plan);
             return;
         }
-        if (plan.outputMode() == ChannelOutputMode.TEXT_IMAGE && plan.hasImage()) {
-            if (!plan.hasText()) {
-                sendImage(context, plan);
-                return;
-            }
-            this.sendOrFallback(
-                    context,
-                    plan,
-                    "当前渠道不支持图文消息",
-                    () -> messageSenderRouter.sendImageWithText(
-                            context, plan.text(), plan.image()));
-            return;
-        }
-        if (plan.outputMode() == ChannelOutputMode.FILE
-                || plan.outputMode() == ChannelOutputMode.TEXT_FILE) {
-            if (plan.attachments().size() == 1 && plan.hasText()) {
-                if (!this.trySend(() -> messageSenderRouter.sendFileWithText(
-                        context,
-                        plan.text(),
-                        plan.attachments().getFirst().toBotFile()))) {
-                    this.sendFileFallback(context, plan);
-                }
-            } else {
-                this.sendFileFallback(context, plan);
-            }
+        if (plan.outputMode() == ChannelOutputMode.FILE) {
+            messageSenderRouter.sendText(context, plan.text());
+            this.sendFileFallback(context, plan);
             return;
         }
         if (plan.hasText()) {
@@ -85,17 +70,11 @@ public class QqOfficialResponseStrategy implements BotChannelResponseStrategy {
     }
 
     private void sendFileFallback(BotMessageContext context, ResponsePlan plan) {
-        boolean sent = this.sendOrFallback(
-                context,
-                plan,
-                "当前渠道不支持文件消息",
-                () -> plan.attachments().forEach(attachment ->
-                        messageSenderRouter.sendFile(context, attachment.toBotFile())));
-        if (!sent) {
-            return;
-        }
-        if (plan.hasText()) {
-            messageSenderRouter.sendText(context, plan.text());
+        try {
+            plan.attachments().forEach(attachment ->
+                    messageSenderRouter.sendFile(context, attachment.toBotFile()));
+        } catch (BotChannelCapabilityException exception) {
+            // 摘要在进入文件流程前已经发送，降级时不得重复发送。
         }
     }
 

@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.domain;
 
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -47,14 +49,14 @@ public class BotRobotRole {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @jakarta.persistence.PrePersist
+    @PrePersist
     void onCreate() {
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
     }
 
-    @jakarta.persistence.PreUpdate
+    @PreUpdate
     void onUpdate() {
         updatedAt = LocalDateTime.now();
     }

@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.repository;
 
-import com.nnm.bot.warframe.domain.entity.WarframeForumArticle;
+import java.util.Optional;
+import com.nnm.bot.warframe.model.entity.WarframeForumArticle;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -15,4 +16,8 @@ public interface WarframeForumArticleRepository
     boolean existsBySlugIgnoreCaseAndIdNot(String slug, Long id);
 
     List<WarframeForumArticle> findAllByIdNot(Long id);
+
+    List<WarframeForumArticle> findAllByEnabledTrue();
+
+    Optional<WarframeForumArticle> findFirstByOrderByIdDesc();
 }

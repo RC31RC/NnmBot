@@ -1,27 +1,27 @@
 package com.nnm.bot.core.plugin.model;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.map.MapUtil;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Collection;
 
 /**
- * 插件的稳定返回协议：可复制文本和供模板使用的键值对数据彼此独立。
+ * 插件的稳定返回协议：摘要文字与可直接展示的数据对象彼此独立。
  *
- * @param text 供用户复制或阅读的文字结果
- * @param data 供 HTML 模板使用的键值对数据
+ * @param text 始终以文字发送的摘要，不重复承载订单等明细
+ * @param data 已处理的展示 POJO、集合或 Map，所有输出模式使用同一对象
  * @param attachments 需要发送的文件附件
  * @param status 命令业务处理状态
  */
-public record CommandResult(String text, Map<String, Object> data,
-                            List<CommandAttachment> attachments,
-                            CommandResultStatus status) {
+public record CommandResult(String text, Object data, List<CommandAttachment> attachments, CommandResultStatus status) {
 
     public CommandResult {
         text = ObjectUtil.isNull(text) ? "" : text.trim();
@@ -30,12 +30,12 @@ public record CommandResult(String text, Map<String, Object> data,
         status = ObjectUtil.defaultIfNull(status, CommandResultStatus.SUCCESS);
     }
 
-    public CommandResult(String text, Map<String, Object> data,
+    public CommandResult(String text, Object data,
                          List<CommandAttachment> attachments) {
         this(text, data, attachments, CommandResultStatus.SUCCESS);
     }
 
-    public CommandResult(String text, Map<String, Object> data) {
+    public CommandResult(String text, Object data) {
         this(text, data, List.of(), CommandResultStatus.SUCCESS);
     }
 
@@ -43,7 +43,7 @@ public record CommandResult(String text, Map<String, Object> data,
         return new CommandResult(text, Map.of(), List.of(), CommandResultStatus.SUCCESS);
     }
 
-    public static CommandResult of(String text, Map<String, Object> data) {
+    public static CommandResult of(String text, Object data) {
         return new CommandResult(text, data, List.of(), CommandResultStatus.SUCCESS);
     }
 
@@ -53,7 +53,7 @@ public record CommandResult(String text, Map<String, Object> data,
     }
 
     public static CommandResult withAttachments(String text,
-                                                Map<String, Object> data,
+                                                Object data,
                                                 List<CommandAttachment> attachments) {
         return new CommandResult(text, data, attachments, CommandResultStatus.SUCCESS);
     }
@@ -74,21 +74,36 @@ public record CommandResult(String text, Map<String, Object> data,
     }
 
     public boolean hasData() {
-        return !data.isEmpty();
+        if (data == null) return false;
+        if (data instanceof Map<?, ?> map) return !map.isEmpty();
+        if (data instanceof Collection<?> collection) return !collection.isEmpty();
+        if (data instanceof CharSequence text) return !text.isEmpty();
+        if (data.getClass().isArray()) return Array.getLength(data) > 0;
+        return true;
     }
 
     public boolean hasAttachments() {
         return !attachments.isEmpty();
     }
 
-    private static Map<String, Object> immutableData(Map<String, Object> source) {
-        if (MapUtil.isEmpty(source)) {
+    private static Object immutableData(Object source) {
+        if (source == null) {
             return Map.of();
         }
-        Map<String, Object> copy = new LinkedHashMap<>();
-        source.forEach((key, value) -> copy.put(
-                Objects.requireNonNull(key, "result data key must not be null"),
-                value));
-        return Collections.unmodifiableMap(copy);
+        if (source instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((key, value) -> {
+                if (!(Objects.requireNonNull(key, "result data key must not be null") instanceof String name)) {
+                    throw new IllegalArgumentException("result data key must be a string");
+                }
+                copy.put(name, value);
+            });
+            return Collections.unmodifiableMap(copy);
+        }
+        if (source instanceof Collection<?> collection) {
+            return Collections.unmodifiableList(new ArrayList<>(collection));
+        }
+        // POJO 由命令层提供不可变快照；在此保留类型，不进行反射或 JSON 往返转换。
+        return source;
     }
 }

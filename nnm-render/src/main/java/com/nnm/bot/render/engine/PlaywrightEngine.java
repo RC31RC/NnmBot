@@ -1,5 +1,6 @@
 package com.nnm.bot.render.engine;
 
+import com.microsoft.playwright.options.ScreenshotType;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
@@ -42,7 +43,7 @@ public class PlaywrightEngine implements RenderEngine {
             byte[] screenshot = page.screenshot(
                     new Page.ScreenshotOptions()
                             .setFullPage(true)
-                            .setType(com.microsoft.playwright.options.ScreenshotType.PNG)
+                            .setType(ScreenshotType.PNG)
             );
 
             page.close();

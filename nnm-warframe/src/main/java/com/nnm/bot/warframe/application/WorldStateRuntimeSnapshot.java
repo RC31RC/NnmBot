@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.application;
 
-import com.nnm.bot.warframe.domain.model.WorldState;
+import com.nnm.bot.warframe.model.WorldState;
 
 import java.time.Instant;
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.List;
  * 当前世界状态的原子运行时快照。
  *
  * <p>领域投影和原始响应必须一起替换，避免解析结果与排障数据来自不同
- * 的上游响应。该对象只存在于内存，不是历史快照表。</p>
+ * 的上游响应。分布式模式共享于 Redis，单机模式保存在内存，不是历史快照表。</p>
  */
 public record WorldStateRuntimeSnapshot(
         WorldState state,

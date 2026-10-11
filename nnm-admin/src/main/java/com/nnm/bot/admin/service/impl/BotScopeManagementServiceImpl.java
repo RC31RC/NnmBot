@@ -25,6 +25,8 @@ import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
 import com.nnm.bot.core.channel.port.BotScopeDiscoveryProvider;
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
+import com.nnm.bot.core.channel.model.BotChannelKey;
+import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.admin.repository.SysUserIdentityRepository;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -152,7 +154,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
                 .orElse(null);
         return new BotScopeItem(
                 scope.getId(),
-                com.nnm.bot.core.constant.BotPlatform.valueOf(scope.getPlatform()),
+                BotPlatform.valueOf(scope.getPlatform()),
                 scope.getScopeType(),
                 scope.getScopeKey(),
                 scope.getBotInstanceId(),
@@ -165,7 +167,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
     private BotScopeDiscoveryItem discovery(
             BotChannelInstance instance, BotChannelInstanceRecord record) {
         BotChannelSnapshot snapshot = channelRegistry.find(
-                new com.nnm.bot.core.channel.model.BotChannelKey(
+                new BotChannelKey(
                         instance.getPlatform(), instance.getBotAccountId())).orElse(null);
         BotScopeDiscoveryProvider provider = discoveryProviders.stream()
                 .filter(item -> item.platform() == instance.getPlatform())
@@ -208,7 +210,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
 
     private void synchronizeMembers(
             BotScope scope,
-            com.nnm.bot.core.constant.BotPlatform platform,
+            BotPlatform platform,
             String scopeType,
             String scopeKey,
             BotChannelInstance instance) {

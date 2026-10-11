@@ -7,7 +7,9 @@ public record OneBotAccountProbeRequest(
         /** 已保存的实例主键。 */
         Long instanceId,
         /** 临时探测使用的 WebSocket 地址。 */
-        @Size(max = 500) String connectionUrl,
+        @Size(max = 500)
+        String connectionUrl,
         /** 临时探测使用的访问令牌。 */
-        @Size(max = 1000) String accessToken) {
+        @Size(max = 1000)
+        String accessToken) {
 }

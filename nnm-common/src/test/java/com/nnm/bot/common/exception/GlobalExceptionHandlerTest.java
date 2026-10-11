@@ -1,5 +1,6 @@
 package com.nnm.bot.common.exception;
 
+import java.util.List;
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.response.ApiResponse;
 import org.junit.jupiter.api.Test;
@@ -7,11 +8,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -134,12 +137,32 @@ class GlobalExceptionHandlerTest {
     @Test
     void mapsNotAcceptableMediaType() {
         ResponseEntity<ApiResponse<Void>> response = handler.handleMediaTypeNotAcceptable(
-                new HttpMediaTypeNotAcceptableException(java.util.List.of(MediaType.APPLICATION_JSON)));
+                new HttpMediaTypeNotAcceptableException(List.of(MediaType.APPLICATION_JSON)));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_ACCEPTABLE);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getCode())
                 .isEqualTo(CommonErrorCode.NOT_ACCEPTABLE.getCode());
+    }
+
+    @Test
+    void ignoresBrokenPipeWhenWritingResponse() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handleMessageNotWritable(
+                new HttpMessageNotWritableException("response stream closed", new IOException("Broken pipe")));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    void stillReportsActualSerializationFailure() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handleMessageNotWritable(
+                new HttpMessageNotWritableException("invalid JSON",
+                        new IllegalStateException("serializer failed")));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getCode()).isEqualTo(CommonErrorCode.SYSTEM_ERROR.getCode());
     }
 
     @Test

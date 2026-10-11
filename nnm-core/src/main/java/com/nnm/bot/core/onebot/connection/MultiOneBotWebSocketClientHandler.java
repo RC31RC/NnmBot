@@ -52,7 +52,8 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
             BotContainer botContainer,
             CoreEvent coreEvent,
             WebSocketProperties wsProperties,
-            @Qualifier("shiroTaskExecutor") ThreadPoolTaskExecutor shiroTaskExecutor) {
+            @Qualifier("shiroTaskExecutor")
+            ThreadPoolTaskExecutor shiroTaskExecutor) {
         super(eventHandler, botFactory, actionHandler, shiroAsyncTask,
                 botContainer, coreEvent, wsProperties, shiroTaskExecutor);
         this.botContainer = botContainer;

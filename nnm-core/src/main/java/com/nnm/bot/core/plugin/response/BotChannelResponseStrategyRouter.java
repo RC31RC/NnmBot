@@ -6,6 +6,8 @@ import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.plugin.api.BotChannelResponseStrategy;
 import com.nnm.bot.core.plugin.model.ResponsePlan;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -41,8 +43,8 @@ public class BotChannelResponseStrategyRouter {
     public void send(BotMessageContext context, ResponsePlan plan) {
         BotChannelResponseStrategy strategy = this.strategies.get(context.platform());
         if (ObjectUtil.isNull(strategy)) {
-            throw new com.nnm.bot.common.exception.BusinessException(
-                    com.nnm.bot.core.constant.BotChannelErrorCode.RESPONSE_STRATEGY_NOT_REGISTERED,
+            throw new BusinessException(
+                    BotChannelErrorCode.RESPONSE_STRATEGY_NOT_REGISTERED,
                     "未注册响应策略: " + context.platform());
         }
         strategy.send(context, plan);

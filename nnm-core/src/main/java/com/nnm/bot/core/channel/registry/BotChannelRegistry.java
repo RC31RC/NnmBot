@@ -1,5 +1,6 @@
 package com.nnm.bot.core.channel.registry;
 
+import java.util.Objects;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.collection.CollUtil;
@@ -177,7 +178,7 @@ public class BotChannelRegistry {
             if (this.status == BotChannelStatus.DISABLED) {
                 return null;
             }
-            if (this.status == status && java.util.Objects.equals(this.lastError, error)) {
+            if (this.status == status && Objects.equals(this.lastError, error)) {
                 return null;
             }
             this.status = status;
