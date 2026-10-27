@@ -4,12 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
+import java.time.Duration;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,13 +21,25 @@ class ExecutorConfigTest {
     private final ExecutorProperties properties = new ExecutorProperties();
 
     @Test
-    void usesCpuCountAsDefaultAndRejectsInvalidConcurrency() {
+    void capsDefaultPlatformWorkersAndRejectsInvalidConcurrency() {
         assertThat(properties.getTask().getCoreSize()).isEqualTo(
-                Runtime.getRuntime().availableProcessors());
+                Math.max(1, Math.min(2, Runtime.getRuntime().availableProcessors())));
         assertThat(properties.getTask().getMaxSize()).isEqualTo(properties.getTask().getCoreSize());
         properties.setDiscoveryConcurrency(0);
         assertThatThrownBy(() -> config.memberDiscoveryExecutor(properties))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void validatesIngressBytesAndComputationDeadlines() {
+        properties.getCommandIngress().setQueueCapacity(0);
+        assertThatThrownBy(properties::validate).isInstanceOf(IllegalArgumentException.class);
+        properties.getCommandIngress().setQueueCapacity(1);
+        properties.getCommandIngress().setMaxPendingBytes(1);
+        assertThatThrownBy(properties::validate).isInstanceOf(IllegalArgumentException.class);
+        properties.getCommandIngress().setMaxPendingBytes(65536);
+        properties.getComputation().setResultTimeout(Duration.ofMillis(1));
+        assertThatThrownBy(properties::validate).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -61,51 +74,51 @@ class ExecutorConfigTest {
 
     @Test
     void cpuWorkRunsOnPlatformThreads() throws Exception {
+        properties.getTask().setCoreSize(2);
+        properties.getTask().setMaxSize(2);
+        properties.getTask().setQueueCapacity(3);
         ThreadPoolTaskExecutor executor = config.cpuTaskExecutor(properties);
         executor.initialize();
         try {
             assertThat(executor.submit(() -> Thread.currentThread().isVirtual())
                     .get(5, TimeUnit.SECONDS)).isFalse();
+            assertThat(executor.getCorePoolSize()).isEqualTo(2);
+            assertThat(executor.getMaxPoolSize()).isEqualTo(2);
+            assertThat(executor.getQueueCapacity()).isEqualTo(3);
         } finally {
             executor.shutdown();
         }
     }
 
     @Test
-    void communitySourcesUseIndependentBoundedWorkersAndCallerBackpressure() throws Exception {
-        properties.setCommunitySourceConcurrency(1);
-        properties.setCommunitySourceQueueCapacity(1);
-        ThreadPoolTaskExecutor executor = config.communitySourceExecutor(properties);
+    void saturatedCpuPoolRejectsInsteadOfRunningOnSubmitter() throws Exception {
+        properties.getTask().setCoreSize(1);
+        properties.getTask().setMaxSize(1);
+        properties.getTask().setQueueCapacity(1);
+        ThreadPoolTaskExecutor executor = config.cpuTaskExecutor(properties);
         executor.initialize();
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
+        AtomicBoolean ranOnCaller = new AtomicBoolean();
         try {
             executor.execute(() -> {
                 started.countDown();
                 try {
                     release.await();
-                } catch (InterruptedException exception) {
+                } catch (InterruptedException interrupted) {
                     Thread.currentThread().interrupt();
+                    throw new IllegalStateException(interrupted);
                 }
             });
             assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
-            var queued = executor.submit(() -> Thread.currentThread().getName());
-            Thread submitter = Thread.currentThread();
-            assertThat(executor.submit(Thread::currentThread).get(5, TimeUnit.SECONDS))
-                    .isSameAs(submitter);
-            assertThat(executor.getMaxPoolSize()).isEqualTo(1);
-            assertThat(executor.getQueueSize()).isEqualTo(1);
-            release.countDown();
-            assertThat(queued.get(5, TimeUnit.SECONDS)).startsWith("nnm-community-source-");
+            executor.execute(() -> { });
+            assertThatThrownBy(() -> executor.execute(() -> ranOnCaller.set(true)))
+                    .isInstanceOf(TaskRejectedException.class);
+            assertThat(ranOnCaller).isFalse();
         } finally {
             release.countDown();
             executor.shutdown();
         }
-        assertThatThrownBy(() -> executor.execute(() -> {}))
-                .isInstanceOf(RejectedExecutionException.class);
-        properties.setCommunitySourceQueueCapacity(-1);
-        assertThatThrownBy(() -> config.communitySourceExecutor(properties))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private void assertBackpressure(AsyncTaskExecutor executor) throws Exception {

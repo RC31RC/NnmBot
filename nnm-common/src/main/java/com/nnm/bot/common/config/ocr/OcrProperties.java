@@ -9,6 +9,7 @@ public class OcrProperties {
     private boolean enabled = true;
     private long maxInputBytes = 8L * 1024 * 1024;
     private long maxImagePixels = 25_000_000L;
+    private int maxResultCharacters = 32768;
     private boolean enhancedRecognition = true;
     private int maxSideLength = 960;
     private float boxScoreThreshold = 0.6F;
@@ -33,6 +34,14 @@ public class OcrProperties {
 
     public long getMaxImagePixels() {
         return maxImagePixels;
+    }
+
+    public int getMaxResultCharacters() {
+        return maxResultCharacters;
+    }
+
+    public void setMaxResultCharacters(int maxResultCharacters) {
+        this.maxResultCharacters = maxResultCharacters;
     }
 
     public void setMaxImagePixels(long maxImagePixels) {
@@ -81,7 +90,8 @@ public class OcrProperties {
 
     @PostConstruct
     void validate() {
-        if (this.maxInputBytes <= 0 || this.maxImagePixels <= 0 || this.maxSideLength <= 0) {
+        if (this.maxInputBytes <= 0 || this.maxImagePixels <= 0 || this.maxSideLength <= 0
+                || this.maxResultCharacters < 1) {
             throw new IllegalStateException("nnm.ocr image limits must be positive");
         }
         if (this.boxScoreThreshold <= 0 || this.boxScoreThreshold > 1

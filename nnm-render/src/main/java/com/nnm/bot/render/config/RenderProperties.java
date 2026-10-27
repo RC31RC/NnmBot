@@ -4,6 +4,8 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.render.constant.RenderEngineType;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -15,6 +17,11 @@ public class RenderProperties {
     private RenderEngineType engine = RenderEngineType.AUTO;
     private final Playwright playwright = new Playwright();
     private final Fonts fonts = new Fonts();
+    private final Limits limits = new Limits();
+
+    public Limits getLimits() {
+        return limits;
+    }
 
     public RenderEngineType getEngine() {
         return engine;
@@ -49,6 +56,17 @@ public class RenderProperties {
             throw new IllegalArgumentException(
                     "render.fonts.paths must not contain blank values");
         }
+        if (limits.maxInputBytes < 1 || limits.maxImagePixels < 1 || limits.maxResultBytes < 1) {
+            throw new IllegalArgumentException("render.limits must be positive");
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class Limits {
+        private int maxInputBytes = 2 * 1024 * 1024;
+        private long maxImagePixels = 8_000_000;
+        private int maxResultBytes = 8 * 1024 * 1024;
     }
 
     public static class Playwright {

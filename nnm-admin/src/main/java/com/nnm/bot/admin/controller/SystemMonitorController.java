@@ -1,13 +1,16 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.vo.system.SessionVO;
+import com.nnm.bot.admin.pojo.vo.system.OperationLogVO;
+import com.nnm.bot.admin.controller.assembler.system.AdminSystemViewAssembler;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.system.OperationLogItem;
-import com.nnm.bot.admin.dto.system.SessionItem;
-import com.nnm.bot.admin.service.OnlineSessionService;
-import com.nnm.bot.admin.service.OperationAuditService;
+import com.nnm.bot.admin.pojo.dto.system.OperationLogDTO;
+import com.nnm.bot.admin.pojo.dto.system.SessionDTO;
+import com.nnm.bot.admin.service.system.OnlineSessionService;
+import com.nnm.bot.admin.service.system.OperationAuditService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
-import com.nnm.bot.admin.dto.system.OperationLogQueryRequest;
+import com.nnm.bot.admin.pojo.query.system.OperationLogQuery;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,23 +33,23 @@ public class SystemMonitorController {
 
     @PostMapping("/operation-logs/query")
     @SaCheckPermission("system:audit:view")
-    public ApiResponse<PageResult<OperationLogItem>> operationLogs(
+    public ApiResponse<PageResult<OperationLogVO>> operationLogs(
             @RequestBody
-            OperationLogQueryRequest request
+            OperationLogQuery request
     ) {
-        return ApiResponse.ok(auditService.logs(
+        return ApiResponse.ok(AdminSystemViewAssembler.toOperationLogVO(auditService.logs(
                 request.operatorName(),
                 request.current() == null ? 1 : request.current(),
                 request.size() == null ? 20 : request.size()
-        ));
+        )));
     }
 
     @PostMapping("/sessions/query")
     @SaCheckPermission("system:session:view")
-    public ApiResponse<List<SessionItem>> sessions(
+    public ApiResponse<List<SessionVO>> sessions(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(onlineSessionService.sessions());
+        return ApiResponse.ok(AdminSystemViewAssembler.toSessionVO(onlineSessionService.sessions()));
     }
 
     @DeleteMapping("/sessions/{token}")

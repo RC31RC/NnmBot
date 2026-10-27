@@ -129,6 +129,35 @@ public class HttpClient {
         return getBytes(url, toHttpHeaders(headers));
     }
 
+    /** 单次受限下载；在读取过程中执行业务字节上限，HTTP/传输/超限异常直接传播。 */
+    public byte[] getLimitedBytes(String url, Map<String, String> headers, long maxBytes) {
+        if (maxBytes < 1 || maxBytes >= Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("maxBytes must be positive and less than Integer.MAX_VALUE");
+        }
+        String requestUrl = requireUrl(url);
+        int limit = Math.toIntExact(Math.min(maxBytes, properties.getMaxResponseBodyBytes()));
+        logRequest("GET", requestUrl, null);
+        long startedAt = System.nanoTime();
+        return restClient.get().uri(requestUrl)
+                .headers(target -> copyHeaders(requestHeaders(toHttpHeaders(headers)), target))
+                .exchange((request, response) -> {
+                    if (response.getHeaders().getContentLength() > limit) {
+                        throw new ExternalResponseTooLargeException("GET", sanitizeUrl(requestUrl), limit, null);
+                    }
+                    byte[] body = response.getBody().readNBytes(limit + 1);
+                    if (body.length > limit) {
+                        throw new ExternalResponseTooLargeException("GET", sanitizeUrl(requestUrl), limit, null);
+                    }
+                    int status = response.getStatusCode().value();
+                    recordMetric("GET", requestUrl, status, startedAt);
+                    if (!response.getStatusCode().is2xxSuccessful()) {
+                        throw new ExternalHttpException("GET", sanitizeUrl(requestUrl), status,
+                                new String(body, StandardCharsets.UTF_8), response.getHeaders(), null);
+                    }
+                    return body;
+                });
+    }
+
     /**
      * 下载需要保留原始字节的响应。
      */
@@ -164,6 +193,19 @@ public class HttpClient {
      */
     public DownloadResult downloadTo(
             String url, HttpHeaders headers, Path target) {
+        return downloadTo(url, headers, target, properties.getMaxDownloadBytes());
+    }
+
+    /** 成品下载可使用 manifest 字节数收紧上限；不能突破全局下载预算。 */
+    public DownloadResult downloadTo(
+            String url, Map<String, String> headers, Path target, long maxBytes) {
+        return downloadTo(url, toHttpHeaders(headers), target, maxBytes);
+    }
+
+    private DownloadResult downloadTo(
+            String url, HttpHeaders headers, Path target, long maxBytes) {
+        if (maxBytes < 1) throw new IllegalArgumentException("maxBytes must be positive");
+        long downloadLimit = Math.min(maxBytes, properties.getMaxDownloadBytes());
         String requestUrl = requireUrl(url);
         HttpHeaders requestHeaders = requestHeaders(headers);
         Objects.requireNonNull(target, "target must not be null");
@@ -172,7 +214,7 @@ public class HttpClient {
         DownloadResult last = null;
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            last = doDownload(requestUrl, requestHeaders, normalizedTarget);
+            last = doDownload(requestUrl, requestHeaders, normalizedTarget, downloadLimit);
             if (!last.isRetryable() || attempt == maxAttempts) {
                 return last;
             }
@@ -469,7 +511,7 @@ public class HttpClient {
     }
 
     private DownloadResult doDownload(
-            String url, HttpHeaders headers, Path target) {
+            String url, HttpHeaders headers, Path target, long downloadLimit) {
         logRequest("GET", url, null);
         long startedAt = System.nanoTime();
         Path temporary = null;
@@ -501,10 +543,10 @@ public class HttpClient {
                                 if (read == 0) {
                                     continue;
                                 }
-                                if (bytes > properties.getMaxDownloadBytes() - read) {
+                                if (bytes > downloadLimit - read) {
                                     throw new ExternalResponseTooLargeException(
                                             "GET", sanitizeUrl(url),
-                                            properties.getMaxDownloadBytes(), null);
+                                            downloadLimit, null);
                                 }
                                 output.write(buffer, 0, read);
                                 bytes += read;

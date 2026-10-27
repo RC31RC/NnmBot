@@ -1,9 +1,11 @@
 package com.nnm.bot.core.plugin.system;
 
+import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.model.CommandView;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.constant.MatchType;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -12,14 +14,21 @@ import org.springframework.beans.factory.ObjectProvider;
 
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
+import java.util.List;
 
 @BotPluginCommand(
         code = SystemCommandCodes.STATUS,
         matchType = MatchType.EXACT,
         name = "状态",
         gameCode = "system",
-        order = Integer.MIN_VALUE + 1)
+        order = Integer.MIN_VALUE + 1,
+        allowRelatedAction = true)
 public class StatusPlugin extends BotPlugin {
+
+    @Override
+    public List<CommandView> views() {
+        return List.of(CommandView.textImageAndMarkdown("system.status"));
+    }
 
     private static final long MEBIBYTE = 1024L * 1024L;
     @Resource
@@ -27,7 +36,7 @@ public class StatusPlugin extends BotPlugin {
 
     @Override
     public CommandResult handle(CommandInvocation invocation) {
-        var context = invocation.context();
+        BotMessageContext context = invocation.context();
         Runtime runtime = Runtime.getRuntime();
         long usedMemory = runtime.totalMemory() - runtime.freeMemory();
         Duration uptime = Duration.ofMillis(ManagementFactory.getRuntimeMXBean().getUptime());
@@ -39,7 +48,7 @@ public class StatusPlugin extends BotPlugin {
         long usedMemoryMiB = usedMemory / MEBIBYTE;
         long maxMemoryMiB = runtime.maxMemory() / MEBIBYTE;
         int pluginCount = this.commandRegistryProvider.getObject().size();
-        return CommandResult.of("NnmBot 运行正常", new StatusDisplay(accountId, scope, uptimeText,
+        return CommandResult.view("system.status", "NnmBot 运行正常", new StatusDisplay(accountId, scope, uptimeText,
                 javaVersion, "%d MiB / %d MiB".formatted(usedMemoryMiB, maxMemoryMiB), pluginCount));
     }
 

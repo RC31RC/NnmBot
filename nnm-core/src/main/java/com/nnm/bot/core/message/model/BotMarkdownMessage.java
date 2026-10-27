@@ -21,9 +21,7 @@ import java.util.Objects;
  * @param customTemplateId QQ 官方 Markdown 模板 ID
  * @param params 模板参数
  */
-public record BotMarkdownMessage(String content,
-                                 String customTemplateId,
-                                 Map<String, List<String>> params) {
+public record BotMarkdownMessage(String content, String customTemplateId, Map<String, List<String>> params) {
 
     public BotMarkdownMessage {
         content = StrUtil.isBlank(content) ? null : content;
@@ -53,13 +51,11 @@ public record BotMarkdownMessage(String content,
         return new BotMarkdownMessage(null, customTemplateId, Map.of());
     }
 
-    public static BotMarkdownMessage template(String customTemplateId,
-                                              Map<String, List<String>> params) {
+    public static BotMarkdownMessage template(String customTemplateId, Map<String, List<String>> params) {
         return new BotMarkdownMessage(null, customTemplateId, params);
     }
 
-    private static Map<String, List<String>> immutableParams(
-            Map<String, List<String>> source) {
+    private static Map<String, List<String>> immutableParams(Map<String, List<String>> source) {
         if (MapUtil.isEmpty(source)) {
             return Map.of();
         }

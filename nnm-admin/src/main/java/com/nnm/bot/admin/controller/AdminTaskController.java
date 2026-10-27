@@ -1,11 +1,13 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.common.task.AdminTaskService.TaskSubscription;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter.SseEventBuilder;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.common.task.AdminTaskEvent;
 import com.nnm.bot.common.task.AdminTaskService;
-import com.nnm.bot.common.task.AdminTaskStatus;
+import com.nnm.bot.common.constant.TaskConstants.AdminTaskStatus;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 管理端长任务的状态查询与 SSE 订阅入口。
@@ -61,10 +64,10 @@ public class AdminTaskController {
         findAuthorized(taskId);
         SseEmitter emitter = new SseEmitter(0L);
         log.info("管理端 SSE 建立, taskId={}", taskId);
-        AtomicReference<AdminTaskService.TaskSubscription> subscription =
+        AtomicReference<TaskSubscription> subscription =
                 new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> keepAlive = new AtomicReference<>();
-        Object sendLock = new Object();
+        ReentrantLock sendLock = new ReentrantLock();
         AtomicBoolean closed = new AtomicBoolean();
         Runnable cleanup = () -> {
             if (closed.compareAndSet(false, true)) {
@@ -83,7 +86,7 @@ public class AdminTaskController {
             keepAlive.set(keepAliveTask);
             if (closed.get()) cleanup.run();
 
-            AdminTaskService.TaskSubscription registered = taskService.subscribe(taskId, event -> {
+            TaskSubscription registered = taskService.subscribe(taskId, event -> {
                 boolean sent = send(
                         emitter,
                         taskId,
@@ -115,7 +118,7 @@ public class AdminTaskController {
     private void sendKeepAlive(
             SseEmitter emitter,
             UUID taskId,
-            Object sendLock,
+            ReentrantLock sendLock,
             Runnable cleanup) {
         send(
                 emitter,
@@ -136,13 +139,16 @@ public class AdminTaskController {
     private static boolean send(
             SseEmitter emitter,
             UUID taskId,
-            Object sendLock,
-            SseEmitter.SseEventBuilder event,
+            ReentrantLock sendLock,
+            SseEventBuilder event,
             Runnable cleanup,
             String operation) {
         try {
-            synchronized (sendLock) {
+            sendLock.lock();
+            try {
                 emitter.send(event);
+            } finally {
+                sendLock.unlock();
             }
             return true;
         } catch (IOException | RuntimeException exception) {
@@ -180,13 +186,13 @@ public class AdminTaskController {
      * 发送异常可能并发触发。
      */
     private static void close(
-            AtomicReference<AdminTaskService.TaskSubscription> subscription,
+            AtomicReference<TaskSubscription> subscription,
             AtomicReference<ScheduledFuture<?>> keepAlive) {
         ScheduledFuture<?> keepAliveTask = keepAlive.getAndSet(null);
         if (keepAliveTask != null) {
             keepAliveTask.cancel(false);
         }
-        AdminTaskService.TaskSubscription value = subscription.getAndSet(null);
+        TaskSubscription value = subscription.getAndSet(null);
         if (value != null) {
             value.close();
         }

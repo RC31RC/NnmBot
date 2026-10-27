@@ -1,10 +1,13 @@
 package com.nnm.bot.core.group.service;
 
+import com.nnm.bot.core.plugin.model.ReplyBlock.DataView;
 import java.nio.charset.StandardCharsets;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.model.ReplyBlock;
+import com.nnm.bot.core.plugin.model.ReplyMessage;
 import com.nnm.bot.core.plugin.model.PointCommandDisplay;
 import com.nnm.bot.core.plugin.system.SystemCommandCodes;
 import org.springframework.stereotype.Component;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
+import java.util.ArrayList;
 
 /**
  * 集中定义命令积分的幂等和响应规则，避免特殊命令把记账逻辑带回插件。
@@ -69,11 +73,27 @@ public class CommandPointPolicy {
             return result;
         }
         PointBalance balance = change.balance();
-        var data = new PointCommandDisplay(balance.points(), balance.totalEarned(), balance.totalSpent());
+        PointCommandDisplay data = new PointCommandDisplay(balance.points(), balance.totalEarned(), balance.totalSpent());
         String text = change.applied()
                 ? "签到成功，当前积分：" + balance.points()
                 : "今天已经签到，当前积分：" + balance.points();
-        return new CommandResult(text, data, result.attachments(), result.status());
+        ArrayList<ReplyMessage> replies = new ArrayList<>(result.replies());
+        if (replies.isEmpty()) throw new IllegalStateException("Sign-in result requires a balance view");
+        ReplyMessage reply = replies.getFirst();
+        ArrayList<ReplyBlock> blocks = new ArrayList<>(reply.blocks());
+        if (blocks.getFirst() instanceof ReplyBlock.Text) blocks.set(0, new ReplyBlock.Text(text));
+        else blocks.addFirst(new ReplyBlock.Text(text));
+        for (int i = 0; i < blocks.size(); i++) {
+            if (blocks.get(i) instanceof DataView<?> view && view.data() instanceof PointCommandDisplay) {
+                blocks.set(i, new ReplyBlock.DataView<>(view.viewKey(), data, view.summary()));
+            }
+        }
+        if (blocks.stream().noneMatch(block -> block instanceof DataView<?> view
+                && view.data() instanceof PointCommandDisplay)) {
+            blocks.add(new ReplyBlock.DataView<>("system.points", data, null));
+        }
+        replies.set(0, new ReplyMessage(blocks, reply.actions(), reply.composition(), reply.relatedActions()));
+        return result.withReplies(replies);
     }
 
     private String messageIdempotencyKey(String type,

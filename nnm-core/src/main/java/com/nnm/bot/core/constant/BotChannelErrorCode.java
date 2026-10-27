@@ -17,6 +17,8 @@ public enum BotChannelErrorCode implements ErrorCode {
     INSTANCE_START_FAILED(502, "机器人实例启动失败", HttpStatus.BAD_GATEWAY),
     CHANNEL_NOT_REGISTERED(404, "机器人渠道未注册", HttpStatus.NOT_FOUND),
     CHANNEL_REGISTRATION_CONFLICT(409, "机器人渠道注册冲突", HttpStatus.CONFLICT),
+    MULTIPLE_OFFICIAL_INSTANCES_UNSUPPORTED(409, "同一逻辑群组暂不支持绑定多个 QQ 官方机器人实例，请先解绑原实例", HttpStatus.CONFLICT),
+    CONNECTION_MIGRATION_CONFIRMATION_REQUIRED(409, "机器人连接迁移需要管理员确认", HttpStatus.CONFLICT),
     ACCOUNT_NOT_ALLOWED(403, "机器人账号未授权", HttpStatus.FORBIDDEN),
     INVALID_ACCOUNT_ID(400, "机器人账号标识无效", HttpStatus.BAD_REQUEST),
     MESSAGE_PARSE_FAILED(502, "渠道消息解析失败", HttpStatus.BAD_GATEWAY),
@@ -29,6 +31,7 @@ public enum BotChannelErrorCode implements ErrorCode {
     FILE_CLEANUP_FAILED(500, "机器人临时文件清理失败", HttpStatus.INTERNAL_SERVER_ERROR),
     IMAGE_RENDER_FAILED(500, "命令图片渲染失败", HttpStatus.INTERNAL_SERVER_ERROR),
     RESPONSE_STRATEGY_NOT_REGISTERED(500, "机器人响应策略未注册", HttpStatus.INTERNAL_SERVER_ERROR),
+    REPLY_INSTANCE_UNAVAILABLE(503, "当前群组没有在线且具备所需能力的回复实例", HttpStatus.SERVICE_UNAVAILABLE),
     UNSUPPORTED_MESSAGE_CAPABILITY(501, "当前机器人渠道不支持该消息能力", HttpStatus.NOT_IMPLEMENTED),
     UPSTREAM_RESPONSE_INVALID(502, "渠道上游响应无效", HttpStatus.BAD_GATEWAY);
 

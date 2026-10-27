@@ -1,5 +1,7 @@
 package com.nnm.bot.core.message.model;
 
+import com.nnm.bot.core.constant.BotMessageConstants.BotIncomingAttachmentType;
+
 import cn.hutool.core.util.StrUtil;
 
 import java.util.Map;

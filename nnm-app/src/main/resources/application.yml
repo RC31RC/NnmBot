@@ -1,8 +1,15 @@
+# 基础设施层：连接信息、认证和 starter / 中间件的应用级覆盖，通常只随机器或环境调整。
+# 系统业务差异在 application-system.yml，Warframe 差异与来源目录在 application-warframe.yml。
+# 三层通过 import 自动加载，无须激活同名 profile；未声明的参数使用各 Properties 的默认值。
 server:
   port: 8080
   shutdown: graceful
 
 spring:
+  http:
+    converters:
+      # API 与官方/社区解析使用同一套 Jackson 2 JsonNode，避免默认 Jackson 3 将其视为普通 Bean。
+      preferred-json-mapper: jackson2
   application:
     name: NnmBot
   threads:
@@ -18,13 +25,23 @@ spring:
     check-template-location: false
   config:
     import:
-      - optional:classpath:application-bot.yml
-      - classpath:application-distributed.yml
+      - classpath:application-system.yml
+      - classpath:application-warframe.yml
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  data:
+    redis:
+      repositories:
+        enabled: false
+      # 默认仅连接本机；需要认证或其他连接时，通过 NNM_REDIS_* 显式提供。
+      host: ${NNM_SESSION_REDIS_HOST:${NNM_REDIS_HOST:123.206.232.72}}
+      port: ${NNM_SESSION_REDIS_PORT:${NNM_REDIS_PORT:6379}}
+      database: ${NNM_SESSION_REDIS_DATABASE:2}
+      password: ${NNM_SESSION_REDIS_PASSWORD:${NNM_REDIS_PASSWORD:6379736}}
+      # Redisson 命令超时需要覆盖正常网络抖动；锁获取失败时仍会保留原始 Redis 超时原因。
+      timeout: 10s
   datasource:
     driver-class-name: org.postgresql.Driver
-#    url: jdbc:postgresql://123.206.232.72:5432/nnmbot?currentSchema=nnmbot,public
     url: jdbc:postgresql://127.0.0.1:5432/nnmbot?currentSchema=nnmbot,public
     username: postgres
     password: root
@@ -44,12 +61,6 @@ spring:
         format_sql: true
         query.fail_on_pagination_over_collection_fetch: true
     show-sql: false
-  cache:
-    # 当前实际 CacheManager 由 cache2k 配置类显式提供；以下 Caffeine 配置仅保留作评估回退，
-    # 不会覆盖显式 CacheManager Bean。
-    type: caffeine
-    caffeine:
-      spec: maximumSize=500,expireAfterWrite=600s
 
 sa-token:
   token-name: Authorization
@@ -83,69 +94,153 @@ management:
       show-details: when-authorized
 
 nnm:
-  web:
-    cors:
-      # 精确来源用于本机开发；来源模式覆盖常见私有局域网地址和任意开发端口。
-      allowed-origins: ${NNM_WEB_CORS_ALLOWED_ORIGINS:http://localhost:3006,http://127.0.0.1:3006}
-      allowed-origin-patterns: ${NNM_WEB_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:[*],http://127.0.0.1:[*],http://10.*:[*],http://192.168.*:[*],http://172.16.*:[*],http://172.17.*:[*],http://172.18.*:[*],http://172.19.*:[*],http://172.20.*:[*],http://172.21.*:[*],http://172.22.*:[*],http://172.23.*:[*],http://172.24.*:[*],http://172.25.*:[*],http://172.26.*:[*],http://172.27.*:[*],http://172.28.*:[*],http://172.29.*:[*],http://172.30.*:[*],http://172.31.*:[*]}
-      allowed-methods:
-        - GET
-        - POST
-        - PUT
-        - PATCH
-        - DELETE
-        - OPTIONS
-      allowed-headers:
-        - "*"
-      allow-credentials: false
-      max-age: 3600
-  ocr:
-    # OCR native 库只在后续紫卡分析启用时打开，避免普通启动加载模型。
-    enabled: true
-    max-input-bytes: 8388608
-    max-image-pixels: 25000000
-    enhanced-recognition: true
-    max-side-length: 960
-    box-score-threshold: 0.6
-    box-threshold: 0.3
-    un-clip-ratio: 2.5
-  admin:
-    bootstrap:
-      enabled: true
-      username: admin
-      password: admin123
-  http:
-    connect-timeout: 10s
-    read-timeout: 30s
-    max-attempts: 3
-    retry-backoff: 500ms
-    retry-max-backoff: 5s
-    slow-request-threshold: 3s
-    payload-logging-enabled: false
-    max-payload-log-length: 2048
-    # 单位为字节：普通响应 16 MiB，流式下载 512 MiB。
-    max-response-body-bytes: 16777216
-    max-download-bytes: 536870912
-    request-id-header: X-Request-Id
-    request-id-mdc-key: requestId
-    trace-header: traceparent
-    trace-mdc-key: traceparent
-    metrics-enabled: true
-    trust-all-certs: false
+  storage:
+    # VaultS3 只通过 S3 兼容接口访问；数据库和业务响应不保存该地址。
+    endpoint: ${NNM_VAULTS3_ENDPOINT:http://123.206.232.72:9000}
+    access-key: ${NNM_VAULTS3_ACCESS_KEY:nnmbot}
+    secret-key: ${NNM_VAULTS3_SECRET_KEY:nnmbot}
+    bucket: ${NNM_VAULTS3_BUCKET:nnmbot}
+    region: ${NNM_VAULTS3_REGION:nnmbot-1}
+    connect-timeout: ${NNM_VAULTS3_CONNECT_TIMEOUT:5s}
+    read-timeout: ${NNM_VAULTS3_READ_TIMEOUT:60s}
+    write-timeout: ${NNM_VAULTS3_WRITE_TIMEOUT:60s}
+    call-timeout: ${NNM_VAULTS3_CALL_TIMEOUT:2m}
+    max-concurrent-requests: ${NNM_VAULTS3_MAX_CONCURRENT_REQUESTS:2}
+  bot:
+    notifications:
+      response-timeout: 60s
+      retention: 15m
+      poll-interval: 300ms
+      resource-retention: 24h
+      max-schedule-delay: 30d
+      resource-cleanup-interval: 1h
+      jobs:
+        # 数据库保存待发内容；扫描只认领到期任务，不自动重放发送结果未知的任务。
+        cron: "*/5 * * * * *"
+        zone: Asia/Shanghai
+        dispatch-grace: 10m
+        stale-timeout: 10m
+        history-retention: 7d
+        max-pending-per-user: 20
+    credentials:
+      # 本地凭据加密；机器人实例连接和运行策略由数据库维护。
+      encryption-key: ${NNM_BOT_CREDENTIAL_KEY:local-dev-key-change-before-production}
+  reply:
+    qq:
+      # 被动回复额度属于平台协议边界；可在本地压低，但不能配置超过 QQ 官方上限。
+      c2c-reply-limit: 4
+      group-reply-limit: 5
+      safety-margin: 5s
+      ledger-retention: 24h
+      # 只添加已经确认获准使用消息级原生键盘的账号；空映射使用命令文字。
+      keyboard-accounts: {}
+      # 仅为真实账号已确认获准主动发送的群配置；空映射默认关闭。
+      proactive-groups: {}
   executor:
-    # 通用 I/O 任务使用虚拟线程，数值限制的是同时运行的业务任务数。
+    # 固定本机 CPU 任务预算，与数据库连接池上限 5、4GB 内存共同评估。
+    # 命令共享应用虚拟线程额度；只有独立派发器可以等待其容量。
     application-concurrency: 64
-    # 独立虚拟线程执行器在提交入口限流，不创建无限等待的发现线程。
-    discovery-concurrency: 4
-    # 建连任务与业务任务隔离，防止业务等待握手时耗尽同一执行器的许可。
-    connection-concurrency: 4
-    # 下载和解析隔离于父刷新任务；工作线程不访问数据库，兼顾 4GB 内存预算。
-    community-source-concurrency: 2
-    community-source-queue-capacity: 8
     task:
-      # CPU 线程数默认取 JVM 可见核心数，可用 core-size / max-size 显式覆盖。
-      queue-capacity: 100
-      keep-alive: 60s
-    scheduler:
-      pool-size: 2
-    await-termination: 30s
+      core-size: 2
+      max-size: 2
+      # 重计算最多等待 4 项，满载明确拒绝，绝不在提交线程补跑。
+      queue-capacity: 4
+    command-ingress:
+      # 等待总数含派发暂存；数量和编码载荷预算同时生效，不是 JVM 堆上限。
+      queue-capacity: 32
+      max-message-bytes: 32768
+      max-pending-bytes: 2097152
+      max-queue-wait: 10s
+    computation:
+      ocr-in-flight: 1
+      max-queue-wait: 5s
+      # 等待超时不会提前释放仍在运行的原生计算额度。
+      result-timeout: 30s
+    gateway-events:
+      # QQ 观察/成员同步独立单工，满载拒绝并告警，不阻塞命令与心跳。
+      concurrency: 1
+      queue-capacity: 16
+
+# Redis is required even for one instance. Runtime/cache use native Redisson YAML below.
+rdt:
+  # Native Redisson YAML; can be replaced with runtime.file / cache.file for any supported topology.
+  # DB0/1/2 only separate names. Independent eviction needs separate Redis instances.
+  redis:
+    runtime:
+      config: |
+        threads: 2
+        nettyThreads: 2
+        singleServerConfig:
+          address: "redis://${NNM_REDIS_HOST:123.206.232.72}:${NNM_REDIS_PORT:6379}"
+          database: ${NNM_REDIS_DATABASE:0}
+          password: ${NNM_REDIS_PASSWORD:6379736}
+          timeout: 10000
+          connectionMinimumIdleSize: 1
+          connectionPoolSize: 12
+          subscriptionConnectionMinimumIdleSize: 1
+          subscriptionConnectionPoolSize: 4
+    cache:
+      config: |
+        threads: 2
+        nettyThreads: 1
+        singleServerConfig:
+          address: "redis://${NNM_CACHE_REDIS_HOST:${NNM_REDIS_HOST:123.206.232.72}}:${NNM_CACHE_REDIS_PORT:${NNM_REDIS_PORT:6379}}"
+          database: ${NNM_CACHE_REDIS_DATABASE:1}
+          password: ${NNM_CACHE_REDIS_PASSWORD:${NNM_REDIS_PASSWORD:6379736}}
+          timeout: 10000
+          connectionMinimumIdleSize: 1
+          connectionPoolSize: 8
+          subscriptionConnectionMinimumIdleSize: 1
+          subscriptionConnectionPoolSize: 2
+  # Optional module is NOT enabled or added to this application in this iteration.
+  # consistency:
+  #   enabled: true
+  #   schema: nnmbot
+  #   inbox-enabled: false
+  namespace: nnmbot:${APP_ENV:dev}
+  # 同时运行的应用节点必须唯一；同一节点重启后保持稳定。
+  instance-id: ${INSTANCE_ID:nnmbot-1}
+  instance:
+    # 节点身份续期独立于机器人 owner lease；lease 采用 RDT 默认 30s。
+    renew-interval: 10s
+  schedule:
+    # 当前 JVM 调度模板的执行预算；不同于命令并发及数据库连接池大小。
+    max-concurrent-tasks: 2
+    # 到期索引每 2 秒检查一次，避免节点数乘任务数形成高频轮询。
+    poll-interval: 2s
+    # 每个任务执行历史条数
+    max-history-entries: 256
+    # RDT 调度结果保留一天；不用于 Warframe 本地动态快照。
+    result-ttl: 1d
+  queue:
+    # 当前 JVM 单模板共享预算；相邻源码与实际 SNAPSHOT JAR 的默认值为 16。
+    # 本项目为 4GB/数据库连接池 5 显式收紧到 8，不叠加另一层可靠消费队列。
+    max-concurrent-handlers: 8
+    local-buffer-capacity: 16
+    read-batch-size: 4
+    # 同时占用的阻塞命令连接上限，给租约、锁、调度和业务缓存留出连接。
+    max-blocking-reads: 3
+    # 每个队列可以积压的消息条数
+    max-backlog-messages: 2048
+    # 每个队列可以积压的容量
+    max-backlog-bytes: 16777216
+    # 本地可以缓存的消息总容量
+    local-buffer-bytes: 8388608
+
+# Shiro 只提供 OneBot 协议解析；内置 WS 客户端和服务端均不参与连接管理。
+shiro:
+  # SDK 自己创建执行器；全局虚拟线程开启时使用虚拟线程工厂，但仍受池和队列容量约束。
+  task-pool:
+    enable-task-pool: true
+    core-pool-size: 2
+    max-pool-size: 4
+    queue-capacity: 100
+    keep-alive-time: 60
+  ws:
+    # 文件合并及 QQ 群文件上传可能明显超过 SDK 默认的 10 秒。
+    timeout: 300
+    server:
+      enable: false
+
+# HTTP / OCR / 绘图使用 HttpClientProperties、OcrProperties、RenderProperties 的代码默认值。
+# 机器需要额外中文字体时可在这里覆盖 render.fonts.paths。

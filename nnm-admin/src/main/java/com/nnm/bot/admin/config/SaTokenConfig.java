@@ -5,7 +5,7 @@ import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.config.properties.AdminBootstrapProperties;
 import com.nnm.bot.admin.config.properties.WebCorsProperties;
-import com.nnm.bot.admin.service.RbacAccountService;
+import com.nnm.bot.admin.service.auth.RbacAccountService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;

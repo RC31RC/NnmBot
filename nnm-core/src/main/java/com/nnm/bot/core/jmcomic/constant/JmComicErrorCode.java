@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 public enum JmComicErrorCode implements ErrorCode {
 
     DISABLED(409, "JM 下载功能未启用", HttpStatus.CONFLICT),
+    DOWNLOAD_METHODS_DISABLED(409, "JM 整本下载和分页下载均已关闭", HttpStatus.CONFLICT),
     BUSY(409, "已有 JM 下载任务正在执行，请稍后再试", HttpStatus.CONFLICT),
     INVALID_ALBUM_ID(400, "JM 漫画 ID 格式不正确", HttpStatus.BAD_REQUEST),
     ALBUM_TOO_LARGE(413, "JM 漫画页数超过系统限制", HttpStatus.CONTENT_TOO_LARGE),

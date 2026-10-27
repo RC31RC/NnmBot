@@ -14,6 +14,8 @@ import com.nnm.bot.core.group.service.BotGroupCommandContext;
 import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
 import com.nnm.bot.core.group.service.GroupCommandService;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
+import com.nnm.bot.core.group.service.BotGroupMemberIdentityAdapters;
+import com.nnm.bot.core.group.service.BotGroupMemberMergeService;
 import com.nnm.bot.core.group.service.PointAccountService;
 import com.nnm.bot.core.group.service.PointBalance;
 import jakarta.annotation.Resource;
@@ -35,7 +37,11 @@ public class GroupCommandServiceImpl implements GroupCommandService {
     @Resource
     private BotGroupMemberIdentityResolver memberIdentityResolver;
     @Resource
+    private BotGroupMemberIdentityAdapters identityAdapters = BotGroupMemberIdentityAdapters.defaults();
+    @Resource
     private PointAccountService pointAccountService;
+    @Resource
+    private BotGroupMemberMergeService memberMergeService;
 
     @Override
     @Transactional
@@ -44,13 +50,12 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         if (ObjectUtil.isNull(groupContext)) {
             return CommandResult.text("签到只能在已配置的群组中使用");
         }
-        BotGroupMember member = resolveMember(groupContext, context);
+        BotGroupMember member = resolveWritableMember(groupContext, context);
         if (ObjectUtil.isNull(member)) {
             return CommandResult.text("当前用户还未加入该逻辑群组");
         }
 
-        PointBalance balance = pointAccountService.balance(
-                        groupContext.group().getId(), member.getId())
+        PointBalance balance = pointAccountService.balance(groupContext.group().getId(), member.getId())
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
         // 签到奖励由命令积分守卫统一结算，这里只提供成员和当前账户快照。
         return result("当前积分：" + balance.points(), balance);
@@ -63,7 +68,7 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         if (ObjectUtil.isNull(groupContext)) {
             return CommandResult.text("积分查询只能在已配置的群组中使用");
         }
-        BotGroupMember member = resolveMember(groupContext, context);
+        BotGroupMember member = resolveExistingMember(groupContext, context);
         if (ObjectUtil.isNull(member)) {
             return CommandResult.text("当前用户还未加入该逻辑群组");
         }
@@ -73,10 +78,18 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         return result("当前积分：" + balance.points(), balance);
     }
 
-    private BotGroupMember resolveMember(
+    private BotGroupMember resolveWritableMember(
             BotGroupCommandContext groupContext, BotMessageContext context) {
         return memberIdentityResolver
-                .findOrCreateForCommand(groupContext.group().getId(), context)
+                .findOrCreateForWrite(groupContext.group().getId(), context)
+                .filter(BotGroupMember::isEnabled)
+                .orElse(null);
+    }
+
+    private BotGroupMember resolveExistingMember(
+            BotGroupCommandContext groupContext, BotMessageContext context) {
+        return memberIdentityResolver
+                .findByContext(groupContext.group().getId(), context)
                 .filter(BotGroupMember::isEnabled)
                 .orElse(null);
     }
@@ -100,84 +113,92 @@ public class GroupCommandServiceImpl implements GroupCommandService {
             return CommandResult.text("当前群聊尚未绑定逻辑群组");
         }
 
-        BotGroupMember member = resolveBindingMember(groupContext.group(), context, qqUserId);
+        BotGroupMember member;
+        if (context.platform() == BotPlatform.ONEBOT) {
+            member = memberRepository.findByGroupIdAndQqId(groupContext.group().getId(), qqUserId)
+                    .orElseGet(() -> newMember(groupContext.group(), context));
+            identityAdapters.assign(BotPlatform.ONEBOT, member, qqUserId);
+            member.setQqIdVerified(true);
+            member.setQqBoundAt(LocalDateTime.now());
+            memberRepository.save(member);
+            if (!member.isEnabled()) {
+                return CommandResult.text("当前群组成员身份已停用，请联系管理员");
+            }
+            return CommandResult.text("绑定成功，QQ 身份已记录；需要跨渠道关联时请通过官方机器人发送绑定命令");
+        }
+
+        BotGroupMember byQqId = memberRepository
+                .findByGroupIdAndQqId(groupContext.group().getId(), qqUserId)
+                .orElse(null);
+        BotGroupMember byOpenId = memberRepository
+                .findByGroupIdAndMemberOpenid(groupContext.group().getId(), context.senderId())
+                .orElse(null);
+        if (byQqId != null && byOpenId != null && !byQqId.getId().equals(byOpenId.getId())) {
+            ensureMergeCompatible(byQqId, byOpenId, qqUserId, context.senderId());
+            if (memberMergeService == null) {
+                throw new IllegalStateException("成员合并服务未装配");
+            }
+            member = memberMergeService.merge(groupContext.group().getId(), byQqId, byOpenId);
+        } else if (byQqId != null) {
+            member = byQqId;
+        } else if (byOpenId != null) {
+            member = byOpenId;
+        } else {
+            member = newMember(groupContext.group(), context);
+        }
         if (!member.isEnabled()) {
             return CommandResult.text("当前群组成员身份已停用，请联系管理员");
         }
-        if (member.isQqIdVerified() && !qqUserId.equals(member.getQqId())) {
+        if (StrUtil.isNotBlank(member.getQqId()) && !qqUserId.equals(member.getQqId())) {
             return CommandResult.text("当前平台身份已经绑定其他 QQ 号，不能直接覆盖");
         }
-
-        boolean verified = context.platform() == BotPlatform.ONEBOT;
-        if (context.platform() == BotPlatform.QQ_OFFICIAL
-                && StrUtil.isNotBlank(member.getMemberOpenid())
+        if (StrUtil.isNotBlank(member.getMemberOpenid())
                 && !context.senderId().equals(member.getMemberOpenid())) {
             return CommandResult.text("该 QQ 号已经绑定其他 QQ 官方成员身份");
         }
         member.setQqId(qqUserId);
-        member.setQqIdVerified(verified);
-        member.setQqBoundAt(LocalDateTime.now());
-        assignChannelIdentity(member, context);
+        member.setQqBoundAt(member.getQqBoundAt() == null
+                ? LocalDateTime.now() : member.getQqBoundAt());
+        identityAdapters.assign(BotPlatform.QQ_OFFICIAL, member, context.senderId());
+        // 官方自报 QQ 不改变既有可信核验状态，也不伪造新的核验标记。
         memberRepository.save(member);
+        return CommandResult.text("绑定成功，QQ 官方身份已关联 QQ：" + qqUserId);
+    }
 
-        if (verified) {
-            return CommandResult.text("绑定成功，当前群组成员已绑定 QQ：" + qqUserId);
+    private void ensureMergeCompatible(BotGroupMember byQqId,
+                                        BotGroupMember byOpenId,
+                                        String qqUserId,
+                                        String memberOpenid) {
+        if (StrUtil.isNotBlank(byQqId.getMemberOpenid())
+                && !memberOpenid.equals(byQqId.getMemberOpenid())) {
+            throw new IllegalArgumentException("QQ号已经绑定其他 QQ 官方成员身份");
         }
-        return CommandResult.text("已记录 QQ：" + qqUserId
-                + "。QQ 官方机器人只能确认当前用户 OpenID，无法从消息直接核验 QQ 号归属；"
-                + "当前绑定标记为待人工确认，积分仍按本平台身份计算");
+        if (StrUtil.isNotBlank(byOpenId.getQqId())
+                && !qqUserId.equals(byOpenId.getQqId())) {
+            throw new IllegalArgumentException("当前平台身份已经绑定其他 QQ 号");
+        }
+        if (StrUtil.isNotBlank(byQqId.getKookId()) && StrUtil.isNotBlank(byOpenId.getKookId())
+                && !byQqId.getKookId().equals(byOpenId.getKookId())) {
+            throw new IllegalArgumentException("成员已有冲突的其他平台身份，不能自动合并");
+        }
     }
 
     private BotGroupCommandContext resolveGroup(BotMessageContext context) {
         return groupContextResolver.resolve(context).orElse(null);
     }
 
-    private BotGroupMember resolveBindingMember(
-            BotGroup group, BotMessageContext context, String qqId) {
-        if (context.platform() == BotPlatform.ONEBOT) {
-            return memberIdentityResolver.findByContext(group.getId(), context)
-                    .orElseGet(() -> newMember(group, context));
-        }
-        BotGroupMember byQqId = memberRepository
-                .findByGroupIdAndQqId(group.getId(), qqId)
-                .orElse(null);
-        BotGroupMember byChannelId = memberIdentityResolver
-                .findByContext(group.getId(), context)
-                .orElse(null);
-        if (ObjectUtil.isNotNull(byQqId) && ObjectUtil.isNotNull(byChannelId)
-                && !byQqId.getId().equals(byChannelId.getId())) {
-            throw new IllegalArgumentException("QQ号和当前平台身份已经分别绑定到不同群组成员");
-        }
-        if (ObjectUtil.isNotNull(byQqId)) {
-            return byQqId;
-        }
-        if (ObjectUtil.isNotNull(byChannelId)) {
-            return byChannelId;
-        }
-        return newMember(group, context);
-    }
-
     private BotGroupMember newMember(BotGroup group, BotMessageContext context) {
         BotGroupMember member = new BotGroupMember();
         member.setGroupId(group.getId());
-        assignChannelIdentity(member, context);
+        identityAdapters.assign(context.platform(), member, context.senderId());
         member.setDisplayName(null);
         member.setMemberRole("MEMBER");
         member.setEnabled(true);
         return member;
     }
 
-    private void assignChannelIdentity(
-            BotGroupMember member, BotMessageContext context) {
-        switch (context.platform()) {
-            case ONEBOT -> member.setQqId(context.senderId());
-            case QQ_OFFICIAL -> member.setMemberOpenid(context.senderId());
-            default -> member.setKookId(context.senderId());
-        }
-    }
-
     private CommandResult result(String text, PointBalance balance) {
-        return CommandResult.of(text,
+        return CommandResult.view("system.points", text,
                 new PointCommandDisplay(balance.points(), balance.totalEarned(), balance.totalSpent()));
     }
 

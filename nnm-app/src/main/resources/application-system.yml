@@ -1,0 +1,32 @@
+# 系统业务层：只保留本项目需要的开关、凭据入口和差异化覆盖，不配置 RDT 基础能力。
+# 机器人缓存/路由默认值见 BotCacheProperties / CommandRoutingProperties；
+# 共享任务、发现超时、owner lease 与接管策略默认值见 ClusterProperties。
+# 需要调整时直接覆盖对应 nnm.cache.bot.*、nnm.bot.routing.*、nnm.cluster.*，
+# 不再通过 nnm.cache.shared.* 中转，也不会同步修改 rdt.instance.*。
+nnm:
+  bot:
+    channels:
+      onebot:
+        # 保留已有环境变量入口；超时、分片、容量与清理周期使用 OneBotProperties 默认值。
+        file-transfer-mode: ${NNM_ONEBOT_FILE_TRANSFER_MODE:AUTO}
+        file-staging-directory: ${NNM_ONEBOT_FILE_STAGING_DIRECTORY:${user.dir}/data/onebot-files}
+  jmcomic:
+    # 两条下载链路可分别关闭；线程、文件与图像预算采用 JmComicProperties 默认值。
+    whole-file-enabled: ${NNM_JMCOMIC_WHOLE_FILE_ENABLED:true}
+    page-download-enabled: ${NNM_JMCOMIC_PAGE_DOWNLOAD_ENABLED:true}
+    temporary-directory: ${NNM_JMCOMIC_TEMPORARY_DIRECTORY:${user.dir}/data/jmcomic}
+    username: ${NNM_JMCOMIC_USERNAME:hhhddc}
+    password: ${NNM_JMCOMIC_PASSWORD:159000}
+    download-threads: ${NNM_JMCOMIC_DOWNLOAD_THREADS:4}
+    max-concurrent-tasks: ${NNM_JMCOMIC_MAX_CONCURRENT_TASKS:2}
+  web:
+    cors:
+      # 只覆盖开发来源；HTTP 方法、Header、凭据与 max-age 使用 WebCorsProperties 默认值。
+      allowed-origins: ${NNM_WEB_CORS_ALLOWED_ORIGINS:http://localhost:3006,http://127.0.0.1:3006}
+      allowed-origin-patterns: ${NNM_WEB_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:[*],http://127.0.0.1:[*],http://10.*:[*],http://192.168.*:[*],http://172.16.*:[*],http://172.17.*:[*],http://172.18.*:[*],http://172.19.*:[*],http://172.20.*:[*],http://172.21.*:[*],http://172.22.*:[*],http://172.23.*:[*],http://172.24.*:[*],http://172.25.*:[*],http://172.26.*:[*],http://172.27.*:[*],http://172.28.*:[*],http://172.29.*:[*],http://172.30.*:[*],http://172.31.*:[*]}
+  admin:
+    bootstrap:
+      # 本地空库初始化账户；这是系统业务行为，不属于认证 starter 的默认配置。
+      enabled: true
+      username: admin
+      password: admin123

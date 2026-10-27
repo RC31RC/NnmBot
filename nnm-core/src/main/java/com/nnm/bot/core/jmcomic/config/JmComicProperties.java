@@ -19,7 +19,7 @@ import java.util.List;
 public class JmComicProperties {
 
     /** 是否允许执行 JM 下载任务。 */
-    private boolean enabled;
+    private boolean enabled = true;
     /** 项目工作目录下的 JM 临时下载目录。 */
     private Path temporaryDirectory =
             Path.of(System.getProperty("user.dir"), "data", "jmcomic");
@@ -31,6 +31,8 @@ public class JmComicProperties {
     private int retryTimes = 2;
     /** 是否优先尝试上游整本文件下载接口。 */
     private boolean wholeFileEnabled = true;
+    /** 是否允许分页下载；关闭时也禁止整本下载失败后的分页兜底。 */
+    private boolean pageDownloadEnabled = true;
     /** 整本文件下载超时。 */
     private Duration wholeFileTimeout = Duration.ofMinutes(10);
     /** 可选 JM 账号，用于访问需要登录的整本下载接口。 */
@@ -108,6 +110,14 @@ public class JmComicProperties {
 
     public void setWholeFileEnabled(boolean wholeFileEnabled) {
         this.wholeFileEnabled = wholeFileEnabled;
+    }
+
+    public boolean isPageDownloadEnabled() {
+        return pageDownloadEnabled;
+    }
+
+    public void setPageDownloadEnabled(boolean pageDownloadEnabled) {
+        this.pageDownloadEnabled = pageDownloadEnabled;
     }
 
     public Duration getWholeFileTimeout() {

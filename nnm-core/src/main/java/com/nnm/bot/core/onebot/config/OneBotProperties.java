@@ -1,5 +1,7 @@
 package com.nnm.bot.core.onebot.config;
 
+import com.nnm.bot.core.constant.onebot.OneBotConstants.FileTransferMode;
+
 import cn.hutool.core.util.ObjectUtil;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -161,12 +163,4 @@ public class OneBotProperties {
         }
     }
 
-    public enum FileTransferMode {
-        /** 本机连接使用路径，远端连接使用 NapCat WebSocket 分片上传。 */
-        AUTO,
-        /** 文件路径在 NnmBot 与 OneBot 进程间可见时使用。 */
-        LOCAL_PATH,
-        /** 通过 NapCat upload_file_stream 将文件传到 OneBot 主机。 */
-        STREAM
-    }
 }

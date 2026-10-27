@@ -1,31 +1,33 @@
 package com.nnm.bot.core.channel.runtime;
 
+import com.nnm.bot.core.channel.topology.BotTopologySnapshot;
+import java.util.Map.Entry;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
+import com.nnm.bot.core.channel.model.BotChannelInstanceMetadata;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
-import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
+import com.nnm.bot.core.channel.topology.BotTopologyStore;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
-import com.nnm.bot.core.config.DistributedProperties;
-import io.github.rdt.cache.CacheEntry;
-import io.github.rdt.cache.CacheService;
-import io.github.rdt.lease.RedisOwnerLeaseService;
-import io.github.rdt.lease.RedisOwnerLeaseService.Lease;
+import com.nnm.bot.core.config.ClusterProperties;
+import io.github.rdt.redisson.lease.RedisOwnerLeaseService;
+import io.github.rdt.redisson.lease.RedisOwnerLeaseService.Lease;
 import io.github.rdt.spring.config.RdtProperties;
 import io.github.rdt.spring.lease.NodeIdentityLease;
-import io.github.rdt.support.KeySpace;
+import io.github.rdt.spring.lease.NodeIdentityListener;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RedissonClient;
-import org.redisson.client.codec.StringCodec;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -33,34 +35,41 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /** Desired state is shared; only the lease owner creates sockets. Each node reconciles locally. */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "nnm.distributed", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class ClusterBotRuntime {
+public class ClusterBotRuntime implements NodeIdentityListener {
+    private final ReentrantLock reconciliationLock = new ReentrantLock();
+
     @Resource
     private RedisOwnerLeaseService leases;
     @Resource
     private NodeIdentityLease identity;
     @Resource
-    private DistributedProperties properties;
+    private ClusterProperties properties;
     @Resource
     private RdtProperties rdt;
-    @Resource
-    private RedissonClient redis;
-    @Resource
-    private KeySpace keys;
-    @Resource
-    private CacheService cache;
-    @Resource
-    private BotChannelInstanceProvider instances;
     @Resource
     private BotChannelRegistry registry;
     @Resource
     private ObjectProvider<BotChannelRuntimeManager> runtime;
+    @Resource
+    private ObjectProvider<BotConnectionPlacementCoordinator> placementCoordinator;
+    @Resource
+    private BotRuntimeStateStore stateStore;
+
+    @Resource
+    private BotTopologyStore topology;
+
     private final Map<String, OwnedConnection> owned = new HashMap<>();
+    private final Map<String, Lease> affinities = new HashMap<>();
+    private final Map<String, Long> componentStartedAt = new HashMap<>();
+    private final Map<String, Long> componentUnhealthySince = new HashMap<>();
+    private final Map<String, Long> componentBackoffUntil = new HashMap<>();
+    private final Map<String, Long> startRetryUntil = new HashMap<>();
+    private final Map<String, PlacementConflict> placementConflicts = new HashMap<>();
+    private volatile ReconciliationFailure reconciliationFailure;
     private boolean stopped;
 
     public void request(String instanceId, boolean running) {
-        Runnable write = () -> redis.<String, String>getMap(keys.key("bot", "desired"), StringCodec.INSTANCE)
-                .put(instanceId, Boolean.toString(running));
+        Runnable write = () -> stateStore.request(instanceId, running);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -73,110 +82,426 @@ public class ClusterBotRuntime {
         }
     }
 
-    /**
-     * 当前实例的连接协调入口。
-     *
-     * <p>连接对象只存在于当前 JVM，因此每个实例都必须执行本地协调。
-     * Redis owner lease 负责集群归属竞争，不能把本地协调本身改成只由一个实例执行的
-     * RDT 集群任务，否则其他实例无法续租和管理自己持有的 WebSocket。</p>
-     */
-    @Scheduled(fixedDelayString = "${nnm.distributed.reconcile-interval:10s}")
-    public synchronized void reconcile() {
-        if (stopped) return;
+    public Map<String, String> desiredStates() {
+        return stateStore.desiredStates();
+    }
+
+    public void reconcile() {
+        reconciliationLock.lock();
         try {
-            identity.requireHealthy();
-            // Stop unsafe connections before querying the database or attempting new acquisitions.
-            for (var entry : List.copyOf(owned.entrySet())) {
-                if (!leases.renew(entry.getValue().lease(), properties.ownerLease())) {
-                    stopLocal(entry.getKey());
+            if (stopped) return;
+            try {
+                if (!identity.isHealthy()) {
+                    identityLost();
+                    ReconciliationFailure failure = new ReconciliationFailure("node-identity",
+                            "节点身份租约暂不可用，正在自动恢复，请稍后重试");
+                    if (!failure.equals(reconciliationFailure)) log.warn(failure.message());
+                    reconciliationFailure = failure;
+                    return;
                 }
-            }
-            Map<String, String> desired = redis.<String, String>getMap(
-                    keys.key("bot", "desired"), StringCodec.INSTANCE).readAllMap();
-            List<BotChannelInstanceRecord> records = instances.findAll();
-            Map<String, BotChannelInstanceRecord> eligible = new HashMap<>();
-            records.stream().filter(BotChannelInstanceRecord::enabled)
-                    .filter(record -> "true".equals(desired.get(record.instanceId())))
-                    .forEach(record -> eligible.put(record.instanceId(), record));
-            for (var entry : List.copyOf(owned.entrySet())) {
-                if (!entry.getValue().record().equals(eligible.get(entry.getKey()))) stopLocal(entry.getKey());
-            }
-            for (BotChannelInstanceRecord record : eligible.values()) {
-                if (!owned.containsKey(record.instanceId())) {
-                    var lease = leases.acquire(leaseName(key(record)), rdt.instanceId(), properties.ownerLease());
-                    if (lease.isEmpty()) continue;
-                    owned.put(record.instanceId(), new OwnedConnection(record, lease.get()));
-                    try {
-                        runtime.getObject().startLocal(record.instanceId());
-                    } catch (RuntimeException exception) {
-                        stopLocal(record.instanceId());
-                        log.warn("Bot owner failed to start {}", record.instanceId(), exception);
-                        continue;
-                    }
+                renewAffinities();
+                renewOwnedConnections();
+
+                Map<String, String> desired = stateStore.desiredStates();
+                // 本轮协调只持有一个版本，不能把旧实例配置与刷新后的连接分组混用。
+                BotTopologySnapshot topologySnapshot = topology.snapshot();
+                List<BotChannelInstanceRecord> records = List.copyOf(topologySnapshot.instances().values());
+                Map<String, String> placement = topologySnapshot.connectionGroups();
+                Map<String, BotChannelInstanceRecord> eligible = new HashMap<>();
+                records.stream()
+                        .filter(BotChannelInstanceRecord::enabled)
+                        .filter(record -> "true".equals(desired.get(record.instanceId())))
+                        .forEach(record -> eligible.put(record.instanceId(), record));
+
+                startRetryUntil.keySet().retainAll(eligible.keySet());
+                stopRemovedOrDisabled(eligible);
+                Map<String, String> targets = placementTargets(records, placement);
+                reconcilePlacement(placement, targets);
+                reconcileComponentHealth(eligible, placement);
+                startEligible(eligible, placement, targets);
+                publishStatuses();
+                releaseUnusedAffinities();
+                if (reconciliationFailure != null) {
+                    reconciliationFailure = null;
+                    log.info("Bot cluster reconciliation recovered");
                 }
-                OwnedConnection connection = owned.get(record.instanceId());
-                registry.find(key(record)).ifPresent(snapshot -> cache.put(
-                        statusKey(key(record)), new SharedStatus(connection.lease(), snapshot), properties.ownerLease()));
+            } catch (RuntimeException exception) {
+                reconciliationFailure = new ReconciliationFailure(exception.getClass().getName(),
+                        exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage());
+                try {
+                    identityLost();
+                } catch (RuntimeException cleanupFailure) {
+                    if (cleanupFailure != exception) exception.addSuppressed(cleanupFailure);
+                }
+                throw exception;
             }
-        } catch (RuntimeException exception) {
-            // Redis/DB uncertainty is fail-closed, not permission to continue sending.
-            for (String id : List.copyOf(owned.keySet())) stopLocal(id);
-            log.warn("Bot cluster reconciliation failed; local connections stopped", exception);
+        } finally {
+            reconciliationLock.unlock();
         }
     }
 
-    public synchronized BooleanSupplier guard(BotChannelKey key) {
-        Lease lease = owned.values().stream().filter(value -> key(value.record()).equals(key))
-                .map(OwnedConnection::lease).findFirst().orElse(null);
-        // Capture this acquisition, not a lookup that could authorize an old socket after reacquiring.
-        return () -> {
-            if (lease == null) return false;
-            try {
-                identity.requireHealthy();
-                return leases.isHeld(lease);
+    private void renewAffinities() {
+        for (Entry<String,Lease> entry : List.copyOf(affinities.entrySet())) {
+            if (!leases.renew(entry.getValue(), properties.ownerLease())) {
+                stopComponent(entry.getKey());
+                affinities.remove(entry.getKey());
+                componentUnhealthySince.remove(entry.getKey());
+                componentStartedAt.remove(entry.getKey());
             }
-            catch (RuntimeException exception) { return false; }
-        };
+        }
+    }
+
+    private void renewOwnedConnections() {
+        for (Entry<String,OwnedConnection> entry : List.copyOf(owned.entrySet())) {
+            if (!leases.renew(entry.getValue().lease(), properties.ownerLease())) {
+                stopLocal(entry.getKey());
+            }
+        }
+    }
+
+    private void stopRemovedOrDisabled(Map<String, BotChannelInstanceRecord> eligible) {
+        for (Entry<String,OwnedConnection> entry : List.copyOf(owned.entrySet())) {
+            BotChannelInstanceRecord expected = eligible.get(entry.getKey());
+            if (!entry.getValue().active || expected == null || !entry.getValue().record().equals(expected)) {
+                stopLocal(entry.getKey());
+            }
+        }
+    }
+
+    private Map<String, String> placementTargets(List<BotChannelInstanceRecord> records,
+                                               Map<String, String> placement) {
+        Map<String, String> targets = new HashMap<>();
+        BotConnectionPlacementCoordinator coordinator = placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
+        Map<String, Lease> currentOwners = leases.findAll(records.stream().map(record -> leaseName(key(record))).toList());
+        for (String component : new HashSet<>(placement.values())) {
+            List<String> members = BotConnectionPlacementCoordinator.members(component, placement);
+            Optional<String> approved = coordinator == null ? Optional.empty()
+                    : coordinator.approvedTarget(component, members);
+            if (approved.isPresent()) {
+                targets.put(component, approved.get());
+                continue;
+            }
+            Set<String> owners = new HashSet<>();
+            records.stream().filter(record -> members.contains(record.instanceId()))
+                    .map(record -> currentOwners.get(leaseName(key(record)))).filter(Objects::nonNull)
+                    .forEach(lease -> owners.add(lease.owner()));
+            if (!owners.isEmpty()) targets.put(component, owners.size() == 1 ? owners.iterator().next() : "");
+        }
+        return targets;
+    }
+
+    private void reconcilePlacement(Map<String, String> placement, Map<String, String> targets) {
+        Set<String> conflicts = new HashSet<>();
+        for (OwnedConnection connection : List.copyOf(owned.values())) {
+            String id = connection.record().instanceId();
+            String expected = placement.get(id);
+            String target = targets.get(expected);
+            if (target != null && !target.isEmpty() && !rdt.instanceId().equals(target)) {
+                // Only an approved transfer can select a different owner while both nodes are alive.
+                stopLocal(id);
+                continue;
+            }
+            if (Objects.equals(expected, connection.affinityName())) continue;
+            if ("".equals(target)) {
+                conflicts.add(id);
+                PlacementConflict conflict = new PlacementConflict(connection.affinityName(), expected);
+                if (!conflict.equals(placementConflicts.put(id, conflict))) {
+                    log.warn("Bot placement requires administrator confirmation: instance={}, component={}", id, expected);
+                }
+                continue;
+            }
+            Lease affinity = expected == null ? null : acquireAffinity(expected);
+            if (expected != null && affinity == null) continue;
+            // One volatile swap keeps the existing socket and its guard; the account acquisition is unchanged.
+            connection.placement = new ConnectionPlacement(expected, affinity);
+        }
+        placementConflicts.keySet().retainAll(conflicts);
+    }
+
+    private Lease acquireAffinity(String name) {
+        Lease current = affinities.get(name);
+        if (current != null) return current;
+        Optional<Lease> acquired = leases.acquire("bot-affinity:" + name, rdt.instanceId(), properties.ownerLease());
+        acquired.ifPresent(lease -> {
+            affinities.put(name, lease);
+            componentStartedAt.putIfAbsent(name, System.currentTimeMillis());
+        });
+        return acquired.orElse(null);
+    }
+
+    private void reconcileComponentHealth(Map<String, BotChannelInstanceRecord> eligible,
+                                          Map<String, String> placement) {
+        long now = System.currentTimeMillis();
+        Map<String, List<OwnedConnection>> localComponents = owned.values().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        connection -> componentName(connection.record(), placement,
+                                connection.affinityName())));
+        for (Entry<String,List<OwnedConnection>> entry : localComponents.entrySet()) {
+            String component = entry.getKey();
+            List<BotChannelInstanceRecord> expected = eligible.values().stream()
+                    .filter(record -> component.equals(componentName(record, placement,
+                            placement.get(record.instanceId()))))
+                    .toList();
+            // A healthy owner from a previous topology must not be pulled into a new component
+            // merely because the database graph changed. The explicit-stop path handles it.
+            if (expected.size() != entry.getValue().size()) {
+                continue;
+            }
+            boolean healthy = entry.getValue().stream().anyMatch(connection ->
+                    isConnected(connection.record()));
+            if (healthy) {
+                componentUnhealthySince.remove(component);
+                continue;
+            }
+            long started = componentStartedAt.computeIfAbsent(component, ignored -> now);
+            if (now - started < properties.componentStartupGrace().toMillis()) {
+                continue;
+            }
+            long unhealthySince = componentUnhealthySince.computeIfAbsent(component,
+                    ignored -> now);
+            if (now - unhealthySince < properties.componentFailureThreshold().toMillis()) {
+                continue;
+            }
+            log.warn("All connections in component {} have been unavailable for {} ms; "
+                            + "releasing the whole component",
+                    component, now - unhealthySince);
+            stopComponent(component);
+            BotConnectionPlacementCoordinator coordinator = placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
+            if (coordinator != null) coordinator.clearApproval(component);
+            componentBackoffUntil.put(component,
+                    now + properties.componentFailoverBackoff().toMillis());
+            componentUnhealthySince.remove(component);
+            componentStartedAt.remove(component);
+        }
+    }
+
+    private void startEligible(Map<String, BotChannelInstanceRecord> eligible,
+                               Map<String, String> placement, Map<String, String> targets) {
+        long now = System.currentTimeMillis();
+        for (BotChannelInstanceRecord record : eligible.values().stream()
+                .sorted(Comparator.comparing(BotChannelInstanceRecord::instanceId)).toList()) {
+            if (owned.containsKey(record.instanceId())) {
+                if (startRetryUntil.containsKey(record.instanceId())
+                        && now >= startRetryUntil.get(record.instanceId())) {
+                    retryStart(record, now);
+                }
+                continue;
+            }
+            if (now < startRetryUntil.getOrDefault(record.instanceId(), 0L)) {
+                continue;
+            }
+            String affinityName = placement.get(record.instanceId());
+            if (affinityName != null
+                    && now < componentBackoffUntil.getOrDefault(affinityName, 0L)) {
+                continue;
+            }
+            String target = targets.get(affinityName);
+            if (target != null && !rdt.instanceId().equals(target)) continue;
+            Lease affinity = affinityName == null ? null : acquireAffinity(affinityName);
+            if (affinityName != null && affinity == null) continue;
+            Optional<Lease> lease = leases.acquire(leaseName(key(record)), rdt.instanceId(), properties.ownerLease());
+            if (lease.isEmpty()) continue;
+            OwnedConnection connection = new OwnedConnection(record, lease.get(), affinityName,
+                    affinity);
+            owned.put(record.instanceId(), connection);
+            retryStart(record, now);
+        }
+    }
+
+    private void retryStart(BotChannelInstanceRecord record, long now) {
+        try {
+            runtime.getObject().startLocal(record.instanceId(), key(record));
+            stateStore.clearStartFailure(record.instanceId());
+            startRetryUntil.remove(record.instanceId());
+            if (placementName(record) != null) {
+                componentStartedAt.putIfAbsent(placementName(record), now);
+            }
+        } catch (RuntimeException exception) {
+            OwnedConnection connection = owned.get(record.instanceId());
+            if (connection != null) registry.find(key(record)).ifPresent(snapshot ->
+                    stateStore.startFailed(record.instanceId(), connection.lease(), connection.affinity(), snapshot));
+            startRetryUntil.put(record.instanceId(),
+                    now + properties.componentFailoverBackoff().toMillis());
+            throw exception;
+        }
+    }
+
+    private String placementName(BotChannelInstanceRecord record) {
+        OwnedConnection connection = owned.get(record.instanceId());
+        return connection == null ? null : connection.affinityName();
+    }
+
+    private void publishStatuses() {
+        Map<BotChannelKey, SharedStatus> statuses = new HashMap<>();
+        owned.values().forEach(connection -> registry.find(key(connection.record())).ifPresent(snapshot ->
+                statuses.put(key(connection.record()), new SharedStatus(connection.lease(), connection.affinity(), snapshot))));
+        stateStore.publish(statuses);
+    }
+
+    private boolean isConnected(BotChannelInstanceRecord record) {
+        return registry.find(key(record))
+                .map(snapshot -> snapshot.status()
+                        == com.nnm.bot.core.constant.BotChannelStatus.CONNECTED)
+                .orElse(false);
+    }
+
+    private String componentName(BotChannelInstanceRecord record,
+                                 Map<String, String> placement,
+                                 String fallback) {
+        return placement.getOrDefault(record.instanceId(), fallback == null
+                ? record.instanceId() : fallback);
+    }
+
+    public BooleanSupplier guard(BotChannelKey key) {
+        reconciliationLock.lock();
+        try {
+            OwnedConnection connection = owned.values().stream()
+                    .filter(value -> key(value.record()).equals(key))
+                    .findFirst().orElse(null);
+            BooleanSupplier nodeOwnership = identity.guard();
+            return () -> {
+                if (connection == null || !connection.active || !nodeOwnership.getAsBoolean()) return false;
+                ConnectionPlacement placement = connection.placement;
+                return leases.isHeld(connection.lease())
+                        && (placement.lease() == null || leases.isHeld(placement.lease()));
+            };
+        } finally {
+            reconciliationLock.unlock();
+        }
     }
 
     public Optional<BotChannelSnapshot> snapshot(BotChannelKey key) {
-        CacheEntry<SharedStatus> entry = cache.get(statusKey(key), SharedStatus.class);
-        if (entry instanceof CacheEntry.Hit<SharedStatus> hit && hit.value() != null
-                && leases.isHeld(hit.value().lease())) {
-            return Optional.of(hit.value().snapshot());
-        }
-        return Optional.empty();
+        return Optional.ofNullable(stateStore.snapshots(List.of(key)).get(key));
+    }
+
+    public BotRuntimeStateStore.State states(List<BotChannelInstanceMetadata> instances) {
+        return stateStore.read(instances);
+    }
+
+    public Map<BotChannelKey, BotChannelSnapshot> snapshots(List<BotChannelKey> keys) {
+        return stateStore.snapshots(keys);
+    }
+
+    public Map<String, BotChannelSnapshot> startFailures(List<String> ids) {
+        return stateStore.startFailures(ids);
+    }
+
+    public Optional<String> reconciliationFailure() {
+        ReconciliationFailure failure = reconciliationFailure;
+        return failure == null ? Optional.empty() : Optional.of(failure.message());
+    }
+
+    public Optional<BotChannelSnapshot> startFailure(String instanceId) {
+        return stateStore.startFailure(instanceId);
     }
 
     public boolean isLocalOwner(BotChannelKey key) {
         return guard(key).getAsBoolean();
     }
 
-    private void stopLocal(String id) {
-        OwnedConnection connection = owned.remove(id);
-        try {
-            runtime.getObject().removeRuntime(id);
-        } catch (RuntimeException exception) {
-            log.warn("Bot local shutdown failed: {}", id, exception);
-        } finally {
-            if (connection != null) {
-                try { leases.release(connection.lease()); }
-                catch (RuntimeException exception) { log.debug("Lease will expire: {}", id, exception); }
+    private void stopComponent(String component) {
+        for (OwnedConnection connection : List.copyOf(owned.values())) {
+            String current = connection.affinityName() == null
+                    ? connection.record().instanceId() : connection.affinityName();
+            if (component.equals(current)) {
+                stopLocal(connection.record().instanceId());
             }
         }
     }
 
+    private void stopLocal(String id) {
+        placementConflicts.remove(id);
+        OwnedConnection connection = owned.get(id);
+        if (connection != null) connection.active = false;
+        runtime.getObject().removeRuntime(id);
+        if (connection != null) leases.release(connection.lease());
+        owned.remove(id);
+    }
+
+    @Override
+    public void identityLost() {
+        reconciliationLock.lock();
+        try {
+            // Revoke every callback first, even if one connector fails during cleanup.
+            owned.values().forEach(connection -> connection.active = false);
+            for (String id : List.copyOf(owned.keySet())) stopLocal(id);
+            releaseUnusedAffinities();
+            componentUnhealthySince.clear();
+        } finally {
+            reconciliationLock.unlock();
+        }
+    }
+
+    private void releaseUnusedAffinities() {
+        Set<String> activeComponents = new HashSet<>();
+        owned.values().forEach(connection -> {
+            if (connection.affinityName() != null) {
+                activeComponents.add(connection.affinityName());
+            }
+        });
+        for (Entry<String,Lease> entry : List.copyOf(affinities.entrySet())) {
+            if (activeComponents.contains(entry.getKey())) continue;
+            leases.release(entry.getValue());
+            affinities.remove(entry.getKey());
+            componentStartedAt.remove(entry.getKey());
+        }
+    }
+
     @PreDestroy
-    public synchronized void close() {
-        stopped = true;
-        for (String id : List.copyOf(owned.keySet())) stopLocal(id);
+    public void close() {
+        reconciliationLock.lock();
+        try {
+            stopped = true;
+            identityLost();
+        } finally {
+            reconciliationLock.unlock();
+        }
     }
 
     private static BotChannelKey key(BotChannelInstanceRecord record) {
         return new BotChannelKey(record.platform(), record.botAccountId());
     }
-    private static String leaseName(BotChannelKey key) { return "bot:" + key.platform() + ":" + key.botAccountId(); }
-    private static String statusKey(BotChannelKey key) { return "bot-status:" + key.platform() + ":" + key.botAccountId(); }
-    private record OwnedConnection(BotChannelInstanceRecord record, Lease lease) { }
-    public record SharedStatus(Lease lease, BotChannelSnapshot snapshot) { }
+
+    private static String leaseName(BotChannelKey key) {
+        return "bot:" + key.platform() + ":" + key.botAccountId();
+    }
+
+    private static String statusKey(BotChannelKey key) {
+        return "bot-status:" + key.platform() + ":" + key.botAccountId();
+    }
+
+    private static String startFailureKey(String instanceId) {
+        return "bot-start-failure:" + instanceId;
+    }
+
+    private record PlacementConflict(String current, String expected) {
+    }
+
+    private record ReconciliationFailure(String type, String message) {
+    }
+
+    private record ConnectionPlacement(String name, Lease lease) {
+    }
+
+    private static final class OwnedConnection {
+        private final BotChannelInstanceRecord record;
+        private final Lease lease;
+        private volatile ConnectionPlacement placement;
+        private volatile boolean active = true;
+
+        private OwnedConnection(BotChannelInstanceRecord record, Lease lease, String affinityName,
+                                Lease affinity) {
+            this.record = record;
+            this.lease = lease;
+            this.placement = new ConnectionPlacement(affinityName, affinity);
+        }
+
+        private BotChannelInstanceRecord record() { return record; }
+        private Lease lease() { return lease; }
+        private String affinityName() { return placement.name(); }
+        private Lease affinity() { return placement.lease(); }
+    }
+
+    public record SharedStatus(Lease lease, Lease affinity, BotChannelSnapshot snapshot) {
+    }
 }

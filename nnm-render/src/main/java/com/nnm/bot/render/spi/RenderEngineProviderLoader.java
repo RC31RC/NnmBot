@@ -1,5 +1,6 @@
 package com.nnm.bot.render.spi;
 
+import java.util.ServiceLoader.Provider;
 import com.nnm.bot.render.RenderEngine;
 import java.util.Locale;
 import cn.hutool.core.util.StrUtil;
@@ -62,7 +63,7 @@ public class RenderEngineProviderLoader {
             URLClassLoader loader = new URLClassLoader(jars.toArray(URL[]::new),
                     RenderEngineProvider.class.getClassLoader());
             classLoaders.add(loader);
-            Iterator<ServiceLoader.Provider<RenderEngineProvider>> discovered =
+            Iterator<Provider<RenderEngineProvider>> discovered =
                     ServiceLoader.load(RenderEngineProvider.class, loader).stream().iterator();
             int discoveryErrors = 0;
             while (discoveryErrors < MAX_DISCOVERY_ERRORS) {

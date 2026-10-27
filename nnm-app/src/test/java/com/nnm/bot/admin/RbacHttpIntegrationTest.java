@@ -1,21 +1,26 @@
 package com.nnm.bot.admin;
 
-import io.github.rdt.lock.DistributedLockManager;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import java.net.http.HttpRequest.BodyPublisher;
+import java.net.http.HttpRequest.Builder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
-import com.nnm.bot.admin.domain.SysRole;
-import com.nnm.bot.admin.domain.SysUser;
+import com.nnm.bot.admin.pojo.entity.system.SysRole;
+import com.nnm.bot.admin.pojo.entity.system.SysUser;
+import com.nnm.bot.admin.repository.system.SysRoleRepository;
+import com.nnm.bot.admin.repository.system.SysUserRepository;
+import com.nnm.bot.support.OfflineRedis;
 import io.github.rdt.cache.CacheService;
-import com.nnm.bot.admin.repository.SysRoleRepository;
-import com.nnm.bot.admin.repository.SysUserRepository;
+import io.github.rdt.id.DistributedIdGenerator;
+import io.github.rdt.lock.DistributedLockManager;
+import io.github.rdt.lock.DistributedLockTemplate;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.io.IOException;
@@ -28,6 +33,7 @@ import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@OfflineRedis
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
@@ -38,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.properties.hibernate.default_schema=PUBLIC",
         "nnm.admin.bootstrap.enabled=false",
-        "nnm.warframe.polling.enabled=false",
+        "nnm.warframe.pull.polling.enabled=false",
         "shiro.ws.server.enable=false",
         "shiro.ws.client.enable=false"
         }
@@ -47,7 +53,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         scripts = "classpath:db/rbac-http-seed.sql",
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
 )
-@MockitoBean(types = {DistributedLockManager.class, CacheService.class})
+@MockitoBean(types = {DistributedLockManager.class, CacheService.class, DistributedLockTemplate.class, DistributedIdGenerator.class})
 class RbacHttpIntegrationTest {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -493,14 +499,14 @@ class RbacHttpIntegrationTest {
             String token,
             String body
     ) throws IOException, InterruptedException {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
+        Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + path))
                 .header("Accept", "application/json");
         if (token != null) {
             builder.header("Authorization", "Bearer " + token);
         }
 
-        HttpRequest.BodyPublisher publisher = body == null
+        BodyPublisher publisher = body == null
                 ? HttpRequest.BodyPublishers.noBody()
                 : HttpRequest.BodyPublishers.ofString(body);
         if (body != null) {

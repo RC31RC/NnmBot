@@ -1,5 +1,8 @@
 package com.nnm.bot.core.config;
 
+import com.nnm.bot.common.concurrent.BoundedTaskExecutor;
+import com.nnm.bot.core.config.ExecutorProperties.Task;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +12,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration(proxyBeanMethods = false)
@@ -37,7 +39,7 @@ public class ExecutorConfig {
     @Bean(name = "cpuTaskExecutor")
     public ThreadPoolTaskExecutor cpuTaskExecutor(ExecutorProperties properties) {
         properties.validate();
-        ExecutorProperties.Task task = properties.getTask();
+        Task task = properties.getTask();
 
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(task.getCoreSize());
@@ -46,11 +48,34 @@ public class ExecutorConfig {
         executor.setKeepAliveSeconds(Math.toIntExact(task.getKeepAlive().toSeconds()));
         executor.setAllowCoreThreadTimeOut(true);
         executor.setThreadNamePrefix("nnm-task-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(
                 Math.toIntExact(properties.getAwaitTermination().toSeconds()));
         return executor;
+    }
+
+    @Bean(destroyMethod = "close")
+    public BoundedTaskExecutor imageTaskExecutor(ExecutorProperties properties,
+            @Qualifier("cpuTaskExecutor")
+            AsyncTaskExecutor cpuExecutor) {
+        properties.validate();
+        return computationExecutor(cpuExecutor, properties,
+                properties.getTask().getMaxSize() + properties.getTask().getQueueCapacity());
+    }
+
+    @Bean(destroyMethod = "close")
+    public BoundedTaskExecutor ocrTaskExecutor(ExecutorProperties properties,
+            @Qualifier("cpuTaskExecutor")
+            AsyncTaskExecutor cpuExecutor) {
+        properties.validate();
+        return computationExecutor(cpuExecutor, properties, properties.getComputation().getOcrInFlight());
+    }
+
+    private BoundedTaskExecutor computationExecutor(AsyncTaskExecutor cpuExecutor,
+                                                   ExecutorProperties properties, int maxInFlight) {
+        return new BoundedTaskExecutor(cpuExecutor, maxInFlight,
+                properties.getComputation().getMaxQueueWait(), properties.getComputation().getResultTimeout());
     }
 
     /**
@@ -93,25 +118,19 @@ public class ExecutorConfig {
         return virtualExecutor("nnm-connect-", properties.getConnectionConcurrency(), properties);
     }
 
-    /** 父刷新任务不能占用此池；有界队列和调用方背压限制下载、JSON 解析的内存峰值。 */
+    /** 群组观察和成员同步不占命令回调；满载明确拒绝，禁止调用者补跑。 */
     @Bean
-    public ThreadPoolTaskExecutor communitySourceExecutor(ExecutorProperties properties) {
+    public ThreadPoolTaskExecutor qqGatewayEventExecutor(ExecutorProperties properties) {
         properties.validate();
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(properties.getCommunitySourceConcurrency());
-        executor.setMaxPoolSize(properties.getCommunitySourceConcurrency());
-        executor.setQueueCapacity(properties.getCommunitySourceQueueCapacity());
-        executor.setThreadNamePrefix("nnm-community-source-");
-        executor.setRejectedExecutionHandler((task, pool) -> {
-            if (pool.isShutdown()) {
-                throw new RejectedExecutionException(
-                        "Community source executor is shutting down");
-            }
-            task.run();
-        });
+        executor.setCorePoolSize(properties.getGatewayEvents().getConcurrency());
+        executor.setMaxPoolSize(properties.getGatewayEvents().getConcurrency());
+        executor.setQueueCapacity(properties.getGatewayEvents().getQueueCapacity());
+        executor.setThreadNamePrefix("nnm-qq-event-");
+        executor.setVirtualThreads(true);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(
-                Math.toIntExact(properties.getAwaitTermination().toSeconds()));
+        executor.setAwaitTerminationSeconds(Math.toIntExact(properties.getAwaitTermination().toSeconds()));
         return executor;
     }
 

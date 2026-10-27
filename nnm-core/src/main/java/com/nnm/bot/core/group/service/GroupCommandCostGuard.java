@@ -49,7 +49,7 @@ public class GroupCommandCostGuard implements CommandCostGuard {
         }
 
         BotGroupMember member = memberIdentityResolver
-                .findOrCreateForCommand(groupContext.group().getId(), context)
+                .findOrCreateForWrite(groupContext.group().getId(), context)
                 .filter(BotGroupMember::isEnabled)
                 .orElse(null);
         if (ObjectUtil.isNull(member)) {
@@ -112,7 +112,7 @@ public class GroupCommandCostGuard implements CommandCostGuard {
             throw new IllegalStateException("命令执行完成，但逻辑群组已不可用");
         }
         BotGroupMember member = memberIdentityResolver
-                .findOrCreateForCommand(groupContext.group().getId(), context)
+                .findOrCreateForWrite(groupContext.group().getId(), context)
                 .orElseThrow(() -> new IllegalStateException(
                         "命令执行完成，但群组成员已不存在"));
         PointChangeResult change = pointAccountService.earn(

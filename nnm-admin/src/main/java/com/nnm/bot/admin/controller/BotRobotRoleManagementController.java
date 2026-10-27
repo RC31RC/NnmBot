@@ -1,9 +1,11 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.vo.bot.role.BotRobotRoleVO;
+import com.nnm.bot.admin.controller.assembler.bot.role.AdminBotRoleViewAssembler;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.bot.BotRobotRoleItem;
-import com.nnm.bot.admin.dto.bot.BotRobotRoleSaveRequest;
-import com.nnm.bot.admin.service.BotRobotRoleManagementService;
+import com.nnm.bot.admin.pojo.dto.bot.role.BotRobotRoleDTO;
+import com.nnm.bot.admin.pojo.dto.bot.role.BotRobotRoleSaveDTO;
+import com.nnm.bot.admin.service.bot.role.BotRobotRoleManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
@@ -27,10 +29,10 @@ public class BotRobotRoleManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotRobotRoleItem>> list(
+    public ApiResponse<List<BotRobotRoleVO>> list(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.list());
+        return ApiResponse.ok(AdminBotRoleViewAssembler.toBotRobotRoleVO(service.list()));
     }
 
     @PostMapping
@@ -38,7 +40,7 @@ public class BotRobotRoleManagementController {
     public ApiResponse<Long> create(
             @Valid
             @RequestBody
-    BotRobotRoleSaveRequest request) {
+    BotRobotRoleSaveDTO request) {
         return ApiResponse.ok(service.create(request));
     }
 
@@ -49,7 +51,7 @@ public class BotRobotRoleManagementController {
             long id,
             @Valid
             @RequestBody
-            BotRobotRoleSaveRequest request) {
+            BotRobotRoleSaveDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }

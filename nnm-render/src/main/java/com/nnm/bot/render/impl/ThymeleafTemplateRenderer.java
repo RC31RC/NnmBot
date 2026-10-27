@@ -13,11 +13,13 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templateresolver.StringTemplateResolver;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Component
 public class ThymeleafTemplateRenderer implements TemplateRenderer {
 
     private static final int MAX_INLINE_TEMPLATE_LENGTH = 256 * 1024;
+    private static final Pattern TYPE_EXPRESSION = Pattern.compile("(?i)(?<![a-z0-9_])t\\s*\\(");
 
     @Resource
     private SpringTemplateEngine templateEngine;
@@ -47,7 +49,7 @@ public class ThymeleafTemplateRenderer implements TemplateRenderer {
         if (lowerCase.contains("<script")
                 || lowerCase.contains("th:utext")
                 || lowerCase.contains("@{")
-                || lowerCase.contains("t(")
+                || TYPE_EXPRESSION.matcher(html).find()
                 || lowerCase.contains("__")) {
             throw new IllegalArgumentException("inline html contains unsupported expression");
         }

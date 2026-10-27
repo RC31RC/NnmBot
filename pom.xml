@@ -29,6 +29,7 @@
 
     <properties>
         <java.version>21</java.version>
+        <openfeign-querydsl.version>7.7</openfeign-querydsl.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Spring 与 Spring Boot -->
@@ -52,6 +53,7 @@
         <!-- JMComic -->
         <jmcomic.version>1.1.8</jmcomic.version>
         <okhttp.version>4.12.0</okhttp.version>
+        <minio.version>8.5.17</minio.version>
         <webp-imageio.version>0.3.3</webp-imageio.version>
 
         <!-- 认证 -->
@@ -169,6 +171,13 @@
                 <version>${sa-token.version}</version>
             </dependency>
 
+            <!-- VaultS3 使用 S3 兼容协议，沿用 OkHttp 4.x。 -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio.version}</version>
+            </dependency>
+
             <!-- 通用工具 -->
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -232,10 +241,38 @@
                 <artifactId>cache2k-api</artifactId>
                 <version>${cache2k.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.cache2k</groupId>
+                <artifactId>cache2k-core</artifactId>
+                <version>${cache2k.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                    <!-- Lombok accessors must be available before metadata extraction. -->
+                    <annotationProcessors>
+                        <annotationProcessor>lombok.launch.AnnotationProcessorHider$AnnotationProcessor</annotationProcessor>
+                        <annotationProcessor>org.springframework.boot.configurationprocessor.ConfigurationMetadataAnnotationProcessor</annotationProcessor>
+                    </annotationProcessors>
+                </configuration>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>

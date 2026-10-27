@@ -1,50 +1,34 @@
 package com.nnm.bot.warframe.config;
 
-import java.time.Clock;
-
 import com.nnm.bot.common.http.NnmRestClientFactory;
-import com.nnm.bot.warframe.client.exchange.WarframeArbitrationHttpExchange;
-import com.nnm.bot.warframe.client.exchange.WarframeMarketV1HttpExchange;
-import com.nnm.bot.warframe.client.exchange.WarframeMarketV2HttpExchange;
-import com.nnm.bot.warframe.client.exchange.WarframeWorldStateHttpExchange;
-import com.nnm.bot.warframe.config.properties.WarframeArbitrationProperties;
-import com.nnm.bot.warframe.config.properties.WarframeCommunityDataProperties;
-import com.nnm.bot.warframe.config.properties.WarframeForumStorageProperties;
-import com.nnm.bot.warframe.config.properties.WarframeMarketApiProperties;
-import com.nnm.bot.warframe.config.properties.WarframeOfficialApiProperties;
-import com.nnm.bot.warframe.config.properties.WarframeOfficialDataProperties;
-import com.nnm.bot.warframe.config.properties.WarframeWorldStateDataProperties;
-import com.nnm.bot.warframe.config.properties.WarframeCycleProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import com.nnm.bot.warframe.runtime.client.market.exchange.WarframeMarketV1HttpExchange;
+import com.nnm.bot.warframe.runtime.client.market.exchange.WarframeMarketV2HttpExchange;
+import com.nnm.bot.warframe.runtime.client.worldstate.exchange.WarframeWorldStateHttpExchange;
+import com.nnm.bot.warframe.runtime.config.market.WarframeMarketApiProperties;
+import com.nnm.bot.warframe.runtime.config.worldstate.WarframeOfficialApiProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import java.time.Clock;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({
-        WarframeOfficialApiProperties.class,
-        WarframeMarketApiProperties.class,
-        WarframeCommunityDataProperties.class,
-        WarframeForumStorageProperties.class,
-        WarframeOfficialDataProperties.class,
-        WarframeWorldStateDataProperties.class,
-        WarframeCycleProperties.class,
-        WarframeArbitrationProperties.class
-})
 public class WarframeClientConfiguration {
 
+    /**
+     * 注册统一使用 UTC 的业务时钟，供运行时刷新与过期判断使用。
+     * @return 时钟对象。
+     */
     @Bean
     public Clock warframeClock() {
         return Clock.systemUTC();
     }
 
-    @Bean
-    public WarframeArbitrationHttpExchange warframeArbitrationHttpExchange(
-            NnmRestClientFactory clientFactory,
-            WarframeArbitrationProperties properties) {
-        return clientFactory.createClient(
-                properties.getUrl(), WarframeArbitrationHttpExchange.class);
-    }
-
+    /**
+     * 取得游戏资料市场HTTP声明式接口。
+     *
+     * @param clientFactory 客户端工厂。
+     * @param properties 当前业务配置。
+     * @return 游戏资料市场HTTP声明式接口对象。
+     */
     @Bean
     public WarframeMarketV1HttpExchange warframeMarketV1HttpExchange(
             NnmRestClientFactory clientFactory,
@@ -53,6 +37,13 @@ public class WarframeClientConfiguration {
                 properties.getV1BaseUrl(), WarframeMarketV1HttpExchange.class);
     }
 
+    /**
+     * 取得游戏资料市场HTTP声明式接口。
+     *
+     * @param clientFactory 客户端工厂。
+     * @param properties 当前业务配置。
+     * @return 游戏资料市场HTTP声明式接口对象。
+     */
     @Bean
     public WarframeMarketV2HttpExchange warframeMarketV2HttpExchange(
             NnmRestClientFactory clientFactory,
@@ -61,6 +52,13 @@ public class WarframeClientConfiguration {
                 properties.getV2BaseUrl(), WarframeMarketV2HttpExchange.class);
     }
 
+    /**
+     * 取得游戏资料世界状态HTTP声明式接口。
+     *
+     * @param clientFactory 客户端工厂。
+     * @param properties 当前业务配置。
+     * @return 游戏资料世界状态HTTP声明式接口对象。
+     */
     @Bean
     public WarframeWorldStateHttpExchange warframeWorldStateHttpExchange(
             NnmRestClientFactory clientFactory,

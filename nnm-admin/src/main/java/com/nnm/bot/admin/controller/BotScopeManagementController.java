@@ -1,13 +1,17 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.vo.bot.scope.BotScopeVO;
+import com.nnm.bot.admin.pojo.vo.bot.scope.BotScopeMemberVO;
+import com.nnm.bot.admin.pojo.vo.bot.scope.BotScopeDiscoveryVO;
+import com.nnm.bot.admin.controller.assembler.bot.scope.AdminBotScopeViewAssembler;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.bot.BotScopeItem;
-import com.nnm.bot.admin.dto.bot.BotScopeMemberItem;
-import com.nnm.bot.admin.dto.bot.BotScopeMemberUpdateRequest;
-import com.nnm.bot.admin.dto.bot.BotScopeCreateRequest;
-import com.nnm.bot.admin.dto.bot.BotScopeUpdateRequest;
-import com.nnm.bot.admin.dto.bot.BotScopeDiscoveryItem;
-import com.nnm.bot.admin.service.BotScopeManagementService;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDTO;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeMemberDTO;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeMemberUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeCreateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDiscoveryDTO;
+import com.nnm.bot.admin.service.bot.scope.BotScopeManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
@@ -31,18 +35,18 @@ public class BotScopeManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotScopeItem>> scopes(
+    public ApiResponse<List<BotScopeVO>> scopes(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.scopes());
+        return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeVO(service.scopes()));
     }
 
     @PostMapping("/discovery/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotScopeDiscoveryItem>> discovery(
+    public ApiResponse<List<BotScopeDiscoveryVO>> discovery(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.discover());
+        return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeDiscoveryVO(service.discover()));
     }
 
     @PostMapping
@@ -50,7 +54,7 @@ public class BotScopeManagementController {
     public ApiResponse<Long> create(
             @Valid
             @RequestBody
-    BotScopeCreateRequest request) {
+    BotScopeCreateDTO request) {
         return ApiResponse.ok(service.create(request));
     }
 
@@ -61,7 +65,7 @@ public class BotScopeManagementController {
             long id,
             @Valid
             @RequestBody
-            BotScopeUpdateRequest request) {
+            BotScopeUpdateDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
@@ -77,12 +81,12 @@ public class BotScopeManagementController {
 
     @PostMapping("/{id}/members/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotScopeMemberItem>> members(
+    public ApiResponse<List<BotScopeMemberVO>> members(
             @PathVariable
             long id,
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.members(id));
+        return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeMemberVO(service.members(id)));
     }
 
     @PutMapping("/{scopeId}/members/{memberId}")
@@ -94,7 +98,7 @@ public class BotScopeManagementController {
             long memberId,
             @Valid
             @RequestBody
-            BotScopeMemberUpdateRequest request) {
+            BotScopeMemberUpdateDTO request) {
         service.updateMember(scopeId, memberId, request);
         return ApiResponse.ok();
     }

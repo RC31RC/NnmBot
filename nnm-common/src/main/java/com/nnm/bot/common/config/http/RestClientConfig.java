@@ -1,5 +1,6 @@
 package com.nnm.bot.common.config.http;
 
+import java.net.http.HttpClient.Builder;
 import com.nnm.bot.common.http.ResponseSizeLimitInterceptor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.Resource;
@@ -38,7 +39,7 @@ public class RestClientConfig {
     @ConditionalOnMissingBean(ClientHttpRequestFactory.class)
     public ClientHttpRequestFactory nnmClientHttpRequestFactory() {
         properties.validate();
-        HttpClient.Builder httpClientBuilder = HttpClient.newBuilder()
+        Builder httpClientBuilder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(properties.getConnectTimeout())
                 .followRedirects(HttpClient.Redirect.NORMAL);

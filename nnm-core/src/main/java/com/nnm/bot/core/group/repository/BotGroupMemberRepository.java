@@ -2,6 +2,8 @@ package com.nnm.bot.core.group.repository;
 
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.util.Collection;
 import java.util.List;
@@ -21,6 +23,9 @@ public interface BotGroupMemberRepository extends JpaRepository<BotGroupMember, 
             Long groupId, String memberOpenid);
 
     Optional<BotGroupMember> findByGroupIdAndKookId(Long groupId, String kookId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<BotGroupMember> findByIdAndGroupId(Long id, Long groupId);
 
     void deleteAllByGroupId(Long groupId);
 }

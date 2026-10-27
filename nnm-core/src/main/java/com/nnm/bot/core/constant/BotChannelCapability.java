@@ -8,6 +8,15 @@ public enum BotChannelCapability {
     IMAGE_MESSAGE,
     FILE_MESSAGE,
     MARKDOWN_MESSAGE,
+    NATIVE_KEYBOARD,
+    /** Discoverable scopes, possibly only those observed through events. */
+    GROUP_DISCOVERY,
+    /** An authoritative platform API enumerating the bot's current groups. */
+    GROUP_LIST,
     GROUP_MEMBER_LIST,
-    GROUP_MEMBER_DETAIL
+    GROUP_MEMBER_DETAIL,
+    /** Ordinary members joining or leaving a group. */
+    GROUP_MEMBER_EVENTS,
+    /** The bot itself being added to or removed from a group. */
+    BOT_GROUP_MEMBERSHIP_EVENTS
 }

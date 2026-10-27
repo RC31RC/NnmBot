@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.registry;
 
+import java.util.Map.Entry;
+import java.lang.Character.UnicodeScript;
 import cn.hutool.core.util.ObjectUtil;
 
 import com.nnm.bot.core.constant.CommandBoundaryPolicy;
@@ -33,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 将静态插件实现和数据库命令定义合并为运行时索引。
@@ -40,6 +43,7 @@ import java.util.Optional;
 @Slf4j
 @Component
 public class CommandRegistry {
+    private final ReentrantLock refreshLock = new ReentrantLock();
 
     @Resource
     private List<BotPlugin> botPlugins;
@@ -59,14 +63,19 @@ public class CommandRegistry {
     /**
      * 完整构建成功后再替换快照，配置错误时保留当前可用索引。
      */
-    public synchronized void refresh() {
-        Snapshot replacement = buildSnapshot();
-        snapshot = replacement;
-        log.info("Registered {} bot commands: {}",
-                replacement.commands().size(),
-                replacement.commands().stream()
-                        .map(command -> command.descriptor().code())
-                        .toList());
+    public void refresh() {
+        refreshLock.lock();
+        try {
+            Snapshot replacement = buildSnapshot();
+            snapshot = replacement;
+            log.info("Registered {} bot commands: {}",
+                    replacement.commands().size(),
+                    replacement.commands().stream()
+                            .map(command -> command.descriptor().code())
+                            .toList());
+        } finally {
+            refreshLock.unlock();
+        }
     }
 
     /**
@@ -209,7 +218,7 @@ public class CommandRegistry {
         Map<String, Lookup> exactCommands = new HashMap<>();
         List<Lookup> prefixCommands = new ArrayList<>();
 
-        for (Map.Entry<String, BotPlugin> entry : pluginsByCode.entrySet()) {
+        for (Entry<String,BotPlugin> entry : pluginsByCode.entrySet()) {
             BotPlugin plugin = entry.getValue();
             CommandDefinition definition = definitionsByCode.remove(entry.getKey());
             if (ObjectUtil.isNull(definition)) {
@@ -335,7 +344,7 @@ public class CommandRegistry {
     }
 
     private static boolean isCjk(int codePoint) {
-        Character.UnicodeScript script = Character.UnicodeScript.of(codePoint);
+        UnicodeScript script = Character.UnicodeScript.of(codePoint);
         return script == Character.UnicodeScript.HAN
                 || script == Character.UnicodeScript.HIRAGANA
                 || script == Character.UnicodeScript.KATAKANA

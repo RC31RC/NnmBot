@@ -14,12 +14,12 @@ class SerializedWebSocketSessionTest {
         WebSocketSession delegate = mock(WebSocketSession.class);
         when(delegate.isOpen()).thenReturn(true);
         AtomicBoolean held = new AtomicBoolean(true);
-        var session = new SerializedWebSocketSession(delegate, held::get);
-        var first = new TextMessage("first");
+        SerializedWebSocketSession session = new SerializedWebSocketSession(delegate, held::get);
+        TextMessage first = new TextMessage("first");
         session.sendMessage(first);
         verify(delegate).sendMessage(first);
         held.set(false);
-        var stale = new TextMessage("stale");
+        TextMessage stale = new TextMessage("stale");
         assertThatThrownBy(() -> session.sendMessage(stale)).isInstanceOf(IOException.class);
         verify(delegate, never()).sendMessage(stale);
         verify(delegate).close();

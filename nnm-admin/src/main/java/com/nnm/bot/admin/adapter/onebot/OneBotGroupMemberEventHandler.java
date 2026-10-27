@@ -8,8 +8,9 @@ import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
 import com.mikuac.shiro.dto.event.notice.GroupDecreaseNoticeEvent;
 import com.mikuac.shiro.dto.event.notice.GroupIncreaseNoticeEvent;
-import com.nnm.bot.admin.service.BotGroupManagementService;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
+import com.nnm.bot.core.channel.port.BotGroupMemberEventSink;
+import com.nnm.bot.core.constant.BotPlatform;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class OneBotGroupMemberEventHandler {
 
     @Resource
-    private BotGroupManagementService groupManagementService;
+    private BotGroupMemberEventSink memberEvents;
 
     @GroupIncreaseHandler
     public void onIncrease(Bot bot, GroupIncreaseNoticeEvent event) {
@@ -33,9 +34,10 @@ public class OneBotGroupMemberEventHandler {
         }
         try {
             BotDiscoveredMember member = queryMember(bot, event.getGroupId(), event.getUserId());
-            groupManagementService.handleOneBotMemberJoined(
+            memberEvents.handleMemberJoined(
+                    BotPlatform.ONEBOT,
                     String.valueOf(bot.getSelfId()),
-                    event.getGroupId(),
+                    String.valueOf(event.getGroupId()),
                     member);
         } catch (RuntimeException exception) {
             log.warn("OneBot 入群成员同步失败: groupId={}, userId={}",
@@ -52,10 +54,11 @@ public class OneBotGroupMemberEventHandler {
             return;
         }
         try {
-            groupManagementService.handleOneBotMemberLeft(
+            memberEvents.handleMemberLeft(
+                    BotPlatform.ONEBOT,
                     String.valueOf(bot.getSelfId()),
-                    event.getGroupId(),
-                    event.getUserId());
+                    String.valueOf(event.getGroupId()),
+                    String.valueOf(event.getUserId()));
         } catch (RuntimeException exception) {
             log.warn("OneBot 退群成员同步失败: groupId={}, userId={}",
                     event.getGroupId(), event.getUserId(), exception);

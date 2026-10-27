@@ -1,9 +1,9 @@
 package com.nnm.bot.admin.security;
 
 import cn.dev33.satoken.stp.StpInterface;
-import com.nnm.bot.admin.domain.SysRole;
-import com.nnm.bot.admin.domain.SysUser;
-import com.nnm.bot.admin.repository.SysUserRepository;
+import com.nnm.bot.admin.pojo.entity.system.SysRole;
+import com.nnm.bot.admin.pojo.entity.system.SysUser;
+import com.nnm.bot.admin.repository.system.SysUserRepository;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 

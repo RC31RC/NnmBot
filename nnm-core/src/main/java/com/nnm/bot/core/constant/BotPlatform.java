@@ -8,12 +8,20 @@ public enum BotPlatform {
             BotChannelCapability.IMAGE_MESSAGE,
             BotChannelCapability.FILE_MESSAGE,
             BotChannelCapability.GROUP_MEMBER_LIST,
-            BotChannelCapability.GROUP_MEMBER_DETAIL),
+            BotChannelCapability.GROUP_MEMBER_DETAIL,
+            BotChannelCapability.GROUP_DISCOVERY,
+            BotChannelCapability.GROUP_LIST,
+            BotChannelCapability.GROUP_MEMBER_EVENTS),
     QQ_OFFICIAL(
             BotChannelCapability.TEXT_MESSAGE,
             BotChannelCapability.IMAGE_MESSAGE,
             BotChannelCapability.FILE_MESSAGE,
-            BotChannelCapability.MARKDOWN_MESSAGE);
+            BotChannelCapability.MARKDOWN_MESSAGE,
+            BotChannelCapability.GROUP_DISCOVERY,
+            BotChannelCapability.GROUP_MEMBER_LIST,
+            BotChannelCapability.GROUP_MEMBER_DETAIL,
+            BotChannelCapability.GROUP_MEMBER_EVENTS,
+            BotChannelCapability.BOT_GROUP_MEMBERSHIP_EVENTS);
 
     private final Set<BotChannelCapability> capabilities;
 
@@ -27,4 +35,5 @@ public enum BotPlatform {
     public Set<BotChannelCapability> capabilities() {
         return this.capabilities;
     }
+
 }

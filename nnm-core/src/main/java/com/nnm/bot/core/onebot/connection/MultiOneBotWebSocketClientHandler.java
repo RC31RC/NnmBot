@@ -17,6 +17,8 @@ import com.mikuac.shiro.handler.ActionHandler;
 import com.mikuac.shiro.handler.EventHandler;
 import com.mikuac.shiro.properties.WebSocketProperties;
 import com.mikuac.shiro.task.ShiroAsyncTask;
+import com.nnm.bot.core.onebot.message.OneBotMessageArrivalStore;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
@@ -43,6 +45,8 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
     private final CoreEvent coreEvent;
     private final ThreadPoolTaskExecutor shiroTaskExecutor;
     private final ConcurrentMap<String, Set<Long>> sessionAccounts = new ConcurrentHashMap<>();
+    @Resource
+    private OneBotMessageArrivalStore messageArrivals;
 
     public MultiOneBotWebSocketClientHandler(
             EventHandler eventHandler,
@@ -68,7 +72,15 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-        String accountId = messageAccountId(message);
+        long receivedAt = System.currentTimeMillis();
+        JsonObjectWrapper payload = JsonUtils.isValid(message.getPayload())
+                ? JsonObjectWrapper.parseObject(message.getPayload()) : null;
+        Object selfId = payload == null ? null : payload.get(Connection.SELF_ID);
+        String accountId = selfId == null ? null : selfId.toString();
+        if (payload != null && accountId != null && "message".equals(payload.get("post_type"))
+                && payload.get("message_id") != null) {
+            messageArrivals.record(session.getId(), accountId, payload.get("message_id").toString(), receivedAt);
+        }
         if (ObjectUtil.isNotNull(accountId)) {
             session.getAttributes().put(Connection.X_SELF_ID, accountId);
             long numericAccountId = parseAccountId(accountId);
@@ -108,14 +120,6 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
             return;
         }
         CompletableFuture.runAsync(() -> coreEvent.offline(accountId), shiroTaskExecutor);
-    }
-
-    private static String messageAccountId(TextMessage message) {
-        if (!JsonUtils.isValid(message.getPayload())) {
-            return null;
-        }
-        Object value = JsonObjectWrapper.parseObject(message.getPayload()).get(Connection.SELF_ID);
-        return ObjectUtil.isNull(value) ? null : value.toString();
     }
 
     private static long parseAccountId(String accountId) {

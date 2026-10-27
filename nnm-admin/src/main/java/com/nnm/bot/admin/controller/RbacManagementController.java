@@ -1,16 +1,18 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.dto.system.RoleGrantSaveDTO;
+import com.nnm.bot.admin.pojo.vo.system.RoleGrantVO;
+import com.nnm.bot.admin.controller.assembler.system.AdminSystemViewAssembler;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
-import com.nnm.bot.admin.dto.system.MenuSaveRequest;
-import com.nnm.bot.admin.dto.system.PermissionSaveRequest;
-import com.nnm.bot.admin.dto.system.RoleGrantRequest;
-import com.nnm.bot.admin.dto.system.RoleGrantResponse;
-import com.nnm.bot.admin.dto.system.RoleSaveRequest;
-import com.nnm.bot.admin.dto.system.UserRoleRequest;
-import com.nnm.bot.admin.dto.system.UserSaveRequest;
-import com.nnm.bot.admin.dto.system.UserStatusRequest;
-import com.nnm.bot.admin.service.RbacManagementService;
+import com.nnm.bot.admin.pojo.dto.system.MenuSaveDTO;
+import com.nnm.bot.admin.pojo.dto.system.PermissionSaveDTO;
+import com.nnm.bot.admin.pojo.dto.system.RoleGrantDTO;
+import com.nnm.bot.admin.pojo.dto.system.RoleSaveDTO;
+import com.nnm.bot.admin.pojo.dto.system.UserRoleDTO;
+import com.nnm.bot.admin.pojo.dto.system.UserSaveDTO;
+import com.nnm.bot.admin.pojo.dto.system.UserStatusDTO;
+import com.nnm.bot.admin.service.system.RbacManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
@@ -35,7 +37,7 @@ public class RbacManagementController {
     public ApiResponse<Long> createUser(
             @Valid
             @RequestBody
-    UserSaveRequest request) {
+    UserSaveDTO request) {
         return ApiResponse.ok(managementService.createUser(StpUtil.getLoginIdAsLong(), request));
     }
 
@@ -46,7 +48,7 @@ public class RbacManagementController {
             long userId,
             @Valid
             @RequestBody
-            UserSaveRequest request
+            UserSaveDTO request
     ) {
         managementService.updateUser(StpUtil.getLoginIdAsLong(), userId, request);
         return ApiResponse.ok();
@@ -59,7 +61,7 @@ public class RbacManagementController {
             long userId,
             @Valid
             @RequestBody
-            UserStatusRequest request
+            UserStatusDTO request
     ) {
         managementService.updateUserStatus(StpUtil.getLoginIdAsLong(), userId, request);
         return ApiResponse.ok();
@@ -72,7 +74,7 @@ public class RbacManagementController {
             long userId,
             @Valid
             @RequestBody
-            UserRoleRequest request
+            UserRoleDTO request
     ) {
         managementService.assignUserRoles(StpUtil.getLoginIdAsLong(), userId, request);
         return ApiResponse.ok();
@@ -83,7 +85,7 @@ public class RbacManagementController {
     public ApiResponse<Long> createRole(
             @Valid
             @RequestBody
-    RoleSaveRequest request) {
+    RoleSaveDTO request) {
         return ApiResponse.ok(managementService.createRole(StpUtil.getLoginIdAsLong(), request));
     }
 
@@ -94,7 +96,7 @@ public class RbacManagementController {
             long roleId,
             @Valid
             @RequestBody
-            RoleSaveRequest request
+            RoleSaveDTO request
     ) {
         managementService.updateRole(StpUtil.getLoginIdAsLong(), roleId, request);
         return ApiResponse.ok();
@@ -111,12 +113,12 @@ public class RbacManagementController {
 
     @PostMapping("/roles/{roleId}/grants/query")
     @SaCheckPermission("system:role:assign")
-    public ApiResponse<RoleGrantResponse> roleGrants(
+    public ApiResponse<RoleGrantVO> roleGrants(
             @PathVariable
             long roleId,
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(managementService.roleGrants(StpUtil.getLoginIdAsLong(), roleId));
+        return ApiResponse.ok(AdminSystemViewAssembler.toRoleGrantVO(managementService.roleGrants(StpUtil.getLoginIdAsLong(), roleId)));
     }
 
     @PutMapping("/roles/{roleId}/grants")
@@ -126,7 +128,7 @@ public class RbacManagementController {
             long roleId,
             @Valid
             @RequestBody
-            RoleGrantRequest request
+            RoleGrantSaveDTO request
     ) {
         managementService.assignRoleGrants(StpUtil.getLoginIdAsLong(), roleId, request);
         return ApiResponse.ok();
@@ -137,7 +139,7 @@ public class RbacManagementController {
     public ApiResponse<Long> createMenu(
             @Valid
             @RequestBody
-    MenuSaveRequest request) {
+    MenuSaveDTO request) {
         return ApiResponse.ok(managementService.createMenu(request));
     }
 
@@ -148,7 +150,7 @@ public class RbacManagementController {
             long menuId,
             @Valid
             @RequestBody
-            MenuSaveRequest request
+            MenuSaveDTO request
     ) {
         managementService.updateMenu(menuId, request);
         return ApiResponse.ok();
@@ -168,7 +170,7 @@ public class RbacManagementController {
     public ApiResponse<Long> createPermission(
             @Valid
             @RequestBody
-    PermissionSaveRequest request) {
+    PermissionSaveDTO request) {
         return ApiResponse.ok(managementService.createPermission(request));
     }
 
@@ -179,7 +181,7 @@ public class RbacManagementController {
             long permissionId,
             @Valid
             @RequestBody
-            PermissionSaveRequest request
+            PermissionSaveDTO request
     ) {
         managementService.updatePermission(permissionId, request);
         return ApiResponse.ok();

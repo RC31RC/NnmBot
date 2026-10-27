@@ -1,15 +1,16 @@
 package com.nnm.bot.admin.service.impl;
 
+import com.nnm.bot.admin.service.bot.role.impl.BotRobotRoleManagementServiceImpl;
 import org.mockito.ArgumentMatchers;
 import io.github.rdt.lock.DistributedLockManager;
-import com.nnm.bot.admin.domain.BotChannelInstance;
-import com.nnm.bot.admin.domain.BotRobotRole;
-import com.nnm.bot.admin.domain.BotRobotRoleInstance;
-import com.nnm.bot.admin.repository.BotChannelInstanceRepository;
-import com.nnm.bot.admin.repository.BotCommandRepository;
-import com.nnm.bot.admin.repository.BotCommandRobotRoleRepository;
-import com.nnm.bot.admin.repository.BotRobotRoleInstanceRepository;
-import com.nnm.bot.admin.repository.BotRobotRoleRepository;
+import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
+import com.nnm.bot.admin.pojo.entity.bot.role.BotRobotRole;
+import com.nnm.bot.admin.pojo.entity.bot.role.BotRobotRoleInstance;
+import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
+import com.nnm.bot.admin.repository.bot.command.BotCommandRepository;
+import com.nnm.bot.admin.repository.bot.command.BotCommandRobotRoleRepository;
+import com.nnm.bot.admin.repository.bot.role.BotRobotRoleInstanceRepository;
+import com.nnm.bot.admin.repository.bot.role.BotRobotRoleRepository;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

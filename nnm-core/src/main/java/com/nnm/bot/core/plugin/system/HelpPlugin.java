@@ -19,7 +19,8 @@ import java.util.Locale;
         matchType = MatchType.EXACT,
         name = "帮助",
         gameCode = "system",
-        order = Integer.MIN_VALUE)
+        order = Integer.MIN_VALUE,
+        allowRelatedAction = true)
 public class HelpPlugin extends BotPlugin {
 
     @Resource

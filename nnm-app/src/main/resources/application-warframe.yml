@@ -1,0 +1,36 @@
+# Warframe business settings bind independently by subsystem; nested budgets stay with their owner.
+# forum.storage 管理附件，pull 管理来源和拉取，query 管理查询/周期，cache 管理 JVM 本地业务缓存；动态快照不落数据库或 Redis。
+# 本文件仅保留环境变量入口、项目路径差异，不重复默认容量、超时、周期与 API 地址。
+# query 与 cache 当前无差异项，使用代码默认值；世界状态自动轮询默认暂停。
+# 官方/Market/图片/周报的默认来源见各子属性类型；HTTP 通用策略使用 nnm.http 默认值。
+# 人工白名单来源通过管理端配置，上传和拉取统一审核。
+nnm:
+  warframe:
+    forum:
+      public-base-url: ${NNM_WARFRAME_FORUM_PUBLIC_BASE_URL:http://localhost:3006}
+      storage:
+        # 存储连接统一在 application.yml 的 nnm.storage；这里仅管理论坛附件行为。
+        max-file-bytes: ${NNM_WARFRAME_FORUM_MAX_FILE_BYTES:52428800}
+    pull:
+      arbitration:
+        enabled: ${NNM_WARFRAME_ARBITRATION_ENABLED:true}
+        url: ${NNM_WARFRAME_ARBITRATION_URL:https://browse.wf/arbys.txt}
+        cron: ${NNM_WARFRAME_ARBITRATION_CRON:0 */5 * * * *}
+        zone: ${NNM_WARFRAME_ARBITRATION_ZONE:Asia/Shanghai}
+        refresh-interval: ${NNM_WARFRAME_ARBITRATION_REFRESH_INTERVAL:30m}
+        retry-interval: ${NNM_WARFRAME_ARBITRATION_RETRY_INTERVAL:1m}
+        history-retention: ${NNM_WARFRAME_ARBITRATION_HISTORY_RETENTION:90d}
+        max-records: ${NNM_WARFRAME_ARBITRATION_MAX_RECORDS:50000}
+        max-response-bytes: ${NNM_WARFRAME_ARBITRATION_MAX_RESPONSE_BYTES:5242880}
+      dataset:
+        source-mode: ${NNM_WARFRAME_DATASET_SOURCE_MODE:LOCAL}
+        local-data-directory: ${NNM_WARFRAME_DATASET_DIRECTORY:${user.dir}/../warframe-datasource-nnm/data/latest}
+        local-ref: ${NNM_WARFRAME_DATASET_LOCAL_REF:local}
+        local-commit: ${NNM_WARFRAME_DATASET_LOCAL_COMMIT:}
+        local-version-timeout: ${NNM_WARFRAME_DATASET_LOCAL_VERSION_TIMEOUT:5s}
+      market-api:
+        version: ${NNM_WARFRAME_MARKET_API_VERSION:v2}
+        api-key: ${NNM_WARFRAME_MARKET_API_KEY:}
+        user-agent: ${NNM_WARFRAME_MARKET_USER_AGENT:NnmBot/1.0}
+      bounty-cycle:
+        enabled: ${NNM_WARFRAME_BOUNTY_CYCLE_ENABLED:true}

@@ -1,40 +1,43 @@
 package com.nnm.bot.core.task;
 
+import com.nnm.bot.common.constant.TaskConstants.AdminTaskStatus;
+
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.common.task.*;
-import com.nnm.bot.core.config.DistributedProperties;
-import io.github.rdt.cache.CacheEntry;
-import io.github.rdt.cache.CacheService;
+import com.nnm.bot.core.config.ClusterProperties;
+import io.github.rdt.state.SharedStateStore;
 import io.github.rdt.exception.RdtException;
 import io.github.rdt.exception.RdtErrorCode;
 import jakarta.annotation.Resource;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 /** Share snapshots, not Java closures. A crashed worker is reported as failed, never replayed blindly. */
 @Slf4j
 @Service
-@ConditionalOnProperty(prefix = "nnm.distributed", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RedisAdminTaskService implements AdminTaskService {
     @Resource
-    private CacheService cache;
+    private SharedStateStore stateStore;
     @Resource
     private AdminTaskCoordination coordination;
     @Resource
-    private DistributedProperties properties;
+    private ClusterProperties properties;
     @Resource(name = "applicationTaskExecutor")
     private Executor executor;
     @Resource(name = "taskScheduler")
@@ -46,14 +49,14 @@ public class RedisAdminTaskService implements AdminTaskService {
         if (type == null || type.isBlank() || permission == null || permission.isBlank() || work == null) {
             throw new IllegalArgumentException("Task type, permission and work are required");
         }
-        // Reserve atomically, but submit outside the lock: CallerRunsPolicy can execute inline.
+        // Submit outside the distributed lock: the bounded executor can block the submitting thread.
         Reservation reservation = coordination.reserve(type, () -> {
             Optional<UUID> active = findActive(type);
             if (active.isPresent()) return new Reservation(active.get(), false);
             UUID id = UUID.randomUUID();
             save(new StoredTask(permission, Instant.now().plus(properties.taskTimeout()),
                     event(id, type, AdminTaskStatus.QUEUED, "QUEUED", "任务已排队", 0, 0, null, null, null, 1)));
-            cache.put("admin-task-active:" + type, id, properties.taskTimeout().plus(properties.taskRetention()));
+            stateStore.put("admin-task-active:" + type, id, properties.taskTimeout().plus(properties.taskRetention()));
             log.info("管理端任务已提交, type={}, taskId={}, mode=redis", type, id);
             return new Reservation(id, true);
         });
@@ -82,11 +85,8 @@ public class RedisAdminTaskService implements AdminTaskService {
 
     @Override
     public Optional<UUID> findActive(String type) {
-        CacheEntry<UUID> entry = cache.get("admin-task-active:" + type, UUID.class);
-        if (entry instanceof CacheEntry.Hit<UUID> hit && hit.value() != null) {
-            return find(hit.value()).filter(RedisAdminTaskService::active).map(AdminTaskEvent::taskId);
-        }
-        return Optional.empty();
+        return stateStore.<UUID>get("admin-task-active:" + type, UUID.class)
+                .flatMap(this::find).filter(RedisAdminTaskService::active).map(AdminTaskEvent::taskId);
     }
 
     @Override
@@ -149,9 +149,20 @@ public class RedisAdminTaskService implements AdminTaskService {
         }
     }
 
+    private static Throwable unwrap(Throwable failure) {
+        Throwable current = failure;
+        while ((current instanceof CompletionException
+                || current instanceof ExecutionException
+                || current instanceof UndeclaredThrowableException)
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
+    }
+
     private void fail(UUID id, Exception exception) {
         log.warn("Admin task failed: {}", id, exception);
-        Throwable cause = InMemoryAdminTaskService.unwrap(exception);
+        Throwable cause = unwrap(exception);
         int code = CommonErrorCode.SYSTEM_ERROR.getCode();
         String message = CommonErrorCode.SYSTEM_ERROR.getMessage();
         String type = "SYSTEM";
@@ -166,7 +177,7 @@ public class RedisAdminTaskService implements AdminTaskService {
         update(id, AdminTaskStatus.FAILED, "FAILED", message, 0, 0, null, code, type);
     }
 
-    private synchronized void update(UUID id, AdminTaskStatus status, String stage, String message,
+    private void update(UUID id, AdminTaskStatus status, String stage, String message,
                                      long current, long total, Object result, Integer code, String errorType) {
         StoredTask task = load(id).orElseThrow();
         coordination.reserve(task.event().taskType(), () -> {
@@ -213,24 +224,22 @@ public class RedisAdminTaskService implements AdminTaskService {
     }
 
     private void clearActive(String type, UUID taskId) {
-        CacheEntry<UUID> entry = cache.get("admin-task-active:" + type, UUID.class);
-        if (entry instanceof CacheEntry.Hit<UUID> hit && taskId.equals(hit.value())) {
-            cache.evict("admin-task-active:" + type);
+        if (stateStore.<UUID>get("admin-task-active:" + type, UUID.class).filter(taskId::equals).isPresent()) {
+            stateStore.evict("admin-task-active:" + type);
         }
     }
 
     private void refreshActive(String type, UUID taskId) {
-        cache.put("admin-task-active:" + type, taskId,
+        stateStore.put("admin-task-active:" + type, taskId,
                 properties.taskTimeout().plus(properties.taskRetention()));
     }
 
     private Optional<StoredTask> load(UUID id) {
-        CacheEntry<StoredTask> entry = cache.get("admin-task:" + id, StoredTask.class);
-        return entry instanceof CacheEntry.Hit<StoredTask> hit ? Optional.ofNullable(hit.value()) : Optional.empty();
+        return stateStore.get("admin-task:" + id, StoredTask.class);
     }
 
     private void save(StoredTask task) {
-        cache.put("admin-task:" + task.event().taskId(), task,
+        stateStore.put("admin-task:" + task.event().taskId(), task,
                 properties.taskRetention().plus(properties.taskTimeout()));
     }
 
@@ -258,6 +267,8 @@ public class RedisAdminTaskService implements AdminTaskService {
     private record Reservation(UUID id, boolean created) { }
 
     private final class ProgressSubscription {
+        private final ReentrantLock subscriptionLock = new ReentrantLock();
+
         private final UUID id;
         private final Consumer<AdminTaskEvent> listener;
         private long sequence = -1;
@@ -267,28 +278,43 @@ public class RedisAdminTaskService implements AdminTaskService {
             this.id = id;
             this.listener = listener;
         }
-        private synchronized void start() {
-            if (!closed) future = scheduler.scheduleWithFixedDelay(this::poll, properties.taskPollInterval());
-        }
-        private synchronized void poll() {
-            if (closed) return;
+        private void start() {
+            subscriptionLock.lock();
             try {
-                find(id).ifPresent(event -> {
-                    if (event.sequence() > sequence) {
-                        sequence = event.sequence();
-                        listener.accept(event);
-                    }
-                    if (!active(event)) close();
-                });
-            } catch (RuntimeException exception) {
-                log.debug("Task progress polling failed: {}", id, exception);
+                if (!closed) future = scheduler.scheduleWithFixedDelay(this::poll, properties.taskPollInterval());
+            } finally {
+                subscriptionLock.unlock();
             }
         }
-        private synchronized void close() {
-            if (closed) return;
-            closed = true;
-            if (future != null) future.cancel(false);
-            subscribers.decrementAndGet();
+        private void poll() {
+            subscriptionLock.lock();
+            try {
+                if (closed) return;
+                try {
+                    find(id).ifPresent(event -> {
+                        if (event.sequence() > sequence) {
+                            sequence = event.sequence();
+                            listener.accept(event);
+                        }
+                        if (!active(event)) close();
+                    });
+                } catch (RuntimeException exception) {
+                    log.debug("Task progress polling failed: {}", id, exception);
+                }
+            } finally {
+                subscriptionLock.unlock();
+            }
+        }
+        private void close() {
+            subscriptionLock.lock();
+            try {
+                if (closed) return;
+                closed = true;
+                if (future != null) future.cancel(false);
+                subscribers.decrementAndGet();
+            } finally {
+                subscriptionLock.unlock();
+            }
         }
     }
 }

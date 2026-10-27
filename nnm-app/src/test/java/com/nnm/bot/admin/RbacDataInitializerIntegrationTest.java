@@ -1,24 +1,29 @@
 package com.nnm.bot.admin;
 
-import io.github.rdt.lock.DistributedLockManager;
-import io.github.rdt.cache.CacheService;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import com.nnm.bot.admin.config.properties.AdminBootstrapProperties;
+import com.nnm.bot.admin.pojo.entity.system.SysUser;
 import com.nnm.bot.admin.bootstrap.RbacDataInitializer;
+import com.nnm.bot.admin.config.properties.AdminBootstrapProperties;
 import com.nnm.bot.admin.constant.DataScope;
-import com.nnm.bot.admin.domain.SysRole;
-import com.nnm.bot.admin.repository.SysMenuRepository;
-import com.nnm.bot.admin.repository.SysRoleRepository;
-import com.nnm.bot.admin.repository.SysUserRepository;
+import com.nnm.bot.admin.pojo.entity.system.SysRole;
+import com.nnm.bot.admin.repository.system.SysMenuRepository;
+import com.nnm.bot.admin.repository.system.SysRoleRepository;
+import com.nnm.bot.admin.repository.system.SysUserRepository;
+import com.nnm.bot.support.OfflineRedis;
+import io.github.rdt.cache.CacheService;
+import io.github.rdt.id.DistributedIdGenerator;
+import io.github.rdt.lock.DistributedLockManager;
+import io.github.rdt.lock.DistributedLockTemplate;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@OfflineRedis
 @SpringBootTest(properties = {
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.url=jdbc:h2:mem:nnm-rbac-bootstrap;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
@@ -27,11 +32,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.properties.hibernate.default_schema=PUBLIC",
         "nnm.admin.bootstrap.enabled=false",
-        "nnm.warframe.polling.enabled=false",
+        "nnm.warframe.pull.polling.enabled=false",
         "shiro.ws.server.enable=false",
         "shiro.ws.client.enable=false"
 })
-@MockitoBean(types = {DistributedLockManager.class, CacheService.class})
+@MockitoBean(types = {DistributedLockManager.class, CacheService.class, DistributedLockTemplate.class, DistributedIdGenerator.class})
 class RbacDataInitializerIntegrationTest {
 
     @Resource
@@ -74,7 +79,7 @@ class RbacDataInitializerIntegrationTest {
         bootstrapProperties.setPassword("admin123");
         initializer.run(null);
 
-        var admin = userRepository.findByUsername("admin").orElseThrow();
+        SysUser admin = userRepository.findByUsername("admin").orElseThrow();
         assertThat(admin.getRoles()).extracting(SysRole::getCode).containsExactly("R_SUPER");
         assertThat(passwordEncoder.matches("admin123", admin.getPassword())).isTrue();
         assertThat(menuRepository.count()).isZero();

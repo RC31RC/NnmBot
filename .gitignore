@@ -43,7 +43,7 @@ src/main/resources/application-local.yaml
 !nnm-app/src/test/java/com/nnm/bot/DistributedApplicationTest.java
 !nnm-core/src/test/java/com/nnm/bot/core/channel/runtime/ClusterBotRuntimeTest.java
 !nnm-core/src/test/java/com/nnm/bot/core/onebot/connection/SerializedWebSocketSessionTest.java
-!nnm-warframe/src/test/java/com/nnm/bot/warframe/application/WorldStateWatchListenerTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/listener/watch/WorldStateWatchListenerTest.java
 
 # 线程、HTTP 与锁接入回归测试需要随实现保留。
 !nnm-common/src/test/java/com/nnm/bot/common/http/HttpClientTest.java
@@ -53,5 +53,107 @@ src/main/resources/application-local.yaml
 !nnm-admin/src/test/java/com/nnm/bot/admin/service/impl/BotRobotRoleManagementServiceImplTest.java
 !nnm-admin/src/test/java/com/nnm/bot/admin/service/impl/BotGroupManagementServiceImplTest.java
 
+# JMComic download switches and page-order regressions must accompany the implementation.
+!nnm-core/src/test/java/com/nnm/bot/core/jmcomic/**
+
+# Data catalog and isolated SQL validation inputs must accompany their scripts.
+!nnm-app/src/test/java/com/nnm/bot/ProjectCatalogTest.java
+!nnm-app/src/test/java/com/nnm/bot/PostgresSchemaValidationTest.java
+!nnm-app/src/test/java/com/nnm/bot/WarframeDataConfigurationTest.java
+!nnm-app/src/test/java/com/nnm/bot/WarframeLuxeTemplateTest.java
+!nnm-app/src/test/java/com/nnm/bot/warframe/CommunityRefreshTransactionTest.java
+!nnm-app/src/test/resources/db/command-catalog.json
+!nnm-app/src/test/resources/db/legacy/warframe-pre-expansion.sql
+
+# Channel lifecycle and reply-routing regressions accompany their implementation.
+!nnm-core/src/test/java/com/nnm/bot/core/channel/runtime/BotConnectionAffinityResolverTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/execution/CommandDispatcherTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/execution/CommandReceiptRegistryTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/execution/GroupCommandCoordinatorTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/response/CommandReplyRouterTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/qqofficial/gateway/QqOfficialGatewayClientTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/qqofficial/api/QqOfficialApiClientTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/qqofficial/message/QqOfficialProactiveMessageSenderTest.java
+!nnm-app/src/test/resources/db/bot-reply-routing-legacy.sql
+
 # Render module local tests are kept out of repository commits
 /nnm-render/src/test/
+
+!nnm-core/src/test/java/com/nnm/bot/core/channel/runtime/BotConnectionPlacementCoordinatorTest.java
+
+!nnm-app/src/test/java/com/nnm/bot/BotGroupBindingTransactionTest.java
+
+# 论坛附件生命周期与 RDT ID 分配回归随业务实现保留。
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/forum/impl/ForumArticleServiceImplTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/forum/impl/ForumFileServiceImplTest.java
+
+# Message descriptors, transaction boundaries and retry semantics accompany the RDT API.
+!nnm-core/src/test/java/com/nnm/bot/core/config/RdtRetryConfigurationTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/task/WorldStatePollingRegistrationTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/impl/WarframeWorldStateServiceImplTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/cache/resolution/WarframeItemIndexInvalidatorTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/cache/arbitration/WarframeArbitrationQueryCacheTest.java
+
+# Queue admission regressions must accompany the integration changes.
+!nnm-core/src/test/java/com/nnm/bot/core/channel/runtime/ClusterScopeDiscoveryAdmissionTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/service/impl/BotGroupNotificationServiceImplTest.java
+
+# Command admission and shared CPU lifecycle regressions accompany their implementation.
+!nnm-common/src/test/java/com/nnm/bot/common/concurrent/BoundedTaskExecutorTest.java
+!nnm-common/src/test/java/com/nnm/bot/common/ocr/RapidOcrServiceTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/execution/CommandIngressServiceTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/onebot/message/OneBotMessageHandlerTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/onebot/message/OneBotMessageArrivalStoreTest.java
+!/nnm-render/src/test/
+!nnm-render/src/test/java/com/nnm/bot/render/impl/DefaultImageServiceTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/riven/impl/WarframeRivenOcrServiceImplTest.java
+!nnm-app/src/test/java/com/nnm/bot/RelicTemplateTest.java
+
+# Composite replies and billing state regressions must ship with the protocol change.
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/response/**
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/execution/CommandExecutionPipelineTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/registry/CommandRegistryTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/**
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/cache/worldstate/WorldStateCommandImageCacheTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/WorldStateImagePrewarmServiceTest.java
+
+# WorldState codebook consistency and package boundaries accompany this refactor.
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/impl/WarframeWorldStateCodebookRecoveryTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/WarframePackageStructureTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/WorldStateCodebookImageRefreshTest.java
+
+# Preserve relocated test fixtures and regressions previously covered by plugin exceptions.
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/arbitration/ArbitrationCommandHandlerTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/task/WarframeRuntimeIndexRefreshTaskTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/resolution/WarframeTranslationFixtures.java
+!nnm-app/src/test/java/com/nnm/bot/support/OfflineRedis.java
+
+# Dynamic presentation and persistent notification jobs must ship with their regressions.
+!nnm-core/src/test/java/com/nnm/bot/core/plugin/model/PresentationPolicyTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/channel/messaging/consumer/GroupNotificationConsumerTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/channel/messaging/model/NotificationContentTest.java
+!nnm-core/src/test/java/com/nnm/bot/core/channel/messaging/store/NotificationResourceStorageTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/adapter/command/DatabaseCommandRelatedActionProviderTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/adapter/notification/DatabaseNotificationDeliveryGuardTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/service/impl/BotNotificationJobServiceImplTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/service/support/BotCommandPresentationValidatorTest.java
+!nnm-admin/src/test/java/com/nnm/bot/admin/service/support/RelatedCommandBuilderTest.java
+!nnm-app/src/test/java/com/nnm/bot/NotificationJobPersistenceTest.java
+
+# 类型化 WorldState 输入、刷新快照和命令投影的回归样例随本次重构保留。
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/mapper/worldstate/OfficialWorldStateMapperTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/WarframeOfficialWorldStateIndexTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/impl/WarframeWorldStateServiceImplTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/impl/WarframeCycleServiceImplTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/impl/WarframeBountyCycleServiceImplTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/event/watch/BountySubscriptionTest.java
+!nnm-warframe/src/test/resources/worldstate/official-2026-10-24.json
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/repository/official/support/OfficialRelationRowProjectionTest.java
+
+# Official import, typed relation loading and source-priority regressions.
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/official/**
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/client/WarframeOfficialSourceClientTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/client/WarframeOfficialSourceClientLocalTest.java
+!nnm-app/src/test/java/com/nnm/bot/warframe/**
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/parser/official/input/WarframeOfficialInputParserTest.java
+!nnm-warframe/src/test/java/com/nnm/bot/warframe/service/worldstate/impl/WarframeWorldStateCodebookServiceImplTest.java

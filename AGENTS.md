@@ -1,5 +1,7 @@
 # NnmBot 开发约定
 
+开发阶段直接更新 API、状态模型和全部调用方，不为历史版本保留旧构造器、接口别名、迁移、双写或回退分支。外部协议适配按实际协议需求保留。
+
 ## 项目边界
 
 - 后端仓库：`/Users/ren/RcGit/NnmBot`
@@ -18,7 +20,19 @@
   只有同名类型无法通过 import 清晰区分时才保留全限定名，并保持范围最小。
 - Java 代码保持精简，参考 `charge-operator` 的分层方式。
 - Controller 只负责协议转换、参数接收和权限声明，业务逻辑放入 Service。
-- Service 接口与实现分离；DTO、响应对象和实体职责明确。
+- Warframe 主体包按 `runtime` 与 `persistent/{official,curated}` 组织：动态数据及运行时计算归入 `runtime`，官方 JSON 持久化归入 `persistent/official`，本项目维护的数据归入 `persistent/curated`。`plugin`、`controller`、`schedule`、`mq`、`storage` 保持 Warframe 根包，并在内部按来源和业务分包。
+- Warframe 动态上游协议模型放入 `runtime/rawdata/<业务>`；官方静态 JSON 输入 DTO 与解析器放入 `persistent/official/pojo/dto`、`persistent/official/parser`；人工导入模型与解析器放入 `persistent/curated`。不保留根目录 `rawdata`、`parser`、`service`、`repository`、`pojo` 或 `shared`。
+- Service 接口与实现分离；实体保留原名，不加 DO/Entity 后缀；Repository 非受管投影与服务间传输统一以 `DTO` 结尾；前端响应与命令/页面展示对象统一以 `VO` 结尾；查询参数统一以 `Query` 结尾；新增和修改参数使用或复用 `DTO`，不另设 Request/Response/Item/Display 后缀体系。嵌套传输/展示类型遵循相同后缀。
+- `pojo/dto`、`pojo/vo` 只按来源及业务域分包，不再额外设置 `input/output`；同一类型同时承担内部传输和前端展示时，保留 DTO 并在展示边界转换为 VO，不把 DTO 直接作为业务 API 响应。
+- Admin 与 Warframe 数据对象统一采用 `pojo/entity`、`pojo/dto`、`pojo/vo`、`pojo/query` 类型层次；Admin 类型在模块根 `pojo` 下，Warframe 类型放在所属生命周期和来源目录下，再按实际业务分包。内部运行状态和外部协议模型不强制归入这些类型。
+- Service 接口与实现分离；Admin 服务位于 `service/<业务>`，Warframe 服务位于 `runtime/service/<业务>` 或 `persistent/{official,curated}/service/<业务>`，实现放入对应 `impl`；公开传输对象不定义在 Service 内，下载、文件存储、缓存、本地事件和纯展示映射分别归入实际职责包。
+- 官方 JSON 先绑定 `persistent/official/pojo/dto/<业务>` 的逐文件类型化输入；人工维护数据导入绑定 `persistent/curated/pojo/dto/<业务>` 的白名单业务对象。不得把外部 JSON 直接绑定 JPA Entity；原始 JSON 独立保留用于差异审核与精度/缺失值审计。
+- 查询入参统一放入所属模块的 `pojo/query/<来源或业务>`；Warframe 查询类型随 `runtime` 或 `persistent` 来源归属，不因经由 HTTP 接收而混入普通 DTO；超过两个查询参数时使用明确 Query 类型，不使用裸 Map。
+- 生产枚举统一放在所属模块的 `constant` 包；Warframe 来源专用枚举放在 `runtime/constant` 或 `persistent/{official,curated}/constant`，真正跨来源的模块常量放在根 `constant`。同一业务职责且有共同调用方的相关枚举合并到常量容器的内部枚举，禁止在 DTO、Entity、Service 或内部状态类中再嵌套定义枚举。
+- 官方静态数据的 71 个 JSON 各有独立主表和具体 Repository；禁止跨数据集总父表和统一根 Repository。仅本 JSON 内必要子表由主表统一维护。
+- MQ 在所属 Maven 模块的 `mq` 下固定分为 `consumer`、`message`、`messagedescriptor`、`consumerdescriptor` 四个目录，目录内再按业务域细分；消息载荷、发布描述符、消费策略和消费者独立成类，不再混入 `messaging` 或匿名策略。
+- 所有 `@Scheduled`、`@RdtScheduled` 入口放在所属模块的 `schedule` 包；分布式统一认领任务保留 RDT，各实例内存与本地资源刷新保留本地调度，不因归包改变任务作用域。
+- Warframe Plugin 只做命令参数转换、调用 Service 和组装 VO/CommandResult；业务 Service 不依赖 Plugin 或渲染包，也不组装 CommandResult。内部状态、权限上下文和上游协议模型放在真实职责包，不保留混装 DTO/VO 的通用 `model` 包。
 - Spring 管理的 Service、Repository、Provider 等协作依赖优先使用 `@Resource`；
   不可变值对象、命令元数据和需要在构造阶段完成校验的非 Spring 对象继续使用构造器传参。
 - 跨模块分页响应统一使用 `nnm-common` 的 `PageResult`，不要在业务模块重复定义同构分页 DTO。
@@ -31,8 +45,10 @@
 - MapStruct 仅用于字段较多或存在复用价值的对象映射，简单映射直接构造。
 - 字符串、集合和对象的通用防御性判断可以使用 Hutool `StrUtil`、`CollUtil`、
   `ObjUtil`；仅在能提升可读性时使用，文件、协议和业务状态校验仍保留显式判断。
-- 在连接生命周期、并发状态、协议边界和非直观业务约束等关键位置添加精简注释，说明设计意图或
-  风险；自解释代码和普通 CRUD 不添加重复代码含义的注释。
+- Warframe 模块手写声明的方法使用中文 Javadoc 说明用途、各入参和返回值；对外传播的受检异常说明抛出条件，生成式方法的注释同步维护在生成器中。
+- 在连接生命周期、并发状态、协议边界和非直观业务约束等关键位置添加精简行内注释，说明设计意图或
+  风险；自解释代码和普通 CRUD 不添加重复代码含义的行内注释。
+- 不为普通业务编排重复捕获异常；需要协议错误转换、有效快照恢复、逐通知隔离或资源清理时才在明确边界捕获，其余失败直接传播。
 - 优先沿用现有模块边界，不为单一场景提前增加抽象。
 
 ## Common 与 Core 约定

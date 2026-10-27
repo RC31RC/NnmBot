@@ -1,15 +1,33 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.vo.bot.scope.BotScopeDiscoveryVO;
+import com.nnm.bot.admin.pojo.vo.bot.notification.BotNotificationPreviewVO;
+import com.nnm.bot.admin.pojo.vo.bot.notification.BotNotificationJobVO;
+import com.nnm.bot.admin.pojo.vo.bot.group.BotGroupVO;
+import com.nnm.bot.admin.pojo.vo.bot.group.BotGroupMemberVO;
+import com.nnm.bot.admin.pojo.vo.bot.group.BotGroupBindingPreviewVO;
+import com.nnm.bot.admin.controller.assembler.bot.scope.AdminBotScopeViewAssembler;
+import com.nnm.bot.admin.controller.assembler.bot.notification.AdminBotNotificationViewAssembler;
+import com.nnm.bot.admin.controller.assembler.bot.group.AdminBotGroupViewAssembler;
+import com.nnm.bot.common.task.AdminTaskService.AdminTaskWork;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.bot.BotGroupBotSaveRequest;
-import com.nnm.bot.admin.dto.bot.BotGroupCreateRequest;
-import com.nnm.bot.admin.dto.bot.BotGroupItem;
-import com.nnm.bot.admin.dto.bot.BotGroupMemberItem;
-import com.nnm.bot.admin.dto.bot.BotGroupMemberPointsUpdateRequest;
-import com.nnm.bot.admin.dto.bot.BotGroupMemberUpdateRequest;
-import com.nnm.bot.admin.dto.bot.BotGroupUpdateRequest;
-import com.nnm.bot.admin.dto.bot.BotScopeDiscoveryItem;
-import com.nnm.bot.admin.service.BotGroupManagementService;
+import cn.dev33.satoken.stp.StpUtil;
+import com.nnm.bot.admin.pojo.dto.bot.notification.BotNotificationPreviewDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupBotSaveDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupBindingPreviewDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupBotUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupCreateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupDTO;
+import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationDTO;
+import com.nnm.bot.admin.service.bot.notification.BotGroupNotificationService;
+import com.nnm.bot.admin.service.bot.notification.BotNotificationJobService;
+import com.nnm.bot.admin.pojo.dto.bot.notification.BotNotificationJobDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupMemberDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupMemberPointsUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupMemberUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDiscoveryDTO;
+import com.nnm.bot.admin.service.bot.group.BotGroupManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.task.AdminTaskService;
 import com.nnm.bot.common.task.AdminTaskSubmission;
@@ -25,6 +43,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/api/admin/v1/bot-groups")
@@ -34,21 +54,25 @@ public class BotGroupManagementController {
     private BotGroupManagementService service;
     @Resource
     private AdminTaskService taskService;
+    @Resource
+    private BotGroupNotificationService notifications;
+    @Resource
+    private BotNotificationJobService notificationJobs;
 
     @PostMapping("/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotGroupItem>> list(
+    public ApiResponse<List<BotGroupVO>> list(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.list());
+        return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupVO(service.list()));
     }
 
     @PostMapping("/discovery/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotScopeDiscoveryItem>> discovery(
+    public ApiResponse<List<BotScopeDiscoveryVO>> discovery(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.discover());
+        return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeDiscoveryVO(service.discover()));
     }
 
     @PostMapping("/discovery")
@@ -77,10 +101,42 @@ public class BotGroupManagementController {
     private AdminTaskSubmission submitTask(
             String taskType,
             String permission,
-            AdminTaskService.AdminTaskWork work) {
+            AdminTaskWork work) {
         return taskService.findActive(taskType)
                 .map(existing -> new AdminTaskSubmission(existing, taskType))
                 .orElseGet(() -> taskService.submit(taskType, permission, work));
+    }
+
+    @PostMapping("/notifications")
+    @SaCheckPermission("bot:notification:send")
+    public ApiResponse<BotNotificationJobVO> sendNotification(
+            @Valid
+            @RequestBody
+            BotGroupNotificationDTO request) {
+        return ApiResponse.ok(AdminBotNotificationViewAssembler.toBotNotificationJobVO(notificationJobs.submit(StpUtil.getLoginIdAsLong(), request)));
+    }
+
+    @GetMapping("/notifications")
+    @SaCheckPermission("bot:notification:send")
+    public ApiResponse<List<BotNotificationJobVO>> notificationJobs() {
+        return ApiResponse.ok(AdminBotNotificationViewAssembler.toBotNotificationJobVO(notificationJobs.list(StpUtil.getLoginIdAsLong())));
+    }
+
+    @PostMapping("/notifications/{id}/cancel")
+    @SaCheckPermission("bot:notification:send")
+    public ApiResponse<BotNotificationJobVO> cancelNotification(
+            @PathVariable
+            UUID id) {
+        return ApiResponse.ok(AdminBotNotificationViewAssembler.toBotNotificationJobVO(notificationJobs.cancel(StpUtil.getLoginIdAsLong(), id)));
+    }
+
+    @PostMapping("/notifications/preview")
+    @SaCheckPermission("bot:notification:preview")
+    public ApiResponse<List<BotNotificationPreviewVO>> previewNotification(
+            @Valid
+            @RequestBody
+            BotGroupNotificationDTO request) {
+        return ApiResponse.ok(AdminBotNotificationViewAssembler.toBotNotificationPreviewVO(notifications.preview(StpUtil.getLoginIdAsLong(), request)));
     }
 
     @PostMapping
@@ -88,8 +144,19 @@ public class BotGroupManagementController {
     public ApiResponse<Long> create(
             @Valid
             @RequestBody
-    BotGroupCreateRequest request) {
+    BotGroupCreateDTO request) {
         return ApiResponse.ok(service.create(request));
+    }
+
+    @PostMapping("/{id}/preview")
+    @SaCheckPermission("bot:group:update")
+    public ApiResponse<BotGroupBindingPreviewVO> previewGroupUpdate(
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            BotGroupUpdateDTO request) {
+        return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupBindingPreviewVO(service.previewGroupUpdate(id, request)));
     }
 
     @PutMapping("/{id}")
@@ -99,7 +166,7 @@ public class BotGroupManagementController {
             long id,
             @Valid
             @RequestBody
-            BotGroupUpdateRequest request) {
+            BotGroupUpdateDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
@@ -113,6 +180,30 @@ public class BotGroupManagementController {
         return ApiResponse.ok();
     }
 
+    @PostMapping("/{id}/bots/preview")
+    @SaCheckPermission("bot:group:update")
+    public ApiResponse<BotGroupBindingPreviewVO> previewBinding(
+            @PathVariable
+            long id,
+            @Valid
+            @RequestBody
+            BotGroupBotSaveDTO request) {
+        return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupBindingPreviewVO(service.previewBinding(id, request)));
+    }
+
+    @PostMapping("/{id}/bots/{bindingId}/preview")
+    @SaCheckPermission("bot:group:update")
+    public ApiResponse<BotGroupBindingPreviewVO> previewBindingUpdate(
+            @PathVariable
+            long id,
+            @PathVariable
+            long bindingId,
+            @Valid
+            @RequestBody
+            BotGroupBotUpdateDTO request) {
+        return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupBindingPreviewVO(service.previewBindingUpdate(id, bindingId, request)));
+    }
+
     @PostMapping("/{id}/bots")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> bindBot(
@@ -120,7 +211,7 @@ public class BotGroupManagementController {
             long id,
             @Valid
             @RequestBody
-            BotGroupBotSaveRequest request) {
+            BotGroupBotSaveDTO request) {
         service.bindBot(id, request);
         return ApiResponse.ok();
     }
@@ -136,14 +227,28 @@ public class BotGroupManagementController {
         return ApiResponse.ok();
     }
 
+    @PutMapping("/{id}/bots/{bindingId}")
+    @SaCheckPermission("bot:group:update")
+    public ApiResponse<Void> updateBot(
+            @PathVariable
+            long id,
+            @PathVariable
+            long bindingId,
+            @Valid
+            @RequestBody
+            BotGroupBotUpdateDTO request) {
+        service.updateBot(id, bindingId, request);
+        return ApiResponse.ok();
+    }
+
     @PostMapping("/{id}/members/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotGroupMemberItem>> members(
+    public ApiResponse<List<BotGroupMemberVO>> members(
             @PathVariable
             long id,
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.members(id));
+        return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupMemberVO(service.members(id)));
     }
 
     @PutMapping("/{groupId}/members/{memberId}")
@@ -155,7 +260,7 @@ public class BotGroupManagementController {
             long memberId,
             @Valid
             @RequestBody
-            BotGroupMemberUpdateRequest request) {
+            BotGroupMemberUpdateDTO request) {
         service.updateMember(groupId, memberId, request);
         return ApiResponse.ok();
     }
@@ -169,7 +274,7 @@ public class BotGroupManagementController {
             long memberId,
             @Valid
             @RequestBody
-            BotGroupMemberPointsUpdateRequest request) {
+            BotGroupMemberPointsUpdateDTO request) {
         service.updateMemberPoints(groupId, memberId, request);
         return ApiResponse.ok();
     }

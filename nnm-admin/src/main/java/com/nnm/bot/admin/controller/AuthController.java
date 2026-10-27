@@ -1,9 +1,11 @@
 package com.nnm.bot.admin.controller;
 
-import com.nnm.bot.admin.dto.auth.LoginRequest;
-import com.nnm.bot.admin.dto.auth.LoginResponse;
-import com.nnm.bot.admin.dto.auth.RefreshTokenRequest;
-import com.nnm.bot.admin.service.AuthService;
+import com.nnm.bot.admin.pojo.dto.auth.LoginDTO;
+import com.nnm.bot.admin.pojo.vo.auth.LoginTokenVO;
+import com.nnm.bot.admin.controller.assembler.auth.AdminAuthViewAssembler;
+import com.nnm.bot.admin.pojo.dto.auth.LoginTokenDTO;
+import com.nnm.bot.admin.pojo.dto.auth.RefreshTokenDTO;
+import com.nnm.bot.admin.service.auth.AuthService;
 import com.nnm.bot.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.annotation.Resource;
@@ -20,19 +22,19 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(
+    public ApiResponse<LoginTokenVO> login(
             @Valid
             @RequestBody
-    LoginRequest request) {
-        return ApiResponse.ok(authService.login(request));
+    LoginDTO request) {
+        return ApiResponse.ok(AdminAuthViewAssembler.toLoginTokenVO(authService.login(request)));
     }
 
     @PostMapping("/refresh")
-    public ApiResponse<LoginResponse> refresh(
+    public ApiResponse<LoginTokenVO> refresh(
             @Valid
             @RequestBody
-    RefreshTokenRequest request) {
-        return ApiResponse.ok(authService.refresh(request));
+    RefreshTokenDTO request) {
+        return ApiResponse.ok(AdminAuthViewAssembler.toLoginTokenVO(authService.refresh(request)));
     }
 
     @PostMapping("/logout")

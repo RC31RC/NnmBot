@@ -1,15 +1,24 @@
 package com.nnm.bot.admin.service.impl;
 
+import com.nnm.bot.admin.service.bot.group.impl.BotGroupManagementServiceImpl;
+import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDiscoveryDTO;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import org.mockito.Mockito;
-import com.nnm.bot.admin.domain.BotChannelInstance;
-import com.nnm.bot.admin.dto.bot.BotGroupMemberPointsUpdateRequest;
-import com.nnm.bot.admin.repository.BotChannelInstanceRepository;
+import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupMemberPointsUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupBotUpdateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupBotSaveDTO;
+import com.nnm.bot.core.channel.topology.BotTopologyInvalidator;
+import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
+import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
 import com.nnm.bot.core.channel.model.BotDiscoveredScope;
+import com.nnm.bot.core.channel.model.BotMemberQueryResult;
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
-import com.nnm.bot.core.channel.port.BotScopeDiscoveryProvider;
+import com.nnm.bot.core.channel.runtime.BotScopeDiscoveryRouter;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroup;
 import com.nnm.bot.core.group.domain.BotGroupBot;
@@ -26,15 +35,26 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.beans.factory.ObjectProvider;
+import com.nnm.bot.core.channel.runtime.BotConnectionPlacementCoordinator;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import jakarta.validation.Validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 
@@ -56,13 +76,14 @@ class BotGroupManagementServiceImplTest {
     @Mock
     private BotChannelInstanceProvider instanceProvider;
     @Mock
-    private BotScopeDiscoveryProvider discoveryProvider;
+    private BotScopeDiscoveryRouter discoveryRouter;
 
     private BotGroupManagementServiceImpl service;
 
     @BeforeEach
     void setUp() {
         this.service = new BotGroupManagementServiceImpl();
+        ReflectionTestUtils.setField(service, "topologyInvalidator", mock(BotTopologyInvalidator.class));
         ReflectionTestUtils.setField(this.service, "memberDiscoveryExecutor", (Executor) Runnable::run);
         ReflectionTestUtils.setField(this.service, "groupRepository", this.groupRepository);
         ReflectionTestUtils.setField(this.service, "botRepository", this.botRepository);
@@ -73,8 +94,7 @@ class BotGroupManagementServiceImplTest {
                 this.service, "pointAccountService", this.pointAccountService);
         ReflectionTestUtils.setField(this.service, "instanceRepository", this.instanceRepository);
         ReflectionTestUtils.setField(this.service, "instanceProvider", this.instanceProvider);
-        ReflectionTestUtils.setField(
-                this.service, "discoveryProviders", List.of(this.discoveryProvider));
+        ReflectionTestUtils.setField(this.service, "discoveryRouter", this.discoveryRouter);
     }
 
     @Test
@@ -95,8 +115,7 @@ class BotGroupManagementServiceImplTest {
         when(this.instanceProvider.findAll()).thenReturn(List.of(record));
         when(this.instanceRepository.findAllByOrderByPlatformAscInstanceIdAsc())
                 .thenReturn(List.of(instance));
-        when(this.discoveryProvider.platform()).thenReturn(BotPlatform.ONEBOT);
-        when(this.discoveryProvider.discover(record)).thenReturn(discoveryResult());
+        when(this.discoveryRouter.discover(record)).thenReturn(discoveryResult());
         when(this.botRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
                 "ONEBOT", "GROUP", "20001", 1L)).thenReturn(Optional.of(binding));
         when(this.botRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
@@ -110,7 +129,7 @@ class BotGroupManagementServiceImplTest {
         when(this.memberRepository.findByGroupIdAndQqId(9L, "10002"))
                 .thenReturn(Optional.empty());
 
-        var result = this.service.discoverAndSynchronize();
+        List<BotScopeDiscoveryDTO> result = this.service.discoverAndSynchronize();
 
         assertThat(result).singleElement().satisfies(discovery ->
                 assertThat(discovery.scopes())
@@ -237,7 +256,7 @@ class BotGroupManagementServiceImplTest {
         when(this.groupRepository.findById(9L)).thenReturn(Optional.of(group));
 
         this.service.updateMemberPoints(
-                9L, 101L, new BotGroupMemberPointsUpdateRequest(77L));
+                9L, 101L, new BotGroupMemberPointsUpdateDTO(77L));
 
         verify(this.pointAccountService).adjust(
                 eq(9L),
@@ -245,6 +264,167 @@ class BotGroupManagementServiceImplTest {
                 eq(77L),
                 startsWith("ADMIN_ADJUSTMENT:9:101:"),
                 eq("后台管理员调整成员积分"));
+    }
+
+    @Test
+    void shouldUpdateReplyPriorityAndEnabledStateWithoutChangingBinding() {
+        BotGroup group = new BotGroup();
+        group.setId(9L);
+        BotGroupBot binding = new BotGroupBot();
+        binding.setId(7L);
+        binding.setGroupId(9L);
+        binding.setBotInstanceId(1L);
+        binding.setScopeKey("20001");
+        when(groupRepository.findById(9L)).thenReturn(Optional.of(group));
+        when(botRepository.findById(7L)).thenReturn(Optional.of(binding));
+
+        service.updateBot(9L, 7L, new BotGroupBotUpdateDTO(false, 10));
+
+        ArgumentCaptor<BotGroupBot> saved = ArgumentCaptor.forClass(BotGroupBot.class);
+        verify(botRepository).save(saved.capture());
+        assertThat(saved.getValue().isEnabled()).isFalse();
+        assertThat(saved.getValue().getReplyPriority()).isEqualTo(10);
+        assertThat(saved.getValue().getBotInstanceId()).isEqualTo(1L);
+        assertThat(saved.getValue().getScopeKey()).isEqualTo("20001");
+    }
+
+    @Test
+    void shouldRejectReplySettingsForAnotherLogicalGroup() {
+        BotGroup group = new BotGroup();
+        group.setId(9L);
+        BotGroupBot binding = new BotGroupBot();
+        binding.setGroupId(10L);
+        when(groupRepository.findById(9L)).thenReturn(Optional.of(group));
+        when(botRepository.findById(7L)).thenReturn(Optional.of(binding));
+
+        assertThatThrownBy(() -> service.updateBot(9L, 7L, new BotGroupBotUpdateDTO(true, 10)))
+                .isInstanceOf(DataNotFoundException.class);
+
+        verify(botRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldValidateReplyPriorityRangeAndRequireEnabledState() {
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            Validator validator = factory.getValidator();
+            assertThat(validator.validate(new BotGroupBotUpdateDTO(true, 0))).isEmpty();
+            assertThat(validator.validate(new BotGroupBotUpdateDTO(false, 10000))).isEmpty();
+            assertThat(validator.validate(new BotGroupBotUpdateDTO(true, -1))).hasSize(1);
+            assertThat(validator.validate(new BotGroupBotUpdateDTO(true, 10001))).hasSize(1);
+            assertThat(validator.validate(new BotGroupBotUpdateDTO(null, 100))).hasSize(1);
+        }
+    }
+
+    @Test
+    void shouldNotSaveBindingOrQueryMembersWhenMigrationIsNotConfirmed() {
+        BotGroup group = new BotGroup();
+        group.setId(9L);
+        BotChannelInstance instance = oneBotInstance();
+        when(groupRepository.findById(9L)).thenReturn(Optional.of(group));
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        BotConnectionPlacementCoordinator coordinator = mock(BotConnectionPlacementCoordinator.class);
+        ObjectProvider<BotConnectionPlacementCoordinator> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(coordinator);
+        ReflectionTestUtils.setField(service, "placementCoordinator", provider);
+        doThrow(new BusinessException(BotChannelErrorCode.CONNECTION_MIGRATION_CONFIRMATION_REQUIRED))
+                .when(coordinator).prepare(any(), isNull());
+
+        assertThatThrownBy(() -> service.bindBot(9L, new BotGroupBotSaveDTO(instance.getId(),
+                BotPlatform.ONEBOT, "GROUP", "20001", null, true, true)))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("管理员确认");
+
+        verify(botRepository, never()).save(any());
+        verifyNoInteractions(discoveryRouter, memberRepository);
+    }
+
+    @Test
+    void shouldRejectAnotherOfficialInstanceEvenWhenTheExistingBindingIsDisabled() {
+        BotGroup group = new BotGroup();
+        group.setId(9L);
+        BotChannelInstance instance = new BotChannelInstance();
+        instance.setId(2L);
+        instance.setPlatform(BotPlatform.QQ_OFFICIAL);
+        when(groupRepository.findById(9L)).thenReturn(Optional.of(group));
+        when(instanceRepository.findById(2L)).thenReturn(Optional.of(instance));
+        BotGroupBot existing = new BotGroupBot();
+        existing.setBotInstanceId(3L);
+        existing.setPlatform("QQ_OFFICIAL");
+        existing.setScopeType("GROUP");
+        existing.setEnabled(false);
+        when(botRepository.findAllByGroupIdOrderByPlatformAscScopeKeyAsc(9L)).thenReturn(List.of(existing));
+        assertThatThrownBy(() -> service.bindBot(9L, new BotGroupBotSaveDTO(2L, BotPlatform.QQ_OFFICIAL,
+                "GROUP", "openid", null, true, false)))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("QQ 官方");
+        verify(botRepository, never()).save(any());
+        verifyNoInteractions(discoveryRouter, memberRepository);
+    }
+
+    @Test
+    void shouldBindDiscoveredQqGroupToExistingLogicalGroupAndSynchronizeObservedMembers() {
+        BotGroup group = new BotGroup();
+        group.setId(9L);
+        BotChannelInstance instance = new BotChannelInstance();
+        instance.setId(2L);
+        instance.setPlatform(BotPlatform.QQ_OFFICIAL);
+        instance.setInstanceId("qq-main");
+        instance.setBotAccountId("app-1");
+        BotChannelInstanceRecord record = new BotChannelInstanceRecord(BotPlatform.QQ_OFFICIAL, "qq-main", "app-1",
+                true, null, null, "app-1", "secret", null, null, null, null,
+                117440512, null, null);
+        BotDiscoveredScope scope = new BotDiscoveredScope("GROUP", "group-openid", "发现的群组", null,
+                List.of(new BotDiscoveredMember("member-openid", "成员", "MEMBER")), false);
+        when(groupRepository.findById(9L)).thenReturn(Optional.of(group));
+        when(instanceRepository.findById(2L)).thenReturn(Optional.of(instance));
+        when(instanceProvider.findAll()).thenReturn(List.of(record));
+        when(discoveryRouter.discover(record))
+                .thenReturn(new BotScopeDiscoveryResult(true, "观察结果", List.of(scope)));
+        when(discoveryRouter.queryMembers(record, "group-openid"))
+                .thenReturn(new BotMemberQueryResult(List.of(), false));
+
+        service.bindBot(9L, new BotGroupBotSaveDTO(2L, BotPlatform.QQ_OFFICIAL,
+                " group ", " group-openid ", "发现的群组", true, true));
+
+        ArgumentCaptor<BotGroupBot> binding = ArgumentCaptor.forClass(BotGroupBot.class);
+        verify(botRepository).save(binding.capture());
+        assertThat(binding.getValue().getGroupId()).isEqualTo(9L);
+        assertThat(binding.getValue().getBotInstanceId()).isEqualTo(2L);
+        assertThat(binding.getValue().getPlatform()).isEqualTo("QQ_OFFICIAL");
+        assertThat(binding.getValue().getScopeType()).isEqualTo("GROUP");
+        assertThat(binding.getValue().getScopeKey()).isEqualTo("group-openid");
+        assertThat(binding.getValue().getDisplayName()).isEqualTo("发现的群组");
+        ArgumentCaptor<BotGroupMember> member = ArgumentCaptor.forClass(BotGroupMember.class);
+        verify(memberRepository).save(member.capture());
+        assertThat(member.getValue().getGroupId()).isEqualTo(9L);
+        assertThat(member.getValue().getMemberOpenid()).isEqualTo("member-openid");
+        assertThat(member.getValue().getQqId()).isNull();
+        verify(groupRepository, never()).save(any());
+        verify(memberRepository, never()).findAllByGroupIdOrderByMemberRoleAscIdAsc(any());
+    }
+
+    @Test
+    void shouldClearOnlyQqOfficialIdentityWhenMemberLeaves() {
+        BotChannelInstance instance = new BotChannelInstance();
+        instance.setId(2L);
+        instance.setPlatform(BotPlatform.QQ_OFFICIAL);
+        instance.setBotAccountId("app-1");
+        BotGroupBot binding = new BotGroupBot();
+        binding.setGroupId(9L);
+        BotGroupMember member = member(101L, "10001");
+        member.setMemberOpenid("member-openid");
+        when(instanceRepository.findByPlatformAndBotAccountId(BotPlatform.QQ_OFFICIAL, "app-1"))
+                .thenReturn(Optional.of(instance));
+        when(botRepository.findAllByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
+                "QQ_OFFICIAL", "GROUP", "group-openid", 2L)).thenReturn(List.of(binding));
+        when(memberRepository.findByGroupIdAndMemberOpenid(9L, "member-openid"))
+                .thenReturn(Optional.of(member));
+
+        service.handleMemberLeft(BotPlatform.QQ_OFFICIAL, "app-1", "group-openid", "member-openid");
+
+        assertThat(member.getMemberOpenid()).isNull();
+        assertThat(member.getQqId()).isEqualTo("10001");
+        assertThat(member.isEnabled()).isTrue();
+        verify(memberRepository).save(member);
+        verify(memberRepository, never()).delete(member);
     }
 
     private void stubBoundOneBotScope(BotDiscoveredScope scope) {
@@ -255,8 +435,7 @@ class BotGroupManagementServiceImplTest {
         when(this.instanceProvider.findAll()).thenReturn(List.of(record));
         when(this.instanceRepository.findAllByOrderByPlatformAscInstanceIdAsc())
                 .thenReturn(List.of(oneBotInstance()));
-        when(this.discoveryProvider.platform()).thenReturn(BotPlatform.ONEBOT);
-        when(this.discoveryProvider.discover(record)).thenReturn(
+        when(this.discoveryRouter.discover(record)).thenReturn(
                 new BotScopeDiscoveryResult(true, null, List.of(scope)));
         when(this.botRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
                 "ONEBOT", "GROUP", "20001", 1L)).thenReturn(Optional.of(binding));

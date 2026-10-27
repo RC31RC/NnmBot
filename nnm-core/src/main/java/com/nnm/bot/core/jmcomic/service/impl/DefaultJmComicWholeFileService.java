@@ -26,6 +26,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedInputStream;
@@ -106,7 +107,12 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             this.downloadPayload(info.downloadUrl(), client.getCookies(), payload);
             return Optional.of(this.convertPayload(albumId, title, payload, workspace));
         } catch (BusinessException exception) {
-            throw exception;
+            // 资源上限属于整个任务的限制，不允许通过另一条下载路径绕过。
+            if (exception.getStatus() == HttpStatus.CONTENT_TOO_LARGE) {
+                throw exception;
+            }
+            throw new JmComicWholeFileException(
+                    "JM 整本下载内容处理失败: " + albumId, exception);
         } catch (JmComicWholeFileException exception) {
             throw exception;
         } catch (RuntimeException | IOException exception) {

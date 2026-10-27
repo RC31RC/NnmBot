@@ -1,71 +1,90 @@
 package com.nnm.bot.core.plugin.execution;
 
-import java.util.Locale;
-import cn.hutool.core.util.ObjectUtil;
-
+import com.nnm.bot.core.group.domain.BotGroupMember;
+import com.nnm.bot.core.config.BotCacheProperties;
+import jakarta.annotation.PostConstruct;
+import com.nnm.bot.core.group.service.BotGroupCommandContext;
+import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
+import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.CommandCooldownGuard;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
+import java.time.Duration;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
 import org.cache2k.CacheManager;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-import java.util.UUID;
-
-/**
- * 单 JVM 冷却实现。缓存只保存最近执行时间，不承载业务状态。
- */
+/** 单 JVM 冷却实现，身份归一只改变 key，不把冷却扩展为 Redis 状态。 */
 @Component
 public class Cache2kCommandCooldownGuard implements CommandCooldownGuard, AutoCloseable {
 
-    private final CacheManager cacheManager;
-    private final Cache<String, Long> executions;
+    @Resource
+    private BotCacheProperties properties;
+    private CacheManager cacheManager;
+    private Cache<String, Long> executions;
+    @Resource
+    private BotGroupCommandContextResolver groupResolver;
+    @Resource
+    private BotGroupMemberIdentityResolver memberResolver;
 
-    public Cache2kCommandCooldownGuard() {
-        /*
-         * Spring 测试会创建多个应用上下文。为每个 Bean 使用独立 manager，
-         * 避免默认 manager 中的同名缓存跨上下文残留。
-         */
-        cacheManager = CacheManager.getInstance(
-                "nnm-command-cooldown-" + UUID.randomUUID());
+    @PostConstruct
+    public void initialize() {
+        cacheManager = CacheManager.getInstance("nnm-command-cooldown-" + UUID.randomUUID());
         executions = Cache2kBuilder
                 .of(String.class, Long.class)
                 .manager(cacheManager)
                 .name("executions")
-                .entryCapacity(8192)
-                .expireAfterWrite(Duration.ofHours(24))
+                .entryCapacity(properties.cooldownCapacity())
+                .expireAfterWrite(properties.cooldownRetention())
                 .build();
     }
 
     @Override
-    public synchronized boolean tryAcquire(BotMessageContext context,
+    public boolean tryAcquire(BotMessageContext context,
                                             CommandDescriptor descriptor,
                                             long cooldownSeconds) {
         if (cooldownSeconds <= 0) {
             return true;
         }
-        String key = String.join("|",
-                context.platform().name(),
-                context.botAccountId(),
-                context.scope().name(),
-                context.conversationId(),
-                context.senderId(),
-                descriptor.code().toLowerCase(Locale.ROOT));
-        long now = System.currentTimeMillis();
-        Long previous = executions.peek(key);
-        if (ObjectUtil.isNotNull(previous) && now - previous < cooldownSeconds * 1000L) {
-            return false;
+        String key = cooldownKey(context, descriptor);
+        long now = System.nanoTime();
+        long cooldown = Duration.ofSeconds(cooldownSeconds).toNanos();
+        // cache2k 按 key 原子处理，互不相关的群组和成员不争用一个 JVM 全局锁。
+        return executions.invoke(key, entry -> {
+            Long previous = entry.exists() ? entry.getValue() : null;
+            if (previous != null && now - previous < cooldown) return false;
+            entry.setValue(now);
+            return true;
+        });
+    }
+
+    private String cooldownKey(BotMessageContext context, CommandDescriptor descriptor) {
+        Optional<BotGroupCommandContext> group = groupResolver == null ? Optional.<BotGroupCommandContext>empty()
+                : groupResolver.resolve(context);
+        if (group.isPresent()) {
+            Optional<BotGroupMember> member = memberResolver == null ? Optional.<BotGroupMember>empty()
+                    : memberResolver.findByContext(group.get().group().getId(), context);
+            String identity = member.filter(item -> item.getId() != null)
+                    .map(item -> "member:" + item.getId())
+                    .orElseGet(() -> "native:" + context.platform().name()
+                            + ":" + context.senderId());
+            return "group:" + group.get().group().getId() + "|" + identity + "|"
+                    + descriptor.code().strip().toLowerCase(Locale.ROOT);
         }
-        executions.put(key, now);
-        return true;
+        return String.join("|", "private", context.platform().name(), context.botAccountId(), context.scope().name(),
+                context.conversationId(), context.senderId(),
+                descriptor.code().strip().toLowerCase(Locale.ROOT));
     }
 
     @PreDestroy
     @Override
     public void close() {
-        cacheManager.close();
+        if (cacheManager != null) cacheManager.close();
     }
 }

@@ -1,14 +1,15 @@
 package com.nnm.bot.core.message.sender;
 
+import com.nnm.bot.core.constant.BotMessageConstants.PartKind;
 import cn.hutool.core.util.ObjectUtil;
 
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.constant.BotChannelCapability;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.constant.BotPlatform;
-import com.nnm.bot.core.message.model.BotFile;
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
 import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.message.model.PreparedBotMessage;
+import com.nnm.bot.core.message.model.BotMessageSendPermit;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -17,12 +18,12 @@ import org.springframework.util.Assert;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.nnm.bot.core.message.model.BotMessagePart;
 
 /**
  * 根据消息上下文中的平台选择协议发送器。
  *
- * <p>它只做平台路由，不决定文本、图片、文件之间的降级策略；
- * 输出组合和降级由各平台 {@code BotChannelResponseStrategy} 负责。</p>
+ * <p>它只负责平台协议路由；展示选择和降级由 ReplyPlanner 在发送前完成。</p>
  */
 @Component
 public class BotMessageSenderRouter {
@@ -47,54 +48,25 @@ public class BotMessageSenderRouter {
         this.senders = Map.copyOf(registry);
     }
 
-    public void sendText(BotMessageContext context, String text) {
-        this.sender(context).sendText(context, text);
-    }
-
-    public void sendText(BotMessageContext context, String text, String mentionUserId) {
-        this.sender(context).sendText(context, text, mentionUserId);
-    }
-
     public boolean supports(BotMessageContext context, BotChannelCapability capability) {
         return this.sender(context).supports(context, capability);
     }
 
-    public void sendImage(BotMessageContext context, byte[] image) {
-        this.sender(context).sendImage(context, image);
+    public boolean supportsComposition(BotMessageContext context, List<PartKind> parts) {
+        return this.sender(context).supportsComposition(context, parts);
     }
 
-    public void sendImage(BotMessageContext context, byte[] image, String mentionUserId) {
-        this.sender(context).sendImage(context, image, mentionUserId);
+    public boolean canReserve(BotMessageContext context, int count) {
+        return this.sender(context).canReserve(context, count);
     }
 
-    public void sendImageWithText(BotMessageContext context, String text, byte[] image) {
-        this.sender(context).sendImageWithText(context, text, image);
+    public List<BotMessageSendPermit> reserve(BotMessageContext context, int count) {
+        return this.sender(context).reserve(context, count);
     }
 
-    public void sendImageWithText(BotMessageContext context, String text, byte[] image,
-                                  String mentionUserId) {
-        this.sender(context).sendImageWithText(context, text, image, mentionUserId);
-    }
-
-    public void sendFile(BotMessageContext context, BotFile file) {
-        this.sender(context).sendFile(context, file);
-    }
-
-    public void sendFile(BotMessageContext context, BotFile file, String mentionUserId) {
-        this.sender(context).sendFile(context, file, mentionUserId);
-    }
-
-    public void sendFileWithText(BotMessageContext context, String text, BotFile file) {
-        this.sender(context).sendFileWithText(context, text, file);
-    }
-
-    public void sendFileWithText(BotMessageContext context, String text, BotFile file,
-                                 String mentionUserId) {
-        this.sender(context).sendFileWithText(context, text, file, mentionUserId);
-    }
-
-    public void sendMarkdown(BotMessageContext context, BotMarkdownMessage message) {
-        this.sender(context).sendMarkdown(context, message);
+    public PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
+                                     BotMessageSendPermit permit) {
+        return this.sender(context).prepare(context, blocks, mentionUserId, permit);
     }
 
     private BotMessageSender sender(BotMessageContext context) {

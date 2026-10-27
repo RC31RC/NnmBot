@@ -1,5 +1,7 @@
 package com.nnm.bot.core.group.service.impl;
 
+import com.nnm.bot.core.group.service.CanonicalMemberResolver;
+
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.domain.BotGroupPointTransaction;
@@ -29,11 +31,14 @@ public class PointAccountServiceImpl implements PointAccountService {
     private BotGroupPointTransactionRepository transactionRepository;
     @Resource
     private DistributedLockManager lockManager;
+    @Resource
+    private CanonicalMemberResolver canonicalMembers;
 
     @Override
     @Transactional
     @RdtLock
     public PointChangeResult earn(PointOperation operation) {
+        operation = canonical(operation);
         lockManager.lock("group-member:" + operation.memberId());
         if (existsByIdempotencyKey(operation.idempotencyKey())) {
             return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
@@ -52,6 +57,7 @@ public class PointAccountServiceImpl implements PointAccountService {
     @Transactional
     @RdtLock
     public PointChangeResult spend(PointOperation operation) {
+        operation = canonical(operation);
         lockManager.lock("group-member:" + operation.memberId());
         if (existsByIdempotencyKey(operation.idempotencyKey())) {
             return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
@@ -85,11 +91,11 @@ public class PointAccountServiceImpl implements PointAccountService {
         if (existsByIdempotencyKey(refundKey)) {
             return repeated(refundKey, original.getGroupId(), original.getMemberId());
         }
+        long memberId = canonicalMemberId(original.getGroupId(), original.getMemberId());
         lockManager.lock(
-                "group-member:" + original.getMemberId(),
+                "group-member:" + memberId,
                 LockOptions.defaults());
-        BotGroupMember member = memberRepository.findById(original.getMemberId())
-                .filter(item -> item.getGroupId().equals(original.getGroupId()))
+        BotGroupMember member = memberRepository.findByIdAndGroupId(memberId, original.getGroupId())
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
         long refund = Math.abs(original.getAmount());
         member.setPoints(Math.addExact(member.getPoints(), refund));
@@ -118,10 +124,11 @@ public class PointAccountServiceImpl implements PointAccountService {
                                     long targetPoints,
                                     String idempotencyKey,
                                     String description) {
-        lockManager.lock("group-member:" + memberId);
         if (groupId <= 0 || memberId <= 0) {
             throw new IllegalArgumentException("积分账户标识必须为正数");
         }
+        memberId = canonicalMemberId(groupId, memberId);
+        lockManager.lock("group-member:" + memberId);
         if (targetPoints < 0) {
             throw new IllegalArgumentException("积分余额不能为负数");
         }
@@ -129,8 +136,7 @@ public class PointAccountServiceImpl implements PointAccountService {
         if (existsByIdempotencyKey(normalizedIdempotencyKey)) {
             return repeated(normalizedIdempotencyKey, groupId, memberId);
         }
-        BotGroupMember member = memberRepository.findById(memberId)
-                .filter(item -> item.getGroupId().equals(groupId))
+        BotGroupMember member = memberRepository.findByIdAndGroupId(memberId, groupId)
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
         long amount = Math.subtractExact(targetPoints, member.getPoints());
         if (amount == 0) {
@@ -155,6 +161,7 @@ public class PointAccountServiceImpl implements PointAccountService {
     @Override
     @Transactional(readOnly = true)
     public Optional<PointBalance> balance(long groupId, long memberId) {
+        memberId = canonicalMemberId(groupId, memberId);
         return memberRepository.findById(memberId)
                 .filter(member -> member.getGroupId().equals(groupId))
                 .map(this::snapshot);
@@ -168,9 +175,24 @@ public class PointAccountServiceImpl implements PointAccountService {
     }
 
     private BotGroupMember lockedMember(PointOperation operation) {
-        return memberRepository.findById(operation.memberId())
-                .filter(member -> member.getGroupId().equals(operation.groupId()))
+        // 不使用命令入口的余额和启用状态；行锁一直持有到事务提交，避免方法锁提前释放。
+        return memberRepository.findByIdAndGroupId(operation.memberId(), operation.groupId())
+                .filter(BotGroupMember::isEnabled)
                 .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
+    }
+
+    private PointOperation canonical(PointOperation operation) {
+        long memberId = canonicalMemberId(operation.groupId(), operation.memberId());
+        if (memberId == operation.memberId()) {
+            return operation;
+        }
+        return new PointOperation(operation.groupId(), memberId, operation.commandCode(),
+                operation.transactionType(), operation.amount(), operation.idempotencyKey(),
+                operation.description());
+    }
+
+    private long canonicalMemberId(long groupId, long memberId) {
+        return canonicalMembers.resolve(groupId, memberId);
     }
 
     private BotGroupPointTransaction saveTransaction(PointOperation operation,

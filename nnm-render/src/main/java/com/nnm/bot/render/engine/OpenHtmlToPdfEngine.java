@@ -1,10 +1,14 @@
 package com.nnm.bot.render.engine;
 
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.RenderOptions;
+import com.nnm.bot.common.constant.ComputationErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.message.exception.BotImageRenderException;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -16,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.io.IOException;
 
 @Slf4j
 public class OpenHtmlToPdfEngine implements RenderEngine {
@@ -49,15 +54,24 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
 
             try (PDDocument doc = PDDocument.load(pdfOs.toByteArray())) {
                 PDFRenderer renderer = new PDFRenderer(doc);
+                PDRectangle bounds = doc.getPage(0).getCropBox();
+                double scale = options.getDpi() / 72D;
+                if (Math.ceil(bounds.getWidth() * scale) * Math.ceil(bounds.getHeight() * scale)
+                        > options.getMaxImagePixels()) {
+                    throw new BusinessException(ComputationErrorCode.RESULT_TOO_LARGE);
+                }
                 BufferedImage image = renderer.renderImageWithDPI(0, options.getDpi());
-
-                ByteArrayOutputStream imgOs = new ByteArrayOutputStream();
-                ImageIO.write(image, options.getFormat(), imgOs);
-                return imgOs.toByteArray();
+                try (ByteArrayOutputStream imgOs = new ByteArrayOutputStream()) {
+                    if (!ImageIO.write(image, options.getFormat(), imgOs)) {
+                        throw new IllegalArgumentException("Unsupported render image format: " + options.getFormat());
+                    }
+                    return imgOs.toByteArray();
+                } finally {
+                    image.flush();
+                }
             }
-        } catch (Exception e) {
-            log.error("OpenHtmlToPdf render failed", e);
-            throw new RuntimeException("Image render failed", e);
+        } catch (IOException e) {
+            throw new BotImageRenderException("PDF 图片转换失败", e);
         }
     }
 
@@ -66,14 +80,9 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
             if (ObjectUtil.isNull(fontPath) || !Files.isRegularFile(fontPath)) {
                 continue;
             }
-            try {
-                builder.useFont(fontPath.toFile(), "Noto Sans SC");
-                log.debug("Registered render font: {}", fontPath);
-                return;
-            } catch (RuntimeException exception) {
-                log.warn("Unable to register render font {}: {}", fontPath,
-                        exception.getMessage());
-            }
+            builder.useFont(fontPath.toFile(), "Noto Sans SC");
+            log.debug("Registered render font: {}", fontPath);
+            return;
         }
         log.warn("No configured Chinese font was found; CJK glyphs may be missing");
     }

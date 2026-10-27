@@ -1,10 +1,10 @@
 package com.nnm.bot.admin.bootstrap;
 
 import com.nnm.bot.admin.config.properties.AdminBootstrapProperties;
-import com.nnm.bot.admin.domain.SysRole;
-import com.nnm.bot.admin.domain.SysUser;
-import com.nnm.bot.admin.repository.SysRoleRepository;
-import com.nnm.bot.admin.repository.SysUserRepository;
+import com.nnm.bot.admin.pojo.entity.system.SysRole;
+import com.nnm.bot.admin.pojo.entity.system.SysUser;
+import com.nnm.bot.admin.repository.system.SysRoleRepository;
+import com.nnm.bot.admin.repository.system.SysUserRepository;
 import jakarta.annotation.Resource;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;

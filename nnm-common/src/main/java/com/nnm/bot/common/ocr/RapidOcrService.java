@@ -8,7 +8,9 @@ import cn.hutool.core.util.StrUtil;
 import com.benjaminwan.ocrlibrary.OcrResult;
 import com.benjaminwan.ocrlibrary.TextBlock;
 import com.nnm.bot.common.config.ocr.OcrProperties;
+import com.nnm.bot.common.concurrent.BoundedTaskExecutor;
 import com.nnm.bot.common.constant.OcrErrorCode;
+import com.nnm.bot.common.constant.ComputationErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import io.github.mymonstercat.Model;
 import io.github.mymonstercat.ocr.InferenceEngine;
@@ -34,6 +36,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * RapidOCR 适配层。模型和 native 库只在第一次识别时加载，避免影响普通启动。
@@ -41,11 +44,13 @@ import java.util.List;
 @Service
 public class RapidOcrService implements OcrService {
 
-    private final Object lock = new Object();
+    private final ReentrantLock inferenceLock = new ReentrantLock();
     private volatile InferenceEngine engine;
 
     @Resource
     private OcrProperties properties;
+    @Resource(name = "ocrTaskExecutor")
+    private BoundedTaskExecutor taskExecutor;
 
     @Override
     public OcrTextResult recognize(byte[] image) {
@@ -62,16 +67,18 @@ public class RapidOcrService implements OcrService {
                             + this.properties.getMaxInputBytes() + " 字节");
         }
 
+        return taskExecutor.execute(() -> recognizeImage(image));
+    }
+
+    private OcrTextResult recognizeImage(byte[] image) {
         BufferedImage source = this.decodeAndValidate(image);
-        Path temporaryFile = null;
-        try {
-            temporaryFile = Files.createTempFile("nnmbot-ocr-", ".png");
-            OcrCandidate best = this.recognizeVariant(source, temporaryFile);
+        try (TemporaryImage temporary = new TemporaryImage(Files.createTempFile("nnmbot-ocr-", ".png"))) {
+            OcrCandidate best = this.recognizeVariant(source, temporary.path());
             if (this.properties.isEnhancedRecognition()) {
                 BufferedImage enhanced = createContrastVariant(source);
                 try {
                     best = OcrCandidate.best(
-                            best, this.recognizeVariant(enhanced, temporaryFile));
+                            best, this.recognizeVariant(enhanced, temporary.path()));
                 } finally {
                     enhanced.flush();
                 }
@@ -79,31 +86,26 @@ public class RapidOcrService implements OcrService {
                 BufferedImage sharpened = createSharpenedVariant(source);
                 try {
                     best = OcrCandidate.best(
-                            best, this.recognizeVariant(sharpened, temporaryFile));
+                            best, this.recognizeVariant(sharpened, temporary.path()));
                 } finally {
                     sharpened.flush();
                 }
             }
-            OcrTextResult result = best.toTextResult();
-            this.deleteTemporaryFile(temporaryFile, null);
-            return result;
-        } catch (BusinessException exception) {
-            this.deleteTemporaryFile(temporaryFile, exception);
-            throw exception;
+            if (best.text().length() > properties.getMaxResultCharacters()) {
+                throw new BusinessException(ComputationErrorCode.RESULT_TOO_LARGE);
+            }
+            return best.toTextResult();
         } catch (IOException exception) {
-            BusinessException wrapped = new BusinessException(
+            throw new BusinessException(
                     OcrErrorCode.TEMPORARY_FILE_FAILED,
                     "OCR 临时图片处理失败",
                     exception);
-            this.deleteTemporaryFile(temporaryFile, wrapped);
-            throw wrapped;
         } catch (RuntimeException exception) {
-            BusinessException wrapped = new BusinessException(
+            if (exception instanceof BusinessException business) throw business;
+            throw new BusinessException(
                     OcrErrorCode.RECOGNITION_FAILED,
                     "OCR 引擎执行失败",
                     exception);
-            this.deleteTemporaryFile(temporaryFile, wrapped);
-            throw wrapped;
         } finally {
             source.flush();
         }
@@ -165,8 +167,11 @@ public class RapidOcrService implements OcrService {
                     OcrErrorCode.INVALID_IMAGE, "无法将 OCR 图片转换为 PNG");
         }
         OcrResult result;
-        synchronized (this.lock) {
+        this.inferenceLock.lock();
+        try {
             result = this.engine().runOcr(temporaryFile.toString(), this.createConfig());
+        } finally {
+            this.inferenceLock.unlock();
         }
         return OcrCandidate.from(result);
     }
@@ -225,21 +230,10 @@ public class RapidOcrService implements OcrService {
         return this.engine;
     }
 
-    private void deleteTemporaryFile(Path file, RuntimeException original) {
-        if (ObjectUtil.isNull(file)) {
-            return;
-        }
-        try {
-            Files.deleteIfExists(file);
-        } catch (IOException exception) {
-            if (ObjectUtil.isNotNull(original)) {
-                original.addSuppressed(exception);
-                return;
-            }
-            throw new BusinessException(
-                    OcrErrorCode.TEMPORARY_FILE_FAILED,
-                    "OCR 临时文件清理失败: " + file,
-                    exception);
+    private record TemporaryImage(Path path) implements AutoCloseable {
+        @Override
+        public void close() throws IOException {
+            Files.deleteIfExists(path);
         }
     }
 

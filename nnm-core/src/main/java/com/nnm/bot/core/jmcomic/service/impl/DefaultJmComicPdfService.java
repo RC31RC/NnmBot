@@ -26,10 +26,8 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * 将下载图片逐页压缩为 PDF，避免一次性把整本图片载入堆内存。
@@ -48,13 +46,15 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
             throw new BusinessException(
                     JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
         }
-        List<Path> orderedImages = imageFiles.stream()
+        List<Path> imagesInCallerOrder = imageFiles.stream()
                 .filter(ObjectUtil::isNotNull)
-                .sorted(Comparator.comparing(
-                        path -> path.toAbsolutePath().normalize().toString(),
-                        DefaultJmComicPdfService::compareNaturally))
                 .toList();
-        if (orderedImages.size() > this.properties.getMaxPages()) {
+        // ZIP 图片落盘名只用于隔离条目，不能覆盖调用方按原始章节、页码确定的顺序。
+        if (imagesInCallerOrder.isEmpty()) {
+            throw new BusinessException(
+                    JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
+        }
+        if (imagesInCallerOrder.size() > this.properties.getMaxPages()) {
             throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE);
         }
 
@@ -62,7 +62,7 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
         try {
             Files.createDirectories(normalizedOutput.getParent());
             try (PDDocument document = new PDDocument(MemoryUsageSetting.setupTempFileOnly())) {
-                for (Path imageFile : orderedImages) {
+                for (Path imageFile : imagesInCallerOrder) {
                     this.appendPage(document, imageFile);
                 }
                 document.save(normalizedOutput.toFile());
@@ -178,53 +178,6 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
             graphics.dispose();
         }
         return target;
-    }
-
-    static int compareNaturally(String left, String right) {
-        int leftIndex = 0;
-        int rightIndex = 0;
-        while (leftIndex < left.length() && rightIndex < right.length()) {
-            char leftChar = left.charAt(leftIndex);
-            char rightChar = right.charAt(rightIndex);
-            if (Character.isDigit(leftChar) && Character.isDigit(rightChar)) {
-                int leftEnd = numberEnd(left, leftIndex);
-                int rightEnd = numberEnd(right, rightIndex);
-                String leftNumber = trimLeadingZeroes(left.substring(leftIndex, leftEnd));
-                String rightNumber = trimLeadingZeroes(right.substring(rightIndex, rightEnd));
-                int lengthComparison = Integer.compare(leftNumber.length(), rightNumber.length());
-                if (lengthComparison != 0) {
-                    return lengthComparison;
-                }
-                int numberComparison = leftNumber.compareTo(rightNumber);
-                if (numberComparison != 0) {
-                    return numberComparison;
-                }
-                leftIndex = leftEnd;
-                rightIndex = rightEnd;
-                continue;
-            }
-            int characterComparison = Character.compare(
-                    Character.toLowerCase(leftChar), Character.toLowerCase(rightChar));
-            if (characterComparison != 0) {
-                return characterComparison;
-            }
-            leftIndex++;
-            rightIndex++;
-        }
-        return Integer.compare(left.length() - leftIndex, right.length() - rightIndex);
-    }
-
-    private static int numberEnd(String value, int start) {
-        int index = start;
-        while (index < value.length() && Character.isDigit(value.charAt(index))) {
-            index++;
-        }
-        return index;
-    }
-
-    private static String trimLeadingZeroes(String value) {
-        String trimmed = value.replaceFirst("^0+(?!$)", "");
-        return trimmed.toLowerCase(Locale.ROOT);
     }
 
     private static void deleteOutputAfterFailure(Path output, IOException original) {

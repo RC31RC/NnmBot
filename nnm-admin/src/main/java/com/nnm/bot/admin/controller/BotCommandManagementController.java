@@ -1,19 +1,20 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.vo.bot.command.BotCommandVO;
+import com.nnm.bot.admin.pojo.vo.bot.command.BotCommandRoleVO;
+import com.nnm.bot.admin.pojo.vo.bot.command.BotCommandCostVO;
+import com.nnm.bot.admin.controller.assembler.bot.command.AdminBotCommandViewAssembler;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.bot.BotCommandItem;
-import com.nnm.bot.admin.dto.bot.BotCommandChannelOutputItem;
-import com.nnm.bot.admin.dto.bot.BotCommandChannelOutputSaveRequest;
-import com.nnm.bot.admin.dto.bot.BotCommandCostItem;
-import com.nnm.bot.admin.dto.bot.BotCommandCostSaveRequest;
-import com.nnm.bot.admin.dto.bot.BotCommandRoleItem;
-import com.nnm.bot.admin.dto.bot.BotCommandRoleSaveRequest;
-import com.nnm.bot.admin.dto.bot.BotCommandSaveRequest;
-import com.nnm.bot.admin.dto.bot.BotCommandSystemRoleSaveRequest;
-import com.nnm.bot.admin.service.BotCommandManagementService;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandDTO;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandCostDTO;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandCostSaveDTO;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandRoleDTO;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandRoleSaveDTO;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandSaveDTO;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandSystemRoleSaveDTO;
+import com.nnm.bot.admin.service.bot.command.BotCommandManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
-import com.nnm.bot.core.constant.BotPlatform;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,10 +35,10 @@ public class BotCommandManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotCommandItem>> commands(
+    public ApiResponse<List<BotCommandVO>> commands(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.commands());
+        return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandVO(service.commands()));
     }
 
     @PutMapping("/{code}")
@@ -47,43 +48,19 @@ public class BotCommandManagementController {
             String code,
                                     @Valid
                                     @RequestBody
-                                    BotCommandSaveRequest request) {
+                                    BotCommandSaveDTO request) {
         service.update(code, request);
-        return ApiResponse.ok();
-    }
-
-    @PostMapping("/{code}/outputs/query")
-    @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotCommandChannelOutputItem>> channelOutputs(
-            @PathVariable
-            String code,
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
-        return ApiResponse.ok(service.channelOutputs(code));
-    }
-
-    @PutMapping("/{code}/outputs/{platform}")
-    @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> updateChannelOutput(
-            @PathVariable
-            String code,
-            @PathVariable
-            BotPlatform platform,
-            @Valid
-            @RequestBody
-            BotCommandChannelOutputSaveRequest request) {
-        service.updateChannelOutput(code, platform, request);
         return ApiResponse.ok();
     }
 
     @PostMapping("/{code}/robot-roles/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotCommandRoleItem>> roles(
+    public ApiResponse<List<BotCommandRoleVO>> roles(
             @PathVariable
             String code,
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.roles(code));
+        return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandRoleVO(service.roles(code)));
     }
 
     @PutMapping("/{code}/robot-roles")
@@ -93,7 +70,7 @@ public class BotCommandManagementController {
             String code,
             @Valid
             @RequestBody
-            BotCommandRoleSaveRequest request) {
+            BotCommandRoleSaveDTO request) {
         service.updateRoles(code, request);
         return ApiResponse.ok();
     }
@@ -116,19 +93,19 @@ public class BotCommandManagementController {
             String code,
             @Valid
             @RequestBody
-            BotCommandSystemRoleSaveRequest request) {
+            BotCommandSystemRoleSaveDTO request) {
         service.updateSystemRoles(code, request);
         return ApiResponse.ok();
     }
 
     @PostMapping("/{code}/cost/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<BotCommandCostItem> cost(
+    public ApiResponse<BotCommandCostVO> cost(
             @PathVariable
             String code,
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.cost(code));
+        return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandCostVO(service.cost(code)));
     }
 
     @PutMapping("/{code}/cost")
@@ -138,7 +115,7 @@ public class BotCommandManagementController {
             String code,
             @Valid
             @RequestBody
-            BotCommandCostSaveRequest request) {
+            BotCommandCostSaveDTO request) {
         service.updateCost(code, request);
         return ApiResponse.ok();
     }

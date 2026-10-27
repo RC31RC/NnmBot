@@ -1,21 +1,25 @@
 package com.nnm.bot.warframe.config;
 
-import com.nnm.bot.warframe.config.properties.WarframeCacheProperties;
-import com.nnm.bot.warframe.cache.WarframeCacheNames;
+import com.nnm.bot.warframe.constant.WarframeCacheNames;
+import com.nnm.bot.warframe.config.cache.WarframeCacheProperties;
+import com.nnm.bot.warframe.config.cache.WarframeCacheProperties.CacheRegion;
+import org.cache2k.Cache2kBuilder;
 import org.cache2k.extra.spring.SpringCache2kCacheManager;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import java.util.concurrent.atomic.AtomicLong;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(WarframeCacheProperties.class)
 public class WarframeCacheConfiguration {
 
     private static final AtomicLong CACHE_MANAGER_SEQUENCE = new AtomicLong();
 
+    /**
+     * 根据各业务缓存的容量与过期配置注册 cache2k 缓存管理器。
+     * @param properties 当前业务配置。
+     * @return 缓存管理器对象。
+     */
     @Bean
     public CacheManager cacheManager(WarframeCacheProperties properties) {
         properties.validate();
@@ -25,45 +29,36 @@ public class WarframeCacheConfiguration {
                         .permitNullValues(false)
                         .disableStatistics(false))
                 .addCaches(
-                        builder -> builder
-                                .name(WarframeCacheNames.WORLD_STATE)
-                                .entryCapacity(properties.getWorldState().getCapacity())
-                                .eternal(true),
-                        builder -> builder
-                                .name(WarframeCacheNames.METADATA)
-                                .entryCapacity(properties.getMetadata().getCapacity())
-                                .expireAfterWrite(properties.getMetadata().getExpireAfterWrite()),
-                        builder -> builder
-                                .name(WarframeCacheNames.MARKET_ORDERS)
-                                .entryCapacity(properties.getMarketOrders().getCapacity())
-                                .expireAfterWrite(properties.getMarketOrders().getExpireAfterWrite()),
-                        builder -> builder
-                                .name(WarframeCacheNames.MARKET_AUCTIONS)
-                                .entryCapacity(properties.getMarketAuctions().getCapacity())
-                                .expireAfterWrite(properties.getMarketAuctions().getExpireAfterWrite()),
-                        builder -> builder
-                                .name(WarframeCacheNames.MARKET_STATISTICS)
-                                .entryCapacity(properties.getMarketStatistics().getCapacity())
-                                .expireAfterWrite(properties.getMarketStatistics().getExpireAfterWrite()),
-                        builder -> builder
-                                .name(WarframeCacheNames.ITEM_RESOLUTION_INDEX)
-                                .entryCapacity(properties.getItemResolutionIndex().getCapacity())
-                                .expireAfterWrite(properties.getItemResolutionIndex().getExpireAfterWrite()),
-                        builder -> builder
-                                .name(WarframeCacheNames.TRANSLATIONS)
-                                .entryCapacity(properties.getTranslations().getCapacity())
-                                .expireAfterWrite(properties.getTranslations().getExpireAfterWrite()),
-                        builder -> builder
-                                .name(WarframeCacheNames.DATA_SOURCE_TAG)
-                                .entryCapacity(properties.getDataSourceTag().getCapacity())
-                                .expireAfterWrite(properties.getDataSourceTag().getExpireAfterWrite()),
-                        builder -> builder
-                                .name(WarframeCacheNames.WORLD_STATE_IMAGES)
-                                .entryCapacity(properties.getWorldStateImages().getCapacity())
-                                .expireAfterWrite(
-                                        properties.getWorldStateImages().getExpireAfterWrite())
-                );
+                        builder -> region(builder, WarframeCacheNames.SUBSCRIPTION_MEMORY, properties.getSubscriptionMemory()),
+                        builder -> region(builder, WarframeCacheNames.METADATA, properties.getMetadata()),
+                        builder -> region(builder, WarframeCacheNames.MARKET_ORDERS, properties.getMarketOrders()),
+                        builder -> region(builder, WarframeCacheNames.MARKET_AUCTIONS, properties.getMarketAuctions()),
+                        builder -> region(builder, WarframeCacheNames.MARKET_STATISTICS, properties.getMarketStatistics()),
+                        builder -> region(builder, WarframeCacheNames.ITEM_RESOLUTION_INDEX,
+                                properties.getItemResolutionIndex()),
+                        builder -> region(builder, WarframeCacheNames.IMAGE_INDEX, properties.getImageIndex()),
+                        builder -> region(builder, WarframeCacheNames.RIVEN_WEEKLY, properties.getRivenWeekly()),
+                        builder -> region(builder, WarframeCacheNames.WORLD_STATE_IMAGES,
+                                properties.getWorldStateImages()));
         cacheManager.setAllowUnknownCache(false);
         return cacheManager;
+    }
+
+    /**
+     * 将单个业务缓存区的容量和生命周期应用到缓存构建器。
+     * @param builder 构建器。
+     * @param name 当前业务对象的名称。
+     * @param properties 当前业务配置。
+     * @return 缓存键构建器对象。
+     */
+    private Cache2kBuilder<?, ?> region(
+            Cache2kBuilder<?, ?> builder,
+            String name,
+            CacheRegion properties) {
+        Cache2kBuilder<?, ?> configured = builder.name(name)
+                .entryCapacity(properties.getCapacity());
+        return properties.getExpireAfterWrite() == null
+                ? configured.eternal(true)
+                : configured.expireAfterWrite(properties.getExpireAfterWrite());
     }
 }

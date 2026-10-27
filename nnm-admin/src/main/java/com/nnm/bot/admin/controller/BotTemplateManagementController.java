@@ -1,9 +1,11 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.vo.bot.command.BotTemplateVO;
+import com.nnm.bot.admin.controller.assembler.bot.command.AdminBotCommandViewAssembler;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.bot.BotTemplateItem;
-import com.nnm.bot.admin.dto.bot.BotTemplateSaveRequest;
-import com.nnm.bot.admin.service.BotTemplateManagementService;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotTemplateDTO;
+import com.nnm.bot.admin.pojo.dto.bot.command.BotTemplateSaveDTO;
+import com.nnm.bot.admin.service.bot.command.BotTemplateManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
@@ -27,10 +29,10 @@ public class BotTemplateManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotTemplateItem>> list(
+    public ApiResponse<List<BotTemplateVO>> list(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.list());
+        return ApiResponse.ok(AdminBotCommandViewAssembler.toBotTemplateVO(service.list()));
     }
 
     @PostMapping
@@ -38,7 +40,7 @@ public class BotTemplateManagementController {
     public ApiResponse<Long> create(
             @Valid
             @RequestBody
-    BotTemplateSaveRequest request) {
+    BotTemplateSaveDTO request) {
         return ApiResponse.ok(service.create(request));
     }
 
@@ -49,7 +51,7 @@ public class BotTemplateManagementController {
             long id,
             @Valid
             @RequestBody
-            BotTemplateSaveRequest request) {
+            BotTemplateSaveDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }

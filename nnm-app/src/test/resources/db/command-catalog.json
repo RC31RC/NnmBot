@@ -1,0 +1,621 @@
+[ {
+  "code" : "abilities",
+  "name" : "技能资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "achievements",
+  "name" : "成就定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "alerts",
+  "name" : "警报",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "animals",
+  "name" : "捕获动物",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "arbitration",
+  "name" : "仲裁",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "arbitration-table",
+  "name" : "仲裁表",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "arcane-guides",
+  "name" : "奥术攻略",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "arcanes",
+  "name" : "奥术资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "archimedeas",
+  "name" : "科研",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "archon-hunts",
+  "name" : "执刑官猎杀",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "archon-shards",
+  "name" : "源力石",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "archwing",
+  "name" : "Archwing资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "bind",
+  "name" : "绑定",
+  "gameCode" : "system",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "booster-packs",
+  "name" : "随机礼包",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "boosters",
+  "name" : "增幅器",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "bounty-definitions",
+  "name" : "赏金定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "bundles",
+  "name" : "礼包内容",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "calendar",
+  "name" : "实时日历",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "calendar-1999",
+  "name" : "1999日历",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "cavia",
+  "name" : "科维兽赏金",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "challenges",
+  "name" : "挑战定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "circuit-hard",
+  "name" : "灵化轮换",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "circuit-normal",
+  "name" : "普通回环",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "clan-initiative",
+  "name" : "氏族周任务",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "codex-fighters",
+  "name" : "Frame Fighter 碎片",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "codex-lore",
+  "name" : "图鉴故事碎片",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "codex-objects",
+  "name" : "图鉴物件",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "codex-songs",
+  "name" : "图鉴歌曲",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "companions",
+  "name" : "同伴资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "conclave",
+  "name" : "竞技场",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "conclave-rules",
+  "name" : "武形秘仪规则",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "construction-progress",
+  "name" : "舰队建造",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "credit-bundles",
+  "name" : "信用点礼包",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "customs",
+  "name" : "外观资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "cycles",
+  "name" : "平原",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "daily-deals",
+  "name" : "每日特惠",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "deep-archimedeas",
+  "name" : "深层科研",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "descents",
+  "name" : "深层下降",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "drones",
+  "name" : "无人机资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "duviri-cycle",
+  "name" : "双衍王境",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "efficient-arbitration",
+  "name" : "高效仲裁",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "email-items",
+  "name" : "邮件定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "enemies",
+  "name" : "敌人资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "entrati",
+  "name" : "英择谛",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "event-rules",
+  "name" : "活动显示规则",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "events",
+  "name" : "活动",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "fish",
+  "name" : "鱼类物品",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "fish-guide",
+  "name" : "鱼类攻略",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "fissures",
+  "name" : "裂隙",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "flash-sales",
+  "name" : "促销",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "flavours",
+  "name" : "展示风格",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "forum-loadout",
+  "name" : "wf配装",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "fusion-bundles",
+  "name" : "融合包",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "gear",
+  "name" : "装备工具",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "global-upgrades",
+  "name" : "全局增益",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "gold-trash",
+  "name" : "金垃圾",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "help",
+  "name" : "帮助",
+  "gameCode" : "system",
+  "matchType" : "EXACT"
+}, {
+  "code" : "hex-archimedeas",
+  "name" : "时光科研",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "hex-bounties",
+  "name" : "1999赏金",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "holdfasts",
+  "name" : "扎里曼赏金",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "intrinsics",
+  "name" : "内源之力",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "invasions",
+  "name" : "入侵",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "item-components",
+  "name" : "物品组件",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "item-drops",
+  "name" : "物品掉落",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "jm",
+  "name" : "JM 下载",
+  "gameCode" : "system",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "keys",
+  "name" : "钥匙链",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "legacy-items",
+  "name" : "历史物品目录",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "liches",
+  "name" : "赤毒",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "map-features",
+  "name" : "开放世界地图标注",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "market",
+  "name" : "市场",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "market-catalog",
+  "name" : "历史 Market 商品",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "market-riven",
+  "name" : "紫卡市场",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "misc",
+  "name" : "杂项资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "mod-sets",
+  "name" : "MOD 套装",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "mods",
+  "name" : "MOD 资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "news",
+  "name" : "新闻",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "nightwave",
+  "name" : "电波",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "nightwave-definitions",
+  "name" : "电波静态定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "ostrons",
+  "name" : "希图斯",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "perrin-sequence",
+  "name" : "佩兰数列",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "persistent-enemies",
+  "name" : "小小黑",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "quests",
+  "name" : "任务资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "recipes",
+  "name" : "制作配方",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "relics",
+  "name" : "遗物",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "resources",
+  "name" : "资源资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "reward-pools",
+  "name" : "奖励池",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "riven-analyse",
+  "name" : "紫卡分析",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "riven-attributes",
+  "name" : "历史紫卡属性编码",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "riven-definitions",
+  "name" : "紫卡属性与挑战",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "riven-unrollables",
+  "name" : "紫卡不可洗属性",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "riven-weekly",
+  "name" : "紫卡周成交统计",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "sentient-outposts",
+  "name" : "先遣舰",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "sign-in",
+  "name" : "签到",
+  "gameCode" : "system",
+  "matchType" : "EXACT"
+}, {
+  "code" : "silver-trash",
+  "name" : "银垃圾",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "simaris",
+  "name" : "西玛里斯",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "sisters",
+  "name" : "信条",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "solaris",
+  "name" : "索拉里斯",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "sorties",
+  "name" : "突击",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "status",
+  "name" : "状态",
+  "gameCode" : "system",
+  "matchType" : "EXACT"
+}, {
+  "code" : "steel-fissures",
+  "name" : "钢铁裂隙",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "steel-path",
+  "name" : "钢铁奖励",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "steel-path-catalog",
+  "name" : "钢铁奖励目录",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "subscribe",
+  "name" : "订阅",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "syndicate-missions",
+  "name" : "集团任务",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "synth-targets",
+  "name" : "合成目标地点",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "systems",
+  "name" : "星系定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "tilesets",
+  "name" : "场景定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "timestamp",
+  "name" : "世界时间",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "today-arbitration",
+  "name" : "今日仲裁",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "translation",
+  "name" : "翻译",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "tutorials",
+  "name" : "教程",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "unsubscribe",
+  "name" : "取消订阅",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "update-liches",
+  "name" : "更新赤毒",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "update-perrin-sequence",
+  "name" : "更新终幕",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "update-sister",
+  "name" : "更新信条",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "vault-trader",
+  "name" : "宝库商人",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "vendor-definitions",
+  "name" : "商人静态定义",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "virtuals",
+  "name" : "虚拟实体",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "void-storms",
+  "name" : "九重天裂隙",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "void-trader",
+  "name" : "奸商",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "warframes",
+  "name" : "战甲资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "watch-list",
+  "name" : "蹲任务",
+  "gameCode" : "warframe",
+  "matchType" : "EXACT"
+}, {
+  "code" : "weapons",
+  "name" : "武器资料",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+}, {
+  "code" : "wiki",
+  "name" : "Wiki",
+  "gameCode" : "warframe",
+  "matchType" : "PREFIX"
+} ]

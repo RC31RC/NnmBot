@@ -13,8 +13,10 @@ import com.nnm.bot.core.channel.model.BotDiscoveredMember;
 import com.nnm.bot.core.channel.model.BotDiscoveredScope;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
+import com.nnm.bot.core.channel.model.BotMemberQueryResult;
+import com.nnm.bot.core.channel.port.BotGroupMemberQueryProvider;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
-import com.nnm.bot.core.channel.port.BotScopeDiscoveryProvider;
+import com.nnm.bot.core.channel.port.BotLocalScopeDiscoveryProvider;
 import com.nnm.bot.core.constant.BotPlatform;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +31,8 @@ import java.util.List;
  */
 @Component
 @Slf4j
-public class OneBotScopeDiscoveryProvider implements BotScopeDiscoveryProvider {
+public class OneBotScopeDiscoveryProvider
+        implements BotLocalScopeDiscoveryProvider, BotGroupMemberQueryProvider {
 
     @Resource
     private BotContainer botContainer;
@@ -43,8 +46,8 @@ public class OneBotScopeDiscoveryProvider implements BotScopeDiscoveryProvider {
 
     @Override
     public BotScopeDiscoveryResult discover(BotChannelInstanceRecord instance) {
-        ClusterScopeDiscovery cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
-        return cluster == null ? discoverLocal(instance.botAccountId()) : cluster.discover(instance);
+        ClusterScopeDiscovery cluster = clusterProvider.getObject();
+        return cluster.discover(instance);
     }
 
     public BotScopeDiscoveryResult discoverLocal(String botAccountId) {
@@ -85,6 +88,20 @@ public class OneBotScopeDiscoveryProvider implements BotScopeDiscoveryProvider {
                     BotChannelErrorCode.SCOPE_DISCOVERY_FAILED,
                     "OneBot 群组查询失败: " + safeMessage(exception),
                     exception);
+        }
+    }
+
+    @Override
+    public BotMemberQueryResult query(
+            BotChannelInstanceRecord instance, String scopeKey) {
+        try {
+            Bot bot = botContainer.robots.get(Long.parseLong(instance.botAccountId()));
+            if (bot == null) return new BotMemberQueryResult(List.of(), false);
+            MemberDiscovery result = loadMembers(bot, Long.parseLong(scopeKey));
+            return new BotMemberQueryResult(result.members(), result.complete());
+        } catch (RuntimeException exception) {
+            log.warn("OneBot 群成员查询失败，groupId={}", scopeKey, exception);
+            return new BotMemberQueryResult(List.of(), false);
         }
     }
 

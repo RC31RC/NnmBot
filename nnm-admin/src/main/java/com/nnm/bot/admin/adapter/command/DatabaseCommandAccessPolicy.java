@@ -1,22 +1,22 @@
 package com.nnm.bot.admin.adapter.command;
 
-import com.nnm.bot.admin.domain.BotCommandRobotRole;
-import com.nnm.bot.admin.domain.BotCommandRole;
-import com.nnm.bot.admin.domain.BotRobotRole;
+import java.util.OptionalLong;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandRobotRole;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandRole;
+import com.nnm.bot.admin.pojo.entity.bot.role.BotRobotRole;
 import java.util.stream.Collectors;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
-import com.nnm.bot.admin.domain.BotCommand;
-import com.nnm.bot.admin.domain.SysUser;
-import com.nnm.bot.admin.repository.BotChannelInstanceRepository;
-import com.nnm.bot.admin.repository.BotCommandRepository;
-import com.nnm.bot.admin.repository.BotCommandRoleRepository;
-import com.nnm.bot.admin.repository.BotCommandRobotRoleRepository;
-import com.nnm.bot.admin.repository.BotRobotRoleInstanceRepository;
-import com.nnm.bot.admin.repository.BotRobotRoleRepository;
-import com.nnm.bot.admin.repository.SysUserIdentityRepository;
-import com.nnm.bot.admin.repository.SysUserRepository;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
+import com.nnm.bot.admin.pojo.entity.system.SysUser;
+import com.nnm.bot.admin.repository.bot.command.BotCommandRepository;
+import com.nnm.bot.admin.repository.bot.command.BotCommandRoleRepository;
+import com.nnm.bot.admin.repository.bot.command.BotCommandRobotRoleRepository;
+import com.nnm.bot.admin.repository.bot.role.BotRobotRoleInstanceRepository;
+import com.nnm.bot.admin.repository.bot.role.BotRobotRoleRepository;
+import com.nnm.bot.admin.repository.system.SysUserIdentityRepository;
+import com.nnm.bot.admin.repository.system.SysUserRepository;
 import com.nnm.bot.core.channel.port.BotChannelInstanceIdentityResolver;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.message.model.BotMessageContext;
@@ -25,15 +25,13 @@ import com.nnm.bot.core.plugin.model.CommandAccessDecision;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
 import com.nnm.bot.core.plugin.system.SystemCommandCodes;
-import com.nnm.bot.core.group.repository.BotGroupBotRepository;
-import com.nnm.bot.core.group.repository.BotGroupRepository;
-import com.nnm.bot.core.group.domain.BotGroup;
-import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
+import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -49,45 +47,26 @@ import java.util.Set;
 @Slf4j
 public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
 
-    private final BotCommandRepository commandRepository;
-    private final BotCommandRobotRoleRepository commandRoleRepository;
-    private final BotRobotRoleInstanceRepository roleInstanceRepository;
-    private final BotRobotRoleRepository roleRepository;
-    private final BotChannelInstanceRepository instanceRepository;
-    private final BotCommandRoleRepository systemRoleBindingRepository;
-    private final SysUserIdentityRepository identityRepository;
-    private final SysUserRepository userRepository;
-    private final BotChannelInstanceIdentityResolver instanceIdentityResolver;
-    private final BotGroupBotRepository groupBotRepository;
-    private final BotGroupRepository groupRepository;
-    private final BotGroupMemberIdentityResolver groupMemberIdentityResolver;
-
-    public DatabaseCommandAccessPolicy(
-            BotCommandRepository commandRepository,
-            BotCommandRobotRoleRepository commandRoleRepository,
-            BotRobotRoleInstanceRepository roleInstanceRepository,
-            BotRobotRoleRepository roleRepository,
-            BotChannelInstanceRepository instanceRepository,
-            BotCommandRoleRepository systemRoleBindingRepository,
-            SysUserIdentityRepository identityRepository,
-            SysUserRepository userRepository,
-            BotChannelInstanceIdentityResolver instanceIdentityResolver,
-            BotGroupBotRepository groupBotRepository,
-            BotGroupRepository groupRepository,
-            BotGroupMemberIdentityResolver groupMemberIdentityResolver) {
-        this.commandRepository = commandRepository;
-        this.commandRoleRepository = commandRoleRepository;
-        this.roleInstanceRepository = roleInstanceRepository;
-        this.roleRepository = roleRepository;
-        this.instanceRepository = instanceRepository;
-        this.systemRoleBindingRepository = systemRoleBindingRepository;
-        this.identityRepository = identityRepository;
-        this.userRepository = userRepository;
-        this.instanceIdentityResolver = instanceIdentityResolver;
-        this.groupBotRepository = groupBotRepository;
-        this.groupRepository = groupRepository;
-        this.groupMemberIdentityResolver = groupMemberIdentityResolver;
-    }
+    @Resource
+    private BotCommandRepository commandRepository;
+    @Resource
+    private BotCommandRobotRoleRepository commandRoleRepository;
+    @Resource
+    private BotRobotRoleInstanceRepository roleInstanceRepository;
+    @Resource
+    private BotRobotRoleRepository roleRepository;
+    @Resource
+    private BotCommandRoleRepository systemRoleBindingRepository;
+    @Resource
+    private SysUserIdentityRepository identityRepository;
+    @Resource
+    private SysUserRepository userRepository;
+    @Resource
+    private BotChannelInstanceIdentityResolver instanceIdentityResolver;
+    @Resource
+    private BotGroupCommandContextResolver groupContextResolver;
+    @Resource
+    private BotGroupMemberIdentityResolver groupMemberIdentityResolver;
 
     @Override
     public CommandAccessDecision check(BotMessageContext context,
@@ -102,7 +81,8 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
                     : CommandAccessDecision.denied("当前业务命令未完成数据库配置");
         }
 
-        CommandAccessDecision instanceDecision = this.checkBotInstance(context, command);
+        CommandAccessDecision instanceDecision = this.checkBotInstance(
+                context.platform(), context.botAccountId(), command);
         if (!instanceDecision.allowed()) {
             return instanceDecision;
         }
@@ -115,7 +95,15 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
         return this.checkGroupRole(context, command);
     }
 
-    private CommandAccessDecision checkBotInstance(BotMessageContext context,
+    @Override
+    public CommandAccessDecision checkInstance(BotPlatform platform, String botAccountId,
+                                               CommandDescriptor descriptor) {
+        return commandRepository.findByCodeIgnoreCase(descriptor.code())
+                .map(command -> checkBotInstance(platform, botAccountId, command))
+                .orElseGet(() -> CommandAccessPolicy.super.checkInstance(platform, botAccountId, descriptor));
+    }
+
+    private CommandAccessDecision checkBotInstance(BotPlatform platform, String botAccountId,
                                                     BotCommand command) {
         // 系统命令是每个实例的内置能力，不受机器人能力角色绑定影响。
         if (SystemCommandCodes.ALL.contains(command.getCode().toLowerCase(Locale.ROOT))) {
@@ -126,15 +114,14 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
         if (bindings.isEmpty()) {
             log.debug("机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, "
                             + "reason=未配置机器人能力角色",
-                    command.getCode(), command.getId(), context.platform(), context.botAccountId());
+                    command.getCode(), command.getId(), platform, botAccountId);
             return CommandAccessDecision.denied("当前命令未配置机器人能力角色");
         }
-        var instance = this.instanceRepository.findByPlatformAndBotAccountId(
-                context.platform(), context.botAccountId()).orElse(null);
-        if (ObjectUtil.isNull(instance)) {
+        OptionalLong instanceId = this.instanceIdentityResolver.resolveId(platform, botAccountId);
+        if (instanceId.isEmpty()) {
             log.debug("机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, "
                             + "bindingCount={}, reason=机器人实例不存在",
-                    command.getCode(), command.getId(), context.platform(), context.botAccountId(),
+                    command.getCode(), command.getId(), platform, botAccountId,
                     bindings.size());
             return CommandAccessDecision.denied("当前机器人实例不存在");
         }
@@ -146,13 +133,13 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
                 .collect(Collectors.toSet());
         Set<Long> boundRoleIds = enabledRoleIds.stream()
                 .filter(roleId -> this.roleInstanceRepository.findAllByRobotRoleId(roleId).stream()
-                        .anyMatch(item -> item.getBotInstanceId().equals(instance.getId())))
+                        .anyMatch(item -> item.getBotInstanceId().equals(instanceId.getAsLong())))
                 .collect(Collectors.toSet());
         boolean allowed = !boundRoleIds.isEmpty();
         log.debug("机器人能力角色校验：commandCode={}, commandId={}, platform={}, botAccountId={}, "
                         + "bindingCount={}, instanceId={}, enabledRoleIds={}, boundRoleIds={}, allowed={}",
-                command.getCode(), command.getId(), context.platform(), context.botAccountId(),
-                bindings.size(), instance.getId(), enabledRoleIds, boundRoleIds, allowed);
+                command.getCode(), command.getId(), platform, botAccountId,
+                bindings.size(), instanceId.getAsLong(), enabledRoleIds, boundRoleIds, allowed);
         return allowed
                 ? CommandAccessDecision.permit()
                 : CommandAccessDecision.denied("当前机器人未绑定该命令能力");
@@ -210,28 +197,9 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
     }
 
     private BotGroupMember resolveGroupMember(BotMessageContext context) {
-        var instanceId = this.instanceIdentityResolver.resolveId(
-                context.platform(), context.botAccountId());
-        if (instanceId.isEmpty()) {
-            return null;
-        }
-        BotGroupBot binding = this.groupBotRepository
-                .findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
-                        context.platform().name(), "GROUP", context.conversationId(),
-                        instanceId.getAsLong())
-                .filter(BotGroupBot::isEnabled)
-                .orElse(null);
-        if (ObjectUtil.isNull(binding)) {
-            return null;
-        }
-        BotGroup group = this.groupRepository.findById(binding.getGroupId())
-                .filter(BotGroup::isEnabled)
-                .orElse(null);
-        if (ObjectUtil.isNull(group)) {
-            return null;
-        }
-        return this.groupMemberIdentityResolver
-                .findOrCreateForCommand(group.getId(), context)
+        // 解析器会优先使用入口只读上下文，权限检查不重复查询群组、绑定和主成员。
+        return groupContextResolver.resolve(context)
+                .flatMap(group -> groupMemberIdentityResolver.findByContext(group.group().getId(), context))
                 .orElse(null);
     }
 

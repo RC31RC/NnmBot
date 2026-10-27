@@ -1,78 +1,34 @@
 package com.nnm.bot.core.message.sender;
 
+import com.nnm.bot.core.constant.BotMessageConstants.PartKind;
 import com.nnm.bot.core.constant.BotChannelCapability;
 import com.nnm.bot.core.constant.BotPlatform;
-import com.nnm.bot.core.message.model.BotFile;
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
 import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.message.exception.BotChannelCapabilityException;
+import com.nnm.bot.core.message.model.BotMessagePart;
+import com.nnm.bot.core.message.model.PreparedBotMessage;
+import com.nnm.bot.core.message.model.BotMessageSendPermit;
+import java.util.List;
+import java.util.stream.IntStream;
 
 public interface BotMessageSender {
 
     BotPlatform platform();
 
-    void sendText(BotMessageContext context, String text);
+    boolean supports(BotMessageContext context, BotChannelCapability capability);
 
-    /** 发送文字并可选提及触发者；默认渠道保持原有协议。 */
-    default void sendText(BotMessageContext context, String text, String mentionUserId) {
-        sendText(context, text);
+    boolean supportsComposition(BotMessageContext context, List<PartKind> parts);
+
+    default boolean canReserve(BotMessageContext context, int count) {
+        return count > 0;
     }
 
-    default boolean supports(BotMessageContext context, BotChannelCapability capability) {
-        return capability == BotChannelCapability.TEXT_MESSAGE;
+    /** 整组预留必须原子完成；无协议额度的平台只提供生命周期句柄。 */
+    default List<BotMessageSendPermit> reserve(BotMessageContext context, int count) {
+        if (count < 1) throw new IllegalArgumentException("count must be positive");
+        return IntStream.range(0, count).mapToObj(index -> BotMessageSendPermit.unrestricted()).toList();
     }
 
-    /**
-     * 渠道未实现媒体能力时抛出该异常，由响应策略使用命令文本降级。
-     */
-    default void sendImage(BotMessageContext context, byte[] image) {
-        throw new BotChannelCapabilityException(
-                this.platform(), BotChannelCapability.IMAGE_MESSAGE, "图片消息");
-    }
-
-    /**
-     * 发送带说明文字的图片。渠道必须显式实现自己的组合协议；
-     * 未实现时交给响应策略统一降级为文本。
-     */
-    default void sendImageWithText(BotMessageContext context, String text, byte[] image) {
-        throw new BotChannelCapabilityException(
-                this.platform(), BotChannelCapability.IMAGE_MESSAGE, "图文组合消息");
-    }
-
-    /** 发送图片并可选提及触发者。 */
-    default void sendImage(BotMessageContext context, byte[] image, String mentionUserId) {
-        sendImage(context, image);
-    }
-
-    /** 发送图文并可选提及触发者。 */
-    default void sendImageWithText(BotMessageContext context, String text, byte[] image,
-                                   String mentionUserId) {
-        sendImageWithText(context, text, image);
-    }
-
-    default void sendFile(BotMessageContext context, BotFile file) {
-        throw new BotChannelCapabilityException(
-                this.platform(), BotChannelCapability.FILE_MESSAGE, "文件消息");
-    }
-
-    default void sendFileWithText(BotMessageContext context, String text, BotFile file) {
-        throw new BotChannelCapabilityException(
-                this.platform(), BotChannelCapability.FILE_MESSAGE, "文件与文字组合消息");
-    }
-
-    /** 发送文件并可选提及触发者。 */
-    default void sendFile(BotMessageContext context, BotFile file, String mentionUserId) {
-        sendFile(context, file);
-    }
-
-    /** 发送文件和文字并可选提及触发者。 */
-    default void sendFileWithText(BotMessageContext context, String text, BotFile file,
-                                  String mentionUserId) {
-        sendFileWithText(context, text, file);
-    }
-
-    default void sendMarkdown(BotMessageContext context, BotMarkdownMessage message) {
-        throw new BotChannelCapabilityException(
-                this.platform(), BotChannelCapability.MARKDOWN_MESSAGE, "Markdown 消息");
-    }
+    /** 可上传或暂存资源，但不得创建平台消息；调用方负责关闭返回对象。 */
+    PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
+                               BotMessageSendPermit permit);
 }

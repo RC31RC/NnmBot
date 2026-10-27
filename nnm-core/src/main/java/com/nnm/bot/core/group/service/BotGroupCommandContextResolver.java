@@ -1,14 +1,17 @@
 package com.nnm.bot.core.group.service;
 
-import com.nnm.bot.core.channel.port.BotChannelInstanceIdentityResolver;
-import com.nnm.bot.core.group.domain.BotGroup;
+import com.nnm.bot.core.channel.topology.BotTopologySnapshot.Binding;
+import com.nnm.bot.core.channel.model.BotChannelKey;
+import com.nnm.bot.core.channel.topology.BotTopologyStore;
+import com.nnm.bot.core.channel.topology.BotTopologySnapshot.Scope;
+import com.nnm.bot.core.channel.topology.BotTopologySnapshot;
+import com.nnm.bot.core.plugin.model.CommandExecutionContext;
 import com.nnm.bot.core.group.domain.BotGroupBot;
-import com.nnm.bot.core.group.repository.BotGroupBotRepository;
-import com.nnm.bot.core.group.repository.BotGroupRepository;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -19,33 +22,40 @@ import java.util.Optional;
 public class BotGroupCommandContextResolver {
 
     @Resource
-    private BotChannelInstanceIdentityResolver instanceIdentityResolver;
-    @Resource
-    private BotGroupBotRepository groupBotRepository;
-    @Resource
-    private BotGroupRepository groupRepository;
+    private BotTopologyStore topology;
 
     public Optional<BotGroupCommandContext> resolve(BotMessageContext context) {
         if (context == null || !context.isGroupMessage()) {
             return Optional.empty();
         }
-        var instanceId = instanceIdentityResolver.resolveId(
-                context.platform(), context.botAccountId());
-        if (instanceId.isEmpty()) {
-            return Optional.empty();
-        }
-        Optional<BotGroupBot> binding = groupBotRepository
-                .findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
-                        context.platform().name(),
-                        "GROUP",
-                        context.conversationId(),
-                        instanceId.getAsLong())
-                .filter(BotGroupBot::isEnabled);
-        if (binding.isEmpty()) {
-            return Optional.empty();
-        }
-        return groupRepository.findById(binding.get().getGroupId())
-                .filter(BotGroup::isEnabled)
-                .map(group -> new BotGroupCommandContext(group, binding.get()));
+        if (context.execution() != null) return Optional.ofNullable(context.execution().group());
+        return resolve(context, topology.snapshot());
     }
+
+    private Optional<BotGroupCommandContext> resolve(BotMessageContext context, BotTopologySnapshot snapshot) {
+        Long instanceId = snapshot.instanceIds().get(new BotChannelKey(context.platform(), context.botAccountId()));
+        if (instanceId == null) return Optional.empty();
+        Binding binding = snapshot.scopes().get(new Scope(instanceId, context.platform().name(), "GROUP", context.conversationId()));
+        if (binding == null || !binding.enabled() || !snapshot.enabled(binding.groupId())) return Optional.empty();
+        return Optional.of(new BotGroupCommandContext(snapshot.groups().get(binding.groupId()).entity(), binding.entity()));
+    }
+    public CommandExecutionContext executionView(BotMessageContext context) {
+        BotTopologySnapshot snapshot = topology.snapshot();
+        BotGroupCommandContext group = context.isGroupMessage() ? resolve(context, snapshot).orElse(null) : null;
+        if (group == null) return new CommandExecutionContext(null, null, List.of(), null);
+        return new CommandExecutionContext(BotTopologySnapshot.Group.of(group.group()),
+                BotTopologySnapshot.Binding.of(group.binding()), snapshot.bindings().getOrDefault(group.group().getId(), List.of())
+                .stream().filter(binding -> binding.enabled() && "GROUP".equals(binding.scopeType())).toList(), null);
+    }
+
+    /**
+     * 返回当前逻辑群组启用的群绑定，供入站关联和身份模式判断复用同一边界。
+     */
+    public List<BotGroupBot> enabledBindings(long groupId) {
+        return topology.snapshot().groupBindings(groupId).stream()
+                .filter(BotGroupBot::isEnabled)
+                .filter(binding -> "GROUP".equals(binding.getScopeType()))
+                .toList();
+    }
+
 }

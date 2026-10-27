@@ -8,7 +8,7 @@ import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.model.ArrayMsg;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.message.model.BotIncomingAttachment;
-import com.nnm.bot.core.message.model.BotIncomingAttachmentType;
+import com.nnm.bot.core.constant.BotMessageConstants.BotIncomingAttachmentType;
 import com.nnm.bot.core.constant.BotMessageScope;
 import com.nnm.bot.core.constant.BotPlatform;
 import org.springframework.util.StringUtils;
@@ -59,9 +59,19 @@ public final class OneBotMessageContextFactory {
                 ObjectUtil.isNull(event.getMessageId()) ? null : String.valueOf(event.getMessageId()),
                 rawMessage,
                 message,
-                new OneBotMessageSource(bot, event),
+                new OneBotMessageSource(bot, replyEvent(event)),
                 attachments(event)
         );
+    }
+
+    private static AnyMessageEvent replyEvent(AnyMessageEvent source) {
+        // 发送只需要定位字段；排队不能额外持有完整消息段、Base64 或 SDK sender 对象。
+        AnyMessageEvent reply = new AnyMessageEvent();
+        reply.setMessageType(source.getMessageType());
+        reply.setUserId(source.getUserId());
+        reply.setGroupId(source.getGroupId());
+        reply.setMessageId(source.getMessageId());
+        return reply;
     }
 
     private static List<BotIncomingAttachment> attachments(AnyMessageEvent event) {

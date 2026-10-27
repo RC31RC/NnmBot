@@ -1,8 +1,8 @@
 package com.nnm.bot.admin.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.bot.BotInstanceRobotRoleSaveRequest;
-import com.nnm.bot.admin.service.BotRobotRoleManagementService;
+import com.nnm.bot.admin.pojo.dto.bot.role.BotInstanceRobotRoleSaveDTO;
+import com.nnm.bot.admin.service.bot.role.BotRobotRoleManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -27,7 +27,7 @@ public class BotInstanceRobotRoleController {
             long id,
             @Valid
             @RequestBody
-            BotInstanceRobotRoleSaveRequest request) {
+            BotInstanceRobotRoleSaveDTO request) {
         service.assignInstanceRoles(id, request.roleIds());
         return ApiResponse.ok();
     }

@@ -48,4 +48,8 @@ public class BotGroupBot {
     /** 是否启用该机器人在群组中的绑定。 */
     @Column(nullable = false)
     private boolean enabled = true;
+
+    /** 数值越小越优先；能力不足或离线的实例不参与回复选择。 */
+    @Column(name = "reply_priority", nullable = false)
+    private int replyPriority = 100;
 }

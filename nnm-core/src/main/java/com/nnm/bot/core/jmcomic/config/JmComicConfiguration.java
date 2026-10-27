@@ -1,5 +1,6 @@
 package com.nnm.bot.core.jmcomic.config;
 
+import io.github.jukomu.jmcomic.core.config.JmConfiguration.Builder;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -23,7 +24,7 @@ public class JmComicConfiguration {
             JmComicProperties properties,
             @Qualifier("jmDownloadExecutor")
             ThreadPoolTaskExecutor executor) {
-        JmConfiguration.Builder builder = new JmConfiguration.Builder()
+        Builder builder = new JmConfiguration.Builder()
                 .clientType(ClientType.API)
                 .timeout(properties.getRequestTimeout())
                 .imageTimeout(properties.getImageTimeout())

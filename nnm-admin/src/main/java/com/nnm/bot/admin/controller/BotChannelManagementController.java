@@ -1,12 +1,15 @@
 package com.nnm.bot.admin.controller;
 
+import com.nnm.bot.admin.pojo.vo.bot.channel.OneBotAccountProbeVO;
+import com.nnm.bot.admin.pojo.vo.bot.channel.BotChannelInstanceVO;
+import com.nnm.bot.admin.controller.assembler.bot.channel.AdminBotChannelViewAssembler;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nnm.bot.admin.dto.bot.BotChannelInstanceItem;
-import com.nnm.bot.admin.dto.bot.OneBotAccountProbeRequest;
-import com.nnm.bot.admin.dto.bot.OneBotAccountProbeResponse;
-import com.nnm.bot.admin.dto.bot.OneBotInstanceSaveRequest;
-import com.nnm.bot.admin.dto.bot.QqOfficialInstanceSaveRequest;
-import com.nnm.bot.admin.service.BotChannelManagementService;
+import com.nnm.bot.admin.pojo.dto.bot.channel.BotChannelInstanceDTO;
+import com.nnm.bot.admin.pojo.query.bot.channel.OneBotAccountProbeQuery;
+import com.nnm.bot.admin.pojo.dto.bot.channel.OneBotAccountProbeDTO;
+import com.nnm.bot.admin.pojo.dto.bot.channel.OneBotInstanceSaveDTO;
+import com.nnm.bot.admin.pojo.dto.bot.channel.QqOfficialInstanceSaveDTO;
+import com.nnm.bot.admin.service.bot.channel.BotChannelManagementService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
@@ -30,10 +33,10 @@ public class BotChannelManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:instance:view")
-    public ApiResponse<List<BotChannelInstanceItem>> instances(
+    public ApiResponse<List<BotChannelInstanceVO>> instances(
             @RequestBody(required = false)
             EmptyRequest ignored) {
-        return ApiResponse.ok(service.instances());
+        return ApiResponse.ok(AdminBotChannelViewAssembler.toBotChannelInstanceVO(service.instances()));
     }
 
     @PostMapping("/onebot")
@@ -41,7 +44,7 @@ public class BotChannelManagementController {
     public ApiResponse<Long> createOneBot(
             @Valid
             @RequestBody
-            OneBotInstanceSaveRequest request) {
+            OneBotInstanceSaveDTO request) {
         return ApiResponse.ok(service.createOneBot(request));
     }
 
@@ -52,7 +55,7 @@ public class BotChannelManagementController {
             long id,
             @Valid
             @RequestBody
-            OneBotInstanceSaveRequest request) {
+            OneBotInstanceSaveDTO request) {
         service.updateOneBot(id, request);
         return ApiResponse.ok();
     }
@@ -62,7 +65,7 @@ public class BotChannelManagementController {
     public ApiResponse<Long> createQqOfficial(
             @Valid
             @RequestBody
-            QqOfficialInstanceSaveRequest request) {
+            QqOfficialInstanceSaveDTO request) {
         return ApiResponse.ok(service.createQqOfficial(request));
     }
 
@@ -73,7 +76,7 @@ public class BotChannelManagementController {
             long id,
             @Valid
             @RequestBody
-            QqOfficialInstanceSaveRequest request) {
+            QqOfficialInstanceSaveDTO request) {
         service.updateQqOfficial(id, request);
         return ApiResponse.ok();
     }
@@ -107,10 +110,10 @@ public class BotChannelManagementController {
 
     @PostMapping("/onebot/probe")
     @SaCheckPermission("bot:instance:probe")
-    public ApiResponse<OneBotAccountProbeResponse> probeOneBot(
+    public ApiResponse<OneBotAccountProbeVO> probeOneBot(
             @Valid
             @RequestBody
-            OneBotAccountProbeRequest request) {
-        return ApiResponse.ok(service.probeOneBot(request));
+            OneBotAccountProbeQuery request) {
+        return ApiResponse.ok(AdminBotChannelViewAssembler.toOneBotAccountProbeVO(service.probeOneBot(request)));
     }
 }

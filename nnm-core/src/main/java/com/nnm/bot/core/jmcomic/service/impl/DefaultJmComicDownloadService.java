@@ -1,10 +1,12 @@
 package com.nnm.bot.core.jmcomic.service.impl;
 
+import java.util.Optional;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
 import com.nnm.bot.core.jmcomic.constant.JmComicErrorCode;
 import com.nnm.bot.core.jmcomic.exception.JmComicWholeFileException;
@@ -30,6 +32,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * JMComic 上游适配层。每个任务拥有独立目录，并受 JVM 级并发和文件大小限制。
@@ -50,7 +53,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     @Resource
     private ObjectProvider<AbstractJmClient> jmClientProvider;
 
-    private final Object loginMonitor = new Object();
+    private final ReentrantLock loginLock = new ReentrantLock();
     private volatile boolean loggedIn;
     private Semaphore taskPermits;
 
@@ -61,9 +64,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
 
     @Override
     public JmComicDocument downloadAsPdf(String albumId) {
-        if (!this.properties.isEnabled()) {
-            throw new BusinessException(JmComicErrorCode.DISABLED);
-        }
+        BusinessAssert.isTrue(this.properties.isEnabled(), JmComicErrorCode.DISABLED);
         String normalizedAlbumId = StrUtil.trim(albumId);
         if (StrUtil.isBlank(normalizedAlbumId)
                 || !normalizedAlbumId.matches(ALBUM_ID_PATTERN)) {
@@ -82,6 +83,10 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
                         "JM 下载任务在排队等待时被中断",
                         exception);
             }
+            BusinessAssert.isTrue(
+                    this.properties.isWholeFileEnabled()
+                            || this.properties.isPageDownloadEnabled(),
+                    JmComicErrorCode.DOWNLOAD_METHODS_DISABLED);
             workspace = this.createWorkspace(normalizedAlbumId);
             Path downloadDirectory = workspace.resolve("images");
             Files.createDirectories(downloadDirectory);
@@ -92,22 +97,30 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             JmAlbum album = client.getAlbum(normalizedAlbumId);
             this.validateAlbum(album);
             JmComicWholeFileException wholeFileFailure = null;
-            try {
-                var wholeFile = this.wholeFileService.download(
-                        client,
-                        normalizedAlbumId,
-                        album.getTitle(),
-                        workspace);
-                if (wholeFile.isPresent()) {
-                    return wholeFile.get();
+            if (this.properties.isWholeFileEnabled()) {
+                try {
+                    Optional<JmComicDocument> wholeFile = this.wholeFileService.download(
+                            client,
+                            normalizedAlbumId,
+                            album.getTitle(),
+                            workspace);
+                    if (wholeFile.isPresent()) {
+                        return wholeFile.get();
+                    }
+                } catch (JmComicWholeFileException exception) {
+                    wholeFileFailure = exception;
+                    log.warn(
+                            "JM whole-file download unavailable for album {}, page download enabled: {}",
+                            normalizedAlbumId,
+                            this.properties.isPageDownloadEnabled(),
+                            exception);
                 }
-            } catch (JmComicWholeFileException exception) {
-                wholeFileFailure = exception;
-                log.warn(
-                        "JM whole-file download unavailable for album {}, "
-                                + "falling back to image download",
-                        normalizedAlbumId,
-                        exception);
+            }
+            if (!this.properties.isPageDownloadEnabled()) {
+                throw new BusinessException(
+                        JmComicErrorCode.DOWNLOAD_FAILED,
+                        "JM 整本下载不可用，分页下载已关闭",
+                        wholeFileFailure);
             }
             try {
                 return this.downloadImagesAsPdf(
@@ -176,7 +189,8 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
         if (this.loggedIn || StrUtil.isBlank(this.properties.getUsername())) {
             return;
         }
-        synchronized (this.loginMonitor) {
+        this.loginLock.lock();
+        try {
             if (this.loggedIn) {
                 return;
             }
@@ -184,6 +198,8 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
                     this.properties.getUsername(),
                     this.properties.getPassword());
             this.loggedIn = true;
+        } finally {
+            this.loginLock.unlock();
         }
     }
 

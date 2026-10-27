@@ -1,5 +1,7 @@
 package com.nnm.bot.core.message.model;
 
+import com.nnm.bot.core.plugin.model.CommandExecutionContext;
+
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.constant.BotMessageScope;
@@ -38,6 +40,9 @@ public final class BotMessageContext {
     private final Object nativeSource;
     /** 入站消息中的图片和文件引用。 */
     private final List<BotIncomingAttachment> attachments;
+    private final String dispatchId;
+    private final long receivedAt;
+    private final CommandExecutionContext execution;
 
     private BotMessageContext(BotPlatform platform,
                               BotMessageScope scope,
@@ -49,6 +54,14 @@ public final class BotMessageContext {
                               String message,
                               Object nativeSource,
                               List<BotIncomingAttachment> attachments) {
+        this(platform, scope, botAccountId, senderId, conversationId, messageId,
+                rawMessage, message, nativeSource, attachments, null, System.currentTimeMillis(), null);
+    }
+
+    private BotMessageContext(BotPlatform platform, BotMessageScope scope, String botAccountId,
+                              String senderId, String conversationId, String messageId,
+                              String rawMessage, String message, Object nativeSource,
+                              List<BotIncomingAttachment> attachments, String dispatchId, long receivedAt, CommandExecutionContext execution) {
         this.platform = platform;
         this.scope = scope;
         this.botAccountId = botAccountId;
@@ -59,6 +72,9 @@ public final class BotMessageContext {
         this.message = message;
         this.nativeSource = nativeSource;
         this.attachments = attachments == null ? List.of() : List.copyOf(attachments);
+        this.dispatchId = dispatchId;
+        this.receivedAt = receivedAt;
+        this.execution = execution;
     }
 
     public static BotMessageContext of(BotPlatform platform,
@@ -108,6 +124,34 @@ public final class BotMessageContext {
                 ? message
                 : Objects.requireNonNullElse(rawMessage, "");
         return value.trim();
+    }
+
+    public BotMessageContext withDispatchId(String id) {
+        return new BotMessageContext(platform, scope, botAccountId, senderId, conversationId,
+                messageId, rawMessage, message, nativeSource, attachments, id, receivedAt, execution);
+    }
+
+    public BotMessageContext withReceivedAt(long timestamp) {
+        Assert.isTrue(timestamp > 0, "receivedAt must be positive");
+        return new BotMessageContext(platform, scope, botAccountId, senderId, conversationId,
+                messageId, rawMessage, message, nativeSource, attachments, dispatchId, timestamp, execution);
+    }
+
+    public BotMessageContext withExecution(CommandExecutionContext value) {
+        return new BotMessageContext(platform, scope, botAccountId, senderId, conversationId,
+                messageId, rawMessage, message, nativeSource, attachments, dispatchId, receivedAt, value);
+    }
+
+    public CommandExecutionContext execution() {
+        return execution;
+    }
+
+    public String dispatchId() {
+        return dispatchId;
+    }
+
+    public long receivedAt() {
+        return receivedAt;
     }
 
     public BotPlatform platform() {

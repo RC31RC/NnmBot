@@ -1,6 +1,9 @@
 package com.nnm.bot.core.task;
 
+import com.nnm.bot.common.constant.TaskConstants.AdminTaskStatus;
+
 import com.nnm.bot.common.task.*;
+import com.nnm.bot.common.task.AdminTaskService.TaskSubscription;
 
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
@@ -145,15 +148,15 @@ class InMemoryAdminTaskServiceTest {
                     assertThat(finish.await(3, TimeUnit.SECONDS)).isTrue();
                     return "preview-id";
                 });
-        var first = service.subscribe(submission.taskId(), ignored -> {});
+        TaskSubscription first = service.subscribe(submission.taskId(), ignored -> {});
         first.close();
         finish.countDown();
-        var terminal = awaitTerminal(submission);
+        AdminTaskEvent terminal = awaitTerminal(submission);
         assertThat(terminal.status()).isEqualTo(AdminTaskStatus.COMPLETED);
         assertThat(service.find(submission.taskId())).get()
                 .extracting(AdminTaskEvent::result).isEqualTo("preview-id");
         AtomicReference<AdminTaskEvent> restored = new AtomicReference<>();
-        try (var reconnect = service.subscribe(submission.taskId(), restored::set)) {
+        try (TaskSubscription reconnect = service.subscribe(submission.taskId(), restored::set)) {
             assertThat(restored.get().status()).isEqualTo(AdminTaskStatus.COMPLETED);
             assertThat(restored.get().result()).isEqualTo("preview-id");
         }

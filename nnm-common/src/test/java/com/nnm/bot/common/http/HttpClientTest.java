@@ -1,8 +1,16 @@
 package com.nnm.bot.common.http;
 
+import com.nnm.bot.common.http.HttpClient.ByteResult;
+import com.nnm.bot.common.http.HttpClient.DownloadResult;
+import com.nnm.bot.common.http.HttpClient.HttpResult;
+import com.nnm.bot.common.http.HttpClient.TextResult;
+import java.io.OutputStream;
+import java.util.stream.Stream;
+import org.slf4j.MDC.MDCCloseable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.config.http.HttpClientProperties;
 import com.nnm.bot.common.config.http.RestClientConfig;
+import java.util.Map;
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -74,7 +82,7 @@ class HttpClientTest {
     @Test
     void stopsChunkedResponseAndDoesNotRetrySizeFailure() {
         respond("/large", 200, 64, true);
-        HttpClient.HttpResult result = client.get(baseUrl + "/large");
+        HttpResult result = client.get(baseUrl + "/large");
         assertThat(result.isSuccess()).isFalse();
         assertThat(result.isRetryable()).isFalse();
         assertThat(result.error()).isInstanceOf(ExternalResponseTooLargeException.class);
@@ -103,8 +111,8 @@ class HttpClientTest {
         headers.set("X-Request-Id", "explicit");
         headers.add("X-Multi", "one");
         headers.add("X-Multi", "two");
-        try (var request = MDC.putCloseable("requestId", "context");
-             var trace = MDC.putCloseable("traceparent", "trace")) {
+        try (MDCCloseable request = MDC.putCloseable("requestId", "context");
+             MDCCloseable trace = MDC.putCloseable("traceparent", "trace")) {
             assertThat(client.get(baseUrl + "/headers", headers).isSuccess()).isTrue();
         }
         assertThat(receivedHeaders.get().getFirst("X-Request-Id")).isEqualTo("explicit");
@@ -141,10 +149,22 @@ class HttpClientTest {
     @Test
     void rejectsKnownLengthBeforeConvertingBytes() {
         respond("/large", 200, 64, false);
-        HttpClient.ByteResult result = client.getBytes(baseUrl + "/large", HttpHeaders.EMPTY);
+        ByteResult result = client.getBytes(baseUrl + "/large", HttpHeaders.EMPTY);
         assertThat(result.error()).isInstanceOf(ExternalResponseTooLargeException.class);
         assertThat(result.isRetryable()).isFalse();
         assertThat(requests).hasValue(1);
+    }
+
+    @Test
+    void businessDownloadLimitAppliesToChunkedBodiesAndPropagatesHttpErrors() {
+        respond("/limited", 200, 7, true);
+        assertThatThrownBy(() -> client.getLimitedBytes(baseUrl + "/limited", Map.of(), 4))
+                .isInstanceOf(ExternalResponseTooLargeException.class);
+        respond("/exact", 200, 4, true);
+        assertThat(client.getLimitedBytes(baseUrl + "/exact", Map.of(), 4)).hasSize(4);
+        respond("/missing", 404, 4, true);
+        assertThatThrownBy(() -> client.getLimitedBytes(baseUrl + "/missing", Map.of(), 4))
+                .isInstanceOf(ExternalHttpException.class);
     }
 
     @Test
@@ -168,12 +188,12 @@ class HttpClientTest {
         Path target = directory.resolve("data.bin");
         Files.writeString(target, "original");
         respond("/large", 200, 64, true);
-        HttpClient.DownloadResult result = client.downloadTo(baseUrl + "/large", HttpHeaders.EMPTY, target);
+        DownloadResult result = client.downloadTo(baseUrl + "/large", HttpHeaders.EMPTY, target);
         assertThat(result.isSuccess()).isFalse();
         assertThat(result.isRetryable()).isFalse();
         assertThat(Files.readString(target)).isEqualTo("original");
         assertThat(requests).hasValue(1);
-        try (var files = Files.list(directory)) {
+        try (Stream<Path> files = Files.list(directory)) {
             assertThat(files.toList()).containsExactly(target);
         }
     }
@@ -187,6 +207,28 @@ class HttpClientTest {
     }
 
     @Test
+    void narrowsStreamingLimitWithoutOverwritingExistingFile() throws IOException {
+        respond("/file", 200, 12, true);
+        Path target = directory.resolve("bounded.bin");
+        Files.writeString(target, "previous");
+        DownloadResult result = client.downloadTo(baseUrl + "/file", Map.of(), target, 8);
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.error()).isInstanceOf(ExternalResponseTooLargeException.class);
+        assertThat(result.isRetryable()).isFalse();
+        assertThat(Files.readString(target)).isEqualTo("previous");
+        assertThat(requests).hasValue(1);
+    }
+
+    @Test
+    void businessDownloadLimitCannotExceedGlobalLimit() {
+        respond("/file", 200, 20, true);
+        DownloadResult result = client.downloadTo(baseUrl + "/file", Map.of(), directory.resolve("bounded.bin"), 32);
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.error()).isInstanceOf(ExternalResponseTooLargeException.class);
+        assertThat(requests).hasValue(1);
+    }
+
+    @Test
     void streamsTextWithoutApplyingInMemoryResponseLimit() throws IOException {
         byte[] body = "{\"entries\":[\"中文\",\"complete\"]}".repeat(3)
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8);
@@ -196,14 +238,14 @@ class HttpClientTest {
             exchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE,
                     "application/json; charset=UTF-8");
             exchange.sendResponseHeaders(200, body.length);
-            try (var output = exchange.getResponseBody()) {
+            try (OutputStream output = exchange.getResponseBody()) {
                 output.write(body);
             } finally {
                 exchange.close();
             }
         });
 
-        HttpClient.TextResult result = client.downloadText(
+        TextResult result = client.downloadText(
                 baseUrl + "/large-text", HttpHeaders.EMPTY);
 
         assertThat(result.isSuccess()).isTrue();
@@ -220,7 +262,7 @@ class HttpClientTest {
             exchange.sendResponseHeaders(429, -1);
             exchange.close();
         });
-        HttpClient.HttpResult result = client.get(baseUrl + "/busy");
+        HttpResult result = client.get(baseUrl + "/busy");
         assertThat(result.statusCode()).isEqualTo(429);
         assertThat(result.headers().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("60");
         assertThat(requests).hasValue(1);
@@ -231,7 +273,7 @@ class HttpClientTest {
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-Test", "first");
         headers.add("X-Test", "second");
-        HttpClient.HttpResult result = new HttpClient.HttpResult(200, "", headers, null);
+        HttpResult result = new HttpClient.HttpResult(200, "", headers, null);
         headers.add("X-Test", "third");
         assertThat(result.headers().get("X-Test")).containsExactly("first", "second");
     }
@@ -244,8 +286,8 @@ class HttpClientTest {
 
     @Test
     void failureLogDetailsExposeRootCauseWithoutLeakingQueryParameters() {
-        var root = new HttpConnectTimeoutException("HTTP connect timed out");
-        var wrapper = new IllegalStateException("request failed", root);
+        HttpConnectTimeoutException root = new HttpConnectTimeoutException("HTTP connect timed out");
+        IllegalStateException wrapper = new IllegalStateException("request failed", root);
 
         assertThat(HttpClient.mostSpecificCause(wrapper)).isSameAs(root);
         assertThat(HttpClient.safeFailureMessage(
@@ -259,7 +301,7 @@ class HttpClientTest {
             requests.incrementAndGet();
             exchange.getResponseHeaders().add("Content-Type", "text/plain");
             exchange.sendResponseHeaders(status, chunked ? 0 : size);
-            try (var output = exchange.getResponseBody()) {
+            try (OutputStream output = exchange.getResponseBody()) {
                 output.write(new byte[size]);
             } finally {
                 exchange.close();

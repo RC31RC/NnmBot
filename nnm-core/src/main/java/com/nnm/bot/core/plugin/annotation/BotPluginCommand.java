@@ -35,4 +35,12 @@ public @interface BotPluginCommand {
 
     /** 展示和前缀匹配优先级。 */
     int order() default 0;
+
+    /**
+     * 是否允许管理端把该命令作为关联导航的无参入口展示。
+     *
+     * <p>命令能精确匹配不等于它适合作为导航入口；例如状态修改命令可能同样使用
+     * {@link MatchType#EXACT}，但不应被结果页附加为可填入动作。</p>
+     */
+    boolean allowRelatedAction() default false;
 }

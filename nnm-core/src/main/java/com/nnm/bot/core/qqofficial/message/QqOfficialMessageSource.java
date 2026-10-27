@@ -4,6 +4,7 @@ import com.nnm.bot.core.constant.BotChannelCapability;
 import com.nnm.bot.core.constant.QqOfficialChatType;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.message.exception.BotChannelCapabilityException;
+import java.time.Instant;
 
 /**
  * QQ 官方机器人消息来源的协议适配结果。
@@ -14,13 +15,15 @@ import com.nnm.bot.core.message.exception.BotChannelCapabilityException;
  * @param messageId 平台消息标识
  * @param appId 当前机器人应用 ID
  * @param rawEvent 平台返回的原始事件 JSON
+ * @param messageCreatedAt 平台消息创建时间；主动发送或协议未提供时为空
  */
 public record QqOfficialMessageSource(String eventType,
                                       QqOfficialChatType chatType,
                                       String targetId,
                                       String messageId,
                                       String appId,
-                                      String rawEvent) {
+                                      String rawEvent,
+                                      Instant messageCreatedAt) {
 
     public String messagePath() {
         return switch (chatType) {

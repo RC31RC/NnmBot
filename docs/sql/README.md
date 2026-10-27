@@ -1,37 +1,28 @@
-# PostgreSQL 手工 SQL
+# PostgreSQL 初始化与手工修复
 
-## 当前入口
+`init.sql` 是当前开发基线，业务对象显式位于 `nnmbot` schema。Hibernate 使用 `ddl-auto: validate`；应用不自动建表、改表、运行迁移或删除旧表。
 
-`init.sql` 是新建或明确重建空库的初始化基线，不是已有数据库的升级脚本。
-2026-10-10 已按要求删除两份独立修复 SQL，不保留备份副本，不再执行旧步骤。
-本轮只清理文件和说明，没有执行 SQL，也没有修改 `init.sql`。
+## 开发库
 
-**当前基线未完全对齐现有实体。** 本地核对发现：
+数据库名和 schema 均为 `nnmbot`。新建空库时由开发者手工执行 `init.sql`；已有数据库不为更新模板或单个表而重放整份初始化脚本。开发阶段可直接调整基线；额外手工修复按 `01_*.sql`、`02_*.sql` 维护，不引入 Flyway 或新旧双写。
 
-- 翻译表仍是 `chinese_name/english_name`，实体使用 `locale/display_name`。
-- 奖励池表仍是 `unique_name/reward_count/rewards_json`，实体使用 `pool_key/reward_items_json`。
-- 基线仍创建已从当前社区模型移除的 `wf_community_command_alias`。
+`01_remove_legacy_community_and_arbitration_runtime_tables.sql` 只处理其声明的退役表，执行前阅读脚本内条件和事务保护。它不由应用启动调用。
 
-因此，不能把删除旧脚本理解为其内容已全部合并，也不保证仅执行当前基线即可通过 Hibernate
-结构校验。后续结构变更应直接对齐 `init.sql`；若还需要已有库修复，再新增有明确适用基线的
-`01_*.sql`，后续依次编号。本轮桌面数据方案中的六张新增社区表也尚未建表。
+数据段为普通 INSERT，可使用 psql、DataGrip、DBeaver 或 JDBC 脚本执行器。不要仅选中半条 INSERT。需要转换新的 PostgreSQL dump 时使用 `scripts/database/convert-postgres-copy-init.cjs`；不要用字符串替换处理 COPY 协议。
 
-## 维护约定
+每张表和每个字段写明 COMMENT，约束/索引上方说明业务目的。官方模型和所有生成式关系表使用 `wf_official_*`，社区人工资料使用 `wf_community_*`。来源类别与维护状态分开，官方自维护记录仍在官方模型表中。
 
-- 数据库为 `nnmbot`，业务对象显式使用 `nnmbot.<table>`，不依赖 `search_path`。
-- 不使用 Flyway；应用不自动执行 SQL，Hibernate 使用 `ddl-auto: validate`。
-- 建表和改表提供 `COMMENT ON TABLE`、`COMMENT ON COLUMN`；约束、索引和枚举变更说明目的。
-- `init.sql` 含 PostgreSQL 18 的 psql 专用指令，应使用匹配客户端；不是任意 GUI 通用脚本。
-- 已有数据库不得直接重放基线；执行结构变更前先核对结构、备份和适用范围。
-- 社区业务数据通过登记的在线来源拉取、预览和采纳，不增加远程社区初始化种子。
-- 完全无外部来源的数据集才属于补充数据；社区 `SELF_MAINTAINED` 兜底不参与来源同步。
+## 验证
 
-## 验证边界
+```sh
+node scripts/database/verify-warframe-sql.cjs --hibernate
+node scripts/database/verify-bounty-sql.cjs
+node scripts/database/verify-worldstate-command-sql.cjs
+node scripts/database/verify-bot-reply-routing.cjs
+```
 
-`scripts/database/verify-warframe-sql.cjs` 仍引用本轮删除的归并脚本，当前不能按旧入口直接运行。
-本轮按“不修改代码”要求保留验证脚本未动，后续需一起对齐基线、夹具和验证入口。
-其他 SQL 验证脚本的适用性本轮未重新验收；历史通过记录不代表此次文件清理后仍能通过。
-所有数据库验证只应使用隔离临时 PostgreSQL，不连接应用数据库。
+检查器只创建临时 PostgreSQL cluster/database，结束后清理，不读取应用数据库连接。可用 `PG_BIN` 指定二进制目录。Hibernate 检查只启动映射，不启动应用、Redis 或业务任务。
 
-表和数据来源的扩展方案见[桌面最终方案](/Users/ren/Desktop/Warframe数据导入最终方案.md)；
-结构和格式明细见[任务整理](/Users/ren/Desktop/数据导入任务整理.md)。
+初始化包含当前命令、菜单、权限及 HTML 模板，但不作为运行时已导入官方数据或实机发送的证明。模板读取 VO 的字段，数据库只保存 HTML 和 URL/占位符，不保存图片二进制。附件由 VaultS3 管理；对象引用和生命周期见对应论坛服务。
+
+SQL 检查夹具放在 `src/test/resources`，不放入业务代码。表数量和测试结果读取当前检查输出，不保存历史验收计数。

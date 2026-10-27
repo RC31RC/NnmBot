@@ -21,48 +21,60 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import java.util.concurrent.locks.ReentrantLock;
 
 /** 统一保存渠道实例身份、能力和易变运行状态。 */
 @Component
 public class BotChannelRegistry {
+    private final ReentrantLock registrationLock = new ReentrantLock();
 
     private final ConcurrentHashMap<BotChannelKey, MutableChannel> channels = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, BotChannelKey> instanceKeys = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<Consumer<BotChannelSnapshot>> listeners =
             new CopyOnWriteArrayList<>();
 
-    public synchronized void register(String instanceId,
+    public void register(String instanceId,
                                       BotChannelKey key,
                                       Set<BotChannelCapability> capabilities,
                                       boolean enabled) {
-        Assert.hasText(instanceId, "instanceId must not be blank");
-        Assert.notNull(key, "key must not be null");
-        Set<BotChannelCapability> safeCapabilities = CollUtil.isEmpty(capabilities) ? Set.of() : Set.copyOf(capabilities);
-        String normalizedInstanceId = instanceId.trim();
-        BotChannelKey existingKey = instanceKeys.get(normalizedInstanceId);
-        if (ObjectUtil.isNotNull(existingKey) && !existingKey.equals(key)) {
-            throw new BusinessException(
-                    BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
-                    "机器人实例标识已注册到其他渠道: " + normalizedInstanceId);
+        registrationLock.lock();
+        try {
+            Assert.hasText(instanceId, "instanceId must not be blank");
+            Assert.notNull(key, "key must not be null");
+            Set<BotChannelCapability> safeCapabilities = CollUtil.isEmpty(capabilities) ? Set.of() : Set.copyOf(capabilities);
+            String normalizedInstanceId = instanceId.trim();
+            BotChannelKey existingKey = instanceKeys.get(normalizedInstanceId);
+            if (ObjectUtil.isNotNull(existingKey) && !existingKey.equals(key)) {
+                throw new BusinessException(
+                        BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
+                        "机器人实例标识已注册到其他渠道: " + normalizedInstanceId);
+            }
+            MutableChannel newChannel = new MutableChannel(
+                    normalizedInstanceId, key, safeCapabilities,
+                    enabled ? BotChannelStatus.DISCONNECTED : BotChannelStatus.DISABLED);
+            MutableChannel previous = channels.putIfAbsent(key, newChannel);
+            if (ObjectUtil.isNotNull(previous) && !previous.instanceId.equals(newChannel.instanceId)) {
+                throw new BusinessException(
+                        BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
+                        "机器人账号已注册到其他实例: " + key);
+            }
+            instanceKeys.putIfAbsent(normalizedInstanceId, key);
+        } finally {
+            registrationLock.unlock();
         }
-        MutableChannel newChannel = new MutableChannel(
-                normalizedInstanceId, key, safeCapabilities,
-                enabled ? BotChannelStatus.DISCONNECTED : BotChannelStatus.DISABLED);
-        MutableChannel previous = channels.putIfAbsent(key, newChannel);
-        if (ObjectUtil.isNotNull(previous) && !previous.instanceId.equals(newChannel.instanceId)) {
-            throw new BusinessException(
-                    BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
-                    "机器人账号已注册到其他实例: " + key);
-        }
-        instanceKeys.putIfAbsent(normalizedInstanceId, key);
     }
 
-    public synchronized void registerIfAbsent(String instanceId,
+    public void registerIfAbsent(String instanceId,
                                                BotChannelKey key,
                                                Set<BotChannelCapability> capabilities,
                                                boolean enabled) {
-        if (!channels.containsKey(key)) {
-            register(instanceId, key, capabilities, enabled);
+        registrationLock.lock();
+        try {
+            if (!channels.containsKey(key)) {
+                register(instanceId, key, capabilities, enabled);
+            }
+        } finally {
+            registrationLock.unlock();
         }
     }
 
@@ -85,15 +97,29 @@ public class BotChannelRegistry {
         }
     }
 
+    public void stopping(BotChannelKey key) {
+        update(key, BotChannelStatus.STOPPING, null);
+    }
+
+    public void startFailed(BotChannelKey key, Throwable error) {
+        update(key, BotChannelStatus.START_FAILED,
+                ObjectUtil.isNull(error) ? null : error.getMessage());
+    }
+
     public void failed(BotChannelKey key, Throwable error) {
         update(key, BotChannelStatus.ERROR,
                 ObjectUtil.isNull(error) ? null : error.getMessage());
     }
 
-    public synchronized void unregister(String instanceId) {
-        BotChannelKey key = instanceKeys.remove(normalizeInstanceId(instanceId));
-        if (ObjectUtil.isNotNull(key)) {
-            channels.remove(key);
+    public void unregister(String instanceId) {
+        registrationLock.lock();
+        try {
+            BotChannelKey key = instanceKeys.remove(normalizeInstanceId(instanceId));
+            if (ObjectUtil.isNotNull(key)) {
+                channels.remove(key);
+            }
+        } finally {
+            registrationLock.unlock();
         }
     }
 
@@ -155,6 +181,7 @@ public class BotChannelRegistry {
     }
 
     private static final class MutableChannel {
+        private final ReentrantLock stateLock = new ReentrantLock();
 
         private final String instanceId;
         private final BotChannelKey key;
@@ -173,24 +200,29 @@ public class BotChannelRegistry {
             this.status = status;
         }
 
-        private synchronized BotChannelSnapshot update(
+        private BotChannelSnapshot update(
                 BotChannelStatus status, String error) {
-            if (this.status == BotChannelStatus.DISABLED) {
-                return null;
+            stateLock.lock();
+            try {
+                if (this.status == BotChannelStatus.DISABLED) {
+                    return null;
+                }
+                if (this.status == status && Objects.equals(this.lastError, error)) {
+                    return null;
+                }
+                this.status = status;
+                this.statusChangedAt = Instant.now();
+                if (status == BotChannelStatus.CONNECTED) {
+                    this.lastError = null;
+                } else if (status == BotChannelStatus.STOPPED) {
+                    this.lastError = null;
+                } else if (ObjectUtil.isNotNull(error)) {
+                    this.lastError = error;
+                }
+                return snapshot();
+            } finally {
+                stateLock.unlock();
             }
-            if (this.status == status && Objects.equals(this.lastError, error)) {
-                return null;
-            }
-            this.status = status;
-            this.statusChangedAt = Instant.now();
-            if (status == BotChannelStatus.CONNECTED) {
-                this.lastError = null;
-            } else if (status == BotChannelStatus.STOPPED) {
-                this.lastError = null;
-            } else if (ObjectUtil.isNotNull(error)) {
-                this.lastError = error;
-            }
-            return snapshot();
         }
 
         private BotChannelSnapshot snapshot() {

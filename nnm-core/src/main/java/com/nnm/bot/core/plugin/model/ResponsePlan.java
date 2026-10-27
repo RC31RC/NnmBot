@@ -1,69 +1,56 @@
 package com.nnm.bot.core.plugin.model;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.core.constant.CommandPresentationConstants.ViewFormat;
 
-import com.nnm.bot.core.constant.ChannelOutputMode;
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
+import com.nnm.bot.core.constant.CommandPresentationConstants.CompositionPolicy;
 
-import java.util.Arrays;
+import com.nnm.bot.core.constant.CommandDeliveryConstants.Presentation;
+
+import com.nnm.bot.core.message.model.BotMessagePart.Button;
+import com.nnm.bot.core.message.model.BotMessagePart;
+import com.nnm.bot.core.plugin.model.ReplyBlock.File;
+import com.nnm.bot.core.plugin.model.ReplyBlock.Image;
+import com.nnm.bot.core.plugin.model.ReplyBlock.Markdown;
+import com.nnm.bot.core.plugin.model.ReplyBlock.Text;
 import java.util.List;
+import java.util.ArrayList;
 
-/**
- * 命令响应的不可变执行计划。
- *
- * <p>计划由命令响应分发器生成，渠道策略只负责把它转换成平台消息；
- * 发送器不读取命令配置，也不决定输出顺序。</p>
- *
- * @param outputMode 本次响应的最终输出模式
- * @param text 可复制的文字结果
- * @param image 已渲染的图片内容
- * @param attachments 待发送文件
- * @param markdown 渠道策略需要发送的 Markdown 消息
- * @param mentionUserId 可选的平台用户标识；渠道不支持提及时应忽略
- */
-public record ResponsePlan(ChannelOutputMode outputMode,
-                           String text,
-                           byte[] image,
-                           List<CommandAttachment> attachments,
-                           BotMarkdownMessage markdown,
-                           String mentionUserId) {
-
-    public ResponsePlan(ChannelOutputMode outputMode,
-                        String text,
-                        byte[] image,
-                        List<CommandAttachment> attachments,
-                        BotMarkdownMessage markdown) {
-        this(outputMode, text, image, attachments, markdown, null);
-    }
-
+/** 单条逻辑消息的渠道编译结果，不含互斥的命令返回模式。 */
+public record ResponsePlan(int logicalMessage, int part, List<ReplyBlock> blocks,
+                           List<PlannedReplyAction> actions, String mentionUserId,
+                           CompositionPolicy composition, ViewFormat viewFormat, boolean plainMarkdown) {
     public ResponsePlan {
-        outputMode = ObjectUtil.isNull(outputMode) ? ChannelOutputMode.TEXT : outputMode;
-        text = StrUtil.blankToDefault(text, "");
-        image = image == null ? null : Arrays.copyOf(image, image.length);
-        attachments = CollUtil.isEmpty(attachments) ? List.of() : List.copyOf(attachments);
-        mentionUserId = StrUtil.isBlank(mentionUserId) ? null : mentionUserId.trim();
+        if (logicalMessage < 0 || part < 0) throw new IllegalArgumentException("message indexes must not be negative");
+        blocks = List.copyOf(blocks);
+        actions = List.copyOf(actions);
+        if (blocks.isEmpty()) throw new IllegalArgumentException("A platform message requires content");
     }
 
-    @Override
-    public byte[] image() {
-        return image == null ? null : Arrays.copyOf(image, image.length);
+    public List<BotMessagePart> parts() {
+        List<BotMessagePart> parts = new ArrayList<>(blocks.stream().map(block -> switch (block) {
+            case Text text -> (BotMessagePart) new BotMessagePart.Text(text.content());
+            case Image image -> new BotMessagePart.Image(image.resource().toBotFile());
+            case File file -> new BotMessagePart.File(file.resource().toBotFile());
+            case Markdown markdown -> new BotMessagePart.Markdown(markdown.message());
+            default -> throw new IllegalStateException("Uncompiled content block");
+        }).toList());
+        List<Button> buttons = actions.stream().filter(action -> action.presentation() == Presentation.NATIVE)
+                .map(action -> new BotMessagePart.Button(action.action().label(), action.action().value(),
+                        action.action() instanceof ReplyAction.Link)).toList();
+        if (!buttons.isEmpty()) parts.add(new BotMessagePart.Keyboard(buttons));
+        return List.copyOf(parts);
     }
 
-    public boolean hasText() {
-        return StrUtil.isNotBlank(text);
+    public String text() {
+        return String.join("\n", blocks.stream()
+                .filter(ReplyBlock.Text.class::isInstance)
+                .map(ReplyBlock.Text.class::cast)
+                .map(ReplyBlock.Text::content)
+                .toList());
     }
 
-    public boolean hasImage() {
-        return image != null && image.length > 0;
-    }
-
-    public boolean hasAttachments() {
-        return CollUtil.isNotEmpty(attachments);
-    }
-
-    public static ResponsePlan text(String text) {
-        return new ResponsePlan(ChannelOutputMode.TEXT, text, null, List.of(), null, null);
+    public List<CommandAttachment> files() {
+        return blocks.stream().filter(ReplyBlock.File.class::isInstance)
+                .map(ReplyBlock.File.class::cast).map(ReplyBlock.File::resource).toList();
     }
 }

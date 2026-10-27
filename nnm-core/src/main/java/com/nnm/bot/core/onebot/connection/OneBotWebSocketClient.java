@@ -1,13 +1,15 @@
 package com.nnm.bot.core.onebot.connection;
 
+import com.nnm.bot.core.constant.onebot.OneBotConstants.StatusAction;
+
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.core.channel.model.BotChannelKey;
+import com.nnm.bot.core.channel.port.BotChannelConnector;
 import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
 import org.springframework.beans.factory.ObjectProvider;
 import java.util.function.BooleanSupplier;
-import com.nnm.bot.core.constant.BotChannelCapability;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import com.nnm.bot.common.exception.BusinessException;
@@ -42,6 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 管理数据库配置的 OneBot 正向 WebSocket 连接。
@@ -51,7 +54,13 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class OneBotWebSocketClient implements SmartLifecycle {
+public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnector {
+    private final ReentrantLock lifecycleLock = new ReentrantLock();
+
+    @Override
+    public BotPlatform platform() {
+        return BotPlatform.ONEBOT;
+    }
 
     @Resource
     private MultiOneBotWebSocketClientHandler handler;
@@ -94,26 +103,37 @@ public class OneBotWebSocketClient implements SmartLifecycle {
     /**
      * 启动或原子替换一个实例连接，旧连接会在新配置登记后停止。
      */
-    public synchronized void startInstance(BotChannelInstanceRecord record) {
-        if (record.platform() != BotPlatform.ONEBOT) {
-            throw new BusinessException(
-                    BotChannelErrorCode.PLATFORM_MISMATCH,
-                    "OneBot 客户端不能启动协议: " + record.platform());
+    public void startInstance(BotChannelInstanceRecord record) {
+        lifecycleLock.lock();
+        try {
+            if (record.platform() != BotPlatform.ONEBOT) {
+                throw new BusinessException(
+                        BotChannelErrorCode.PLATFORM_MISMATCH,
+                        "OneBot 客户端不能启动协议: " + record.platform());
+            }
+            this.validate(record);
+            ManagedConnection replacement = new ManagedConnection(List.of(record));
+            ManagedConnection previous = this.connections.put(record.instanceId(), replacement);
+            if (ObjectUtil.isNotNull(previous)) {
+                previous.stop();
+            }
+            this.running = true;
+            replacement.start();
+        } finally {
+            lifecycleLock.unlock();
         }
-        this.validate(record);
-        ManagedConnection replacement = new ManagedConnection(List.of(record));
-        ManagedConnection previous = this.connections.put(record.instanceId(), replacement);
-        if (ObjectUtil.isNotNull(previous)) {
-            previous.stop();
-        }
-        this.running = true;
-        replacement.start();
     }
 
-    public synchronized void stopInstance(String instanceId) {
-        ManagedConnection connection = this.connections.remove(instanceId);
-        if (ObjectUtil.isNotNull(connection)) {
-            connection.stop();
+    public void stopInstance(String instanceId) {
+        lifecycleLock.lock();
+        try {
+            ManagedConnection connection = this.connections.get(instanceId);
+            if (ObjectUtil.isNotNull(connection)) {
+                connection.stop();
+                this.connections.remove(instanceId, connection);
+            }
+        } finally {
+            lifecycleLock.unlock();
         }
     }
 
@@ -157,8 +177,8 @@ public class OneBotWebSocketClient implements SmartLifecycle {
         private ManagedConnection(List<BotChannelInstanceRecord> instances) {
             this.instances = List.copyOf(instances);
             this.primaryInstance = this.instances.getFirst();
-            ClusterBotRuntime cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
-            BooleanSupplier lease = cluster == null ? () -> true : cluster.guard(
+            ClusterBotRuntime cluster = clusterProvider.getObject();
+            BooleanSupplier lease = cluster.guard(
                     new BotChannelKey(primaryInstance.platform(), primaryInstance.botAccountId()));
             this.ownership = () -> active.get() && lease.getAsBoolean();
             this.client = new StandardWebSocketClient();
@@ -202,10 +222,10 @@ public class OneBotWebSocketClient implements SmartLifecycle {
                 }
                 if (ObjectUtil.isNotNull(error)) {
                     if (!running) {
-                        markKnown(BotChannelStatusAction.DISCONNECTED);
+                        markKnown(StatusAction.DISCONNECTED);
                         return;
                     }
-                    markKnown(BotChannelStatusAction.FAILED, error);
+                    markKnown(StatusAction.FAILED, error);
                     log.warn("OneBot WebSocket connection failed, instanceIds={}",
                             instanceIds(), error);
                     return;
@@ -241,7 +261,7 @@ public class OneBotWebSocketClient implements SmartLifecycle {
             }
             connected.set(false);
             connecting.set(false);
-            markKnown(BotChannelStatusAction.DISCONNECTED);
+            markKnown(StatusAction.DISCONNECTED);
         }
 
         private void closeQuietly(WebSocketSession connectedSession) {
@@ -279,11 +299,11 @@ public class OneBotWebSocketClient implements SmartLifecycle {
             channelRegistry.connected(key);
         }
 
-        private void markKnown(BotChannelStatusAction action) {
+        private void markKnown(StatusAction action) {
             markKnown(action, null);
         }
 
-        private void markKnown(BotChannelStatusAction action, Throwable error) {
+        private void markKnown(StatusAction action, Throwable error) {
             for (long account : knownAccounts) {
                 BotChannelKey key = key(account);
                 switch (action) {
@@ -329,10 +349,6 @@ public class OneBotWebSocketClient implements SmartLifecycle {
             return accountId.trim();
         }
 
-        private enum BotChannelStatusAction {
-            CONNECTING, CONNECTED, DISCONNECTED, FAILED
-        }
-
         private final class ConnectionHandler extends WebSocketHandlerDecorator {
 
             private volatile WebSocketSession shiroSession;
@@ -357,7 +373,7 @@ public class OneBotWebSocketClient implements SmartLifecycle {
                 super.afterConnectionEstablished(serializedSession);
                 ManagedConnection.this.session = serializedSession;
                 connected.set(true);
-                markKnown(BotChannelStatusAction.CONNECTED);
+                markKnown(StatusAction.CONNECTED);
             }
 
             @Override
@@ -391,7 +407,7 @@ public class OneBotWebSocketClient implements SmartLifecycle {
                     ManagedConnection.this.session = null;
                 }
                 if (active.get()) {
-                    markKnown(BotChannelStatusAction.DISCONNECTED);
+                    markKnown(StatusAction.DISCONNECTED);
                 }
                 try {
                     super.afterConnectionClosed(concurrentSession, closeStatus);
@@ -405,7 +421,7 @@ public class OneBotWebSocketClient implements SmartLifecycle {
                                              Throwable exception) throws Exception {
                 connected.set(false);
                 if (active.get()) {
-                    markKnown(BotChannelStatusAction.FAILED, exception);
+                    markKnown(StatusAction.FAILED, exception);
                 }
                 super.handleTransportError(sessionForShiro(session), exception);
             }

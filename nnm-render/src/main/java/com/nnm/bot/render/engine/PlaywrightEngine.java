@@ -7,15 +7,14 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.RenderOptions;
-import lombok.extern.slf4j.Slf4j;
+import com.nnm.bot.common.constant.ComputationErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 
 import java.util.List;
 
-@Slf4j
 public class PlaywrightEngine implements RenderEngine {
 
     private final List<String> chromiumArgs;
-    private Object browser;
 
     public PlaywrightEngine(List<String> chromiumArgs) {
         this.chromiumArgs = chromiumArgs;
@@ -28,32 +27,28 @@ public class PlaywrightEngine implements RenderEngine {
 
     @Override
     public byte[] renderHtmlToImage(String html, RenderOptions options) {
-        try {
-            Playwright playwright = Playwright.create();
-            Browser browser = playwright.chromium().launch(
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(
                     new BrowserType.LaunchOptions()
                             .setHeadless(true)
                             .setArgs(chromiumArgs)
-            );
+            )) {
             Page page = browser.newPage();
             page.setViewportSize(options.getWidth(), 800);
             page.setContent(html);
             page.waitForLoadState();
 
-            byte[] screenshot = page.screenshot(
+            Number width = (Number) page.evaluate("Math.max(innerWidth, document.documentElement.scrollWidth)");
+            Number height = (Number) page.evaluate("Math.max(innerHeight, document.documentElement.scrollHeight)");
+            if (width.doubleValue() * height.doubleValue() > options.getMaxImagePixels()) {
+                throw new BusinessException(ComputationErrorCode.RESULT_TOO_LARGE);
+            }
+
+            return page.screenshot(
                     new Page.ScreenshotOptions()
                             .setFullPage(true)
                             .setType(ScreenshotType.PNG)
             );
-
-            page.close();
-            browser.close();
-            playwright.close();
-
-            return screenshot;
-        } catch (Exception e) {
-            log.error("Playwright render failed", e);
-            throw new RuntimeException("Image render failed", e);
         }
     }
 

@@ -2,10 +2,10 @@ package com.nnm.bot.admin.adapter.command;
 
 import cn.hutool.core.util.ObjectUtil;
 
-import com.nnm.bot.admin.domain.BotCommand;
-import com.nnm.bot.admin.domain.BotCommandCost;
-import com.nnm.bot.admin.repository.BotCommandCostRepository;
-import com.nnm.bot.admin.repository.BotCommandRepository;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandCost;
+import com.nnm.bot.admin.repository.bot.command.BotCommandCostRepository;
+import com.nnm.bot.admin.repository.bot.command.BotCommandRepository;
 import com.nnm.bot.core.plugin.model.CommandCostConfiguration;
 import com.nnm.bot.core.plugin.api.CommandCostConfigurationProvider;
 import jakarta.annotation.Resource;

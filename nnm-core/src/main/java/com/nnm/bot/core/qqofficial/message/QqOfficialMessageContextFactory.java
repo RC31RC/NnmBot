@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.nnm.bot.core.constant.QqOfficialChatType;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.message.model.BotIncomingAttachment;
-import com.nnm.bot.core.message.model.BotIncomingAttachmentType;
+import com.nnm.bot.core.constant.BotMessageConstants.BotIncomingAttachmentType;
 import com.nnm.bot.core.constant.BotMessageScope;
 import com.nnm.bot.core.constant.BotPlatform;
 
@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.OffsetDateTime;
+import java.time.Instant;
 
 /**
  * 将 QQ 官方 Gateway 消息事件转换为平台无关上下文。
@@ -51,7 +53,7 @@ public final class QqOfficialMessageContextFactory {
         };
         String messageId = text(event, "id");
         String content = normalizeContent(event.path("content").asText(""), appId);
-        if (isBlank(appId) || isBlank(senderId) || isBlank(targetId)) {
+        if (isBlank(appId) || isBlank(senderId) || isBlank(targetId) || isBlank(messageId)) {
             return Optional.empty();
         }
 
@@ -70,9 +72,14 @@ public final class QqOfficialMessageContextFactory {
                 event.toString(),
                 content,
                 new QqOfficialMessageSource(
-                        eventType, chatType, targetId, messageId, appId, event.toString()),
+                        eventType, chatType, targetId, messageId, appId, event.toString(), timestamp(event)),
                 attachments(event)
         ));
+    }
+
+    private static Instant timestamp(JsonNode event) {
+        String timestamp = text(event, "timestamp");
+        return timestamp == null ? null : OffsetDateTime.parse(timestamp).toInstant();
     }
 
     static QqOfficialChatType chatType(String eventType) {

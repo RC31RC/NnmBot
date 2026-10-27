@@ -6,6 +6,9 @@ import com.nnm.bot.core.group.domain.BotGroupPointTransaction;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import com.nnm.bot.core.group.repository.BotGroupPointTransactionRepository;
 import com.nnm.bot.core.group.service.PointChangeResult;
+import com.nnm.bot.core.group.service.CanonicalMemberResolver;
+import org.junit.jupiter.api.BeforeEach;
+import org.mockito.Mockito;
 import com.nnm.bot.core.group.service.PointOperation;
 import io.github.rdt.lock.DistributedLockManager;
 import org.junit.jupiter.api.Test;
@@ -35,8 +38,16 @@ class PointAccountServiceImplTest {
     private BotGroupPointTransactionRepository transactionRepository;
     @Mock
     private DistributedLockManager lockManager;
+    @Mock
+    private CanonicalMemberResolver canonicalMembers;
     @InjectMocks
     private PointAccountServiceImpl service;
+
+    @BeforeEach
+    void canonical() {
+        Mockito.lenient().when(canonicalMembers.resolve(Mockito.anyLong(), Mockito.anyLong()))
+                .thenAnswer(call -> call.getArgument(1));
+    }
 
     @Test
     void repeatedOperationReturnsCurrentBalanceWithoutMutatingAgain() {
@@ -66,7 +77,7 @@ class PointAccountServiceImplTest {
         BotGroupMember member = member(GROUP_ID, 5);
         when(this.transactionRepository.existsByIdempotencyKey(operation.idempotencyKey()))
                 .thenReturn(false);
-        when(this.memberRepository.findById(MEMBER_ID))
+        when(this.memberRepository.findByIdAndGroupId(MEMBER_ID, GROUP_ID))
                 .thenReturn(Optional.of(member));
 
         PointChangeResult result = this.service.spend(operation);
@@ -85,8 +96,8 @@ class PointAccountServiceImplTest {
         PointOperation operation = operation("COMMAND_REWARD:101:201:message-1", 10);
         when(this.transactionRepository.existsByIdempotencyKey(operation.idempotencyKey()))
                 .thenReturn(false);
-        when(this.memberRepository.findById(MEMBER_ID))
-                .thenReturn(Optional.of(member(GROUP_ID + 1, 5)));
+        when(this.memberRepository.findByIdAndGroupId(MEMBER_ID, GROUP_ID))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> this.service.earn(operation))
                 .isInstanceOf(IllegalStateException.class)
@@ -99,12 +110,23 @@ class PointAccountServiceImplTest {
     }
 
     @Test
+    void transactionRejectsDisabledAccountRegardlessOfEntrySnapshot() {
+        PointOperation operation = operation("disabled", 10);
+        BotGroupMember disabled = member(GROUP_ID, 100);
+        disabled.setEnabled(false);
+        when(memberRepository.findByIdAndGroupId(MEMBER_ID, GROUP_ID)).thenReturn(Optional.of(disabled));
+        assertThatThrownBy(() -> service.spend(operation)).isInstanceOf(IllegalStateException.class);
+        verify(memberRepository, never()).save(ArgumentMatchers.any());
+        verify(transactionRepository, never()).save(ArgumentMatchers.any());
+    }
+
+    @Test
     void successfulRewardWritesPostSettlementBalanceToLedger() {
         PointOperation operation = operation("COMMAND_REWARD:101:201:message-2", 10);
         BotGroupMember member = member(GROUP_ID, 5);
         when(this.transactionRepository.existsByIdempotencyKey(operation.idempotencyKey()))
                 .thenReturn(false);
-        when(this.memberRepository.findById(MEMBER_ID))
+        when(this.memberRepository.findByIdAndGroupId(MEMBER_ID, GROUP_ID))
                 .thenReturn(Optional.of(member));
         when(this.transactionRepository.save(
                 ArgumentMatchers.any(BotGroupPointTransaction.class)))

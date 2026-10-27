@@ -1,5 +1,6 @@
 package com.nnm.bot.core.plugin.response;
 
+import java.util.Map.Entry;
 import java.util.Objects;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.plugin.annotation.CommandTextInline;
@@ -19,7 +20,7 @@ import java.util.Map;
  * 命令结构化数据的通用文字排版器。
  *
  * <p>{@code CommandResult.data} 是所有命令共用的已处理展示数据。该类只负责
- * 将它排版成文字，不参与业务解析，也不为 WorldState 或市场命令提供特殊协议。</p>
+ * 将它排版成文字，不参与业务解析，也不为 WorldStateDTO 或市场命令提供特殊协议。</p>
  */
 @Component
 public class CommandDataTextFormatter {
@@ -49,7 +50,7 @@ public class CommandDataTextFormatter {
             appendInline(result, map, data, 0);
             return result.toString().trim();
         }
-        for (Map.Entry<?, ?> entry : fields.entrySet()) {
+        for (Entry<?,?> entry : fields.entrySet()) {
             String key = String.valueOf(entry.getKey());
             BeanPropertyDefinition property = properties.get(key);
             Object original = serialized instanceof Map<?, ?>
@@ -84,7 +85,7 @@ public class CommandDataTextFormatter {
 
     private void appendMap(StringBuilder output, Map<?, ?> map, Object original, int depth) {
         Map<String, BeanPropertyDefinition> properties = properties(original);
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
+        for (Entry<?,?> entry : map.entrySet()) {
             String key = String.valueOf(entry.getKey());
             BeanPropertyDefinition property = properties.get(key);
             appendField(output, displayLabel(key, property), entry.getValue(),
@@ -110,7 +111,7 @@ public class CommandDataTextFormatter {
         map.forEach((key, value) -> {
             if (value instanceof Map<?, ?> || value instanceof Collection<?>) {
                 String name = String.valueOf(key);
-                var property = properties.get(name);
+                BeanPropertyDefinition property = properties.get(name);
                 appendField(output, displayLabel(name, property), value,
                         propertyValue(original, name, property), depth + 1);
             }

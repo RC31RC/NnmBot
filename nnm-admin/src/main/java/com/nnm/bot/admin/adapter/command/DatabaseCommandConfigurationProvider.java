@@ -1,18 +1,15 @@
 package com.nnm.bot.admin.adapter.command;
 
+import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
 import java.util.Comparator;
 import cn.hutool.core.util.ObjectUtil;
 
-import com.nnm.bot.admin.domain.BotCommand;
-import com.nnm.bot.admin.domain.BotCommandAlias;
-import com.nnm.bot.admin.domain.BotCommandChannel;
-import com.nnm.bot.admin.domain.BotCommandTemplate;
-import com.nnm.bot.admin.repository.BotCommandAliasRepository;
-import com.nnm.bot.admin.repository.BotCommandChannelRepository;
-import com.nnm.bot.admin.repository.BotCommandRepository;
-import com.nnm.bot.admin.repository.BotCommandTemplateRepository;
-import com.nnm.bot.core.constant.BotPlatform;
-import com.nnm.bot.core.constant.ChannelOutputMode;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandAlias;
+import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandTemplate;
+import com.nnm.bot.admin.repository.bot.command.BotCommandAliasRepository;
+import com.nnm.bot.admin.repository.bot.command.BotCommandRepository;
+import com.nnm.bot.admin.repository.bot.command.BotCommandTemplateRepository;
 import com.nnm.bot.core.plugin.api.CommandConfigurationProvider;
 import com.nnm.bot.core.plugin.model.CommandDefinition;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
@@ -22,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,8 +37,6 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
     @Resource
     private BotCommandAliasRepository aliasRepository;
     @Resource
-    private BotCommandChannelRepository channelRepository;
-    @Resource
     private BotCommandTemplateRepository templateRepository;
 
     @Override
@@ -53,9 +47,7 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         }
 
         Map<Long, List<CommandTrigger>> triggersByCommand = triggersByCommand();
-        Map<Long, Map<BotPlatform, ChannelOutputMode>> channelsByCommand =
-                channelsByCommand();
-        Map<Long, List<CommandExecutionConfiguration.CommandTemplate>> templatesByCommand =
+        Map<Long,List<CommandTemplate>> templatesByCommand =
                 templatesByCommand();
         Map<String, CommandDefinition> definitions = new LinkedHashMap<>();
 
@@ -64,13 +56,12 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
                     new CommandExecutionConfiguration(
                             command.isEnabled(),
                             command.isShowInHelp(),
-                            command.getOutputMode(),
+                            command.getPresentation(),
                             templatesByCommand.getOrDefault(command.getId(), List.of()),
                             normalizedTriggers(triggersByCommand.get(command.getId())),
                             command.getPermissionOverride(),
                             command.getCooldownSeconds(),
-                            command.isMentionInvoker(),
-                            channelsByCommand.getOrDefault(command.getId(), Map.of()));
+                            command.isMentionInvoker());
             CommandDefinition definition = new CommandDefinition(
                     command.getCode(),
                     command.getName(),
@@ -91,24 +82,6 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         return result;
     }
 
-    private Map<Long, Map<BotPlatform, ChannelOutputMode>> channelsByCommand() {
-        Map<Long, Map<BotPlatform, ChannelOutputMode>> result = new HashMap<>();
-        for (BotCommandChannel channel : channelRepository.findAll()) {
-            try {
-                BotPlatform platform = BotPlatform.valueOf(
-                        channel.getPlatform().trim().toUpperCase(Locale.ROOT));
-                result.computeIfAbsent(
-                                channel.getCommandId(),
-                                ignored -> new EnumMap<>(BotPlatform.class))
-                        .put(platform, channel.getOutputMode());
-            } catch (IllegalArgumentException exception) {
-                log.warn("Ignoring unsupported command channel platform [{}]",
-                        channel.getPlatform());
-            }
-        }
-        return result;
-    }
-
     private Map<Long, List<CommandExecutionConfiguration.CommandTemplate>> templatesByCommand() {
         Map<Long, List<BotCommandTemplate>> templates = new HashMap<>();
         for (BotCommandTemplate template : templateRepository.findAll()) {
@@ -117,14 +90,14 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
                         .add(template);
             }
         }
-        Map<Long, List<CommandExecutionConfiguration.CommandTemplate>> result = new HashMap<>();
+        Map<Long,List<CommandTemplate>> result = new HashMap<>();
         templates.forEach((commandId, items) -> {
             items.sort(Comparator
                     .comparingInt(BotCommandTemplate::getSortOrder)
                     .thenComparing(BotCommandTemplate::getId));
             result.put(commandId, items.stream()
                     .map(template -> new CommandExecutionConfiguration.CommandTemplate(
-                            template.getTemplateCode(), template.getHtmlContent()))
+                            template.getTemplateCode(), template.getViewKey(), template.getHtmlContent(), template.getMarkdownContent(), template.getPlainTextContent()))
                     .toList());
         });
         return result;
