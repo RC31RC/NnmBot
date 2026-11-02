@@ -7,9 +7,8 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 扎里曼坚守者赏金命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.HOLDFASTS, name = "扎里曼赏金",
-        gameCode = "warframe", order = 62,
-        allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.HOLDFASTS, name = "扎里曼赏金", gameCode = "warframe", order = 62,
+    allowRelatedAction = true)
 // 官方快照 syndicateMissions；过滤 The Holdfasts 集团。任务文本/奖励引用由 WorldStateDTO 代码簿及社区数据补全。
 public class HoldfastsPlugin extends AbstractWorldStateCommandPlugin {
     /**
@@ -17,7 +16,7 @@ public class HoldfastsPlugin extends AbstractWorldStateCommandPlugin {
      */
     public HoldfastsPlugin() {
         super(state -> WarframeWorldStateProjector.syndicate(state, "扎里曼赏金",
-                value -> contains(value, "holdfast", "坚守者", "zariman")));
+            value -> contains(value, "holdfast", "坚守者", "zariman")));
     }
 
     /**
@@ -29,7 +28,6 @@ public class HoldfastsPlugin extends AbstractWorldStateCommandPlugin {
      */
     private static boolean contains(String value, String... candidates) {
         String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
-        return Arrays.stream(candidates)
-                .anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
+        return Arrays.stream(candidates).anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
     }
 }

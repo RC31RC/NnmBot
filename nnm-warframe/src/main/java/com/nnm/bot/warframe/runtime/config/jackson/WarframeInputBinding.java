@@ -13,8 +13,7 @@ public final class WarframeInputBinding {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private WarframeInputBinding() {
-    }
+    private WarframeInputBinding() {}
 
     /**
      * 在组件初始化时创建专用绑定器，禁止将错误标量类型静默转为有效字段。
@@ -24,10 +23,9 @@ public final class WarframeInputBinding {
      */
     public static ObjectMapper strictMapper(ObjectMapper mapper) {
         ObjectMapper input = mapper.copy().disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
-                .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
-                .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+            .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
         for (CoercionInputShape shape : List.of(CoercionInputShape.Integer, CoercionInputShape.Float,
-                CoercionInputShape.Boolean)) {
+            CoercionInputShape.Boolean)) {
             input.coercionConfigFor(LogicalType.Textual).setCoercion(shape, CoercionAction.Fail);
         }
         return input;

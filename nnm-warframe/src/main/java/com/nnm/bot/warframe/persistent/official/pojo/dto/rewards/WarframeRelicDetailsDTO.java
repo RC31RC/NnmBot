@@ -17,8 +17,8 @@ public record WarframeRelicDetailsDTO(RelicDTO relic, List<RewardDTO> rewards, L
         drops = List.copyOf(drops);
     }
 
-    public record RelicDTO(String recordKey, String relicName, Boolean vaulted, String quality,
-                        String icon, String iconUrl, String sourceCode) {
+    public record RelicDTO(String recordKey, String relicName, Boolean vaulted, String quality, String icon,
+        String iconUrl, String sourceCode) {
     }
 
     public record RewardDTO(String rewardName, String rarity, BigDecimal chance) {

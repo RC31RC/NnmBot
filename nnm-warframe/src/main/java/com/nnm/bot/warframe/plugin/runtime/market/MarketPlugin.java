@@ -34,19 +34,24 @@ import java.util.stream.Collectors;
 
 /** 市场命令入口：解析语法和物品别名，将查询对象交给统一 Market Service。 */
 @Slf4j
-@BotPluginCommand(code = WarframeCommandCodes.MARKET, matchType = MatchType.PREFIX, name = "市场", allowRelatedAction = true, gameCode = "warframe", order = 20)
+@BotPluginCommand(code = WarframeCommandCodes.MARKET, matchType = MatchType.PREFIX, name = "市场",
+    allowRelatedAction = true, gameCode = "warframe", order = 20)
 // 订单来自 Warframe Market API；商品身份从官方目录与人工别名/术语白名单解析。
-public class MarketPlugin extends BotPlugin {
+public class MarketPlugin extends BotPlugin<Void> {
 
     /**
      * 声明市场关联动作需要保留的查询上下文键。
+     *
      * @return 按当前条件筛选或转换后的数据集合。
      */
     @Override
-    public Set<String> actionContextKeys() { return Set.of("item.name", "item.marketSlug"); }
+    public Set<String> actionContextKeys() {
+        return Set.of("item.name", "item.marketSlug");
+    }
 
     /**
      * 声明市场关联查询支持的参数及其展示信息。
+     *
      * @return 按当前条件筛选或转换后的数据集合。
      */
     @Override
@@ -76,10 +81,11 @@ public class MarketPlugin extends BotPlugin {
      * 解析参数并选择图文共用的展示字段；订单过滤、排序及分页全部由 Service 完成。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         WarframeMarketOrderQuery query = parseQuery(invocation.arguments());
         if (StrUtil.isBlank(query.itemInput())) {
             return CommandResult.rejected("格式：wm [满级] [买家|卖家] [平台] 物品名称 [页码]");
@@ -89,9 +95,8 @@ public class MarketPlugin extends BotPlugin {
         String slug = resolveMarketSlug(query.itemInput(), resolution);
         if (StrUtil.isBlank(slug)) {
             if (resolution.ambiguous()) {
-                return CommandResult.rejected("物品名称存在多个候选，请输入更完整的名称："
-                        + resolution.candidates().stream().map(WarframeItemDTO::getLocalizedName)
-                        .collect(Collectors.joining("、")));
+                return CommandResult.rejected("物品名称存在多个候选，请输入更完整的名称：" + resolution.candidates().stream()
+                    .map(WarframeItemDTO::getLocalizedName).collect(Collectors.joining("、")));
             }
             return CommandResult.rejected("没有找到对应的 Warframe Market 物品，请输入物品名称或 Market URL 名称");
         }
@@ -103,9 +108,9 @@ public class MarketPlugin extends BotPlugin {
         WarframeMarketOrderPageDTO data = result.get();
         // Service 保留完整查询能力；WM 不将百科详情和重复订单视图交给发送渠道。
         return CommandResult.view("warframe.market.orders", "市场订单", WarframeMarketOrderVO.from(data))
-                .withActionContext(resolution.found() && !resolution.ambiguous()
-                        ? Map.of("item.name", StrUtil.firstNonBlank(resolution.item().getLocalizedName(),
-                                resolution.item().getOfficialName()), "item.marketSlug", slug) : Map.of());
+            .withActionContext(resolution.found() && !resolution.ambiguous() ? Map.of("item.name",
+                StrUtil.firstNonBlank(resolution.item().getLocalizedName(), resolution.item().getOfficialName()),
+                "item.marketSlug", slug) : Map.of());
     }
 
     /**
@@ -154,8 +159,7 @@ public class MarketPlugin extends BotPlugin {
     }
 
     /**
-     * 对照参考项目的销售词库：先展开黑话/部件，再匹配市场目录中的中文、英文和 slug。
-     *   同分候选优先完整套装，但已明确输入的 slug 或全名始终优先。
+     * 对照参考项目的销售词库：先展开黑话/部件，再匹配市场目录中的中文、英文和 slug。 同分候选优先完整套装，但已明确输入的 slug 或全名始终优先。
      *
      * @param input 待解析或校验的输入。
      * @param resolution 解析状态。
@@ -178,34 +182,35 @@ public class MarketPlugin extends BotPlugin {
             searchTerms.add(resolution.item().getLocalizedName());
             searchTerms.add(resolution.item().getMarketSlug());
         }
-        Set<String> terms = searchTerms.stream().filter(StrUtil::isNotBlank)
-                .map(MarketPlugin::compact).collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<String> terms = searchTerms.stream().filter(StrUtil::isNotBlank).map(MarketPlugin::compact)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
         // 裸名称的 Prime 偏好只使用精确名称/别名，不能把模糊纠错结果当成用户意图。
         Set<String> exactTerms = new LinkedHashSet<>();
         exactTerms.add(compact(input));
-        itemResolver.auctionWeaponSearchTerms(input).stream()
-                .filter(StrUtil::isNotBlank).map(MarketPlugin::compact).forEach(exactTerms::add);
+        itemResolver.auctionWeaponSearchTerms(input).stream().filter(StrUtil::isNotBlank).map(MarketPlugin::compact)
+            .forEach(exactTerms::add);
         List<MarketCandidate> matched = catalog.stream().filter(item -> StrUtil.isNotBlank(item.slug()))
-                .map(item -> new MarketCandidate(item, bestMarketScore(item, terms),
-                        marketIntentPriority(item, input, exactTerms)))
-                .filter(candidate -> candidate.score() >= 0.78D)
-                .sorted(Comparator.comparingInt(MarketCandidate::intentPriority)
-                        .thenComparing(Comparator.comparingDouble(MarketCandidate::score).reversed())
-                        .thenComparing(candidate -> marketPriority(candidate.item()))
-                        .thenComparing(candidate -> candidate.item().slug()))
-                .toList();
+            .map(item -> new MarketCandidate(item, bestMarketScore(item, terms),
+                marketIntentPriority(item, input, exactTerms)))
+            .filter(candidate -> candidate.score() >= 0.78D)
+            .sorted(Comparator.comparingInt(MarketCandidate::intentPriority)
+                .thenComparing(Comparator.comparingDouble(MarketCandidate::score).reversed())
+                .thenComparing(candidate -> marketPriority(candidate.item()))
+                .thenComparing(candidate -> candidate.item().slug()))
+            .toList();
         if (CollUtil.isNotEmpty(matched)) {
             MarketCandidate best = matched.getFirst();
-            boolean ambiguous = matched.stream().skip(1).anyMatch(candidate ->
-                    candidate.intentPriority() == best.intentPriority()
-                            && Double.compare(candidate.score(), best.score()) == 0
-                            && marketPriority(candidate.item()) == marketPriority(best.item())
-                            && !candidate.item().slug().equals(best.item().slug()));
-            // Slug sorting is deterministic display order, never evidence of a unique identity.
+            boolean ambiguous = matched.stream().skip(1)
+                .anyMatch(candidate -> candidate.intentPriority() == best.intentPriority()
+                    && Double.compare(candidate.score(), best.score()) == 0
+                    && marketPriority(candidate.item()) == marketPriority(best.item())
+                    && !candidate.item().slug().equals(best.item().slug()));
+            // 按 slug 排序只保证展示顺序稳定，不能据此认定身份唯一。
             return ambiguous ? "" : best.item().slug();
         }
         // 目录短暂不可用时允许明确的 URL slug；中文不得原样发送给上游。
-        if (direct.matches("[a-z0-9]+(?:_[a-z0-9]+)+")) return direct;
+        if (direct.matches("[a-z0-9]+(?:_[a-z0-9]+)+"))
+            return direct;
         if (resolution.found() && StrUtil.isNotBlank(resolution.item().getMarketSlug())) {
             return resolution.item().getMarketSlug();
         }
@@ -214,6 +219,7 @@ public class MarketPlugin extends BotPlugin {
 
     /**
      * 结合精确匹配词和物品类型计算当前查询意图的候选优先级。
+     *
      * @param item 当前物品或集合成员。
      * @param input 待解析或校验的输入。
      * @param exactTerms 精确术语集合。
@@ -222,13 +228,16 @@ public class MarketPlugin extends BotPlugin {
     private static int marketIntentPriority(WarframeMarketItemDTO item, String input, Set<String> exactTerms) {
         String slug = item.slug().toLowerCase(Locale.ROOT);
         // 带下划线的完整 slug 是显式商品选择，不受裸名称偏好影响。
-        if (input.contains("_") && slug.equalsIgnoreCase(input.trim())) return 0;
+        if (input.contains("_") && slug.equalsIgnoreCase(input.trim()))
+            return 0;
         if (slug.endsWith("_prime_set") || slug.endsWith("_prime")) {
             String base = slug.replaceFirst("_prime(?:_set)?$", "");
-            if (exactTerms.contains(compact(base))) return 1;
+            if (exactTerms.contains(compact(base)))
+                return 1;
         }
-        if (List.of(slug, item.localizedName("zh-hans"), item.localizedName("en"))
-                .stream().map(MarketPlugin::compact).anyMatch(compact(input)::equals)) return 2;
+        if (List.of(slug, item.localizedName("zh-hans"), item.localizedName("en")).stream().map(MarketPlugin::compact)
+            .anyMatch(compact(input)::equals))
+            return 2;
         return 3;
     }
 
@@ -245,10 +254,14 @@ public class MarketPlugin extends BotPlugin {
         for (String term : terms) {
             for (String name : names) {
                 String candidate = compact(name);
-                if (StrUtil.isBlank(candidate)) continue;
-                if (candidate.equals(term)) best = Math.max(best, 1);
-                else if (candidate.contains(term)) best = Math.max(best, 0.94);
-                else if (isSubsequence(term, candidate)) best = Math.max(best, 0.82);
+                if (StrUtil.isBlank(candidate))
+                    continue;
+                if (candidate.equals(term))
+                    best = Math.max(best, 1);
+                else if (candidate.contains(term))
+                    best = Math.max(best, 0.94);
+                else if (isSubsequence(term, candidate))
+                    best = Math.max(best, 0.82);
             }
         }
         return best;
@@ -256,12 +269,14 @@ public class MarketPlugin extends BotPlugin {
 
     /**
      * 按市场物品类别计算候选排序优先级。
+     *
      * @param item 当前物品或集合成员。
      * @return 当前操作计算或读取的数值。
      */
     private static int marketPriority(WarframeMarketItemDTO item) {
         String slug = item.slug().toLowerCase(Locale.ROOT);
-        if (Boolean.TRUE.equals(item.setRoot()) || slug.endsWith("_set")) return 0;
+        if (Boolean.TRUE.equals(item.setRoot()) || slug.endsWith("_set"))
+            return 0;
         return slug.contains("_prime") ? 1 : 2;
     }
 
@@ -275,20 +290,22 @@ public class MarketPlugin extends BotPlugin {
     private static boolean isSubsequence(String input, String candidate) {
         int index = 0;
         for (int i = 0; i < candidate.length() && index < input.length(); i++) {
-            if (candidate.charAt(i) == input.charAt(index)) index++;
+            if (candidate.charAt(i) == input.charAt(index))
+                index++;
         }
         return index == input.length();
     }
 
     /**
      * 去除名称中的比较分隔符，生成市场候选匹配键。
+     *
      * @param value 待校验或规范化的文本。
      * @return 已去除比较分隔符的名称键。
      */
     private static String compact(String value) {
-        return StrUtil.emptyIfNull(value).trim().toLowerCase(Locale.ROOT)
-                .replaceAll("[\\s_\\-·•/\\\\]+", "");
+        return StrUtil.emptyIfNull(value).trim().toLowerCase(Locale.ROOT).replaceAll("[\\s_\\-·•/\\\\]+", "");
     }
 
-    private record MarketCandidate(WarframeMarketItemDTO item, double score, int intentPriority) {}
+    private record MarketCandidate(WarframeMarketItemDTO item, double score, int intentPriority) {
+    }
 }

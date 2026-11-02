@@ -23,13 +23,11 @@ public class BotProactiveMessageSenderRouter {
     private final Map<BotPlatform, BotProactiveMessageSender> senders;
 
     public BotProactiveMessageSenderRouter(List<BotProactiveMessageSender> senders) {
-        EnumMap<BotPlatform, BotProactiveMessageSender> indexed =
-                new EnumMap<>(BotPlatform.class);
+        EnumMap<BotPlatform, BotProactiveMessageSender> indexed = new EnumMap<>(BotPlatform.class);
         for (BotProactiveMessageSender sender : senders) {
             BotProactiveMessageSender previous = indexed.put(sender.platform(), sender);
             if (previous != null) {
-                throw new IllegalStateException(
-                        "Duplicate proactive message sender: " + sender.platform());
+                throw new IllegalStateException("Duplicate proactive message sender: " + sender.platform());
             }
         }
         this.senders = Map.copyOf(indexed);
@@ -37,7 +35,7 @@ public class BotProactiveMessageSenderRouter {
 
     public void sendGroupText(BotPlatform platform, BotProactiveGroupMessage message) {
         BotProactiveTarget target = new BotProactiveTarget(platform, message.botAccountId(), message.conversationId(),
-                message.mentionUserIds());
+            message.mentionUserIds());
         try (PreparedBotMessage prepared = prepare(target, List.of(new BotMessagePart.Text(message.text())))) {
             prepared.send();
         }
@@ -57,10 +55,14 @@ public class BotProactiveMessageSenderRouter {
             }
 
             @Override
-            public boolean canReserve(int messages) { return messages > 0; }
+            public boolean canReserve(int messages) {
+                return messages > 0;
+            }
 
             @Override
-            public String mentionUserId() { return null; }
+            public String mentionUserId() {
+                return null;
+            }
         };
     }
 
@@ -71,8 +73,7 @@ public class BotProactiveMessageSenderRouter {
     private BotProactiveMessageSender sender(BotPlatform platform) {
         BotProactiveMessageSender sender = senders.get(platform);
         if (sender == null) {
-            throw new BusinessException(BotChannelErrorCode.CHANNEL_NOT_REGISTERED,
-                    "未注册主动消息发送器: " + platform);
+            throw new BusinessException(BotChannelErrorCode.CHANNEL_NOT_REGISTERED, "未注册主动消息发送器: " + platform);
         }
         return sender;
     }

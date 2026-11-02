@@ -63,8 +63,12 @@ public class OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsIte
     private OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsGroupsItems> officialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRows = new ArrayList<>();
+    private List<
+        OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsGroupsItems> officialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRewardsItems> officialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRewardsItemsRows = new ArrayList<>();
+    private List<
+        OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRewardsItems> officialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRewardsItemsRows =
+            new ArrayList<>();
 }

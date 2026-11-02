@@ -9,8 +9,7 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum OcrErrorCode implements ErrorCode {
 
-    DISABLED(409, "OCR 功能未启用", HttpStatus.CONFLICT),
-    IMAGE_REQUIRED(400, "OCR 图片不能为空", HttpStatus.BAD_REQUEST),
+    DISABLED(409, "OCR 功能未启用", HttpStatus.CONFLICT), IMAGE_REQUIRED(400, "OCR 图片不能为空", HttpStatus.BAD_REQUEST),
     IMAGE_TOO_LARGE(413, "OCR 图片超过系统限制", HttpStatus.CONTENT_TOO_LARGE),
     INVALID_IMAGE(422, "OCR 图片格式或尺寸无效", HttpStatus.UNPROCESSABLE_ENTITY),
     RECOGNITION_FAILED(500, "OCR 识别失败", HttpStatus.INTERNAL_SERVER_ERROR),

@@ -7,10 +7,9 @@ import io.github.rdt.queue.QueueMode;
 
 /** 主题与投递模式不依赖消息载荷或远端元数据。 */
 public abstract class BotTopologyRefreshMessageDescriptor extends MessageDescriptor<String> {
-    public static final String TOPIC = "bot-topology-refresh-v1";
+    public static final String TOPIC = "bot-topology-refresh";
 
-    protected BotTopologyRefreshMessageDescriptor() {
-    }
+    protected BotTopologyRefreshMessageDescriptor() {}
 
     protected BotTopologyRefreshMessageDescriptor(String payload) {
         super(payload);

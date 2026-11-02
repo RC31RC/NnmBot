@@ -11,26 +11,19 @@ import java.util.Objects;
  * @param description 命令说明
  * @param configuration 命令运行配置
  */
-public record CommandDefinition(
-        String code,
-        String name,
-        String gameCode,
-        String description,
-        CommandExecutionConfiguration configuration
-) {
+public record CommandDefinition(String code, String name, String gameCode, String description,
+    CommandExecutionConfiguration configuration) {
 
     public CommandDefinition {
         code = requireText(code, "code");
         name = requireText(name, "name");
         gameCode = requireText(gameCode, "gameCode");
         description = Objects.requireNonNullElse(description, "").trim();
-        configuration = Objects.requireNonNull(
-                configuration, "configuration must not be null");
+        configuration = Objects.requireNonNull(configuration, "configuration must not be null");
     }
 
     private static String requireText(String value, String field) {
-        String normalized = Objects.requireNonNull(
-                value, field + " must not be null").trim();
+        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
         if (normalized.isEmpty()) {
             throw new IllegalArgumentException(field + " must not be blank");
         }

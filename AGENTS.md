@@ -6,7 +6,7 @@
 
 - 后端仓库：`/Users/ren/RcGit/NnmBot`
 - 前端仓库：`/Users/ren/RcGit/nnm-admin-web`
-- 两个仓库独立开发、独立版本管理，通过 `/api/admin/v1` 协作。
+- 两个仓库独立开发、独立版本管理，通过 `/api/admin` 协作。
 - 当前为本地持续开发阶段，服务地址统一使用 `localhost` 或 `127.0.0.1`。
 - 未经明确要求，不执行生产打包、不提交 Git、不引入部署环境地址。
 - 前端原有页面、路由、组件和功能板块源码必须完整保留，作为后续功能开发与视觉风格的实现范例；开发阶段继续展示这些页面，不得提前删除、覆盖或隐藏，项目收尾时再统一评估哪些入口需要隐藏。
@@ -73,8 +73,10 @@
   其他插件重复处理同一消息。
 - RDT 的使用方式按职责选择：定时任务、消息消费者和方法级互斥优先使用声明式注解；
   分布式 ID 获取、消息投递和跨连接生命周期的 owner lease 优先使用编程式 API。
-- 当前 RDT `@RdtLock` 是方法级锁，不等同于事务级锁；不要假设它会自动延长到外层事务
-  最终提交。事务级锁累积管理器暂未实现，新增需求必须先明确事务传播和释放边界。
+- RDT `@RdtLock` 只建立当前 Spring 代理调用线程的方法锁作用域，不自动获取锁；业务通过
+  `DistributedLockManager.lock(LockKey)` 加锁。当前默认 `TransactionalLockManager` 在首次实际
+  获取锁时若已有同线程活跃 Spring 事务，则在该事务完成后释放；没有事务则方法结束后释放。
+  外层事务、`REQUIRES_NEW` 和异步线程须分别明确释放边界，不把注解当作跨线程锁。
 - 不使用 `ThreadLocal` 跨 WebSocket、线程池、CompletableFuture 或调度回调传播会话、事务、
   锁或业务身份。当前 WebSocket 处理链存在 `applicationTaskExecutor`、
   `shiroTaskExecutor` 和异步完成回调；跨线程上下文必须显式传递，并在同步短调用链结束后
@@ -89,14 +91,14 @@
 - 只有出现多表动态筛选、复杂统计等明确需求时才引入 QueryDSL，不为简单查询提前增加依赖。
 - 业务代码不得拼接原生 SQL；确需报表、批处理或数据库特有能力时，放入独立查询实现并补充集成测试。
 - 当前开发阶段不使用 Flyway。数据库初始化 SQL 统一聚合在
-  `docs/sql/init.sql`，已有数据库修复脚本放在 `docs/sql/` 根目录，由开发者手工执行；
+  `sql/init.sql`，已有数据库修复脚本放在 `sql/` 根目录，由开发者手工执行；
   应用不会自动建表或自动修改数据库结构。
 - 所有建表和改表 SQL 都必须写清楚注释：表使用 `COMMENT ON TABLE`，字段使用
   `COMMENT ON COLUMN`；新增约束、索引或枚举值时，在 SQL 上方补充其业务目的，避免只看字段名
   才能理解结构。
 - 测试可使用 SQL 验证数据库结构，但测试夹具应放在 `src/test/resources`，不得混入生产业务逻辑。
-- 当前开发阶段可以直接修改或重建 `docs/sql/init.sql`；合并基线后的新增脚本按
-  `docs/sql/01_*.sql`、`docs/sql/02_*.sql` 顺序维护，不增加自动迁移版本成本。
+- 当前开发阶段可以直接修改或重建 `sql/init.sql`；合并基线后的新增脚本按
+  `sql/01_*.sql`、`sql/02_*.sql` 顺序维护，不增加自动迁移版本成本。
 - Hibernate 使用 `ddl-auto: validate`，不得依赖 `update` 修改数据库。
 - H2 仅作为测试依赖，用于自动化测试；开发和生产数据库统一优先 PostgreSQL。
 - 当前手工脚本以 PostgreSQL 为目标；若正式选择 MySQL 8，使用独立的 MySQL 脚本目录，不编写
@@ -118,7 +120,7 @@
 - 权限码使用 `业务域:资源:动作`，例如 `system:user:update`。
 - 菜单决定导航可见性，权限码决定按钮和 API 操作，两者不要混为一体。
 - 前端 `v-auth`、`v-roles` 只改善交互体验，不能代替后端鉴权。
-- 前端按钮权限以 `/api/admin/v1/me` 返回的 `buttons` 为准。
+- 前端按钮权限以 `/api/admin/me` 返回的 `buttons` 为准。
 - 机器人能力角色使用 `bot_robot_role`、`bot_command_robot_role`、
   `bot_robot_role_instance`，只表达“命令由哪些机器人实例处理”，不得复用
   `sys_role` 或把机器人实例绑定到后台用户角色。

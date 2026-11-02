@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** 以机器人实例为主体维护能力角色绑定。 */
 @RestController
-@RequestMapping("/api/admin/v1/bot-instances")
+@RequestMapping("/api/admin/bot-instances")
 public class BotInstanceRobotRoleController {
 
     @Resource
@@ -22,12 +22,8 @@ public class BotInstanceRobotRoleController {
 
     @PutMapping("/{id}/robot-roles")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> assignRobotRoles(
-            @PathVariable
-            long id,
-            @Valid
-            @RequestBody
-            BotInstanceRobotRoleSaveDTO request) {
+    public ApiResponse<Void> assignRobotRoles(@PathVariable long id,
+        @Valid @RequestBody BotInstanceRobotRoleSaveDTO request) {
         service.assignInstanceRoles(id, request.roleIds());
         return ApiResponse.ok();
     }

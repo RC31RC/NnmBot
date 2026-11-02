@@ -23,7 +23,9 @@ import com.nnm.bot.core.message.model.BotMessagePart;
 /**
  * 根据消息上下文中的平台选择协议发送器。
  *
- * <p>它只负责平台协议路由；展示选择和降级由 ReplyPlanner 在发送前完成。</p>
+ * <p>
+ * 它只负责平台协议路由；展示选择和降级由 ReplyPlanner 在发送前完成。
+ * </p>
  */
 @Component
 public class BotMessageSenderRouter {
@@ -40,9 +42,8 @@ public class BotMessageSenderRouter {
         for (BotMessageSender sender : this.platformSenders) {
             BotMessageSender previous = registry.put(sender.platform(), sender);
             if (ObjectUtil.isNotNull(previous)) {
-                throw new BusinessException(
-                        BotChannelErrorCode.MESSAGE_SENDER_NOT_REGISTERED,
-                        "重复注册消息发送器: " + sender.platform());
+                throw new BusinessException(BotChannelErrorCode.MESSAGE_SENDER_NOT_REGISTERED,
+                    "重复注册消息发送器: " + sender.platform());
             }
         }
         this.senders = Map.copyOf(registry);
@@ -65,7 +66,7 @@ public class BotMessageSenderRouter {
     }
 
     public PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
-                                     BotMessageSendPermit permit) {
+        BotMessageSendPermit permit) {
         return this.sender(context).prepare(context, blocks, mentionUserId, permit);
     }
 
@@ -73,9 +74,8 @@ public class BotMessageSenderRouter {
         Assert.notNull(context, "context must not be null");
         BotMessageSender sender = senders.get(context.platform());
         if (ObjectUtil.isNull(sender)) {
-            throw new BusinessException(
-                    BotChannelErrorCode.MESSAGE_SENDER_NOT_REGISTERED,
-                    "未注册消息发送器: " + context.platform());
+            throw new BusinessException(BotChannelErrorCode.MESSAGE_SENDER_NOT_REGISTERED,
+                "未注册消息发送器: " + context.platform());
         }
         return sender;
     }

@@ -39,8 +39,8 @@ public class WarframeRivenOcrServiceImpl implements WarframeRivenOcrService {
             // fileId 需要渠道级文件 API，不能把平台标识拼成 URL。
             return new OcrTextResult("", List.of());
         }
-        byte[] image = httpClient.getLimitedBytes(attachment.url(),
-                Map.of("Accept", "image/*"), ocrProperties.getMaxInputBytes());
+        byte[] image =
+            httpClient.getLimitedBytes(attachment.url(), Map.of("Accept", "image/*"), ocrProperties.getMaxInputBytes());
         return ocrService.recognize(image);
     }
 }

@@ -43,5 +43,6 @@ public class OfficialEnemyItemsItems extends OfficialChildRow {
     private OfficialEnemyRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialEnemyItemsItemsItemReferencesItems> officialEnemyItemsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialEnemyItemsItemsItemReferencesItems> officialEnemyItemsItemsItemReferencesItemsRows =
+        new ArrayList<>();
 }

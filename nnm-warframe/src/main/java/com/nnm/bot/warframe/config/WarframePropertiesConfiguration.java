@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.config;
 
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationProperties;
-import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationPullProperties;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.persistent.curated.config.reference.WarframeCommunityProperties;
 import com.nnm.bot.warframe.config.cache.WarframeCacheProperties;
 import com.nnm.bot.warframe.persistent.curated.config.forum.ForumProperties;
@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Configuration;
 public class WarframePropertiesConfiguration {
     /**
      * 注册社区配置，前缀由属性类声明。
+     *
      * @return 游戏资料社区配置对象。
      */
     @Bean
@@ -35,6 +36,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册论坛配置，前缀由属性类声明。
+     *
      * @return 论坛配置对象。
      */
     @Bean
@@ -44,6 +46,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册论坛文件存储子配置，与论坛根配置共享同一绑定结果。
+     *
      * @param properties 当前业务配置。
      * @return 论坛存储配置对象。
      */
@@ -54,6 +57,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册官方实时接口配置，前缀由属性类声明。
+     *
      * @return 官方接口配置对象。
      */
     @Bean
@@ -63,6 +67,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册官方数据集配置，前缀由属性类声明。
+     *
      * @return 官方数据集配置对象。
      */
     @Bean
@@ -72,6 +77,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册市场接口配置，前缀由属性类声明。
+     *
      * @return 市场接口配置对象。
      */
     @Bean
@@ -81,6 +87,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册世界状态轮询配置，前缀由属性类声明。
+     *
      * @return 世界状态轮询配置对象。
      */
     @Bean
@@ -90,6 +97,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册赏金轮换配置，前缀由属性类声明。
+     *
      * @return 赏金轮换配置对象。
      */
     @Bean
@@ -99,6 +107,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册紫卡每周数据配置，前缀由属性类声明。
+     *
      * @return 紫卡每周数据配置对象。
      */
     @Bean
@@ -108,6 +117,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册图片数据配置，前缀由属性类声明。
+     *
      * @return 图片数据配置对象。
      */
     @Bean
@@ -117,6 +127,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册订阅查询配置，前缀由属性类声明。
+     *
      * @return 订阅查询配置对象。
      */
     @Bean
@@ -126,6 +137,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册世界状态代码簿配置，前缀由属性类声明。
+     *
      * @return 世界状态代码簿配置对象。
      */
     @Bean
@@ -135,6 +147,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册周期计算配置，前缀由属性类声明。
+     *
      * @return 周期计算配置对象。
      */
     @Bean
@@ -144,6 +157,7 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册仲裁查询配置，前缀由属性类声明。
+     *
      * @return 仲裁查询配置对象。
      */
     @Bean
@@ -153,15 +167,17 @@ public class WarframePropertiesConfiguration {
 
     /**
      * 注册仲裁来源拉取配置，前缀由属性类声明。
+     *
      * @return 仲裁来源拉取配置对象。
      */
     @Bean
-    public WarframeArbitrationPullProperties warframeArbitrationPullProperties() {
-        return new WarframeArbitrationPullProperties();
+    public WarframeArbitrationSourceProperties warframeArbitrationSourceProperties() {
+        return new WarframeArbitrationSourceProperties();
     }
 
     /**
      * 注册缓存容量和生命周期配置，前缀由属性类声明。
+     *
      * @return 缓存配置对象。
      */
     @Bean

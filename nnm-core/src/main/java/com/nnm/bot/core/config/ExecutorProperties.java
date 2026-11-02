@@ -80,49 +80,39 @@ public class ExecutorProperties {
             throw new IllegalArgumentException("nnm.executor.task.core-size must be at least 1");
         }
         if (task.maxSize < task.coreSize) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.task.max-size must be greater than or equal to core-size");
+            throw new IllegalArgumentException("nnm.executor.task.max-size must be greater than or equal to core-size");
         }
         if (task.queueCapacity < 0) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.task.queue-capacity must not be negative");
+            throw new IllegalArgumentException("nnm.executor.task.queue-capacity must not be negative");
         }
         if (ObjectUtil.isNull(task.keepAlive) || task.keepAlive.isNegative()) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.task.keep-alive must not be negative");
+            throw new IllegalArgumentException("nnm.executor.task.keep-alive must not be negative");
         }
         if (scheduler.poolSize < 1) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.scheduler.pool-size must be at least 1");
+            throw new IllegalArgumentException("nnm.executor.scheduler.pool-size must be at least 1");
         }
         if (ObjectUtil.isNull(awaitTermination) || awaitTermination.isNegative()) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.await-termination must not be negative");
+            throw new IllegalArgumentException("nnm.executor.await-termination must not be negative");
         }
         if (applicationConcurrency < 1) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.application-concurrency must be at least 1");
+            throw new IllegalArgumentException("nnm.executor.application-concurrency must be at least 1");
         }
         if (discoveryConcurrency < 1) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.discovery-concurrency must be at least 1");
+            throw new IllegalArgumentException("nnm.executor.discovery-concurrency must be at least 1");
         }
         if (connectionConcurrency < 1) {
-            throw new IllegalArgumentException(
-                    "nnm.executor.connection-concurrency must be at least 1");
+            throw new IllegalArgumentException("nnm.executor.connection-concurrency must be at least 1");
         }
         if (commandIngress.queueCapacity < 1 || commandIngress.maxMessageBytes < 1
-                || commandIngress.maxPendingBytes < commandIngress.maxMessageBytes
-                || commandIngress.maxQueueWait == null
-                || commandIngress.maxQueueWait.toMillis() < 1) {
+            || commandIngress.maxPendingBytes < commandIngress.maxMessageBytes || commandIngress.maxQueueWait == null
+            || commandIngress.maxQueueWait.toMillis() < 1) {
             throw new IllegalArgumentException("Invalid nnm.executor.command-ingress capacity or timing");
         }
         if (gatewayEvents.concurrency < 1 || gatewayEvents.queueCapacity < 1) {
             throw new IllegalArgumentException("Invalid nnm.executor.gateway-events capacity");
         }
-        if (computation.ocrInFlight < 1 || computation.maxQueueWait == null
-                || computation.maxQueueWait.toMillis() < 1 || computation.resultTimeout == null
-                || computation.resultTimeout.compareTo(computation.maxQueueWait) < 0) {
+        if (computation.ocrInFlight < 1 || computation.maxQueueWait == null || computation.maxQueueWait.toMillis() < 1
+            || computation.resultTimeout == null || computation.resultTimeout.compareTo(computation.maxQueueWait) < 0) {
             throw new IllegalArgumentException("Invalid nnm.executor.computation capacity or timing");
         }
     }

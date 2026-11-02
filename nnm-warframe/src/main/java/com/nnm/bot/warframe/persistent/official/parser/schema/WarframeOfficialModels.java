@@ -46,12 +46,14 @@ public class WarframeOfficialModels {
             Map<String, Field> fields = new LinkedHashMap<>();
             for (Column column : definition.columns()) {
                 Field field = type.getDeclaredField(column.property());
-                if (!field.trySetAccessible()) throw new IllegalStateException("Cannot access official model field");
+                if (!field.trySetAccessible())
+                    throw new IllegalStateException("Cannot access official model field");
                 fields.put(column.property(), field);
             }
             if (definition.parentTable() != null) {
                 Field parent = type.getDeclaredField("parent");
-                if (!parent.trySetAccessible()) throw new IllegalStateException("Cannot access official parent association");
+                if (!parent.trySetAccessible())
+                    throw new IllegalStateException("Cannot access official parent association");
                 fields.put("parent", parent);
             }
             models.put(definition.table(), new RowModel(definition, type, type.getConstructor(), Map.copyOf(fields)));
@@ -60,8 +62,8 @@ public class WarframeOfficialModels {
         contract.roots().forEach((domain, table) -> rootModels.put(domain, models.get(table)));
         tables = Map.copyOf(models);
         roots = Map.copyOf(rootModels);
-        rootsByType = rootModels.values().stream()
-                .collect(Collectors.toUnmodifiableMap(RowModel::type, model -> model));
+        rootsByType =
+            rootModels.values().stream().collect(Collectors.toUnmodifiableMap(RowModel::type, model -> model));
     }
 
     /**
@@ -82,7 +84,8 @@ public class WarframeOfficialModels {
      */
     public RowModel root(String domain) {
         RowModel model = roots.get(domain);
-        if (model == null) throw new IllegalArgumentException("Unsupported official model: " + domain);
+        if (model == null)
+            throw new IllegalArgumentException("Unsupported official model: " + domain);
         return model;
     }
 
@@ -94,7 +97,8 @@ public class WarframeOfficialModels {
      */
     public WarframeOfficialDataDomain domain(Class<?> entityType) {
         RowModel model = rootsByType.get(entityType);
-        if (model == null) throw new IllegalArgumentException("Unsupported official root entity: " + entityType);
+        if (model == null)
+            throw new IllegalArgumentException("Unsupported official root entity: " + entityType);
         return WarframeOfficialDataDomain.fromCode(model.definition().domain());
     }
 
@@ -106,26 +110,27 @@ public class WarframeOfficialModels {
      */
     public RowModel table(String table) {
         RowModel model = tables.get(table);
-        if (model == null) throw new IllegalArgumentException("Unsupported official relation: " + table);
+        if (model == null)
+            throw new IllegalArgumentException("Unsupported official relation: " + table);
         return model;
     }
 
     public record Contract(int version, String buildId, Map<String, String> roots, List<Model> models) {
     }
 
-    public record Model(String domain, String path, String table, String className, String packageName, String parentTable, SchemaField fields,
-                        List<String> children, List<Column> columns, List<String> types) {
+    public record Model(String domain, String path, String table, String className, String packageName,
+        String parentTable, SchemaField fields, List<String> children, List<Column> columns, List<String> types) {
     }
 
     public record Column(String property, String column, String type, String sql) {
     }
 
     public record SchemaField(List<String> path, List<String> types, String state, Map<String, String> values,
-                              List<SchemaField> children, String relation, Boolean dictionary) {
+        List<SchemaField> children, String relation, Boolean dictionary) {
     }
 
     public record RowModel(Model definition, Class<? extends OfficialRow> type,
-                           Constructor<? extends OfficialRow> constructor, Map<String, Field> fields) {
+        Constructor<? extends OfficialRow> constructor, Map<String, Field> fields) {
         /**
          * 创建新的业务记录。
          *
@@ -135,7 +140,8 @@ public class WarframeOfficialModels {
             try {
                 return constructor.newInstance();
             } catch (ReflectiveOperationException exception) {
-                throw new IllegalStateException("Invalid generated official entity: " + type.getSimpleName(), exception);
+                throw new IllegalStateException("Invalid generated official entity: " + type.getSimpleName(),
+                    exception);
             }
         }
 

@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-abstract class AbstractGuidePlugin extends BotPlugin {
+abstract class AbstractGuidePlugin extends BotPlugin<Void> {
     private static final Pattern OPTIONS_START = Pattern.compile("(?:^|\\s)--");
     private static final Pattern OPTION = Pattern.compile("^--([a-z]+)(?:=|\\s+)(\\S+)(?:\\s+|$)");
 
@@ -29,16 +29,18 @@ abstract class AbstractGuidePlugin extends BotPlugin {
             String remaining = input.substring(start.end() - 2);
             while (StrUtil.isNotBlank(remaining)) {
                 Matcher matcher = OPTION.matcher(remaining);
-                if (!matcher.find()) throw new IllegalArgumentException("攻略参数不合法");
+                if (!matcher.find())
+                    throw new IllegalArgumentException("攻略参数不合法");
                 String key = matcher.group(1);
                 if (!Set.of("world", "layer", "page").contains(key) || !map && key.equals("layer")
-                        || options.putIfAbsent(key, matcher.group(2)) != null) {
+                    || options.putIfAbsent(key, matcher.group(2)) != null) {
                     throw new IllegalArgumentException("攻略参数不合法或重复");
                 }
                 remaining = remaining.substring(matcher.end()).trim();
             }
         }
-        if (keyword.length() > 200) throw new IllegalArgumentException("查询内容过长，请缩短到 200 字以内");
+        if (keyword.length() > 200)
+            throw new IllegalArgumentException("查询内容过长，请缩短到 200 字以内");
         String world = options.get("world");
         if (world != null && !Set.of("plains", "vallis", "deimos").contains(world)) {
             throw new IllegalArgumentException("开放世界参数不合法");

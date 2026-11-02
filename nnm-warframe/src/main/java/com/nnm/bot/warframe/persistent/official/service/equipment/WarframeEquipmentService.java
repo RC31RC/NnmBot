@@ -12,8 +12,7 @@ public interface WarframeEquipmentService {
      * @param dataset 本次操作所属的数据文件或社区资料类型。
      * @return 当前独立官方记录的摘要及类型化详情组成的列表。
      */
-    List<WarframeOfficialRecordReadDTO> selectedRecords(
-            Category dataset);
+    List<WarframeOfficialRecordReadDTO> selectedRecords(Category dataset);
 
     /**
      * 按给定业务条件查询战甲及武器资料。

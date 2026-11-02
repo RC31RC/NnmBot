@@ -180,11 +180,15 @@ public class OfficialSyndicateTitlesItems extends OfficialChildRow {
     private OfficialSyndicateRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSyndicateTitlesItemsItemReferencesItems> officialSyndicateTitlesItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialSyndicateTitlesItemsItemReferencesItems> officialSyndicateTitlesItemsItemReferencesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSyndicateTitlesItemsRewardItemReferencesItems> officialSyndicateTitlesItemsRewardItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialSyndicateTitlesItemsRewardItemReferencesItems> officialSyndicateTitlesItemsRewardItemReferencesItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSyndicateTitlesItemsSacrificeItemsItems> officialSyndicateTitlesItemsSacrificeItemsItemsRows = new ArrayList<>();
+    private List<OfficialSyndicateTitlesItemsSacrificeItemsItems> officialSyndicateTitlesItemsSacrificeItemsItemsRows =
+        new ArrayList<>();
 }

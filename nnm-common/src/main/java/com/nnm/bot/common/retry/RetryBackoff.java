@@ -8,8 +8,7 @@ import java.util.Objects;
  */
 public final class RetryBackoff {
 
-    private RetryBackoff() {
-    }
+    private RetryBackoff() {}
 
     public static Duration exponential(Duration initial, Duration maximum, int failedAttempt) {
         Objects.requireNonNull(initial, "initial must not be null");

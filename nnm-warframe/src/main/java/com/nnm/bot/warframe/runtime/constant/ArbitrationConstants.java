@@ -5,8 +5,7 @@ public final class ArbitrationConstants {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private ArbitrationConstants() {
-    }
+    private ArbitrationConstants() {}
 
     public enum QueryType {
         /** 当前正在进行的任务：activation <= now < expiry。 */

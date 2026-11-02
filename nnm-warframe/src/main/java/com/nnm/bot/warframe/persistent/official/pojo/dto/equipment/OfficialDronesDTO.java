@@ -15,8 +15,8 @@ import lombok.Getter;
 
 /** DRONES 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialDronesDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 货架容量；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("binCapacity")
@@ -341,7 +341,8 @@ public class OfficialDronesDTO extends OfficialObjectDTO implements OfficialReco
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -357,7 +358,7 @@ public class OfficialDronesDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 CapacityMultipliersDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class CapacityMultipliersDTO extends OfficialObjectDTO {
         /** 容量倍率列表的普通稀有度；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("COMMON")
@@ -424,7 +425,7 @@ public class OfficialDronesDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ProbabilitiesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ProbabilitiesDTO extends OfficialObjectDTO {
         /** 概率列表的普通稀有度；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("COMMON")

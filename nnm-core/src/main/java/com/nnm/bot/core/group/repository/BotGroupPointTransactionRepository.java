@@ -8,8 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface BotGroupPointTransactionRepository
-        extends JpaRepository<BotGroupPointTransaction, Long> {
+public interface BotGroupPointTransactionRepository extends JpaRepository<BotGroupPointTransaction, Long> {
 
     Optional<BotGroupPointTransaction> findByIdempotencyKey(String idempotencyKey);
 
@@ -19,8 +18,7 @@ public interface BotGroupPointTransactionRepository
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update BotGroupPointTransaction t set t.memberId = :targetMemberId "
-            + "where t.groupId = :groupId and t.memberId = :sourceMemberId")
-    int updateMemberId(@Param("groupId") Long groupId,
-                       @Param("sourceMemberId") Long sourceMemberId,
-                       @Param("targetMemberId") Long targetMemberId);
+        + "where t.groupId = :groupId and t.memberId = :sourceMemberId")
+    int updateMemberId(@Param("groupId") Long groupId, @Param("sourceMemberId") Long sourceMemberId,
+        @Param("targetMemberId") Long targetMemberId);
 }

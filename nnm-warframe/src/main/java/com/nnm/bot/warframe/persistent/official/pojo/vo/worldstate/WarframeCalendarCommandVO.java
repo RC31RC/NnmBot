@@ -8,21 +8,13 @@ import java.util.List;
 
 /** 官方日历任务字典的展示协议。 */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public record WarframeCalendarCommandVO(
-        @JsonPropertyDescription("查询")
-        String query,
-        @JsonPropertyDescription("资料")
-        List<CalendarEntryVO> items,
-        @JsonPropertyDescription("提示")
-        String notice) {
+public record WarframeCalendarCommandVO(@JsonPropertyDescription("查询") String query,
+    @JsonPropertyDescription("资料") List<CalendarEntryVO> items, @JsonPropertyDescription("提示") String notice) {
 
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    public record CalendarEntryVO(
-            @JsonPropertyDescription("名称")
-            String name,
-            @JsonPropertyDescription("说明")
-            String description) {
+    public record CalendarEntryVO(@JsonPropertyDescription("名称") String name,
+        @JsonPropertyDescription("说明") String description) {
         /**
          * 将输入对象转换为当前业务数据对象。
          *

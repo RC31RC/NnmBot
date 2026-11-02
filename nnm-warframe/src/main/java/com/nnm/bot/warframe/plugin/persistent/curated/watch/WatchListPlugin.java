@@ -18,15 +18,10 @@ import jakarta.annotation.Resource;
 import java.util.List;
 
 /** 查看当前群成员自己的 Warframe 蹲任务规则。 */
-@BotPluginCommand(
-        code = WarframeCommandCodes.WATCH_LIST,
-        matchType = MatchType.EXACT,
-        name = "蹲任务",
-        gameCode = "warframe",
-        order = 77,
-        allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.WATCH_LIST, matchType = MatchType.EXACT, name = "蹲任务",
+    gameCode = "warframe", order = 77, allowRelatedAction = true)
 // 只读取当前群组成员自己的 wf_group_watch_rule，不暴露同群其他成员的规则。
-public final class WatchListPlugin extends BotPlugin {
+public final class WatchListPlugin extends BotPlugin<Void> {
 
     @Resource
     private BotGroupCommandContextResolver groupResolver;
@@ -39,31 +34,28 @@ public final class WatchListPlugin extends BotPlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         Optional<BotGroupCommandContext> group = groupResolver.resolve(invocation.context());
         if (group.isEmpty()) {
             return CommandResult.rejected("蹲任务只能在已绑定逻辑群组的群聊中使用");
         }
-        Optional<BotGroupMember> member = memberResolver.findByContext(
-                group.get().group().getId(), invocation.context());
+        Optional<BotGroupMember> member =
+            memberResolver.findByContext(group.get().group().getId(), invocation.context());
         if (member.isEmpty()) {
             return CommandResult.rejected("当前用户还未加入该逻辑群组");
         }
-        List<WarframeGroupWatchRuleDTO> rules = ruleService.findEnabledRules(
-                group.get().group().getId(), member.get().getId());
+        List<WarframeGroupWatchRuleDTO> rules =
+            ruleService.findEnabledRules(group.get().group().getId(), member.get().getId());
         if (CollUtil.isEmpty(rules)) {
             return CommandResult.text("当前没有启用的蹲任务");
         }
         StringBuilder text = new StringBuilder("当前蹲任务：");
-        rules.forEach(rule -> text.append("\n- ")
-                .append(rule.getWatchType())
-                .append(" / ")
-                .append(rule.getWatchKey())
-                .append(" / ")
-                .append(rule.getWatchValue()));
+        rules.forEach(rule -> text.append("\n- ").append(rule.getWatchType()).append(" / ").append(rule.getWatchKey())
+            .append(" / ").append(rule.getWatchValue()));
         return CommandResult.text(text.toString());
     }
 }

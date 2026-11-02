@@ -10,15 +10,9 @@ import java.util.Locale;
 import java.util.Map;
 
 /** 数据库命令配置在核心层的只读投影。 */
-public record CommandExecutionConfiguration(
-        boolean enabled,
-        boolean showInHelp,
-        PresentationPolicy presentation,
-        List<CommandTemplate> templates,
-        List<CommandTrigger> triggers,
-        String permissionOverride,
-        long cooldownSeconds,
-        boolean mentionInvoker) {
+public record CommandExecutionConfiguration(boolean enabled, boolean showInHelp, PresentationPolicy presentation,
+    List<CommandTemplate> templates, List<CommandTrigger> triggers, String permissionOverride, long cooldownSeconds,
+    boolean mentionInvoker) {
 
     public CommandExecutionConfiguration {
         presentation = ObjectUtil.defaultIfNull(presentation, PresentationPolicy.defaults());
@@ -29,24 +23,24 @@ public record CommandExecutionConfiguration(
     }
 
     public static CommandExecutionConfiguration defaults() {
-        return new CommandExecutionConfiguration(true, true, PresentationPolicy.defaults(),
-                List.of(), List.of(), "", 0, false);
+        return new CommandExecutionConfiguration(true, true, PresentationPolicy.defaults(), List.of(), List.of(), "", 0,
+            false);
     }
 
     public static CommandExecutionConfiguration disabledDefaults() {
-        return new CommandExecutionConfiguration(false, false, PresentationPolicy.defaults(),
-                List.of(), List.of(), "", 0, false);
+        return new CommandExecutionConfiguration(false, false, PresentationPolicy.defaults(), List.of(), List.of(), "",
+            0, false);
     }
 
     public String templateHtml(String viewKey) {
-        return templates.stream().filter(template -> template.viewKey().equals(viewKey))
-                .map(CommandTemplate::html).filter(html -> html != null && !html.isBlank()).findFirst().orElse(null);
+        return templates.stream().filter(template -> template.viewKey().equals(viewKey)).map(CommandTemplate::html)
+            .filter(html -> html != null && !html.isBlank()).findFirst().orElse(null);
     }
 
     public CommandTemplate markdownTemplate(String viewKey) {
         return templates.stream().filter(template -> template.viewKey().equals(viewKey))
-                .filter(template -> StrUtil.isNotBlank(template.markdown()) && StrUtil.isNotBlank(template.plainText()))
-                .findFirst().orElse(null);
+            .filter(template -> StrUtil.isNotBlank(template.markdown()) && StrUtil.isNotBlank(template.plainText()))
+            .findFirst().orElse(null);
     }
 
     public record CommandTemplate(String code, String viewKey, String html, String markdown, String plainText) {
@@ -65,10 +59,12 @@ public record CommandExecutionConfiguration(
     }
 
     private static List<CommandTrigger> immutableTriggers(List<CommandTrigger> source) {
-        if (CollUtil.isEmpty(source)) return List.of();
+        if (CollUtil.isEmpty(source))
+            return List.of();
         Map<String, CommandTrigger> unique = new LinkedHashMap<>();
         for (CommandTrigger trigger : source) {
-            if (trigger != null) unique.putIfAbsent(trigger.name().toLowerCase(Locale.ROOT), trigger);
+            if (trigger != null)
+                unique.putIfAbsent(trigger.name().toLowerCase(Locale.ROOT), trigger);
         }
         return List.copyOf(unique.values());
     }

@@ -14,8 +14,8 @@ import lombok.Getter;
 
 /** INBOX 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialInboxDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 英文展示名称；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("displayNameEn")
@@ -370,7 +370,8 @@ public class OfficialInboxDTO extends OfficialObjectDTO implements OfficialRecor
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(displayNameEn), OfficialInputText.first(displayNameZh), null, null, null);
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(displayNameEn),
+            OfficialInputText.first(displayNameZh), null, null, null);
     }
 
     /**
@@ -386,7 +387,7 @@ public class OfficialInboxDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 MessageItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MessageItemReferencesDTO extends OfficialObjectDTO {
         /** 消息的物品引用的字段；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("field")

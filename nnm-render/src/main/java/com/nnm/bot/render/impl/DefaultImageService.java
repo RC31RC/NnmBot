@@ -56,17 +56,16 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
         }
         byte[] variables = serialize(data, limit);
         RenderOptions bounded = options.toBuilder()
-                .maxImagePixels(Math.min(options.getMaxImagePixels(), properties.getLimits().getMaxImagePixels()))
-                .build();
+            .maxImagePixels(Math.min(options.getMaxImagePixels(), properties.getLimits().getMaxImagePixels())).build();
         return taskExecutor.execute(() -> generateImage(html, variables, bounded));
     }
 
     private byte[] generateImage(String html, byte[] variables, RenderOptions options) {
         try {
-            Map<String, Object> data = objectMapper.readValue(variables, new TypeReference<>() { });
+            Map<String, Object> data = objectMapper.readValue(variables, new TypeReference<>() {});
             String rendered = this.templateRenderer.renderHtml(html, data);
             if (rendered.length() > properties.getLimits().getMaxInputBytes()
-                    || rendered.getBytes(StandardCharsets.UTF_8).length > properties.getLimits().getMaxInputBytes()) {
+                || rendered.getBytes(StandardCharsets.UTF_8).length > properties.getLimits().getMaxInputBytes()) {
                 throw new BusinessException(ComputationErrorCode.INPUT_TOO_LARGE);
             }
             byte[] image = this.renderEngine.renderHtmlToImage(rendered, options);
@@ -77,7 +76,8 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
         } catch (IOException exception) {
             throw new BotImageRenderException("解析渲染数据失败", exception);
         } catch (RuntimeException exception) {
-            if (exception instanceof BusinessException business) throw business;
+            if (exception instanceof BusinessException business)
+                throw business;
             if (exception instanceof BotImageRenderException renderException) {
                 throw renderException;
             }
@@ -93,7 +93,8 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
             public void write(byte[] bytes, int offset, int length) {
                 writeLock.lock();
                 try {
-                    if (length > limit - count) throw new BusinessException(ComputationErrorCode.INPUT_TOO_LARGE);
+                    if (length > limit - count)
+                        throw new BusinessException(ComputationErrorCode.INPUT_TOO_LARGE);
                     super.write(bytes, offset, length);
                 } finally {
                     writeLock.unlock();
@@ -104,7 +105,8 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
             public void write(int value) {
                 writeLock.lock();
                 try {
-                    if (count >= limit) throw new BusinessException(ComputationErrorCode.INPUT_TOO_LARGE);
+                    if (count >= limit)
+                        throw new BusinessException(ComputationErrorCode.INPUT_TOO_LARGE);
                     super.write(value);
                 } finally {
                     writeLock.unlock();

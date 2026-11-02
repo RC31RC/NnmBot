@@ -20,12 +20,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialFieldChangeDTO;
 import java.io.IOException;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
 import java.util.TreeSet;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.persistent.official.event.WarframeOfficialDataChangePublisher;
 import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeWorldStateCodebookInvalidator;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.client.source.WarframeOfficialSourceClient;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportHead;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialFile;
@@ -40,10 +43,12 @@ import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOffi
 import com.nnm.bot.warframe.persistent.official.repository.maintenance.WarframeOfficialRebuildMarkerRepository;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFileDigestDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialImportRecordDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialDetailService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -82,6 +87,8 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
     @Resource
     private WarframeOfficialSnapshotParser snapshotParser;
     @Resource
+    private WarframeOfficialSourceClient sourceClient;
+    @Resource
     private ObjectMapper objectMapper;
 
     /**
@@ -93,30 +100,20 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
         return fingerprint(records.contentFingerprint(), datasetFiles.findAll());
     }
 
+    @Override
+    public String fingerprint(Set<String> paths) {
+        return fingerprint(records.contentFingerprint(paths), datasetFiles.findAllById(paths));
+    }
+
     /**
-     * 比较冻结清单与当前基线，提取需要审核的官方文件路径。
+     * 选择本次需要与数据库逐记录比对的官方文件；相同文件摘要也不能跳过本地变更。
      *
-     * @param files 文件集合。
-     * @return 按当前条件筛选或转换后的数据集合。
+     * @param files 本次冻结清单中的文件。
+     * @return 本次需要比对的文件路径。
      */
     @Override
-    public Set<String> changedPaths(List<OfficialFileDigestDTO> files) {
-        Map<String, WarframeOfficialFile> current = datasetFiles.findAll().stream()
-                .collect(Collectors.toMap(WarframeOfficialFile::getProductPath,
-                        file -> file));
-        Set<String> markedPaths = rebuildMarkers.findAll().stream()
-                .map(marker -> marker.getProductPath())
-                .collect(Collectors.toSet());
-        Set<String> paths = new HashSet<>();
-        for (OfficialFileDigestDTO incoming : files) {
-            WarframeOfficialFile adopted = current.get(incoming.path());
-            if (markedPaths.contains(incoming.path()) || adopted == null
-                    || !Objects.equals(adopted.getAdoptedSha256(), incoming.sha256())
-                    || adopted.getParserContractVersion() != WarframeOfficialSnapshotParser.CONTRACT_VERSION) {
-                paths.add(incoming.path());
-            }
-        }
-        return Set.copyOf(paths);
+    public Set<String> comparePaths(List<OfficialFileDigestDTO> files) {
+        return files.stream().map(OfficialFileDigestDTO::path).collect(Collectors.toSet());
     }
 
     /**
@@ -131,12 +128,12 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
     @Transactional
     public void stageCandidates(String sourceRef, String commitSha, String buildId, List<OfficialFileDigestDTO> files) {
         Instant checkedAt = Instant.now();
-        Map<String, WarframeOfficialFile> existing = datasetFiles.findAllById(
-                files.stream().map(OfficialFileDigestDTO::path).toList()).stream()
+        Map<String, WarframeOfficialFile> existing =
+            datasetFiles.findAllById(files.stream().map(OfficialFileDigestDTO::path).toList()).stream()
                 .collect(Collectors.toMap(WarframeOfficialFile::getProductPath, file -> file));
         List<WarframeOfficialFile> states = files.stream().map(item -> {
             BusinessAssert.notNull(WarframeOfficialDataDomain.fromPath(item.path()),
-                    WarframeManagementErrorCode.DATASET_INVALID, "未登记的 Nnm JSON 路径：" + item.path());
+                WarframeManagementErrorCode.DATASET_INVALID, "未登记的 Nnm JSON 路径：" + item.path());
             WarframeOfficialFile state = existing.getOrDefault(item.path(), new WarframeOfficialFile());
             state.setProductPath(item.path());
             state.setCandidateSha256(item.sha256());
@@ -145,6 +142,8 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
             state.setCandidateSourceRef(sourceRef);
             state.setCandidateCommitSha(commitSha);
             state.setCandidateBuildId(buildId);
+            state.setCandidateSourceUrl(
+                sourceClient.rawFileUrl(new WarframeOfficialVersionDTO(sourceRef, commitSha), item.path()));
             state.setCandidateParserContractVersion(WarframeOfficialSnapshotParser.CONTRACT_VERSION);
             state.setCheckedAt(checkedAt);
             return state;
@@ -161,28 +160,46 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public void changes(WarframeOfficialRecordSource incoming, Set<String> paths,
-            Consumer<WarframeOfficialRecordChangeDTO> consumer) throws IOException {
+        Consumer<WarframeOfficialRecordChangeDTO> consumer) throws IOException {
         Map<String, Long> previous = records.officialIdentities(paths);
         readBatches(incoming, batch -> {
             Map<Long, OfficialRecord> oldRows = loadRows(batch, previous);
+            Map<Long, OfficialRecordDTO> stored = new LinkedHashMap<>();
+            Map<WarframeOfficialDataDomain, List<Long>> groups = new LinkedHashMap<>();
             for (OfficialImportRecordDTO item : batch) {
-                validate(item);
-                OfficialRecord old = oldRows.get(previous.remove(item.identity()));
-                if (old == null || !old.isEnabled()) consumer.accept(change(item, old, ChangeType.ADDED.name()));
-                else if (!Objects.equals(old.getRawJson(), item.rawJson())
-                        || !Objects.equals(old.getLocalizedRawJson(), item.localizedJson())) {
-                    consumer.accept(change(item, old, ChangeType.CHANGED.name()));
+                OfficialRecord old = oldRows.get(previous.get(item.identity()));
+                if (old != null && old.isEnabled()) {
+                    groups.computeIfAbsent(item.domain(), ignored -> new ArrayList<>()).add(old.getId());
                 }
+            }
+            groups.forEach((domain, ids) -> stored.putAll(records.loadDetails(domain.domainCode(), ids)));
+            for (OfficialImportRecordDTO item : batch) {
+                OfficialRecordDTO after = validate(item);
+                OfficialRecord old = oldRows.get(previous.remove(item.identity()));
+                if (old == null || !old.isEnabled()) {
+                    consumer.accept(new WarframeOfficialRecordChangeDTO(item.path(), item.recordKey(),
+                        item.localizedName(), ChangeType.ADDED.name(), List.of()));
+                    continue;
+                }
+                OfficialRecordDTO before = stored.get(old.getId());
+                BusinessAssert.notNull(before, WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT,
+                    "数据库中缺少官方记录详情：" + item.identity());
+                List<WarframeOfficialFieldChangeDTO> fields = fieldChanges(before, after, item);
+                compareRoot(old, item, fields);
+                if (!fields.isEmpty())
+                    consumer.accept(new WarframeOfficialRecordChangeDTO(item.path(), item.recordKey(),
+                        item.localizedName(), ChangeType.CHANGED.name(), List.copyOf(fields)));
             }
             records.releaseWritten(oldRows.values());
         });
         forIdBatches(previous.values(), ids -> {
             for (var old : records.findAllById(ids)) {
-                if (old.isEnabled()) consumer.accept(new WarframeOfficialRecordChangeDTO(
-                        repositories.require(old).domain().productPath(), old.getBkey(),
-                        old.getLocalizedName(), ChangeType.REMOVED.name(), old.getRawJson(), null, old.getLocalizedRawJson(), null, List.of()));
+                if (old.isEnabled())
+                    consumer
+                        .accept(new WarframeOfficialRecordChangeDTO(repositories.require(old).domain().productPath(),
+                            old.getBkey(), old.getLocalizedName(), ChangeType.REMOVED.name(), List.of()));
                 records.releaseWritten(List.of(old));
             }
         });
@@ -194,42 +211,49 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
      * @param batchId 当前冻结导入批次的标识。
      * @param incoming 本次输入。
      * @param files 文件集合。
+     * @param selectedIdentities 本次选中采纳的记录身份。
+     * @param selectedPaths 本次选中记录所属的官方文件路径。
+     * @param remainingPaths 当前仍有待审核差异的官方文件路径。
+     * @param remainingChangeObjectKey 过滤后剩余差异对象键。
+     * @param remainingCounts 过滤后剩余差异计数。
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     @Transactional(rollbackFor = Exception.class)
-    public void apply(String batchId, WarframeOfficialRecordSource incoming, List<OfficialFileDigestDTO> files) throws IOException {
-        WarframeOfficialImportHead head = heads.findFirstById(IMPORT_HEAD_ID)
-                .orElseThrow(() -> new IllegalStateException("官方数据指针未初始化，请更新 init.sql"));
+    public void apply(String batchId, WarframeOfficialRecordSource incoming, List<OfficialFileDigestDTO> files,
+        Set<String> selectedIdentities, Set<String> selectedPaths, Set<String> remainingPaths,
+        String remainingChangeObjectKey, Map<String, Integer> remainingCounts) throws IOException {
+        WarframeOfficialImportHead head =
+            heads.findFirstById(IMPORT_HEAD_ID).orElseThrow(() -> new IllegalStateException("官方数据指针未初始化，请更新 init.sql"));
         WarframeOfficialImportBatch batch = batches.findById(batchId).orElse(null);
         BusinessAssert.notNull(batch, WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
-        if (ImportStatus.APPLIED.name().equals(batch.getStatus())) return;
-        BusinessAssert.isTrue(ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(Instant.now()),
-                WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
-        BusinessAssert.isTrue(batch.getParserContractVersion() == WarframeOfficialSnapshotParser.CONTRACT_VERSION
-                        && Objects.equals(head.getBatchId(), batch.getBaselineId()),
-                WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT);
-        BusinessAssert.equals(fingerprint(), batch.getBaselineHash(),
-                WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT,
-                "官方记录在预览后已变化，请重新刷新预览");
-        Set<String> paths = changedPaths(files);
+        BusinessAssert.isTrue(
+            ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(Instant.now()),
+            WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
+        boolean full = batch.getProductPath() == null;
+        BusinessAssert.isTrue(
+            batch.getParserContractVersion() == WarframeOfficialSnapshotParser.CONTRACT_VERSION
+                && (!full || Objects.equals(head.getBatchId(), batch.getBaselineId())),
+            WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT);
+        Set<String> baselinePaths = files.stream().map(OfficialFileDigestDTO::path).collect(Collectors.toSet());
+        BusinessAssert.equals(full ? fingerprint() : fingerprint(baselinePaths), batch.getBaselineHash(),
+            WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT, "官方记录在预览后已变化，请重新刷新预览");
+        Set<String> paths = comparePaths(files).stream().filter(selectedPaths::contains).collect(Collectors.toSet());
         if (CollUtil.isNotEmpty(paths)) {
             Map<String, Long> previous = records.officialIdentities(paths);
-            Map<String, WarframeOfficialFile> previousFiles = datasetFiles.findAllById(paths).stream()
-                    .collect(Collectors.toMap(WarframeOfficialFile::getProductPath, file -> file));
+            previous.keySet().removeIf(identity -> !selectedIdentities.contains(identity));
             readBatches(incoming, rows -> {
                 BusinessAssert.isTrue(rows.stream().allMatch(item -> paths.contains(item.path())),
-                        WarframeManagementErrorCode.DATASET_INVALID, "解析结果含未选定文件");
-                Map<Long, OfficialRecord> oldRows = loadRows(rows, previous);
+                    WarframeManagementErrorCode.DATASET_INVALID, "解析结果含未选定文件");
+                List<OfficialImportRecordDTO> selectedRows =
+                    rows.stream().filter(item -> selectedIdentities.contains(item.identity())).toList();
+                Map<Long, OfficialRecord> oldRows = loadRows(selectedRows, previous);
                 List<OfficialRecord> imported = new ArrayList<>();
-                for (OfficialImportRecordDTO item : rows) {
-                    validate(item);
+                Map<Long, OfficialRecordDTO> inputs = new LinkedHashMap<>();
+                for (OfficialImportRecordDTO item : selectedRows) {
+                    OfficialRecordDTO input = validate(item);
                     OfficialRecord record = oldRows.get(previous.remove(item.identity()));
-                    WarframeOfficialFile adoptedFile = previousFiles.get(item.path());
-                    if (record != null && record.isEnabled() && adoptedFile != null
-                            && adoptedFile.getParserContractVersion() == WarframeOfficialSnapshotParser.CONTRACT_VERSION
-                            && Objects.equals(record.getRawJson(), item.rawJson())
-                            && Objects.equals(record.getLocalizedRawJson(), item.localizedJson())) continue;
-                    if (record == null) record = records.newRecord(item.domain().domainCode());
+                    if (record == null)
+                        record = records.newRecord(item.domain().domainCode());
                     record.setBkey(item.recordKey());
                     record.setMaintenanceType(MaintenanceType.OFFICIAL);
                     record.setOfficialName(item.officialName());
@@ -237,13 +261,15 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
                     record.setParentName(item.parentName());
                     record.setProductCategory(item.productCategory());
                     record.setDescription(item.description());
-                    record.setRawJson(item.rawJson());
-                    record.setLocalizedRawJson(item.localizedJson());
                     record.setEnabled(true);
-                    imported.add(records.save(record));
+                    record = records.save(record);
+                    imported.add(record);
+                    inputs.put(record.getId(), input);
                 }
-                records.flush();
-                details.synchronize(imported, List.of());
+                if (!imported.isEmpty()) {
+                    records.flush();
+                    details.synchronize(imported, inputs, List.of());
+                }
                 records.releaseWritten(imported);
                 records.releaseWritten(oldRows.values());
             });
@@ -252,16 +278,44 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
                 records.flush();
             });
         }
-        synchronizeFiles(batch, files);
-        if (CollUtil.isNotEmpty(paths)) {
-            rebuildMarkers.deleteAllByProductPathIn(paths);
+        Set<String> completedPaths = files.stream().map(OfficialFileDigestDTO::path)
+            .filter(path -> !remainingPaths.contains(path)).collect(Collectors.toSet());
+        synchronizeFiles(batch, files.stream().filter(file -> completedPaths.contains(file.path())).toList());
+        if (CollUtil.isNotEmpty(completedPaths)) {
+            rebuildMarkers.deleteAllByProductPathIn(completedPaths);
         }
+        boolean complete = remainingCounts.values().stream().mapToInt(Integer::intValue).sum() == 0;
+        batch.setChangeObjectKey(remainingChangeObjectKey);
+        batch.setBaselineHash(full ? fingerprint() : fingerprint(baselinePaths));
+        // 无论采纳多少条，该预览都只能提交一次；未选差异须重新刷新生成新预览。
         batch.setStatus(ImportStatus.APPLIED.name());
+        WarframeOfficialPreviewDTO preview;
+        try {
+            preview = objectMapper.readValue(batch.getPreviewJson(), WarframeOfficialPreviewDTO.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Cannot update saved official preview counts", exception);
+        }
+        batch.setPreviewJson(writePreview(preview, remainingCounts, batch.getStatus()));
         batches.save(batch);
-        head.setBatchId(batchId);
-        heads.save(head);
-        dataChanges.publishAfterCommit();
-        codebookInvalidator.invalidateAfterCommit();
+        if (complete) {
+            head.setBatchId(batchId);
+            heads.save(head);
+        }
+        if (!selectedIdentities.isEmpty()) {
+            dataChanges.publishAfterCommit();
+            codebookInvalidator.invalidateAfterCommit();
+        }
+    }
+
+    private String writePreview(WarframeOfficialPreviewDTO preview, Map<String, Integer> counts, String status) {
+        try {
+            return objectMapper.writeValueAsString(new WarframeOfficialPreviewDTO(preview.id(), preview.version(),
+                preview.buildId(), preview.baselineId(), status, preview.expiresAt(), preview.totalBytes(),
+                counts.getOrDefault(ChangeType.ADDED.name(), 0), counts.getOrDefault(ChangeType.CHANGED.name(), 0),
+                counts.getOrDefault(ChangeType.REMOVED.name(), 0), preview.unmappedPaths(), preview.files()));
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Cannot serialize updated official preview", exception);
+        }
     }
 
     /**
@@ -273,15 +327,14 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
     private void synchronizeFiles(WarframeOfficialImportBatch batch, List<OfficialFileDigestDTO> incoming) {
         Instant adoptedAt = Instant.now();
         List<WarframeOfficialFile> adopted = new ArrayList<>(incoming.size());
-        Map<String, WarframeOfficialFile> previousFiles = datasetFiles.findAllById(
-                incoming.stream().map(OfficialFileDigestDTO::path).toList()).stream()
+        Map<String, WarframeOfficialFile> previousFiles =
+            datasetFiles.findAllById(incoming.stream().map(OfficialFileDigestDTO::path).toList()).stream()
                 .collect(Collectors.toMap(WarframeOfficialFile::getProductPath, file -> file));
         for (OfficialFileDigestDTO item : incoming) {
             WarframeOfficialDataDomain type = WarframeOfficialDataDomain.fromPath(item.path());
             BusinessAssert.notNull(type, WarframeManagementErrorCode.DATASET_INVALID,
-                    "没有对应的 Nnm JSON 文件契约：" + item.path());
-            WarframeOfficialFile file = previousFiles.getOrDefault(
-                    item.path(), new WarframeOfficialFile());
+                "没有对应的 Nnm JSON 文件契约：" + item.path());
+            WarframeOfficialFile file = previousFiles.getOrDefault(item.path(), new WarframeOfficialFile());
             file.setProductPath(type.productPath());
             file.setAdoptedSha256(item.sha256());
             file.setCandidateSha256(item.sha256());
@@ -291,9 +344,12 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
             file.setSourceRef(batch.getSourceRef());
             file.setCommitSha(batch.getCommitSha());
             file.setBuildId(batch.getBuildId());
+            file.setSourceUrl(sourceClient
+                .rawFileUrl(new WarframeOfficialVersionDTO(batch.getSourceRef(), batch.getCommitSha()), item.path()));
             file.setCandidateSourceRef(batch.getSourceRef());
             file.setCandidateCommitSha(batch.getCommitSha());
             file.setCandidateBuildId(batch.getBuildId());
+            file.setCandidateSourceUrl(file.getSourceUrl());
             file.setCandidateParserContractVersion(WarframeOfficialSnapshotParser.CONTRACT_VERSION);
             file.setParserContractVersion(WarframeOfficialSnapshotParser.CONTRACT_VERSION);
             file.setAdoptedAt(adoptedAt);
@@ -305,52 +361,59 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
     }
 
     /**
-     * 构造当前记录与冻结基线之间的变更。
-     *
-     * @param item 当前物品或集合成员。
-     * @param old 原有。
-     * @param type 目标业务类型。
-     * @return 游戏资料数据文件记录变更对象。
-     */
-    private WarframeOfficialRecordChangeDTO change(OfficialImportRecordDTO item, OfficialRecord old, String type) {
-        return new WarframeOfficialRecordChangeDTO(item.path(), item.recordKey(), item.localizedName(), type,
-                old == null ? null : old.getRawJson(), item.rawJson(),
-                old == null ? null : old.getLocalizedRawJson(), item.localizedJson(),
-                ChangeType.CHANGED.name().equals(type) ? fieldChanges(old, item) : List.of());
-    }
-
-    /**
      * 每条记录由所属 JSON 的具体类型校验，保留字段路径错误。
      *
      * @param item 当前物品或集合成员。
      */
-    private void validate(OfficialImportRecordDTO item) {
+    private OfficialRecordDTO validate(OfficialImportRecordDTO item) {
         var input = WarframeOfficialInputParser.parseCompleteJson(objectMapper, item.domain(), item.rawJson());
         // 审核入口也会接收已解析记录，不能只依赖文件适配器检查商品身份。
         if (input instanceof OfficialRivenWeaponDTO weapon && weapon.isPresent("marketListings")) {
             BusinessAssert.isTrue(weapon.getMarketListings() != null, WarframeManagementErrorCode.DATASET_INVALID,
-                    "裂罅武器商品列表不能为空");
+                "裂罅武器商品列表不能为空");
             Set<String> ids = new HashSet<>();
             for (var listing : weapon.getMarketListings()) {
-                BusinessAssert.isTrue(listing != null && StrUtil.isNotBlank(listing.getId())
-                                && ids.add(listing.getId()), WarframeManagementErrorCode.DATASET_INVALID,
-                        "裂罅商品稳定 id 缺失或重复：" + item.path() + "#" + item.recordKey());
+                BusinessAssert.isTrue(
+                    listing != null && StrUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()),
+                    WarframeManagementErrorCode.DATASET_INVALID,
+                    "裂罅商品稳定 id 缺失或重复：" + item.path() + "#" + item.recordKey());
             }
         }
+        return input;
     }
 
     /**
      * 对比已建模字段；集合顺序属于该记录内容，不虚构成员身份。
      *
-     * @param old 原有。
-     * @param incoming 本次输入。
-     * @return 按当前条件筛选或转换后的数据集合。
+     * @param before 数据库中持久化的旧记录详情。
+     * @param after 本次文件的类型化记录。
+     * @param incoming 本次文件的原始记录信息。
+     * @return 按字段路径列出的审核差异。
      */
-    private List<WarframeOfficialFieldChangeDTO> fieldChanges(OfficialRecord old, OfficialImportRecordDTO incoming) {
+    private List<WarframeOfficialFieldChangeDTO> fieldChanges(OfficialRecordDTO before, OfficialRecordDTO after,
+        OfficialImportRecordDTO incoming) {
         List<WarframeOfficialFieldChangeDTO> changes = new ArrayList<>();
-        compare(parseJson(incoming.domain(), old.getRawJson()), parseJson(incoming.domain(), incoming.rawJson()), "/raw", changes);
-        compare(parseJson(incoming.domain(), old.getLocalizedRawJson()), parseJson(incoming.domain(), incoming.localizedJson()), "/localized", changes);
-        return List.copyOf(changes);
+        compare(before, after, "/raw", changes);
+        if (incoming.localizedJson() != null && !Objects.equals(incoming.rawJson(), incoming.localizedJson())) {
+            compare(before, parseJson(incoming.domain(), incoming.localizedJson()), "/localized", changes);
+        }
+        return changes;
+    }
+
+    /**
+     * 对源数据派生出的主表摘要也以数据库当前值为准，不用旧文件代替。
+     *
+     * @param before 数据库当前主表记录。
+     * @param after 本次文件的记录信息。
+     * @param changes 本次累积的差异。
+     */
+    private void compareRoot(OfficialRecord before, OfficialImportRecordDTO after,
+        List<WarframeOfficialFieldChangeDTO> changes) {
+        compare(before.getOfficialName(), after.officialName(), "/record/officialName", changes);
+        compare(before.getLocalizedName(), after.localizedName(), "/record/localizedName", changes);
+        compare(before.getParentName(), after.parentName(), "/record/parentName", changes);
+        compare(before.getProductCategory(), after.productCategory(), "/record/productCategory", changes);
+        compare(before.getDescription(), after.description(), "/record/description", changes);
     }
 
     /**
@@ -373,25 +436,42 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
      * @param changes 变更集合。
      */
     private void compare(Object before, Object after, String pointer, List<WarframeOfficialFieldChangeDTO> changes) {
-        if (before instanceof OfficialObjectDTO left && after instanceof OfficialObjectDTO right) {
-            for (var field : OfficialObjectFields.fields(left.getClass())) {
+        if (before instanceof OfficialObjectDTO || after instanceof OfficialObjectDTO) {
+            OfficialObjectDTO left = before instanceof OfficialObjectDTO object ? object : null;
+            OfficialObjectDTO right = after instanceof OfficialObjectDTO object ? object : null;
+            int start = changes.size();
+            // 本地化对象可整体缺席；仍逐字段记录，避免把整条记录写入差异文件。
+            for (var field : OfficialObjectFields.fields(left != null ? left.getClass() : right.getClass())) {
                 String key = field.getAnnotation(JsonProperty.class).value();
                 String child = pointer + "/" + key.replace("~", "~0").replace("/", "~1");
-                if (left.isPresent(key) != right.isPresent(key)) {
+                boolean hasLeft = left != null && left.isPresent(key);
+                boolean hasRight = right != null && right.isPresent(key);
+                if (hasLeft != hasRight) {
                     changes.add(new WarframeOfficialFieldChangeDTO(child,
-                            left.isPresent(key) ? json(OfficialObjectFields.get(left, key)) : null,
-                            right.isPresent(key) ? json(OfficialObjectFields.get(right, key)) : null));
-                } else if (left.isPresent(key)) compare(OfficialObjectFields.get(left, key), OfficialObjectFields.get(right, key), child, changes);
+                        hasLeft ? json(OfficialObjectFields.get(left, key)) : null,
+                        hasRight ? json(OfficialObjectFields.get(right, key)) : null));
+                } else if (hasLeft) {
+                    compare(OfficialObjectFields.get(left, key), OfficialObjectFields.get(right, key), child, changes);
+                }
+            }
+            if (start == changes.size() && (left == null || right == null)) {
+                changes.add(new WarframeOfficialFieldChangeDTO(pointer, json(before), json(after)));
             }
             return;
         }
         if (before instanceof Map<?, ?> left && after instanceof Map<?, ?> right) {
-            Set<String> keys = new TreeSet<>(); left.keySet().forEach(key -> keys.add((String) key)); right.keySet().forEach(key -> keys.add((String) key));
-            for (String key : keys) compare(left.get(key), right.get(key), pointer + "/" + key.replace("~", "~0").replace("/", "~1"), changes);
+            Set<String> keys = new TreeSet<>();
+            left.keySet().forEach(key -> keys.add((String)key));
+            right.keySet().forEach(key -> keys.add((String)key));
+            for (String key : keys)
+                compare(left.get(key), right.get(key), pointer + "/" + key.replace("~", "~0").replace("/", "~1"),
+                    changes);
             return;
         }
-        String oldValue = json(before); String newValue = json(after);
-        if (!Objects.equals(oldValue, newValue)) changes.add(new WarframeOfficialFieldChangeDTO(pointer, oldValue, newValue));
+        String oldValue = json(before);
+        String newValue = json(after);
+        if (!Objects.equals(oldValue, newValue))
+            changes.add(new WarframeOfficialFieldChangeDTO(pointer, oldValue, newValue));
     }
 
     /**
@@ -401,9 +481,13 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
      * @return 协议数据对应的文本。
      */
     private String json(Object value) {
-        if (value == null) return "null";
-        try { return objectMapper.writeValueAsString(value); }
-        catch (JsonProcessingException exception) { throw new IllegalArgumentException("字段差异无法序列化", exception); }
+        if (value == null)
+            return "null";
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("字段差异无法序列化", exception);
+        }
     }
 
     /**
@@ -417,11 +501,12 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
         Map<WarframeOfficialDataDomain, List<Long>> groups = new LinkedHashMap<>();
         for (OfficialImportRecordDTO item : incoming) {
             Long id = previous.get(item.identity());
-            if (id != null) groups.computeIfAbsent(item.domain(), ignored -> new ArrayList<>()).add(id);
+            if (id != null)
+                groups.computeIfAbsent(item.domain(), ignored -> new ArrayList<>()).add(id);
         }
         Map<Long, OfficialRecord> found = new LinkedHashMap<>();
         groups.forEach((domain, ids) -> repositories.require(domain).findAllById(ids)
-                .forEach(record -> found.put(record.getId(), record)));
+            .forEach(record -> found.put(record.getId(), record)));
         return found;
     }
 
@@ -433,7 +518,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     private static void readBatches(WarframeOfficialRecordSource source, Consumer<List<OfficialImportRecordDTO>> action)
-            throws IOException {
+        throws IOException {
         List<OfficialImportRecordDTO> batch = new ArrayList<>(250);
         source.forEachRecord(item -> {
             batch.add(item);
@@ -442,7 +527,8 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
                 batch.clear();
             }
         });
-        if (CollUtil.isNotEmpty(batch)) action.accept(List.copyOf(batch));
+        if (CollUtil.isNotEmpty(batch))
+            action.accept(List.copyOf(batch));
     }
 
     /**
@@ -465,26 +551,22 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
      * @param files 文件集合。
      * @return 当前内容的稳定校验摘要。
      */
-    private static String fingerprint(String rootFingerprint,
-                                      List<WarframeOfficialFile> files) {
+    private static String fingerprint(String rootFingerprint, List<WarframeOfficialFile> files) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             digest.update(rootFingerprint.getBytes(StandardCharsets.US_ASCII));
             files.stream().filter(file -> file.getAdoptedSha256() != null)
-                    .sorted(Comparator.comparing(WarframeOfficialFile::getProductPath))
-                    .forEach(file -> {
-                        for (Object value : List.of(file.getProductPath(),
-                                Objects.toString(file.getAdoptedSha256(), ""),
-                                Objects.toString(file.getAdoptedRecordCount(), ""),
-                                Objects.toString(file.getSourceRef(), ""), Objects.toString(file.getCommitSha(), ""),
-                                Objects.toString(file.getBuildId(), ""), file.getParserContractVersion(),
-                                Objects.toString(file.getAdoptedAt(), ""))) {
-                            byte[] bytes = Objects.toString(value, "").getBytes(StandardCharsets.UTF_8);
-                            digest.update(Integer.toString(bytes.length).getBytes(StandardCharsets.US_ASCII));
-                            digest.update((byte) ':');
-                            digest.update(bytes);
-                        }
-                    });
+                .sorted(Comparator.comparing(WarframeOfficialFile::getProductPath)).forEach(file -> {
+                    for (Object value : List.of(file.getProductPath(), Objects.toString(file.getAdoptedSha256(), ""),
+                        Objects.toString(file.getAdoptedRecordCount(), ""), Objects.toString(file.getSourceRef(), ""),
+                        Objects.toString(file.getCommitSha(), ""), Objects.toString(file.getBuildId(), ""),
+                        file.getParserContractVersion(), Objects.toString(file.getAdoptedAt(), ""))) {
+                        byte[] bytes = Objects.toString(value, "").getBytes(StandardCharsets.UTF_8);
+                        digest.update(Integer.toString(bytes.length).getBytes(StandardCharsets.US_ASCII));
+                        digest.update((byte)':');
+                        digest.update(bytes);
+                    }
+                });
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 unavailable", exception);

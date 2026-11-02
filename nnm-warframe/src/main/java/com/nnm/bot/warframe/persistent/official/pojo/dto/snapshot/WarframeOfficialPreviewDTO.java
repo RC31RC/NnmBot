@@ -3,20 +3,10 @@ package com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot;
 import java.time.Instant;
 import java.util.List;
 
-/** 文件级完整快照审核；不把尚未迁移的业务域标成结构化入库完成。 */
-public record WarframeOfficialPreviewDTO(
-        String id,
-        WarframeOfficialVersionDTO version,
-        String buildId,
-        String baselineId,
-        String status,
-        Instant expiresAt,
-        long totalBytes,
-        int addedRecords,
-        int changedRecords,
-        int removedRecords,
-        List<String> unmappedPaths,
-        List<FileChangeDTO> files) {
+/** 单个 JSON 文件审核预览；不把尚未迁移的业务域标成结构化入库完成。 */
+public record WarframeOfficialPreviewDTO(String id, WarframeOfficialVersionDTO version, String buildId,
+    String baselineId, String status, Instant expiresAt, long totalBytes, int addedRecords, int changedRecords,
+    int removedRecords, List<String> unmappedPaths, List<FileChangeDTO> files) {
     /**
      * 构造数据文件预览传输对象，并保存初始化参数。
      *
@@ -38,6 +28,7 @@ public record WarframeOfficialPreviewDTO(
         unmappedPaths = List.copyOf(unmappedPaths);
     }
 
-    public record FileChangeDTO(String path, String sha256, long bytes, Long recordCount, String changeType) {
+    public record FileChangeDTO(String path, String sha256, long bytes, Long recordCount, String changeType,
+        String baselineSha256) {
     }
 }

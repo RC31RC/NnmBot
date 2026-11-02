@@ -15,25 +15,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/v1/auth")
+@RequestMapping("/api/admin/auth")
 public class AuthController {
 
     @Resource
     private AuthService authService;
 
     @PostMapping("/login")
-    public ApiResponse<LoginTokenVO> login(
-            @Valid
-            @RequestBody
-    LoginDTO request) {
+    public ApiResponse<LoginTokenVO> login(@Valid @RequestBody LoginDTO request) {
         return ApiResponse.ok(AdminAuthViewAssembler.toLoginTokenVO(authService.login(request)));
     }
 
     @PostMapping("/refresh")
-    public ApiResponse<LoginTokenVO> refresh(
-            @Valid
-            @RequestBody
-    RefreshTokenDTO request) {
+    public ApiResponse<LoginTokenVO> refresh(@Valid @RequestBody RefreshTokenDTO request) {
         return ApiResponse.ok(AdminAuthViewAssembler.toLoginTokenVO(authService.refresh(request)));
     }
 

@@ -9,13 +9,8 @@ public class ExternalResponseTooLargeException extends SystemException {
     private final String url;
     private final long maxBytes;
 
-    public ExternalResponseTooLargeException(
-            String method,
-            String url,
-            long maxBytes,
-            Throwable cause) {
-        super("External HTTP response is larger than " + maxBytes
-                + " bytes: " + method + " " + url, cause);
+    public ExternalResponseTooLargeException(String method, String url, long maxBytes, Throwable cause) {
+        super("External HTTP response is larger than " + maxBytes + " bytes: " + method + " " + url, cause);
         this.method = method;
         this.url = url;
         this.maxBytes = maxBytes;

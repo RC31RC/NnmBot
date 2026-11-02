@@ -6,7 +6,7 @@ import java.util.Objects;
 
 /** 主动群目标带账号作用域；QQ OpenID 不能跨应用当作同一群。 */
 public record BotProactiveTarget(BotPlatform platform, String botAccountId, String conversationId,
-                                 List<String> mentionUserIds) {
+    List<String> mentionUserIds) {
     public BotProactiveTarget {
         Objects.requireNonNull(platform, "platform");
         if (botAccountId == null || botAccountId.isBlank() || conversationId == null || conversationId.isBlank()) {
@@ -16,7 +16,6 @@ public record BotProactiveTarget(BotPlatform platform, String botAccountId, Stri
     }
 
     public String identity() {
-        return platform + ":GROUP:" + (platform == BotPlatform.QQ_OFFICIAL ? botAccountId + ":" : "")
-                + conversationId;
+        return platform + ":GROUP:" + (platform == BotPlatform.QQ_OFFICIAL ? botAccountId + ":" : "") + conversationId;
     }
 }

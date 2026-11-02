@@ -37,20 +37,19 @@ public class QqReplyProperties {
 
     @PostConstruct
     public void validate() {
-        if (keyboardAccounts == null || keyboardAccounts.entrySet().stream().anyMatch(entry -> entry.getKey().isBlank()
-                || entry.getValue() == null || entry.getValue().isEmpty() || entry.getValue().contains(BotMessageScope.CHANNEL))) {
+        if (keyboardAccounts == null || keyboardAccounts.entrySet().stream()
+            .anyMatch(entry -> entry.getKey().isBlank() || entry.getValue() == null || entry.getValue().isEmpty()
+                || entry.getValue().contains(BotMessageScope.CHANNEL))) {
             throw new IllegalArgumentException("Keyboard qualification must explicitly name GROUP or PRIVATE accounts");
         }
-        if (proactiveGroups == null || proactiveGroups.entrySet().stream().anyMatch(entry -> entry.getKey().isBlank()
-                || entry.getValue() == null || entry.getValue().isEmpty()
+        if (proactiveGroups == null || proactiveGroups.entrySet().stream()
+            .anyMatch(entry -> entry.getKey().isBlank() || entry.getValue() == null || entry.getValue().isEmpty()
                 || entry.getValue().stream().anyMatch(group -> group == null || group.isBlank()))) {
             throw new IllegalArgumentException("Proactive QQ delivery requires explicit account/group qualification");
         }
-        if (safetyMargin == null || safetyMargin.isNegative()
-                || safetyMargin.compareTo(Duration.ofMinutes(1)) >= 0
-                || ledgerRetention == null || ledgerRetention.compareTo(Duration.ofHours(1)) < 0
-                || c2cReplyLimit < 1 || c2cReplyLimit > 4
-                || groupReplyLimit < 1 || groupReplyLimit > 5) {
+        if (safetyMargin == null || safetyMargin.isNegative() || safetyMargin.compareTo(Duration.ofMinutes(1)) >= 0
+            || ledgerRetention == null || ledgerRetention.compareTo(Duration.ofHours(1)) < 0 || c2cReplyLimit < 1
+            || c2cReplyLimit > 4 || groupReplyLimit < 1 || groupReplyLimit > 5) {
             throw new IllegalArgumentException("Invalid nnm.reply.qq reply window, retention, or quota");
         }
     }

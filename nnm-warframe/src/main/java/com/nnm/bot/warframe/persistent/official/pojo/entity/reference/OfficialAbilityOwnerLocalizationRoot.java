@@ -74,5 +74,6 @@ public class OfficialAbilityOwnerLocalizationRoot extends OfficialRecord {
     private String zhName;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialAbilityOwnerLocalizationAbilitiesItems> officialAbilityOwnerLocalizationAbilitiesItemsRows = new ArrayList<>();
+    private List<OfficialAbilityOwnerLocalizationAbilitiesItems> officialAbilityOwnerLocalizationAbilitiesItemsRows =
+        new ArrayList<>();
 }

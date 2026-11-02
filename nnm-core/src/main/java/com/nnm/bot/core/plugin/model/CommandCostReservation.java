@@ -10,12 +10,8 @@ package com.nnm.bot.core.plugin.model;
  * @param rewardReference 奖励流水幂等引用
  * @param message 拒绝或提示信息
  */
-public record CommandCostReservation(boolean allowed,
-                                     boolean reserved,
-                                     String reference,
-                                     long rewardPoints,
-                                     String rewardReference,
-                                     String message) {
+public record CommandCostReservation(boolean allowed, boolean reserved, String reference, long rewardPoints,
+    String rewardReference, String message) {
 
     public CommandCostReservation {
         if (rewardPoints < 0) {
@@ -31,12 +27,9 @@ public record CommandCostReservation(boolean allowed,
         return new CommandCostReservation(false, false, null, 0, null, message);
     }
 
-    public static CommandCostReservation approved(boolean reserved,
-                                                  String reference,
-                                                  long rewardPoints,
-                                                  String rewardReference) {
-        return new CommandCostReservation(
-                true, reserved, reference, rewardPoints, rewardReference, null);
+    public static CommandCostReservation approved(boolean reserved, String reference, long rewardPoints,
+        String rewardReference) {
+        return new CommandCostReservation(true, reserved, reference, rewardPoints, rewardReference, null);
     }
 
     public boolean rewarding() {

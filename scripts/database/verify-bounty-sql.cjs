@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withPostgres } = require("./postgres-test-cluster.cjs");
 
 withPostgres(({ apply, query }) => {
-  apply("docs/sql/init.sql");
+  apply("sql/init.sql");
   const tables = ["wf_official_bounty_root", "wf_official_bounty_stages_items"];
   for (const table of tables) {
     const relation = `nnmbot.${table}`;

@@ -3,12 +3,7 @@ package com.nnm.bot.warframe.persistent.curated.pojo.dto.forum;
 /**
  * 当前论坛管理操作人及其稳定权限。
  */
-public record ForumOperatorDTO(
-        long userId,
-        int authorityLevel,
-        boolean canUpdate,
-        boolean canDelete
-) {
+public record ForumOperatorDTO(long userId, int authorityLevel, boolean canUpdate, boolean canDelete) {
 
     /**
      * 判断是否满足可以更新条件。

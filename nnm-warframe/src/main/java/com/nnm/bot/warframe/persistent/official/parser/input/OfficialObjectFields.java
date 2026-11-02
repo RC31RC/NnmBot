@@ -19,18 +19,20 @@ public final class OfficialObjectFields {
             Map<String, Field> indexed = new LinkedHashMap<>();
             for (Field field : type.getDeclaredFields()) {
                 JsonProperty property = field.getAnnotation(JsonProperty.class);
-                if (property == null) continue;
-                if (!field.trySetAccessible()) throw new IllegalStateException("无法访问官方字段：" + field);
+                if (property == null)
+                    continue;
+                if (!field.trySetAccessible())
+                    throw new IllegalStateException("无法访问官方字段：" + field);
                 indexed.put(property.value(), field);
             }
             return Collections.unmodifiableMap(indexed);
         }
     };
+
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private OfficialObjectFields() {
-    }
+    private OfficialObjectFields() {}
 
     /**
      * 返回明确声明了 JSON 键的字段，不包含运行时辅助状态。
@@ -51,7 +53,8 @@ public final class OfficialObjectFields {
      */
     public static Field field(Class<?> type, String key) {
         Field field = FIELDS.get(type).get(key);
-        if (field == null) throw new IllegalArgumentException("官方字段尚未建模：" + type.getSimpleName() + "." + key);
+        if (field == null)
+            throw new IllegalArgumentException("官方字段尚未建模：" + type.getSimpleName() + "." + key);
         return field;
     }
 
@@ -95,7 +98,8 @@ public final class OfficialObjectFields {
      * @param key 当前记录或字段的查找键。
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
-    public static void read(ObjectMapper mapper, JsonParser parser, OfficialObjectDTO value, String key) throws IOException {
+    public static void read(ObjectMapper mapper, JsonParser parser, OfficialObjectDTO value, String key)
+        throws IOException {
         Field field = field(value.getClass(), key);
         Object item = mapper.readerFor(mapper.constructType(field.getGenericType())).readValue(parser);
         set(value, key, item);

@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
-/** Shared group bindings form connected components that must live on the same node. */
+/** 共享群组绑定构成连通分量，同一分量必须运行在同一节点。 */
 @Component
 public class BotConnectionAffinityResolver {
     @Resource
@@ -27,23 +27,24 @@ public class BotConnectionAffinityResolver {
 
     public Map<String, String> resolve(List<BotChannelInstanceRecord> records, List<BotGroupBot> candidates) {
         Set<Long> enabledGroups = topology.snapshot().groups().values().stream().filter(group -> group.enabled())
-                .map(group -> group.id()).collect(Collectors.toSet());
+            .map(group -> group.id()).collect(Collectors.toSet());
         return resolve(records, candidates, enabledGroups);
     }
 
     public Map<String, String> resolve(List<BotChannelInstanceRecord> records, List<BotGroupBot> candidates,
-                                       Set<Long> enabledGroups) {
+        Set<Long> enabledGroups) {
         Map<Long, BotChannelInstanceRecord> indexed = new HashMap<>();
         BotTopologySnapshot snapshot = topology.snapshot();
         records.forEach(record -> {
             Long id = snapshot.instanceIds().get(new BotChannelKey(record.platform(), record.botAccountId()));
-            if (id != null) indexed.put(id, record);
+            if (id != null)
+                indexed.put(id, record);
         });
         return resolve(indexed, candidates, enabledGroups);
     }
 
     public Map<String, String> resolve(Map<Long, BotChannelInstanceRecord> records, List<BotGroupBot> candidates,
-                                       Set<Long> enabledGroups) {
+        Set<Long> enabledGroups) {
         return BotTopologySnapshot.connectionGroups(records, candidates, enabledGroups);
     }
 

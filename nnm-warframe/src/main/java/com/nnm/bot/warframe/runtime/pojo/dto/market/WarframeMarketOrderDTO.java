@@ -9,24 +9,10 @@ import java.util.Map;
 /**
  * Warframe Market 单条订单的结构化投影。
  */
-public record WarframeMarketOrderDTO(
-        String id,
-        String orderType,
-        int platinum,
-        int quantity,
-        Integer perTrade,
-        String subtype,
-        Integer rank,
-        Integer charges,
-        Integer amberStars,
-        Integer cyanStars,
-        boolean visible,
-        String createdAt,
-        String updatedAt,
-        String itemId,
-        String groupId,
-        WarframeMarketUserDTO user,
-        Map<String, Object> rawFields) {
+public record WarframeMarketOrderDTO(String id, String orderType, int platinum, int quantity, Integer perTrade,
+    String subtype, Integer rank, Integer charges, Integer amberStars, Integer cyanStars, boolean visible,
+    String createdAt, String updatedAt, String itemId, String groupId, WarframeMarketUserDTO user,
+    Map<String, Object> rawFields) {
 
     /**
      * 构造市场订单传输对象，并保存初始化参数。
@@ -58,8 +44,8 @@ public record WarframeMarketOrderDTO(
         itemId = trim(itemId);
         groupId = trim(groupId);
         user = user == null ? WarframeMarketUserDTO.empty() : user;
-        rawFields = CollUtil.isEmpty(rawFields) ? Map.of()
-                : Collections.unmodifiableMap(new LinkedHashMap<>(rawFields));
+        rawFields =
+            CollUtil.isEmpty(rawFields) ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(rawFields));
     }
 
     /**
@@ -75,20 +61,12 @@ public record WarframeMarketOrderDTO(
      * @param cyanStars 青蓝星槽。
      * @param status 状态。
      */
-    public WarframeMarketOrderDTO(
-            String orderType,
-            String userName,
-            String reputation,
-            int platinum,
-            int quantity,
-            Integer modRank,
-            Integer amberStars,
-            Integer cyanStars,
-            String status) {
-        this("", orderType, platinum, quantity, null, "", modRank, null, amberStars, cyanStars,
-                true, "", "", "", "", new WarframeMarketUserDTO(
-                        "", userName, "", parseInteger(reputation), "", false, "", status,
-                        "", "", Map.of(), Map.of()), Map.of());
+    public WarframeMarketOrderDTO(String orderType, String userName, String reputation, int platinum, int quantity,
+        Integer modRank, Integer amberStars, Integer cyanStars, String status) {
+        this("", orderType, platinum, quantity, null, "", modRank, null, amberStars, cyanStars, true, "", "", "", "",
+            new WarframeMarketUserDTO("", userName, "", parseInteger(reputation), "", false, "", status, "", "",
+                Map.of(), Map.of()),
+            Map.of());
     }
 
     /**
@@ -120,6 +98,7 @@ public record WarframeMarketOrderDTO(
 
     /**
      * 读取订单对应的振幅晶体等级。
+     *
      * @return 当前操作计算或读取的数值。
      */
     public Integer modRank() {

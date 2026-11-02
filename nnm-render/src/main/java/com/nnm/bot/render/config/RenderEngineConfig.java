@@ -48,12 +48,9 @@ public class RenderEngineConfig {
 
     @Bean
     public RenderEngine renderEngine() {
-        RenderEngineProviderContext context = new RenderEngineProviderContext(
-                "file:///templates/",
-                properties.getPlaywright().getChromiumArgs(),
-                properties.getFonts().getPaths().stream()
-                        .map(Path::of)
-                        .toList());
+        RenderEngineProviderContext context =
+            new RenderEngineProviderContext("file:///templates/", properties.getPlaywright().getChromiumArgs(),
+                properties.getFonts().getPaths().stream().map(Path::of).toList());
         if (StrUtil.isNotBlank(configuredProvider)) {
             return create(configuredProvider.trim(), context);
         }
@@ -92,20 +89,18 @@ public class RenderEngineConfig {
 
     private RenderEngine instantiate(RenderEngineProvider provider, RenderEngineProviderContext context) {
         return Objects.requireNonNull(provider.create(context),
-                () -> "Render provider returned null: " + provider.id());
+            () -> "Render provider returned null: " + provider.id());
     }
 
     private RenderEngineProvider find(String id) {
         String normalized = id.toLowerCase(Locale.ROOT);
-        return providers.stream()
-                .filter(provider -> provider.id().trim().equalsIgnoreCase(normalized))
-                .findFirst()
-                .orElse(null);
+        return providers.stream().filter(provider -> provider.id().trim().equalsIgnoreCase(normalized)).findFirst()
+            .orElse(null);
     }
 
     private boolean hasEnoughMemoryForPlaywright() {
         try {
-            OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+            OperatingSystemMXBean osBean = (OperatingSystemMXBean)ManagementFactory.getOperatingSystemMXBean();
             long totalPhysical = osBean.getTotalMemorySize();
             return totalPhysical >= PLAYWRIGHT_MIN_PHYSICAL_MEMORY;
         } catch (Throwable t) {

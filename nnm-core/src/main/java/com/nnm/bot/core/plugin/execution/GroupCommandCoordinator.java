@@ -24,7 +24,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
@@ -42,17 +41,18 @@ public class GroupCommandCoordinator {
     @Resource
     private CommandReceiptRegistry receipts;
     @Resource
-    private ObjectProvider<GroupCommandService> groupCommands;
+    private GroupCommandService groupCommands;
 
     public CommandMatch prepare(CommandMatch match) {
         BotMessageContext context = match.invocation().context();
-        if (context.execution() != null) return match;
+        if (context.execution() != null)
+            return match;
         CommandExecutionContext groupView = groups.executionView(context);
-        CommandExecutionContext view = groupView.groupView() == null ? groupView
-                : new CommandExecutionContext(groupView.groupView(), groupView.bindingView(), groupView.bindings(),
-                        CommandExecutionContext.Member.of(members.findByContext(groupView.groupView().id(), context).orElse(null)));
+        CommandExecutionContext view = groupView.groupView() == null ? groupView : new CommandExecutionContext(
+            groupView.groupView(), groupView.bindingView(), groupView.bindings(),
+            CommandExecutionContext.Member.of(members.findByContext(groupView.groupView().id(), context).orElse(null)));
         return new CommandMatch(match.command(), new CommandInvocation(context.withExecution(view),
-                match.invocation().commandCode(), match.invocation().matchedAlias(), match.invocation().arguments()));
+            match.invocation().commandCode(), match.invocation().matchedAlias(), match.invocation().arguments()));
     }
 
     public boolean shouldIgnore(CommandMatch match) {
@@ -67,7 +67,7 @@ public class GroupCommandCoordinator {
         }
         BotGroupMember member = members.findByContext(group.group().getId(), context).orElse(null);
         return member == null || !member.isEnabled()
-                || !hasAllConfiguredIdentities(context, group.group().getId(), member);
+            || !hasAllConfiguredIdentities(context, group.group().getId(), member);
     }
 
     public CommandMatch observe(CommandMatch match) {
@@ -83,9 +83,8 @@ public class GroupCommandCoordinator {
         String id = receipts.observeLocal(fingerprint, context);
         BotMessageContext correlated = context.withDispatchId(id);
         receipts.register(id, correlated);
-        return new CommandMatch(match.command(), new CommandInvocation(correlated,
-                match.invocation().commandCode(), match.invocation().matchedAlias(),
-                match.invocation().arguments()));
+        return new CommandMatch(match.command(), new CommandInvocation(correlated, match.invocation().commandCode(),
+            match.invocation().matchedAlias(), match.invocation().arguments()));
     }
 
     public boolean claim(BotMessageContext context) {
@@ -103,21 +102,16 @@ public class GroupCommandCoordinator {
     public void supplementBindingIfNeeded(CommandMatch match) {
         BotMessageContext context = match.invocation().context();
         if (!SystemCommandCodes.BIND.equals(normalizeCommand(match.invocation().commandCode()))
-                || context.dispatchId() == null
-                || !validBindingReceipt(context, match.invocation().arguments())) {
+            || context.dispatchId() == null || !validBindingReceipt(context, match.invocation().arguments())) {
             return;
         }
         if (receipts.hasEarlierReceiptFromPlatform(context.dispatchId(), context)) {
             return;
         }
-        GroupCommandService service = groupCommands.getIfAvailable();
-        if (service != null) {
-            service.bindQq(context, match.invocation().arguments().trim());
-        }
+        groupCommands.bindQq(context, match.invocation().arguments().trim());
     }
 
-    private String correlationFingerprint(
-            BotGroupCommandContext group, CommandMatch match) {
+    private String correlationFingerprint(BotGroupCommandContext group, CommandMatch match) {
         BotMessageContext context = match.invocation().context();
         String commandCode = normalizeCommand(match.invocation().commandCode());
         String arguments = Objects.requireNonNullElse(match.invocation().arguments(), "").trim();
@@ -132,17 +126,15 @@ public class GroupCommandCoordinator {
             if (member != null && member.getId() != null) {
                 senderIdentity = "member:" + member.getId();
             } else {
-                senderIdentity = "native:" + context.platform().name()
-                        + ":" + context.senderId();
+                senderIdentity = "native:" + context.platform().name() + ":" + context.senderId();
             }
         }
-        return digest(String.join("|", Long.toString(group.group().getId()),
-                senderIdentity, commandCode, arguments));
+        return digest(String.join("|", Long.toString(group.group().getId()), senderIdentity, commandCode, arguments));
     }
 
     private List<BotGroupBot> enabledBindings(BotMessageContext context, long groupId) {
         return context.execution() == null ? groups.enabledBindings(groupId)
-                : context.execution().bindings().stream().map(Binding::entity).toList();
+            : context.execution().bindings().stream().map(Binding::entity).toList();
     }
 
     private boolean isMultiInstance(BotMessageContext context, long groupId) {
@@ -152,15 +144,13 @@ public class GroupCommandCoordinator {
     private boolean isCrossChannelMultiInstance(BotMessageContext context, long groupId) {
         List<BotGroupBot> bindings = enabledBindings(context, groupId);
         return bindings.size() > 1
-                && bindings.stream().map(binding -> binding.getPlatform().toUpperCase(Locale.ROOT))
-                        .distinct().count() > 1;
+            && bindings.stream().map(binding -> binding.getPlatform().toUpperCase(Locale.ROOT)).distinct().count() > 1;
     }
 
     private boolean hasAllConfiguredIdentities(BotMessageContext context, long groupId, BotGroupMember member) {
         return enabledBindings(context, groupId).stream()
-                .map(binding -> BotPlatform.valueOf(binding.getPlatform().toUpperCase(Locale.ROOT)))
-                .distinct()
-                .allMatch(platform -> identityAdapters.hasIdentity(platform, member));
+            .map(binding -> BotPlatform.valueOf(binding.getPlatform().toUpperCase(Locale.ROOT))).distinct()
+            .allMatch(platform -> identityAdapters.hasIdentity(platform, member));
     }
 
     private boolean validBindingReceipt(BotMessageContext context, String arguments) {
@@ -176,16 +166,17 @@ public class GroupCommandCoordinator {
     }
 
     static String nativeIdentity(BotMessageContext context) {
-        if (context.messageId() == null || context.messageId().isBlank()) return null;
-        return digest(Stream.of(context.platform().name(), context.scope().name(),
-                        context.botAccountId(), context.conversationId(), context.messageId())
-                .map(value -> value.length() + ":" + value).collect(Collectors.joining()));
+        if (context.messageId() == null || context.messageId().isBlank())
+            return null;
+        return digest(Stream.of(context.platform().name(), context.scope().name(), context.botAccountId(),
+            context.conversationId(), context.messageId()).map(value -> value.length() + ":" + value)
+            .collect(Collectors.joining()));
     }
 
     public static String digest(String value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
         }

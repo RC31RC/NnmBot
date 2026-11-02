@@ -19,8 +19,7 @@ public interface BotGroupMemberRepository extends JpaRepository<BotGroupMember, 
 
     Optional<BotGroupMember> findByGroupIdAndQqId(Long groupId, String qqId);
 
-    Optional<BotGroupMember> findByGroupIdAndMemberOpenid(
-            Long groupId, String memberOpenid);
+    Optional<BotGroupMember> findByGroupIdAndMemberOpenid(Long groupId, String memberOpenid);
 
     Optional<BotGroupMember> findByGroupIdAndKookId(Long groupId, String kookId);
 

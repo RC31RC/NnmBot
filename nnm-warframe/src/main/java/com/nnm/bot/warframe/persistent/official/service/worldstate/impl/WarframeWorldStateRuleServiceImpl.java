@@ -23,7 +23,7 @@ public class WarframeWorldStateRuleServiceImpl implements WarframeWorldStateRule
     @Override
     public List<WarframeStateTranslationDetailsDTO> stateTranslations() {
         return catalog.records(WarframeOfficialDataDomain.CHALLENGE).stream()
-                .map(root -> new WarframeStateTranslationDetailsDTO(root.bkey(), name(root), description(root.data())))
-                .toList();
+            .map(root -> new WarframeStateTranslationDetailsDTO(root.bkey(), name(root), description(root.data())))
+            .toList();
     }
 }

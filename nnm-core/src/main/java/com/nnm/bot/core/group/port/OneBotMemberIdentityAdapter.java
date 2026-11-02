@@ -16,8 +16,7 @@ public class OneBotMemberIdentityAdapter implements BotGroupMemberIdentityAdapte
     }
 
     @Override
-    public Optional<BotGroupMember> find(
-            BotGroupMemberRepository repository, long groupId, String platformUserId) {
+    public Optional<BotGroupMember> find(BotGroupMemberRepository repository, long groupId, String platformUserId) {
         return repository.findByGroupIdAndQqId(groupId, platformUserId);
     }
 
@@ -30,7 +29,8 @@ public class OneBotMemberIdentityAdapter implements BotGroupMemberIdentityAdapte
     public void assign(BotGroupMember member, String platformUserId) {
         member.setQqId(platformUserId);
         member.setQqIdVerified(true);
-        if (member.getQqBoundAt() == null) member.setQqBoundAt(LocalDateTime.now());
+        if (member.getQqBoundAt() == null)
+            member.setQqBoundAt(LocalDateTime.now());
     }
 
     @Override

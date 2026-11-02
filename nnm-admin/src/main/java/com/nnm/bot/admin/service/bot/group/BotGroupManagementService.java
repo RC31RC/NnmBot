@@ -27,8 +27,7 @@ public interface BotGroupManagementService extends BotGroupMemberEventSink {
 
     List<BotScopeDiscoveryDTO> discoverAndSynchronize();
 
-    default List<BotScopeDiscoveryDTO> discoverAndSynchronize(
-            TaskProgressReporter reporter) {
+    default List<BotScopeDiscoveryDTO> discoverAndSynchronize(TaskProgressReporter reporter) {
         return discoverAndSynchronize();
     }
 
@@ -60,7 +59,6 @@ public interface BotGroupManagementService extends BotGroupMemberEventSink {
 
     void updateMember(long groupId, long memberId, BotGroupMemberUpdateDTO request);
 
-    void updateMemberPoints(long groupId, long memberId,
-                            BotGroupMemberPointsUpdateDTO request);
+    void updateMemberPoints(long groupId, long memberId, BotGroupMemberPointsUpdateDTO request);
 
 }

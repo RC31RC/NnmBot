@@ -15,8 +15,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Warframe 官方 WorldState 原始数据的类型化输入模型。
- * 未识别字段由 Jackson 忽略；排障原文和顶层字段名由运行时快照单独保留。
+ * Warframe 官方 WorldState 原始数据的类型化输入模型。 未识别字段由 Jackson 忽略；排障原文和顶层字段名由运行时快照单独保留。
  */
 @Getter
 @Setter

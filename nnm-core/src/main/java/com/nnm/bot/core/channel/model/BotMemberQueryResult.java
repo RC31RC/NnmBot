@@ -2,7 +2,7 @@ package com.nnm.bot.core.channel.model;
 
 import java.util.List;
 
-/** Result of querying members for a known platform scope. */
+/** 已知平台作用域的成员查询结果。 */
 public record BotMemberQueryResult(List<BotDiscoveredMember> members, boolean complete) {
 
     public BotMemberQueryResult {

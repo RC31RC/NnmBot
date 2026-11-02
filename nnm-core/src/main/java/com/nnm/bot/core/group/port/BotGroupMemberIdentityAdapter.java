@@ -5,13 +5,12 @@ import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import java.util.Optional;
 
-/** Maps one platform identity onto the logical-group member record. */
+/** 将一个平台身份映射到逻辑群组的成员记录。 */
 public interface BotGroupMemberIdentityAdapter {
 
     BotPlatform platform();
 
-    Optional<BotGroupMember> find(
-            BotGroupMemberRepository repository, long groupId, String platformUserId);
+    Optional<BotGroupMember> find(BotGroupMemberRepository repository, long groupId, String platformUserId);
 
     String identity(BotGroupMember member);
 

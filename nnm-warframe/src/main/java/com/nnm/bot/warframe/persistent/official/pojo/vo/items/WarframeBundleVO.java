@@ -6,8 +6,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record WarframeBundleVO(String query, String category, int page, int totalPages,
-        int totalCount, List<EntryVO> items) {
+public record WarframeBundleVO(String query, String category, int page, int totalPages, int totalCount,
+    List<EntryVO> items) {
     /**
      * 构造礼包展示对象，并保存初始化参数。
      *
@@ -32,11 +32,11 @@ public record WarframeBundleVO(String query, String category, int page, int tota
      * @return 组合包定义的分页视图。
      */
     public static WarframeBundleVO page(String query, String category, List<EntryVO> matches, int requestedPage) {
-        int pages = Math.max(1, (int) ((matches.size() + 3L) / 4));
+        int pages = Math.max(1, (int)((matches.size() + 3L) / 4));
         int page = Math.max(1, Math.min(requestedPage, pages));
         int from = (page - 1) * 4;
         return new WarframeBundleVO(query, category, page, pages, matches.size(),
-                matches.subList(from, Math.min(from + 4, matches.size())));
+            matches.subList(from, Math.min(from + 4, matches.size())));
     }
 
     /**
@@ -45,34 +45,39 @@ public record WarframeBundleVO(String query, String category, int page, int tota
      * @return 按当前对象字段组成的文本内容。
      */
     public String text() {
-        StringBuilder text = new StringBuilder(category).append("：").append(page).append("/")
-                .append(totalPages).append(" 页，共 ").append(totalCount).append(" 条");
+        StringBuilder text = new StringBuilder(category).append("：").append(page).append("/").append(totalPages)
+            .append(" 页，共 ").append(totalCount).append(" 条");
         for (EntryVO item : items) {
             text.append("\n\n").append(item.definition().name());
-            item.definition().attributes().forEach(value -> text.append("\n")
-                    .append(value.label()).append("：").append(value.value()));
-            if (CollUtil.isEmpty(item.components())) text.append("\n组件未提供或未采纳");
+            item.definition().attributes()
+                .forEach(value -> text.append("\n").append(value.label()).append("：").append(value.value()));
+            if (CollUtil.isEmpty(item.components()))
+                text.append("\n组件未提供或未采纳");
             for (ComponentVO component : item.components()) {
                 text.append("\n").append(component.name());
                 text.append(component.amount() == null ? " · 数量未提供" : " × " + component.amount());
-                if (component.rarity() != null) text.append(" · ").append(component.rarity());
+                if (component.rarity() != null)
+                    text.append(" · ").append(component.rarity());
             }
             if ("booster_pack".equals(item.dataset())) {
-                if (CollUtil.isEmpty(item.rolls())) text.append("\n抽取权重未提供或未采纳");
+                if (CollUtil.isEmpty(item.rolls()))
+                    text.append("\n抽取权重未提供或未采纳");
                 for (RollVO roll : item.rolls()) {
                     text.append("\n第 ").append(roll.order() + 1).append(" 抽权重：");
-                    text.append(CollUtil.isEmpty(roll.weights()) ? "未提供" : roll.weights().stream()
+                    text.append(CollUtil.isEmpty(roll.weights()) ? "未提供"
+                        : roll.weights().stream()
                             .map(value -> value.rarity() + " " + value.weight().stripTrailingZeros().toPlainString())
                             .collect(Collectors.joining(" · ")));
                 }
             }
         }
-        if (CollUtil.isEmpty(items)) text.append("\n没有找到匹配的礼包");
+        if (CollUtil.isEmpty(items))
+            text.append("\n没有找到匹配的礼包");
         return text.toString();
     }
 
-    public record EntryVO(String dataset, WarframeMaterialVO.EntryVO definition,
-                        List<ComponentVO> components, List<RollVO> rolls) {
+    public record EntryVO(String dataset, WarframeMaterialVO.EntryVO definition, List<ComponentVO> components,
+        List<RollVO> rolls) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *

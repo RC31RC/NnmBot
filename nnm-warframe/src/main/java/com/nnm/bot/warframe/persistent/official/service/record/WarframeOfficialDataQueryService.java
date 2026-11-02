@@ -3,6 +3,8 @@ package com.nnm.bot.warframe.persistent.official.service.record;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialRecordVO;
 import com.nnm.bot.warframe.persistent.official.pojo.query.WarframeOfficialRecordQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialFormFieldVO;
+import java.util.List;
 
 public interface WarframeOfficialDataQueryService {
 
@@ -21,4 +23,12 @@ public interface WarframeOfficialDataQueryService {
      * @return 包含当前页记录及总数的分页结果。
      */
     PageResult<WarframeOfficialRecordVO> query(WarframeOfficialRecordQuery request);
+
+    /**
+     * 读取官方数据领域对应的类型化表单结构。
+     *
+     * @param domain 官方数据文件所属的业务领域代码。
+     * @return 该领域字段合同对应的表单结构。
+     */
+    List<WarframeOfficialFormFieldVO> formSchema(String domain);
 }

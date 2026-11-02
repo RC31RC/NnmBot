@@ -21,7 +21,9 @@ import org.springframework.stereotype.Service;
 /**
  * 处理跨实例的只读群组发现请求。
  *
- * <p>消息只携带标识和过期时间，不携带机器人凭据，也不传递可执行回调。</p>
+ * <p>
+ * 消息只携带标识和过期时间，不携带机器人凭据，也不传递可执行回调。
+ * </p>
  */
 @Service
 public class ClusterScopeDiscovery {
@@ -38,19 +40,20 @@ public class ClusterScopeDiscovery {
 
     public BotScopeDiscoveryResult discover(BotChannelInstanceRecord instance) {
         BotChannelKey key = new BotChannelKey(instance.platform(), instance.botAccountId());
-        BotLocalScopeDiscoveryProvider provider = providers.stream()
-                .filter(item -> item.platform() == instance.platform())
-                .findFirst().orElse(null);
-        if (provider == null) return BotScopeDiscoveryResult.unsupported("渠道未注册本地发现服务");
-        if (runtime.isLocalOwner(key)) return provider.discoverLocal(instance.botAccountId());
-        if (runtime.snapshot(key).isEmpty()) return BotScopeDiscoveryResult.unsupported("机器人当前未连接");
-        OneBotScopeDiscoveryRequest request = new OneBotScopeDiscoveryRequest(
-                UUID.randomUUID(), instance.platform(), instance.botAccountId(),
-                Instant.now().plus(properties.discoveryTimeout()));
+        BotLocalScopeDiscoveryProvider provider =
+            providers.stream().filter(item -> item.platform() == instance.platform()).findFirst().orElse(null);
+        if (provider == null)
+            return BotScopeDiscoveryResult.unsupported("渠道未注册本地发现服务");
+        if (runtime.isLocalOwner(key))
+            return provider.discoverLocal(instance.botAccountId());
+        if (runtime.snapshot(key).isEmpty())
+            return BotScopeDiscoveryResult.unsupported("机器人当前未连接");
+        OneBotScopeDiscoveryRequest request = new OneBotScopeDiscoveryRequest(UUID.randomUUID(), instance.platform(),
+            instance.botAccountId(), Instant.now().plus(properties.discoveryTimeout()));
         try {
             messages.send(new OneBotScopeDiscoveryMessage(request));
         } catch (RdtQueueException rejected) {
-            // Admission rejection means no request was accepted; do not wait for an impossible response.
+            // 准入拒绝表示没有请求被接受，不能继续等待不存在的响应。
             if (rejected.code() == RdtErrorCode.QUEUE_CAPACITY)
                 return BotScopeDiscoveryResult.unsupported("群组发现队列已满，请稍后重试");
             if (rejected.code() == RdtErrorCode.MESSAGE_TOO_LARGE)
@@ -60,7 +63,8 @@ public class ClusterScopeDiscovery {
         long deadline = System.nanoTime() + properties.discoveryTimeout().toNanos();
         while (System.nanoTime() < deadline) {
             Optional<BotScopeDiscoveryResult> result = responses.find(request.requestId());
-            if (result.isPresent()) return result.get();
+            if (result.isPresent())
+                return result.get();
             try {
                 Thread.sleep(Math.min(250, properties.taskPollInterval().toMillis()));
             } catch (InterruptedException exception) {

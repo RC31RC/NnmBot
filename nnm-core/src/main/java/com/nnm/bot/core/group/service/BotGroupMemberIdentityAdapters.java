@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
-/** Resolves channel-specific member identity behavior without platform switches in services. */
+/** 按渠道解析成员身份行为，业务服务无需按平台分支。 */
 @Component
 public class BotGroupMemberIdentityAdapters {
 
@@ -22,21 +22,19 @@ public class BotGroupMemberIdentityAdapters {
         Map<BotPlatform, BotGroupMemberIdentityAdapter> indexed = new EnumMap<>(BotPlatform.class);
         for (BotGroupMemberIdentityAdapter adapter : adapters) {
             if (indexed.put(adapter.platform(), adapter) != null) {
-                throw new IllegalArgumentException(
-                        "Duplicate member identity adapter: " + adapter.platform());
+                throw new IllegalArgumentException("Duplicate member identity adapter: " + adapter.platform());
             }
         }
         this.adapters = Map.copyOf(indexed);
     }
 
     public static BotGroupMemberIdentityAdapters defaults() {
-        return new BotGroupMemberIdentityAdapters(List.of(
-                new OneBotMemberIdentityAdapter(), new QqOfficialMemberIdentityAdapter()));
+        return new BotGroupMemberIdentityAdapters(
+            List.of(new OneBotMemberIdentityAdapter(), new QqOfficialMemberIdentityAdapter()));
     }
 
-    public Optional<BotGroupMember> find(
-            BotGroupMemberRepository repository, long groupId,
-            BotPlatform platform, String platformUserId) {
+    public Optional<BotGroupMember> find(BotGroupMemberRepository repository, long groupId, BotPlatform platform,
+        String platformUserId) {
         return adapter(platform).find(repository, groupId, platformUserId);
     }
 

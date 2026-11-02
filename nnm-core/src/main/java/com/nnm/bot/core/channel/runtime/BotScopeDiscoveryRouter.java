@@ -10,7 +10,7 @@ import jakarta.annotation.Resource;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
-/** Routes scope discovery through the channel capability contract. */
+/** 按渠道能力合同路由作用域发现请求。 */
 @Component
 public class BotScopeDiscoveryRouter {
 
@@ -23,19 +23,14 @@ public class BotScopeDiscoveryRouter {
         if (!instance.platform().capabilities().contains(BotChannelCapability.GROUP_DISCOVERY)) {
             return BotScopeDiscoveryResult.unsupported("渠道未提供群组发现能力");
         }
-        return providers.stream()
-                .filter(provider -> provider.platform() == instance.platform())
-                .findFirst()
-                .map(provider -> provider.discover(instance))
-                .orElseGet(() -> BotScopeDiscoveryResult.unsupported("渠道未注册群组发现服务"));
+        return providers.stream().filter(provider -> provider.platform() == instance.platform()).findFirst()
+            .map(provider -> provider.discover(instance))
+            .orElseGet(() -> BotScopeDiscoveryResult.unsupported("渠道未注册群组发现服务"));
     }
 
-    public BotMemberQueryResult queryMembers(
-            BotChannelInstanceRecord instance, String scopeKey) {
-        return memberProviders.stream()
-                .filter(provider -> provider.platform() == instance.platform())
-                .findFirst()
-                .map(provider -> provider.query(instance, scopeKey))
-                .orElseGet(() -> new BotMemberQueryResult(List.of(), false));
+    public BotMemberQueryResult queryMembers(BotChannelInstanceRecord instance, String scopeKey) {
+        return memberProviders.stream().filter(provider -> provider.platform() == instance.platform()).findFirst()
+            .map(provider -> provider.query(instance, scopeKey))
+            .orElseGet(() -> new BotMemberQueryResult(List.of(), false));
     }
 }

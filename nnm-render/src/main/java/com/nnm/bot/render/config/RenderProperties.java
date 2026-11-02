@@ -44,17 +44,13 @@ public class RenderProperties {
             throw new IllegalArgumentException("render.engine must be configured");
         }
         if (ObjectUtil.isNull(playwright.chromiumArgs)) {
-            throw new IllegalArgumentException(
-                    "render.playwright.chromium-args must not be null");
+            throw new IllegalArgumentException("render.playwright.chromium-args must not be null");
         }
-        if (playwright.chromiumArgs.stream().anyMatch(argument ->
-                StrUtil.isBlank(argument))) {
-            throw new IllegalArgumentException(
-                    "render.playwright.chromium-args must not contain blank values");
+        if (playwright.chromiumArgs.stream().anyMatch(argument -> StrUtil.isBlank(argument))) {
+            throw new IllegalArgumentException("render.playwright.chromium-args must not contain blank values");
         }
         if (ObjectUtil.isNull(fonts.paths) || fonts.paths.stream().anyMatch(StrUtil::isBlank)) {
-            throw new IllegalArgumentException(
-                    "render.fonts.paths must not contain blank values");
+            throw new IllegalArgumentException("render.fonts.paths must not contain blank values");
         }
         if (limits.maxInputBytes < 1 || limits.maxImagePixels < 1 || limits.maxResultBytes < 1) {
             throw new IllegalArgumentException("render.limits must be positive");
@@ -71,8 +67,7 @@ public class RenderProperties {
 
     public static class Playwright {
 
-        private List<String> chromiumArgs = new ArrayList<>(
-                List.of("--no-sandbox", "--disable-gpu"));
+        private List<String> chromiumArgs = new ArrayList<>(List.of("--no-sandbox", "--disable-gpu"));
 
         public List<String> getChromiumArgs() {
             return chromiumArgs;
@@ -97,18 +92,13 @@ public class RenderProperties {
 
         private static List<String> defaultPaths() {
             String windowsDirectory = System.getenv().getOrDefault("WINDIR", "C:/Windows");
-            return new ArrayList<>(List.of(
-                    windowsDirectory + "/Fonts/simhei.ttf",
-                    windowsDirectory + "/Fonts/simsunb.ttf",
-                    windowsDirectory + "/Fonts/NotoSansSC-VF.ttf",
-                    windowsDirectory + "/Fonts/msyh.ttc",
-                    "/System/Library/Fonts/PingFang.ttc",
-                    "/System/Library/Fonts/STHeiti Light.ttc",
-                    "/Library/Fonts/Arial Unicode.ttf",
-                    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            return new ArrayList<>(
+                List.of(windowsDirectory + "/Fonts/simhei.ttf", windowsDirectory + "/Fonts/simsunb.ttf",
+                    windowsDirectory + "/Fonts/NotoSansSC-VF.ttf", windowsDirectory + "/Fonts/msyh.ttc",
+                    "/System/Library/Fonts/PingFang.ttc", "/System/Library/Fonts/STHeiti Light.ttc",
+                    "/Library/Fonts/Arial Unicode.ttf", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
                     "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-                    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
-            ));
+                    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"));
         }
     }
 }

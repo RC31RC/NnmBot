@@ -66,7 +66,8 @@ public final class WarframeOfficialValues {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private WarframeOfficialValues() { }
+    private WarframeOfficialValues() {}
+
     /**
      * 按调用方明确给出的字段顺序选取首个有值文本。
      *
@@ -75,12 +76,16 @@ public final class WarframeOfficialValues {
      */
     public static String first(Object... values) {
         for (Object value : values) {
-            if (value instanceof String text && StrUtil.isNotBlank(text)) return text;
-            if (value instanceof BigDecimal number) return number.stripTrailingZeros().toPlainString();
-            if (value instanceof Boolean flag) return flag.toString();
+            if (value instanceof String text && StrUtil.isNotBlank(text))
+                return text;
+            if (value instanceof BigDecimal number)
+                return number.stripTrailingZeros().toPlainString();
+            if (value instanceof Boolean flag)
+                return flag.toString();
         }
         return "";
     }
+
     /**
      * 优先使用本地检索字段中的名称。
      *
@@ -90,6 +95,7 @@ public final class WarframeOfficialValues {
     public static String name(WarframeOfficialRecordReadDTO row) {
         return first(row.localizedName(), row.officialName(), row.bkey());
     }
+
     /**
      * 按各具体文件的描述字段构造文本。
      *
@@ -97,69 +103,113 @@ public final class WarframeOfficialValues {
      * @return 业务对象的说明对应的文本。
      */
     public static String description(OfficialObjectDTO value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return switch (value) {
-            case OfficialSyndicateDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialSyndicateDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialActivityDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn());
-            case OfficialBountyDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialBountyDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialKeysDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialEnemyDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialCodexDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialModSetDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialFocusDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialUpgradeDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialChallengeDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialIntrinsicDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialNightwaveDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialAchievementDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialEnemyDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialCodexDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialModSetDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialFocusDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialUpgradeDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialChallengeDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialIntrinsicDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialNightwaveDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialAchievementDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialDojoRecipeDTO data -> first(data.getDescription());
             case OfficialSkinDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialResourcesDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialFusionBundlesDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialBundleDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialSupplyDropDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialAyatanDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialCreditBundleDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialDecorationDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialCustomsDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialComponentDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialCapturaDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialResourcesDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialFusionBundlesDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialBundleDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialSupplyDropDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialAyatanDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialCreditBundleDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialDecorationDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialCustomsDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialComponentDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialCapturaDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialMiscDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialRewardPackDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialRewardPackDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialSongDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialBoosterDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialAbilityDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialBoosterDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialAbilityDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialGearDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialRailjackWeaponDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialSentinelsDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialRailjackWeaponDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialSentinelsDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialShipDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialArchwingDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialWarframeDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialDronesDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialAnimalDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialWeaponDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialArchwingDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialWarframeDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialDronesDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialAnimalDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialWeaponDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
             case OfficialItemLocalizationDTO data -> first(data.getZhDescription(), data.getDescription());
             case OfficialAbilityOwnerLocalizationDTO data -> first(data.getZhDescription(), data.getDescription());
-            case OfficialSyndicateDTO.TitlesDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialRelicDTO.StatesKeyDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialRivenDefinitionDTO.AvailableChallengesComplicationsDTO data -> first(data.getDescriptionZh(), data.getDescription());
-            case OfficialRivenDefinitionDTO.AvailableChallengesDTO data -> first(data.getDescriptionZh(), data.getDescription());
+            case OfficialSyndicateDTO.TitlesDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialRelicDTO.StatesKeyDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialRivenDefinitionDTO.AvailableChallengesComplicationsDTO data ->
+                first(data.getDescriptionZh(), data.getDescription());
+            case OfficialRivenDefinitionDTO.AvailableChallengesDTO data ->
+                first(data.getDescriptionZh(), data.getDescription());
             case OfficialUpgradeDTO.AvailableChallengesComplicationsDTO data -> first(data.getDescription());
             case OfficialUpgradeDTO.AvailableChallengesDTO data -> first(data.getDescription());
-            case OfficialIntrinsicDTO.RanksDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialArchwingDTO.AbilitiesDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialWarframeDTO.AbilitiesDTO data -> first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
-            case OfficialAbilityOwnerLocalizationDTO.AbilitiesDTO data -> first(data.getZhDescription(), data.getDescription());
+            case OfficialIntrinsicDTO.RanksDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialArchwingDTO.AbilitiesDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialWarframeDTO.AbilitiesDTO data ->
+                first(data.getDescriptionZh(), data.getDescriptionEn(), data.getDescription());
+            case OfficialAbilityOwnerLocalizationDTO.AbilitiesDTO data ->
+                first(data.getZhDescription(), data.getDescription());
             default -> "";
         };
     }
+
     /**
      * 返回可安全遍历的可选集合。
      *
      * @param value 待校验或转换的成员集合。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    public static <T> List<T> values(List<T> value) { return value == null ? List.of() : value; }
+    public static <T> List<T> values(List<T> value) {
+        return value == null ? List.of() : value;
+    }
+
     /**
      * 读取可选引用的指定成员，越界返回空值。
      *
@@ -167,35 +217,50 @@ public final class WarframeOfficialValues {
      * @param index 待读取的成员下标。
      * @return 目标类型对象。
      */
-    public static <T> T at(List<T> value, int index) { return value == null || index < 0 || index >= value.size() ? null : value.get(index); }
+    public static <T> T at(List<T> value, int index) {
+        return value == null || index < 0 || index >= value.size() ? null : value.get(index);
+    }
+
     /**
      * 保留原始十进制精度。
      *
      * @param value 待校验的精确数值；缺失值保持为空。
      * @return 当前操作计算或读取的数值。
      */
-    public static BigDecimal decimal(BigDecimal value) { return value; }
+    public static BigDecimal decimal(BigDecimal value) {
+        return value;
+    }
+
     /**
      * 可选整数必须精确转换，避免静默截断。
      *
      * @param value 待校验的精确数值；缺失值保持为空。
      * @return 当前操作计算或读取的数值。
      */
-    public static Integer integer(BigDecimal value) { return value == null ? null : value.intValueExact(); }
+    public static Integer integer(BigDecimal value) {
+        return value == null ? null : value.intValueExact();
+    }
+
     /**
      * 可选长整数必须精确转换。
      *
      * @param value 待校验的精确数值；缺失值保持为空。
      * @return 当前范围内符合条件的条目数。
      */
-    public static Long count(BigDecimal value) { return value == null ? null : value.longValueExact(); }
+    public static Long count(BigDecimal value) {
+        return value == null ? null : value.longValueExact();
+    }
+
     /**
      * 保留未提供布尔字段的空值。
      *
      * @param value 待处理的字段值。
      * @return 满足取得布尔值时为真，否则为假。
      */
-    public static Boolean bool(Boolean value) { return value; }
+    public static Boolean bool(Boolean value) {
+        return value;
+    }
+
     /**
      * 读取各文件明确声明的icon字段。
      *
@@ -203,7 +268,8 @@ public final class WarframeOfficialValues {
      * @return 图标对应的文本。
      */
     public static String icon(OfficialObjectDTO value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return switch (value) {
             case OfficialSyndicateDTO data -> first(data.getIcon());
             case OfficialBountyDTO data -> first(data.getIcon());
@@ -255,6 +321,7 @@ public final class WarframeOfficialValues {
             default -> "";
         };
     }
+
     /**
      * 读取各文件明确声明的iconUrl字段。
      *
@@ -262,7 +329,8 @@ public final class WarframeOfficialValues {
      * @return 图标地址对应的文本。
      */
     public static String iconUrl(OfficialObjectDTO value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return switch (value) {
             case OfficialSyndicateDTO data -> first(data.getIconUrl());
             case OfficialRelicDTO data -> first(data.getIconUrl());
@@ -324,7 +392,8 @@ public final class WarframeOfficialValues {
             case OfficialRegionDTO.MiscItemFeeItemReferencesDTO data -> first(data.getIconUrl());
             case OfficialRegionDTO.MissionRewardCountedItemsItemReferencesDTO data -> first(data.getIconUrl());
             case OfficialRegionDTO.SystemsResourcesItemReferencesDTO data -> first(data.getIconUrl());
-            case OfficialKeysDTO.ChainStagesMessageToSendWhenTriggeredCountedAttachmentsItemReferencesDTO data -> first(data.getIconUrl());
+            case OfficialKeysDTO.ChainStagesMessageToSendWhenTriggeredCountedAttachmentsItemReferencesDTO data ->
+                first(data.getIconUrl());
             case OfficialKeysDTO.MissionRewardCountedItemsItemReferencesDTO data -> first(data.getIconUrl());
             case OfficialKeysDTO.MissionRewardCountedStoreItemsItemReferencesDTO data -> first(data.getIconUrl());
             case OfficialKeysDTO.RewardsItemReferencesDTO data -> first(data.getIconUrl());

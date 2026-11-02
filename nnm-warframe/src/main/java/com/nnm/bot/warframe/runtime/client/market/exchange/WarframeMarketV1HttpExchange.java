@@ -23,17 +23,9 @@ public interface WarframeMarketV1HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/items/{slug}/orders")
-    ResponseEntity<String> fetchOrders(
-            @PathVariable("slug")
-            String slug,
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchOrders(@PathVariable("slug") String slug, @RequestHeader("Platform") String platform,
+        @RequestHeader("Language") String language, @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 
     /**
      * 获取杜卡德金币。
@@ -45,15 +37,9 @@ public interface WarframeMarketV1HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/tools/ducats")
-    ResponseEntity<String> fetchDucats(
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchDucats(@RequestHeader("Platform") String platform,
+        @RequestHeader("Language") String language, @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 
     /**
      * 取得市场物品的成交统计。
@@ -66,17 +52,10 @@ public interface WarframeMarketV1HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/items/{slug}/statistics")
-    ResponseEntity<String> fetchStatistics(
-            @PathVariable("slug")
-            String slug,
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchStatistics(@PathVariable("slug") String slug,
+        @RequestHeader("Platform") String platform, @RequestHeader("Language") String language,
+        @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 
     /**
      * 查询指定物品及词条条件的市场拍卖。
@@ -95,27 +74,12 @@ public interface WarframeMarketV1HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/auctions/search")
-    ResponseEntity<String> searchAuctions(
-            @RequestParam("type")
-            String type,
-            @RequestParam("weapon_url_name")
-            String weaponUrlName,
-            @RequestParam("polarity")
-            String polarity,
-            @RequestParam("buyout_policy")
-            String buyoutPolicy,
-            @RequestParam("sort_by")
-            String sortBy,
-            @RequestParam(value = "positive_stats", required = false)
-            String positiveStats,
-            @RequestParam(value = "negative_stats", required = false)
-            String negativeStats,
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> searchAuctions(@RequestParam("type") String type,
+        @RequestParam("weapon_url_name") String weaponUrlName, @RequestParam("polarity") String polarity,
+        @RequestParam("buyout_policy") String buyoutPolicy, @RequestParam("sort_by") String sortBy,
+        @RequestParam(value = "positive_stats", required = false) String positiveStats,
+        @RequestParam(value = "negative_stats", required = false) String negativeStats,
+        @RequestHeader("Platform") String platform, @RequestHeader("Language") String language,
+        @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 }

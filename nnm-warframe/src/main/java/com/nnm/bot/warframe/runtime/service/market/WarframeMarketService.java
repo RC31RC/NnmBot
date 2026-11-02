@@ -15,9 +15,10 @@ import java.util.Optional;
 /**
  * Warframe Market 领域服务。
  *
- * <p>该接口是命令层访问 Warframe Market 的唯一应用入口，统一承载物品目录、
- * 订单和紫卡、玄骸/姐妹拍卖查询。HTTP 请求头、协议版本、响应解析和缓存由
- * 实现层及 {@code WarframeMarketApiClient} 负责，插件只负责命令参数和展示投影。</p>
+ * <p>
+ * 该接口是命令层访问 Warframe Market 的唯一应用入口，统一承载物品目录、 订单和紫卡、玄骸/姐妹拍卖查询。HTTP 请求头、协议版本、响应解析和缓存由 实现层及
+ * {@code WarframeMarketApiClient} 负责，插件只负责命令参数和展示投影。
+ * </p>
  */
 public interface WarframeMarketService {
 
@@ -86,7 +87,8 @@ public interface WarframeMarketService {
      * @param negativeStats 负面词条统计集合。
      * @return 匹配的业务结果；没有有效数据时为空。
      */
-    Optional<WarframeMarketAuctionSnapshotDTO> searchAuctions(String type, String weaponUrlName, List<String> positiveStats, List<String> negativeStats);
+    Optional<WarframeMarketAuctionSnapshotDTO> searchAuctions(String type, String weaponUrlName,
+        List<String> positiveStats, List<String> negativeStats);
 
     /**
      * 取得市场物品的成交统计。

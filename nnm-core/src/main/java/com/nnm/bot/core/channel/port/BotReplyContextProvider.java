@@ -6,10 +6,10 @@ import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import java.util.Optional;
 
-/** Only adapters supporting unsolicited replies may create a context without a native receipt. */
+/** 只有支持主动发送的适配器，才能创建不带原生回执的回复上下文。 */
 public interface BotReplyContextProvider {
     BotPlatform platform();
 
     Optional<BotMessageContext> create(BotChannelInstanceMetadata instance, BotGroupBot binding,
-                                      BotMessageContext origin, String senderId);
+        BotMessageContext origin, String senderId);
 }

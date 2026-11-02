@@ -21,8 +21,6 @@ public enum CommandBoundaryPolicy {
             return WHITESPACE_REQUIRED;
         }
         int last = trigger.codePointBefore(trigger.length());
-        return last < 128 && Character.isLetterOrDigit(last)
-                ? WHITESPACE_REQUIRED
-                : NONE;
+        return last < 128 && Character.isLetterOrDigit(last) ? WHITESPACE_REQUIRED : NONE;
     }
 }

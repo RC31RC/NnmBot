@@ -55,13 +55,10 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
 
     @Override
     public List<BotChannelInstanceDTO> instances() {
-        Map<String,BotChannelSnapshot> snapshots = statusService.snapshots().stream()
-                .collect(Collectors.toMap(
-                        BotChannelSnapshot::instanceId,
-                        snapshot -> snapshot));
+        Map<String, BotChannelSnapshot> snapshots = statusService.snapshots().stream()
+            .collect(Collectors.toMap(BotChannelSnapshot::instanceId, snapshot -> snapshot));
         return repository.findAllByOrderByPlatformAscInstanceIdAsc().stream()
-                .map(instance -> toItem(instance, snapshots.get(instance.getInstanceId())))
-                .toList();
+            .map(instance -> toItem(instance, snapshots.get(instance.getInstanceId()))).toList();
     }
 
     @Override
@@ -71,12 +68,11 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
         requireUnique(null, request.instanceId(), BotPlatform.ONEBOT, request.botAccountId());
         BotChannelInstance instance = new BotChannelInstance();
         instance.setPlatform(BotPlatform.ONEBOT);
-        applyCommon(instance, request.instanceId(), request.displayName(),
-                request.botAccountId(), request.enabled());
+        applyCommon(instance, request.instanceId(), request.displayName(), request.botAccountId(), request.enabled());
         applyOneBot(instance, request, true);
         repository.save(instance);
         auditService.record("BOT_INSTANCE_CREATE", "BOT_INSTANCE", instance.getId(),
-                "创建 OneBot 实例 " + instance.getInstanceId());
+            "创建 OneBot 实例 " + instance.getInstanceId());
         return instance.getId();
     }
 
@@ -87,30 +83,26 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
         BotChannelInstance instance = instance(id, BotPlatform.ONEBOT);
         String previousInstanceId = instance.getInstanceId();
         requireUnique(id, request.instanceId(), BotPlatform.ONEBOT, request.botAccountId());
-        applyCommon(instance, request.instanceId(), request.displayName(),
-                request.botAccountId(), request.enabled());
+        applyCommon(instance, request.instanceId(), request.displayName(), request.botAccountId(), request.enabled());
         applyOneBot(instance, request, false);
         repository.save(instance);
         runtimeManager.remove(previousInstanceId);
-        auditService.record("BOT_INSTANCE_UPDATE", "BOT_INSTANCE", id,
-                "修改 OneBot 实例 " + instance.getInstanceId());
+        auditService.record("BOT_INSTANCE_UPDATE", "BOT_INSTANCE", id, "修改 OneBot 实例 " + instance.getInstanceId());
     }
 
     @Override
     @Transactional
     public long createQqOfficial(QqOfficialInstanceSaveDTO request) {
         topologyInvalidator.invalidateAfterCommit();
-        BusinessAssert.notBlank(request.clientSecret(), CommonErrorCode.PARAM_INVALID,
-                "新增 QQ 官方机器人必须填写 Client Secret");
+        BusinessAssert.notBlank(request.clientSecret(), CommonErrorCode.PARAM_INVALID, "新增 QQ 官方机器人必须填写 Client Secret");
         requireUnique(null, request.instanceId(), BotPlatform.QQ_OFFICIAL, request.appId());
         BotChannelInstance instance = new BotChannelInstance();
         instance.setPlatform(BotPlatform.QQ_OFFICIAL);
-        applyCommon(instance, request.instanceId(), request.displayName(),
-                request.appId(), request.enabled());
+        applyCommon(instance, request.instanceId(), request.displayName(), request.appId(), request.enabled());
         applyQqOfficial(instance, request, true);
         repository.save(instance);
         auditService.record("BOT_INSTANCE_CREATE", "BOT_INSTANCE", instance.getId(),
-                "创建 QQ 官方机器人实例 " + instance.getInstanceId());
+            "创建 QQ 官方机器人实例 " + instance.getInstanceId());
         return instance.getId();
     }
 
@@ -121,53 +113,43 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
         BotChannelInstance instance = instance(id, BotPlatform.QQ_OFFICIAL);
         String previousInstanceId = instance.getInstanceId();
         requireUnique(id, request.instanceId(), BotPlatform.QQ_OFFICIAL, request.appId());
-        applyCommon(instance, request.instanceId(), request.displayName(),
-                request.appId(), request.enabled());
+        applyCommon(instance, request.instanceId(), request.displayName(), request.appId(), request.enabled());
         applyQqOfficial(instance, request, false);
         repository.save(instance);
         runtimeManager.remove(previousInstanceId);
-        auditService.record("BOT_INSTANCE_UPDATE", "BOT_INSTANCE", id,
-                "修改 QQ 官方机器人实例 " + instance.getInstanceId());
+        auditService.record("BOT_INSTANCE_UPDATE", "BOT_INSTANCE", id, "修改 QQ 官方机器人实例 " + instance.getInstanceId());
     }
 
     @Override
     @Transactional
     public void delete(long id) {
         topologyInvalidator.invalidateAfterCommit();
-        BotChannelInstance instance = repository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
         runtimeManager.remove(instance.getInstanceId());
         repository.delete(instance);
-        auditService.record("BOT_INSTANCE_DELETE", "BOT_INSTANCE", id,
-                "删除机器人实例 " + instance.getInstanceId());
+        auditService.record("BOT_INSTANCE_DELETE", "BOT_INSTANCE", id, "删除机器人实例 " + instance.getInstanceId());
     }
 
     @Override
     public void start(long id) {
-        BotChannelInstance instance = repository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
-        BusinessAssert.isTrue(instance.isEnabled(), CommonErrorCode.DATA_CONFLICT,
-                "机器人实例已禁用，请先编辑并启用实例");
+        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        BusinessAssert.isTrue(instance.isEnabled(), CommonErrorCode.DATA_CONFLICT, "机器人实例已禁用，请先编辑并启用实例");
         try {
             runtimeManager.start(instance.getInstanceId());
         } catch (BusinessException exception) {
             throw exception;
         } catch (RuntimeException exception) {
-            throw new BusinessException(
-                    BotManagementErrorCode.INSTANCE_START_FAILED,
-                    "机器人实例启动失败：" + exception.getMessage(), exception);
+            throw new BusinessException(BotManagementErrorCode.INSTANCE_START_FAILED,
+                "机器人实例启动失败：" + exception.getMessage(), exception);
         }
-        auditService.record("BOT_INSTANCE_START", "BOT_INSTANCE", id,
-                "启动机器人实例 " + instance.getInstanceId());
+        auditService.record("BOT_INSTANCE_START", "BOT_INSTANCE", id, "启动机器人实例 " + instance.getInstanceId());
     }
 
     @Override
     public void stop(long id) {
-        BotChannelInstance instance = repository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
         runtimeManager.stop(instance.getInstanceId());
-        auditService.record("BOT_INSTANCE_STOP", "BOT_INSTANCE", id,
-                "停止机器人实例 " + instance.getInstanceId());
+        auditService.record("BOT_INSTANCE_STOP", "BOT_INSTANCE", id, "停止机器人实例 " + instance.getInstanceId());
     }
 
     @Override
@@ -184,51 +166,37 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
                 token = credentialCipher.decrypt(config.getAccessToken());
             }
         }
-        BusinessAssert.notBlank(url, CommonErrorCode.PARAM_INVALID,
-                "OneBot WebSocket 地址不能为空");
+        BusinessAssert.notBlank(url, CommonErrorCode.PARAM_INVALID, "OneBot WebSocket 地址不能为空");
         try {
             return new OneBotAccountProbeDTO(accountProbe.probe(url, token));
         } catch (OneBotAccountProbeException exception) {
-            throw new BusinessException(
-                    BotManagementErrorCode.ACCOUNT_PROBE_FAILED, exception.getMessage(), exception);
+            throw new BusinessException(BotManagementErrorCode.ACCOUNT_PROBE_FAILED, exception.getMessage(), exception);
         }
     }
 
-    private BotChannelInstanceDTO toItem(
-            BotChannelInstance instance,
-            BotChannelSnapshot snapshot) {
+    private BotChannelInstanceDTO toItem(BotChannelInstance instance, BotChannelSnapshot snapshot) {
         OneBotChannelConfig oneBot = instance.getOneBotConfig();
         QqOfficialChannelConfig official = instance.getQqOfficialConfig();
-        return new BotChannelInstanceDTO(
-                instance.getId(),
-                instance.getPlatform(),
-                instance.getInstanceId(),
-                instance.getDisplayName(),
-                instance.getBotAccountId(),
-                instance.isEnabled(),
-                ObjectUtil.isNull(oneBot) ? null : oneBot.getConnectionUrl(),
-                ObjectUtil.isNotNull(oneBot) && hasText(oneBot.getAccessToken()),
-                ObjectUtil.isNull(oneBot) ? null : oneBot.getReconnectIntervalSeconds(),
-                ObjectUtil.isNull(official) ? null : official.getAppId(),
-                ObjectUtil.isNotNull(official) && hasText(official.getClientSecret()),
-                ObjectUtil.isNull(official) ? null : official.getTokenUrl(),
-                ObjectUtil.isNull(official) ? null : official.getApiBaseUrl(),
-                ObjectUtil.isNull(official) ? null : official.getGatewayUrl(),
-                ObjectUtil.isNull(official) ? null : official.getIntents(),
-                ObjectUtil.isNull(official) ? null : official.getGatewayConnectTimeoutSeconds(),
-                ObjectUtil.isNull(official) ? null : official.getReconnectDelaySeconds(),
-                ObjectUtil.isNull(snapshot)
-                        ? (instance.isEnabled() ? "STOPPED" : "DISABLED")
-                        : snapshot.status().name(),
-                ObjectUtil.isNull(snapshot) ? null : snapshot.statusChangedAt(),
-                ObjectUtil.isNull(snapshot) ? null : snapshot.lastError(),
-                instance.getCreatedAt(),
-                instance.getUpdatedAt());
+        return new BotChannelInstanceDTO(instance.getId(), instance.getPlatform(), instance.getInstanceId(),
+            instance.getDisplayName(), instance.getBotAccountId(), instance.isEnabled(),
+            ObjectUtil.isNull(oneBot) ? null : oneBot.getConnectionUrl(),
+            ObjectUtil.isNotNull(oneBot) && hasText(oneBot.getAccessToken()),
+            ObjectUtil.isNull(oneBot) ? null : oneBot.getReconnectIntervalSeconds(),
+            ObjectUtil.isNull(official) ? null : official.getAppId(),
+            ObjectUtil.isNotNull(official) && hasText(official.getClientSecret()),
+            ObjectUtil.isNull(official) ? null : official.getTokenUrl(),
+            ObjectUtil.isNull(official) ? null : official.getApiBaseUrl(),
+            ObjectUtil.isNull(official) ? null : official.getGatewayUrl(),
+            ObjectUtil.isNull(official) ? null : official.getIntents(),
+            ObjectUtil.isNull(official) ? null : official.getGatewayConnectTimeoutSeconds(),
+            ObjectUtil.isNull(official) ? null : official.getReconnectDelaySeconds(),
+            ObjectUtil.isNull(snapshot) ? (instance.isEnabled() ? "STOPPED" : "DISABLED") : snapshot.status().name(),
+            ObjectUtil.isNull(snapshot) ? null : snapshot.statusChangedAt(),
+            ObjectUtil.isNull(snapshot) ? null : snapshot.lastError(), instance.getCreatedAt(),
+            instance.getUpdatedAt());
     }
 
-    private void applyOneBot(BotChannelInstance instance,
-                             OneBotInstanceSaveDTO request,
-                             boolean create) {
+    private void applyOneBot(BotChannelInstance instance, OneBotInstanceSaveDTO request, boolean create) {
         OneBotChannelConfig config = instance.getOneBotConfig();
         if (ObjectUtil.isNull(config)) {
             config = new OneBotChannelConfig();
@@ -241,9 +209,7 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
         config.setReconnectIntervalSeconds(request.reconnectIntervalSeconds());
     }
 
-    private void applyQqOfficial(BotChannelInstance instance,
-                                 QqOfficialInstanceSaveDTO request,
-                                 boolean create) {
+    private void applyQqOfficial(BotChannelInstance instance, QqOfficialInstanceSaveDTO request, boolean create) {
         QqOfficialChannelConfig config = instance.getQqOfficialConfig();
         if (ObjectUtil.isNull(config)) {
             config = new QqOfficialChannelConfig();
@@ -261,38 +227,28 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
         config.setReconnectDelaySeconds(request.reconnectDelaySeconds());
     }
 
-    private void applyCommon(BotChannelInstance instance,
-                             String instanceId,
-                             String displayName,
-                             String botAccountId,
-                             boolean enabled) {
+    private void applyCommon(BotChannelInstance instance, String instanceId, String displayName, String botAccountId,
+        boolean enabled) {
         instance.setInstanceId(instanceId.trim());
         instance.setDisplayName(displayName.trim());
         instance.setBotAccountId(botAccountId.trim());
         instance.setEnabled(enabled);
     }
 
-    private void requireUnique(Long currentId,
-                               String instanceId,
-                               BotPlatform platform,
-                               String botAccountId) {
-        repository.findByInstanceIdIgnoreCase(instanceId.trim())
-                .filter(existing -> !existing.getId().equals(currentId))
-                .ifPresent(existing -> {
-                    throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "实例标识已存在");
-                });
+    private void requireUnique(Long currentId, String instanceId, BotPlatform platform, String botAccountId) {
+        repository.findByInstanceIdIgnoreCase(instanceId.trim()).filter(existing -> !existing.getId().equals(currentId))
+            .ifPresent(existing -> {
+                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "实例标识已存在");
+            });
         repository.findByPlatformAndBotAccountId(platform, botAccountId.trim())
-                .filter(existing -> !existing.getId().equals(currentId))
-                .ifPresent(existing -> {
-                    throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "机器人账号已存在");
-                });
+            .filter(existing -> !existing.getId().equals(currentId)).ifPresent(existing -> {
+                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "机器人账号已存在");
+            });
     }
 
     private BotChannelInstance instance(long id, BotPlatform expectedPlatform) {
-        BotChannelInstance instance = repository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
-        BusinessAssert.equals(instance.getPlatform(), expectedPlatform,
-                CommonErrorCode.PARAM_INVALID, "机器人实例协议不匹配");
+        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        BusinessAssert.equals(instance.getPlatform(), expectedPlatform, CommonErrorCode.PARAM_INVALID, "机器人实例协议不匹配");
         return instance;
     }
 

@@ -8,21 +8,13 @@ import java.util.List;
 
 /** 人工维护术语查询的展示协议。 */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public record WarframeTermCommandVO(
-        @JsonPropertyDescription("查询")
-        String query,
-        @JsonPropertyDescription("资料")
-        List<TermVO> items,
-        @JsonPropertyDescription("提示")
-        String notice) {
+public record WarframeTermCommandVO(@JsonPropertyDescription("查询") String query,
+    @JsonPropertyDescription("资料") List<TermVO> items, @JsonPropertyDescription("提示") String notice) {
 
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    public record TermVO(
-            @JsonPropertyDescription("中文")
-            String chineseText,
-            @JsonPropertyDescription("英文")
-            String englishText) {
+    public record TermVO(@JsonPropertyDescription("中文") String chineseText,
+        @JsonPropertyDescription("英文") String englishText) {
         /**
          * 将输入对象转换为当前业务数据对象。
          *

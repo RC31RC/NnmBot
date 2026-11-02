@@ -69,35 +69,35 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
         }
         Snapshot snapshot = snapshot(platform);
         String keyword = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        Map<String,WarframeReferenceResolutionDTO> names = itemNameService.resolveAll(snapshot.entries().stream()
-                .map(RivenWeeklyEntryDTO::compatibility).filter(Objects::nonNull).map(WarframeTranslationKey::name).distinct().toList());
+        Map<String, WarframeReferenceResolutionDTO> names =
+            itemNameService.resolveAll(snapshot.entries().stream().map(RivenWeeklyEntryDTO::compatibility)
+                .filter(Objects::nonNull).map(WarframeTranslationKey::name).distinct().toList());
         Map<String, WarframeRivenWeaponDTO> weapons = weaponCatalog.index();
         List<EntryVO> entries = snapshot.entries().stream().map(entry -> {
-                    WarframeReferenceResolutionDTO translated = entry.compatibility() == null ? null
-                            : names.get(WarframeTranslationKey.name(entry.compatibility()));
-                    WarframeRivenWeaponDTO weapon = weapons.get(
-                            WarframeNameNormalizer.weeklyWeapon(entry.compatibility()));
-                    String name = weapon != null && StrUtil.isNotBlank(weapon.nameZh())
-                            ? weapon.nameZh() : translated != null && translated.resolved()
-                            ? translated.displayName() : entry.compatibility() == null ? entry.itemType() : entry.compatibility();
-                    return new EntryVO(name, entry.compatibility(),
-                            entry.itemType(), entry.rerolled(), entry.avg(), entry.median(), entry.min(), entry.max(),
-                            entry.stddev(), entry.pop(), weapon == null ? null : weapon.uniqueName());
-                }).filter(entry -> (rerolled == null || entry.rerolled() == rerolled)
-                        && (StrUtil.isEmpty(keyword) || contains(entry.weaponName(), keyword)
-                        || contains(entry.compatibility(), keyword) || contains(entry.itemType(), keyword)))
-                .sorted(Comparator.comparing(EntryVO::weaponName).thenComparing(EntryVO::itemType)
-                        .thenComparing(EntryVO::rerolled)).toList();
-        int pages = Math.max(1, (int) ((entries.size() + 7L) / 8));
-        int from = (int) Math.min((page - 1L) * 8, entries.size());
+            WarframeReferenceResolutionDTO translated =
+                entry.compatibility() == null ? null : names.get(WarframeTranslationKey.name(entry.compatibility()));
+            WarframeRivenWeaponDTO weapon = weapons.get(WarframeNameNormalizer.weeklyWeapon(entry.compatibility()));
+            String name = weapon != null && StrUtil.isNotBlank(weapon.nameZh()) ? weapon.nameZh()
+                : translated != null && translated.resolved() ? translated.displayName()
+                    : entry.compatibility() == null ? entry.itemType() : entry.compatibility();
+            return new EntryVO(name, entry.compatibility(), entry.itemType(), entry.rerolled(), entry.avg(),
+                entry.median(), entry.min(), entry.max(), entry.stddev(), entry.pop(),
+                weapon == null ? null : weapon.uniqueName());
+        }).filter(entry -> (rerolled == null || entry.rerolled() == rerolled)
+            && (StrUtil.isEmpty(keyword) || contains(entry.weaponName(), keyword)
+                || contains(entry.compatibility(), keyword) || contains(entry.itemType(), keyword)))
+            .sorted(Comparator.comparing(EntryVO::weaponName).thenComparing(EntryVO::itemType)
+                .thenComparing(EntryVO::rerolled))
+            .toList();
+        int pages = Math.max(1, (int)((entries.size() + 7L) / 8));
+        int from = (int)Math.min((page - 1L) * 8, entries.size());
         boolean stale = snapshot.fetchedAt() != null
-                && !warframeClock.instant().isBefore(snapshot.fetchedAt().plus(properties.getRefreshInterval()));
-        String notice = snapshot.fetchedAt() == null ? "官方周成交统计暂不可用"
-                : stale ? "来源刷新失败，当前为上一份成功快照"
-                : CollUtil.isEmpty(entries) ? "没有匹配的周成交统计" : from == entries.size() ? "该页没有统计记录" : null;
-        return new WarframeRivenWeeklyVO(query, platform, page + "/" + pages + " 页，共 "
-                + entries.size() + " 条", properties.getSources().get(platform).getSourceCode(),
-                snapshot.fetchedAt(), stale, entries.subList(from, Math.min(from + 8, entries.size())), notice);
+            && !warframeClock.instant().isBefore(snapshot.fetchedAt().plus(properties.getRefreshInterval()));
+        String notice = snapshot.fetchedAt() == null ? "官方周成交统计暂不可用" : stale ? "来源刷新失败，当前为上一份成功快照"
+            : CollUtil.isEmpty(entries) ? "没有匹配的周成交统计" : from == entries.size() ? "该页没有统计记录" : null;
+        return new WarframeRivenWeeklyVO(query, platform, page + "/" + pages + " 页，共 " + entries.size() + " 条",
+            properties.getSources().get(platform).getSourceCode(), snapshot.fetchedAt(), stale,
+            entries.subList(from, Math.min(from + 8, entries.size())), notice);
     }
 
     /**
@@ -105,7 +105,7 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
      */
     @Override
     public void refresh() {
-        for (String platform : List.of("pc", "ps4", "xb1", "swi")) {
+        for (String platform : properties.getSources().keySet()) {
             snapshot(platform);
         }
     }
@@ -129,13 +129,13 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
             try {
                 Source source = properties.getSources().get(platform);
                 FetchedText fetched = client.fetch(source.getSourceCode(), source.getUrls());
-                next = new Snapshot(parser.parse(fetched.body(), properties.getMaxRecords()),
-                        now, now.plus(properties.getRefreshInterval()));
+                next = new Snapshot(parser.parse(fetched.body(), properties.getMaxRecords()), now,
+                    now.plus(properties.getRefreshInterval()));
             } catch (IOException | RuntimeException exception) {
                 next = new Snapshot(previous == null ? List.of() : previous.entries(),
-                        previous == null ? null : previous.fetchedAt(), now.plus(properties.getRetryInterval()));
-                log.warn("官方紫卡周统计刷新失败，保留上一份快照, platform={}, message={}",
-                        platform, WarframeRuntimeDataClient.failureMessage(exception));
+                    previous == null ? null : previous.fetchedAt(), now.plus(properties.getRetryInterval()));
+                log.warn("官方紫卡周统计刷新失败，保留上一份快照, platform={}, message={}", platform,
+                    WarframeRuntimeDataClient.failureMessage(exception));
             }
             cache.put(platform, next);
             return next;
@@ -155,5 +155,6 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
         return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 
-    private record Snapshot(List<RivenWeeklyEntryDTO> entries, Instant fetchedAt, Instant nextAttemptAt) {}
+    private record Snapshot(List<RivenWeeklyEntryDTO> entries, Instant fetchedAt, Instant nextAttemptAt) {
+    }
 }

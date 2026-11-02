@@ -12,18 +12,12 @@ nnm:
         # 存储连接统一在 application.yml 的 nnm.storage；这里仅管理论坛附件行为。
         max-file-bytes: ${NNM_WARFRAME_FORUM_MAX_FILE_BYTES:52428800}
     pull:
-      arbitration:
-        enabled: ${NNM_WARFRAME_ARBITRATION_ENABLED:true}
-        url: ${NNM_WARFRAME_ARBITRATION_URL:https://browse.wf/arbys.txt}
-        cron: ${NNM_WARFRAME_ARBITRATION_CRON:0 */5 * * * *}
-        zone: ${NNM_WARFRAME_ARBITRATION_ZONE:Asia/Shanghai}
-        refresh-interval: ${NNM_WARFRAME_ARBITRATION_REFRESH_INTERVAL:30m}
-        retry-interval: ${NNM_WARFRAME_ARBITRATION_RETRY_INTERVAL:1m}
-        history-retention: ${NNM_WARFRAME_ARBITRATION_HISTORY_RETENTION:90d}
-        max-records: ${NNM_WARFRAME_ARBITRATION_MAX_RECORDS:50000}
-        max-response-bytes: ${NNM_WARFRAME_ARBITRATION_MAX_RESPONSE_BYTES:5242880}
       dataset:
-        source-mode: ${NNM_WARFRAME_DATASET_SOURCE_MODE:LOCAL}
+        source-mode: ${NNM_WARFRAME_DATASET_SOURCE_MODE:REMOTE}
+        # 可选；CDN 按 tag 逐文件下载失败后，GitHub Contents API 作为回退来源。
+        github-token: ${NNM_WARFRAME_DATASET_GITHUB_TOKEN:}
+        # 清单和业务文件均保存 gzip 原件，仅限制单个压缩文件大小。
+        max-file-bytes: ${NNM_WARFRAME_DATASET_MAX_FILE_BYTES:20000000}
         local-data-directory: ${NNM_WARFRAME_DATASET_DIRECTORY:${user.dir}/../warframe-datasource-nnm/data/latest}
         local-ref: ${NNM_WARFRAME_DATASET_LOCAL_REF:local}
         local-commit: ${NNM_WARFRAME_DATASET_LOCAL_COMMIT:}

@@ -40,7 +40,7 @@ public class ArbitrationCommandHandler {
             case UPCOMING -> "仲裁表";
         };
         DateTimeFormatter format = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(result.zone());
-        List<Map<String,Object>> rows = result.entries().stream().map(entry -> {
+        List<Map<String, Object>> rows = result.entries().stream().map(entry -> {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("node", entry.node());
             row.put("missionType", entry.missionType());
@@ -49,12 +49,11 @@ public class ArbitrationCommandHandler {
             row.put("expiry", format.format(entry.expiry()));
             return row;
         }).toList();
-        String notice = result.notice() + (result.fetchedAt() == null ? ""
-                : " 数据存档：" + format.format(result.fetchedAt()) + "。");
-        WarframeWorldStateCommandVO output = projectionEnricher.enrich(
-                new WarframeWorldStateCommandVO(title,
-                        Map.of("items", rows, "notice", notice)), "arbitration");
-        return CommandResult.view(WarframeViewKeys.WORLD_STATE, title, WarframeWorldStateDisplayMapper.from(
-                "arbitration", output.data(), output.unresolvedReferences()));
+        String notice =
+            result.notice() + (result.fetchedAt() == null ? "" : " 数据存档：" + format.format(result.fetchedAt()) + "。");
+        WarframeWorldStateCommandVO output = projectionEnricher
+            .enrich(new WarframeWorldStateCommandVO(title, Map.of("items", rows, "notice", notice)), "arbitration");
+        return CommandResult.view(WarframeViewKeys.WORLD_STATE, title,
+            WarframeWorldStateDisplayMapper.from("arbitration", output.data(), output.unresolvedReferences()));
     }
 }

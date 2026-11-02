@@ -26,13 +26,10 @@ public class WarframeGroupMemberMergeHandlerImpl implements BotGroupMemberMergeH
      */
     @Override
     public void mergeReferences(long groupId, long sourceMemberId, long targetMemberId) {
-        for (WarframeGroupWatchRule source : repository
-                .findAllByGroupIdAndMemberId(groupId, sourceMemberId)) {
-            WarframeGroupWatchRule target = repository
-                    .findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(
-                            groupId, targetMemberId, source.getWatchType(),
-                            source.getWatchKey(), source.getWatchValue())
-                    .orElse(null);
+        for (WarframeGroupWatchRule source : repository.findAllByGroupIdAndMemberId(groupId, sourceMemberId)) {
+            WarframeGroupWatchRule target =
+                repository.findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(groupId, targetMemberId,
+                    source.getWatchType(), source.getWatchKey(), source.getWatchValue()).orElse(null);
             if (target == null) {
                 source.setMemberId(targetMemberId);
                 repository.save(source);
@@ -40,10 +37,9 @@ public class WarframeGroupMemberMergeHandlerImpl implements BotGroupMemberMergeH
             }
             target.setEnabled(target.isEnabled() || source.isEnabled());
             target.setNotifyEnabled(target.isNotifyEnabled() || source.isNotifyEnabled());
-            target.setMatchedEventsJson(eventMemory.merge(
-                    target.getMatchedEventsJson(), source.getMatchedEventsJson()));
-            if (target.getCreatedAt() == null
-                    || isAfter(target.getCreatedAt(), source.getCreatedAt())) {
+            target
+                .setMatchedEventsJson(eventMemory.merge(target.getMatchedEventsJson(), source.getMatchedEventsJson()));
+            if (target.getCreatedAt() == null || isAfter(target.getCreatedAt(), source.getCreatedAt())) {
                 target.setCreatedAt(source.getCreatedAt());
             }
             repository.save(target);

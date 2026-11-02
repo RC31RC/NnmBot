@@ -20,9 +20,8 @@ public class ReplyProperties {
 
     @PostConstruct
     void validate() {
-        if (maxLogicalMessages < 1 || maxBlocks < 1 || maxTextCharacters < 1
-                || maxActions < 1 || maxPlatformMessages < 1 || maxImageBytes < 1
-                || maxImagePixels < 1 || maxFileBytes < 1) {
+        if (maxLogicalMessages < 1 || maxBlocks < 1 || maxTextCharacters < 1 || maxActions < 1
+            || maxPlatformMessages < 1 || maxImageBytes < 1 || maxImagePixels < 1 || maxFileBytes < 1) {
             throw new IllegalArgumentException("nnm.reply limits must be positive");
         }
     }

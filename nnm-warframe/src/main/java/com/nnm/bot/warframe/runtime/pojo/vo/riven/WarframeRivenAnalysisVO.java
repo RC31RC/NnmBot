@@ -22,22 +22,10 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenA
  * @param missingFields 待确认字段编码
  * @param referenceRanges 按参考项目规则计算的范围，不表示现行版本合法性或价值评级
  */
-public record WarframeRivenAnalysisVO(
-        String rawText,
-        List<String> rawLines,
-        String weaponName,
-        String weaponType,
-        List<String> weaponCandidates,
-        boolean weaponConfirmed,
-        Integer rank,
-        Integer masteryRank,
-        List<AttributeVO> attributes,
-        boolean negativeAny,
-        List<TrendVO> trends,
-        List<LineAnalysisVO> lineAnalyses,
-        List<String> missingFields,
-        List<ReferenceRangeVO> referenceRanges
-) {
+public record WarframeRivenAnalysisVO(String rawText, List<String> rawLines, String weaponName, String weaponType,
+    List<String> weaponCandidates, boolean weaponConfirmed, Integer rank, Integer masteryRank,
+    List<AttributeVO> attributes, boolean negativeAny, List<TrendVO> trends, List<LineAnalysisVO> lineAnalyses,
+    List<String> missingFields, List<ReferenceRangeVO> referenceRanges) {
 
     /**
      * 防御性复制结果，避免异步渲染过程中被外部修改。
@@ -87,13 +75,12 @@ public record WarframeRivenAnalysisVO(
      * @param lineAnalyses 行分析结果集合。
      * @param missingFields 缺失字段集合。
      */
-    public WarframeRivenAnalysisVO(
-            String rawText, List<String> rawLines, String weaponName, String weaponType,
-            List<String> weaponCandidates, boolean weaponConfirmed, Integer rank, Integer masteryRank,
-            List<AttributeVO> attributes, boolean negativeAny, List<TrendVO> trends,
-            List<LineAnalysisVO> lineAnalyses, List<String> missingFields) {
-        this(rawText, rawLines, weaponName, weaponType, weaponCandidates, weaponConfirmed,
-                rank, masteryRank, attributes, negativeAny, trends, lineAnalyses, missingFields, List.of());
+    public WarframeRivenAnalysisVO(String rawText, List<String> rawLines, String weaponName, String weaponType,
+        List<String> weaponCandidates, boolean weaponConfirmed, Integer rank, Integer masteryRank,
+        List<AttributeVO> attributes, boolean negativeAny, List<TrendVO> trends, List<LineAnalysisVO> lineAnalyses,
+        List<String> missingFields) {
+        this(rawText, rawLines, weaponName, weaponType, weaponCandidates, weaponConfirmed, rank, masteryRank,
+            attributes, negativeAny, trends, lineAnalyses, missingFields, List.of());
     }
 
     /**
@@ -115,15 +102,8 @@ public record WarframeRivenAnalysisVO(
      * @param valueStatus OCR_ONLY 表示仅识别数值，UNKNOWN 表示未确定数值
      * @param observedUnit 数值片段中的 percent / seconds / scalar / multiplier，不从词条猜测
      */
-    public record AttributeVO(
-            String code,
-            String displayName,
-            Double value,
-            boolean negative,
-            boolean compound,
-            String sourceLine,
-            String valueStatus,
-            String observedUnit) {
+    public record AttributeVO(String code, String displayName, Double value, boolean negative, boolean compound,
+        String sourceLine, String valueStatus, String observedUnit) {
         /**
          * 缺证据或状态时采用空证据与未知值状态。
          *
@@ -153,8 +133,8 @@ public record WarframeRivenAnalysisVO(
          * @param sourceLine 来源行。
          * @param valueStatus 值状态。
          */
-        public AttributeVO(String code, String displayName, Double value, boolean negative,
-                boolean compound, String sourceLine, String valueStatus) {
+        public AttributeVO(String code, String displayName, Double value, boolean negative, boolean compound,
+            String sourceLine, String valueStatus) {
             this(code, displayName, value, negative, compound, sourceLine, valueStatus, "unknown");
         }
     }
@@ -165,11 +145,7 @@ public record WarframeRivenAnalysisVO(
      * @param attributeCodes 本行明确识别的编码
      * @param valueStatus PARTIAL 表示至少一个属性数值未确定
      */
-    public record LineAnalysisVO(
-            String sourceLine,
-            String kind,
-            List<String> attributeCodes,
-            String valueStatus) {
+    public record LineAnalysisVO(String sourceLine, String kind, List<String> attributeCodes, String valueStatus) {
         /**
          * 行证据不可变，空值保持为未知状态。
          *
@@ -191,10 +167,8 @@ public record WarframeRivenAnalysisVO(
      * @param weaponType 已确认的基准类别，未知为空
      * @param parameters 官方原始参数，语义随每项保留，不冒充卡面基准
      */
-    public record TrendVO(
-            String displayName,
-            String weaponType,
-            List<WarframeRivenAttributeDTO.ParameterDTO> parameters) {
+    public record TrendVO(String displayName, String weaponType,
+        List<WarframeRivenAttributeDTO.ParameterDTO> parameters) {
     }
 
     /**
@@ -211,9 +185,8 @@ public record WarframeRivenAnalysisVO(
      * @param weaponSource 武器类别所取完整记录的来源码
      * @param baselineSource 属性基准的来源码
      */
-    public record ReferenceRangeVO(
-            String code, String displayName, String units, Double lower, Double upper,
-            Double deviationPercent, String status, String reason, String ruleVersion,
-            String weaponKey, String weaponSource, String baselineSource) {
+    public record ReferenceRangeVO(String code, String displayName, String units, Double lower, Double upper,
+        Double deviationPercent, String status, String reason, String ruleVersion, String weaponKey,
+        String weaponSource, String baselineSource) {
     }
 }

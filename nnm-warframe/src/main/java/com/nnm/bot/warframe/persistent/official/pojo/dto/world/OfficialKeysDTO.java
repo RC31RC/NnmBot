@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** KEYS 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 储藏舱奖励清单；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("cacheRewardManifest")
@@ -443,7 +443,9 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), OfficialInputText.first(parentName), null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh),
+            OfficialInputText.first(parentName), null,
+            OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -459,7 +461,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ChainStagesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ChainStagesItemReferencesDTO extends OfficialObjectDTO {
         /** 任务链阶段列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -586,8 +588,9 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ChainStagesMessageToSendWhenTriggeredCountedAttachmentsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
-    public static class ChainStagesMessageToSendWhenTriggeredCountedAttachmentsItemReferencesDTO extends OfficialObjectDTO {
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+    public static class ChainStagesMessageToSendWhenTriggeredCountedAttachmentsItemReferencesDTO
+        extends OfficialObjectDTO {
         /** 任务链阶段列表的触发后发送的邮件的带数量的附件列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
         private String domain;
@@ -728,7 +731,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ChainStagesMessageToSendWhenTriggeredCountedAttachmentsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ChainStagesMessageToSendWhenTriggeredCountedAttachmentsDTO extends OfficialObjectDTO {
         /** 任务链阶段列表的触发后发送的邮件的带数量的附件列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -755,7 +758,8 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
          * @param value 任务链阶段列表的触发后发送的邮件的带数量的附件列表的物品引用，保留协议中的显式空值。
          */
         @JsonSetter("itemReferences")
-        public void setItemReferences(List<ChainStagesMessageToSendWhenTriggeredCountedAttachmentsItemReferencesDTO> value) {
+        public void
+            setItemReferences(List<ChainStagesMessageToSendWhenTriggeredCountedAttachmentsItemReferencesDTO> value) {
             this.itemReferences = value;
             markPresent("itemReferences");
         }
@@ -780,7 +784,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ChainStagesMessageToSendWhenTriggeredItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ChainStagesMessageToSendWhenTriggeredItemReferencesDTO extends OfficialObjectDTO {
         /** 任务链阶段列表的触发后发送的邮件的物品引用的字段；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("field")
@@ -907,7 +911,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ChainStagesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ChainStagesDTO extends OfficialObjectDTO {
         /** 任务链阶段列表的物品引用；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("itemReferences")
@@ -1016,7 +1020,8 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
 
         /** 任务链阶段列表的触发后发送的邮件的带数量的附件列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("messageToSendWhenTriggered__countedAttachments")
-        private List<ChainStagesMessageToSendWhenTriggeredCountedAttachmentsDTO> messageToSendWhenTriggeredCountedAttachments;
+        private List<
+            ChainStagesMessageToSendWhenTriggeredCountedAttachmentsDTO> messageToSendWhenTriggeredCountedAttachments;
 
         /**
          * 记录任务链阶段列表的触发后发送的邮件的带数量的附件列表是否出现，同时区分未提供与显式空值。
@@ -1024,7 +1029,8 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
          * @param value 任务链阶段列表的触发后发送的邮件的带数量的附件列表，保留协议中的显式空值。
          */
         @JsonSetter("messageToSendWhenTriggered__countedAttachments")
-        public void setMessageToSendWhenTriggeredCountedAttachments(List<ChainStagesMessageToSendWhenTriggeredCountedAttachmentsDTO> value) {
+        public void setMessageToSendWhenTriggeredCountedAttachments(
+            List<ChainStagesMessageToSendWhenTriggeredCountedAttachmentsDTO> value) {
             this.messageToSendWhenTriggeredCountedAttachments = value;
             markPresent("messageToSendWhenTriggered__countedAttachments");
         }
@@ -1114,7 +1120,8 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
          * @param value 任务链阶段列表的触发后发送的邮件的物品引用，保留协议中的显式空值。
          */
         @JsonSetter("messageToSendWhenTriggered__itemReferences")
-        public void setMessageToSendWhenTriggeredItemReferences(List<ChainStagesMessageToSendWhenTriggeredItemReferencesDTO> value) {
+        public void setMessageToSendWhenTriggeredItemReferences(
+            List<ChainStagesMessageToSendWhenTriggeredItemReferencesDTO> value) {
             this.messageToSendWhenTriggeredItemReferences = value;
             markPresent("messageToSendWhenTriggered__itemReferences");
         }
@@ -1229,7 +1236,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ItemReferencesRotationsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesRotationsDTO extends OfficialObjectDTO {
         /** 物品引用的轮次的物品的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("item__domain")
@@ -1401,7 +1408,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1573,14 +1580,13 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 MissionDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
-    public static class MissionDTO extends OfficialObjectDTO {
-    }
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+    public static class MissionDTO extends OfficialObjectDTO {}
 
     /** 官方嵌套对象 MissionRewardCountedItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardCountedItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 任务奖励的带数量的物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1737,7 +1743,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 MissionRewardCountedItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardCountedItemsDTO extends OfficialObjectDTO {
         /** 任务奖励的带数量的物品列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -1789,7 +1795,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 MissionRewardCountedStoreItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardCountedStoreItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 任务奖励的带数量的商店物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1931,7 +1937,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 MissionRewardCountedStoreItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardCountedStoreItemsDTO extends OfficialObjectDTO {
         /** 任务奖励的带数量的商店物品列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -1983,7 +1989,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 MissionRewardItemReferencesRotationsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardItemReferencesRotationsDTO extends OfficialObjectDTO {
         /** 任务奖励的物品引用的轮次的物品的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("item__domain")
@@ -2170,7 +2176,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 MissionRewardItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardItemReferencesDTO extends OfficialObjectDTO {
         /** 任务奖励的物品引用的字段；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("field")
@@ -2327,7 +2333,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 RewardsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RewardsItemReferencesDTO extends OfficialObjectDTO {
         /** 奖励的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -2484,7 +2490,7 @@ public class OfficialKeysDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 RewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RewardsDTO extends OfficialObjectDTO {
         /** 奖励的数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("amount")

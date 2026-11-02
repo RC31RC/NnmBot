@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface BotGroupRepository extends JpaRepository<BotGroup, Long> {
 
-    // Serialize group topology writes through transaction commit, including changes in different groups.
+    // 群组拓扑写入串行保护至事务提交，覆盖不同群组之间的变更。
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select g from BotGroup g order by g.id")
     List<BotGroup> lockTopology();

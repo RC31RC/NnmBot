@@ -6,9 +6,5 @@ import jakarta.validation.constraints.Positive;
 /**
  * 论坛文章删除参数。
  */
-public record ForumArticleDeleteDTO(
-        @NotNull
-        @Positive
-        Long id
-) {
+public record ForumArticleDeleteDTO(@NotNull @Positive Long id) {
 }

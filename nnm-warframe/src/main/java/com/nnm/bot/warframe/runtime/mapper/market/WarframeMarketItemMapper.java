@@ -26,18 +26,20 @@ public class WarframeMarketItemMapper {
      * @return 非受管物品 DTO，空输入返回无详情的物品对象
      */
     public WarframeMarketItemDTO parse(ItemRawData item) {
-        if (item == null) return new WarframeMarketItemDTO("", null);
+        if (item == null)
+            return new WarframeMarketItemDTO("", null);
         Map<String, WarframeMarketItemI18nDTO> i18n = new LinkedHashMap<>();
-        if (CollUtil.isNotEmpty(item.getI18n())) item.getI18n().forEach((language, value) -> i18n.put(language, i18n(value)));
+        if (CollUtil.isNotEmpty(item.getI18n()))
+            item.getI18n().forEach((language, value) -> i18n.put(language, i18n(value)));
         if (item.getEnglish() != null && StrUtil.isNotBlank(item.getEnglish().getName())) {
             i18n.putIfAbsent("en", i18n(item.getEnglish()));
         }
         return new WarframeMarketItemDTO(item.getId(), item.getSlug(), item.getGameRef(), item.getTags(),
-                item.getSetRoot(), item.getSetParts(), item.getQuantityInSet(), item.getRarity(), item.getBulkTradable(),
-                item.getSubtypes(), item.getMaxRank(), item.getMaxCharges(), item.getMaxAmberStars(), item.getMaxCyanStars(),
-                item.getBaseEndo(), item.getEndoMultiplier(), item.getDucats(), item.getVosfor(), item.getReqMasteryRank(),
-                item.getVaulted(), item.getTradingTax(), item.getTradable(), i18n,
-                objectMapper.convertValue(item, new TypeReference<>() {}));
+            item.getSetRoot(), item.getSetParts(), item.getQuantityInSet(), item.getRarity(), item.getBulkTradable(),
+            item.getSubtypes(), item.getMaxRank(), item.getMaxCharges(), item.getMaxAmberStars(),
+            item.getMaxCyanStars(), item.getBaseEndo(), item.getEndoMultiplier(), item.getDucats(), item.getVosfor(),
+            item.getReqMasteryRank(), item.getVaulted(), item.getTradingTax(), item.getTradable(), i18n,
+            objectMapper.convertValue(item, new TypeReference<>() {}));
     }
 
     /**
@@ -48,7 +50,7 @@ public class WarframeMarketItemMapper {
      */
     private WarframeMarketItemI18nDTO i18n(I18nRawData value) {
         return value == null ? new WarframeMarketItemI18nDTO("", "", "", "", "", "")
-                : new WarframeMarketItemI18nDTO(value.getName(), value.getDescription(), value.getWikiLink(),
-                        value.getIcon(), value.getThumb(), value.getSubIcon());
+            : new WarframeMarketItemI18nDTO(value.getName(), value.getDescription(), value.getWikiLink(),
+                value.getIcon(), value.getThumb(), value.getSubIcon());
     }
 }

@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface BotChannelInstanceProvider {
 
     List<BotChannelInstanceRecord> findAll();
+
     /** 启动授权边界读取权威配置；适配器应绕过拓扑缓存。 */
     default Optional<BotChannelInstanceRecord> findForStart(String instanceId) {
         return findAll().stream().filter(record -> record.instanceId().equals(instanceId)).findFirst();

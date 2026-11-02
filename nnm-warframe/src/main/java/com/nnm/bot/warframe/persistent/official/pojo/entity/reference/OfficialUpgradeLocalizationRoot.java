@@ -58,5 +58,6 @@ public class OfficialUpgradeLocalizationRoot extends OfficialRecord {
     private String zhName;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialUpgradeLocalizationDescriptionsItems> officialUpgradeLocalizationDescriptionsItemsRows = new ArrayList<>();
+    private List<OfficialUpgradeLocalizationDescriptionsItems> officialUpgradeLocalizationDescriptionsItemsRows =
+        new ArrayList<>();
 }

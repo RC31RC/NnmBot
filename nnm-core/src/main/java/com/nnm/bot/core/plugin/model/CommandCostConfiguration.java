@@ -8,10 +8,7 @@ package com.nnm.bot.core.plugin.model;
  * @param rewardEnabled 是否启用成功奖励
  * @param rewardPoints 单次成功执行奖励的积分数量
  */
-public record CommandCostConfiguration(boolean costEnabled,
-                                       long costPoints,
-                                       boolean rewardEnabled,
-                                       long rewardPoints) {
+public record CommandCostConfiguration(boolean costEnabled, long costPoints, boolean rewardEnabled, long rewardPoints) {
 
     public CommandCostConfiguration {
         if (costPoints < 0) {

@@ -438,7 +438,8 @@ public class OfficialRegionRoot extends OfficialRecord {
     private List<OfficialRegionChallengesItems> officialRegionChallengesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRegionCustomAdvancedSpawnersItems> officialRegionCustomAdvancedSpawnersItemsRows = new ArrayList<>();
+    private List<OfficialRegionCustomAdvancedSpawnersItems> officialRegionCustomAdvancedSpawnersItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialRegionFoundersItems> officialRegionFoundersItemsRows = new ArrayList<>();
@@ -447,10 +448,12 @@ public class OfficialRegionRoot extends OfficialRecord {
     private List<OfficialRegionItemReferencesItems> officialRegionItemReferencesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRegionMiscItemFeeItemReferencesItems> officialRegionMiscItemFeeItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialRegionMiscItemFeeItemReferencesItems> officialRegionMiscItemFeeItemReferencesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRegionMissionRewardCountedItemsItems> officialRegionMissionRewardCountedItemsItemsRows = new ArrayList<>();
+    private List<OfficialRegionMissionRewardCountedItemsItems> officialRegionMissionRewardCountedItemsItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialRegionMissionRewardItemsItems> officialRegionMissionRewardItemsItemsRows = new ArrayList<>();

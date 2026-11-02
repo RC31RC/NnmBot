@@ -22,17 +22,9 @@ public interface WarframeMarketV2HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/orders/item/{slug}")
-    ResponseEntity<String> fetchOrders(
-            @PathVariable("slug")
-            String slug,
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchOrders(@PathVariable("slug") String slug, @RequestHeader("Platform") String platform,
+        @RequestHeader("Language") String language, @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 
     /**
      * 取得市场物品的完整目录详情。
@@ -45,17 +37,9 @@ public interface WarframeMarketV2HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/items/{slug}")
-    ResponseEntity<String> fetchItem(
-            @PathVariable("slug")
-            String slug,
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchItem(@PathVariable("slug") String slug, @RequestHeader("Platform") String platform,
+        @RequestHeader("Language") String language, @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 
     /**
      * 取得市场套装及其部件详情。
@@ -68,17 +52,9 @@ public interface WarframeMarketV2HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/items/{slug}/set")
-    ResponseEntity<String> fetchItemSet(
-            @PathVariable("slug")
-            String slug,
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchItemSet(@PathVariable("slug") String slug, @RequestHeader("Platform") String platform,
+        @RequestHeader("Language") String language, @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 
     /**
      * 读取市场物品目录。
@@ -90,15 +66,9 @@ public interface WarframeMarketV2HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/items")
-    ResponseEntity<String> fetchItems(
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchItems(@RequestHeader("Platform") String platform,
+        @RequestHeader("Language") String language, @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 
     /**
      * 读取指定拍卖类别可选的武器目录。
@@ -111,15 +81,8 @@ public interface WarframeMarketV2HttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange("/{type}/weapons")
-    ResponseEntity<String> fetchAuctionWeapons(
-            @PathVariable("type")
-            String type,
-            @RequestHeader("Platform")
-            String platform,
-            @RequestHeader("Language")
-            String language,
-            @RequestHeader("User-Agent")
-            String userAgent,
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization);
+    ResponseEntity<String> fetchAuctionWeapons(@PathVariable("type") String type,
+        @RequestHeader("Platform") String platform, @RequestHeader("Language") String language,
+        @RequestHeader("User-Agent") String userAgent,
+        @RequestHeader(value = "Authorization", required = false) String authorization);
 }

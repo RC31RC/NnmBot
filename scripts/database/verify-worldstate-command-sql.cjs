@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withPostgres } = require("./postgres-test-cluster.cjs");
 
 withPostgres(({ apply, query }) => {
-  apply("docs/sql/init.sql");
+  apply("sql/init.sql");
   const template = query(`SELECT html_content FROM nnmbot.bot_command_template
     WHERE template_code='arbitrations'`);
   assert(template.includes("仲裁排期"));

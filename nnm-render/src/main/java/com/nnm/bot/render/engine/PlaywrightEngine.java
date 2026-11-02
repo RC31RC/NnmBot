@@ -27,28 +27,20 @@ public class PlaywrightEngine implements RenderEngine {
 
     @Override
     public byte[] renderHtmlToImage(String html, RenderOptions options) {
-        try (Playwright playwright = Playwright.create();
-             Browser browser = playwright.chromium().launch(
-                    new BrowserType.LaunchOptions()
-                            .setHeadless(true)
-                            .setArgs(chromiumArgs)
-            )) {
+        try (Playwright playwright = Playwright.create(); Browser browser =
+            playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true).setArgs(chromiumArgs))) {
             Page page = browser.newPage();
             page.setViewportSize(options.getWidth(), 800);
             page.setContent(html);
             page.waitForLoadState();
 
-            Number width = (Number) page.evaluate("Math.max(innerWidth, document.documentElement.scrollWidth)");
-            Number height = (Number) page.evaluate("Math.max(innerHeight, document.documentElement.scrollHeight)");
+            Number width = (Number)page.evaluate("Math.max(innerWidth, document.documentElement.scrollWidth)");
+            Number height = (Number)page.evaluate("Math.max(innerHeight, document.documentElement.scrollHeight)");
             if (width.doubleValue() * height.doubleValue() > options.getMaxImagePixels()) {
                 throw new BusinessException(ComputationErrorCode.RESULT_TOO_LARGE);
             }
 
-            return page.screenshot(
-                    new Page.ScreenshotOptions()
-                            .setFullPage(true)
-                            .setType(ScreenshotType.PNG)
-            );
+            return page.screenshot(new Page.ScreenshotOptions().setFullPage(true).setType(ScreenshotType.PNG));
         }
     }
 

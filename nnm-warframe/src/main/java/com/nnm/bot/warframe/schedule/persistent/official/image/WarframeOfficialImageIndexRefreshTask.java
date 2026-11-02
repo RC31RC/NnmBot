@@ -18,9 +18,7 @@ public class WarframeOfficialImageIndexRefreshTask {
     /**
      * 按配置重建本实例的图片索引。
      */
-    @Scheduled(
-            initialDelayString = "#{@warframeImageDataProperties.initialDelay.toString()}",
-            fixedDelayString = "#{@warframeImageDataProperties.refreshCheckInterval.toString()}")
+    @Scheduled(initialDelayString = "2m", fixedDelayString = "15m")
     public void refresh() {
         if (properties.isEnabled()) {
             imageResolver.refresh();

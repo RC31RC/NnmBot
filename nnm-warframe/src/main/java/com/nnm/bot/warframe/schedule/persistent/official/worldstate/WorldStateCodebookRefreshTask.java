@@ -13,8 +13,7 @@ public class WorldStateCodebookRefreshTask {
     /**
      * 获取当前上游数据并更新本地有效状态。
      */
-    @Scheduled(fixedDelayString = "#{@warframeWorldStateDataProperties.codebookRefreshInterval.toMillis()}",
-            initialDelayString = "#{@warframeWorldStateDataProperties.codebookRefreshInterval.toMillis()}")
+    @Scheduled(fixedDelayString = "5m", initialDelayString = "5m")
     public void refresh() {
         codebooks.reload();
     }

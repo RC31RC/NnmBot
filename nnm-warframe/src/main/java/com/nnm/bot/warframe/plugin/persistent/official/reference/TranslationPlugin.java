@@ -12,14 +12,10 @@ import jakarta.annotation.Resource;
 import java.util.List;
 
 /** 查询游戏文本翻译。 */
-@BotPluginCommand(
-        code = WarframeCommandCodes.TRANSLATION,
-        matchType = MatchType.PREFIX,
-        name = "翻译",
-        gameCode = "warframe",
-        order = 63)
+@BotPluginCommand(code = WarframeCommandCodes.TRANSLATION, matchType = MatchType.PREFIX, name = "翻译",
+    gameCode = "warframe", order = 63)
 // 从当前生效的官方语言根树查询，自维护完整根优先。
-public final class TranslationPlugin extends BotPlugin {
+public final class TranslationPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -41,8 +37,7 @@ public final class TranslationPlugin extends BotPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(
-            CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         var display = catalog.translations(invocation.arguments());
         return CommandResult.view("warframe.community", "翻译查询", display);
     }

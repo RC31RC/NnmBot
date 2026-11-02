@@ -10,26 +10,18 @@ import java.util.List;
 /**
  * 管理端跨域配置。
  *
- * <p>来源必须显式配置，避免使用 {@code *} 放大管理接口的暴露范围。</p>
+ * <p>
+ * 来源必须显式配置，避免使用 {@code *} 放大管理接口的暴露范围。
+ * </p>
  */
 @ConfigurationProperties(prefix = "nnm.web.cors")
 public class WebCorsProperties {
 
-    private List<String> allowedOrigins = new ArrayList<>(List.of(
-            "http://localhost:3006",
-            "http://127.0.0.1:3006"
-    ));
+    private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:3006", "http://127.0.0.1:3006"));
 
     private List<String> allowedOriginPatterns = new ArrayList<>();
 
-    private List<String> allowedMethods = new ArrayList<>(List.of(
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS"
-    ));
+    private List<String> allowedMethods = new ArrayList<>(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
     private List<String> allowedHeaders = new ArrayList<>(List.of("*"));
 
@@ -89,9 +81,6 @@ public class WebCorsProperties {
         if (CollUtil.isEmpty(values)) {
             return new ArrayList<>();
         }
-        return values.stream()
-                .filter(StrUtil::isNotBlank)
-                .map(String::trim)
-                .toList();
+        return values.stream().filter(StrUtil::isNotBlank).map(String::trim).toList();
     }
 }

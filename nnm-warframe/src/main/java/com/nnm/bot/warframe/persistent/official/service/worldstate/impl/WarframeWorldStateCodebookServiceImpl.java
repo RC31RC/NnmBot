@@ -18,6 +18,7 @@ import java.util.Optional;
 public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldStateCodebookService {
     @Resource
     private WarframeOfficialWorldStateIndex officialIndex;
+
     /**
      * 按给定条件查询业务数据。
      *
@@ -27,10 +28,11 @@ public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldState
      */
     @Override
     public Optional<WarframeWorldStateCodebookEntryDTO> find(WarframeReferenceType type, String reference) {
-        if (type == null || StrUtil.isBlank(reference)) return Optional.empty();
+        if (type == null || StrUtil.isBlank(reference))
+            return Optional.empty();
         Snapshot index = officialIndex.snapshot();
-        return Optional.ofNullable(index.codebooks().getOrDefault(type, Map.of())
-                .get(reference.trim().toLowerCase(Locale.ROOT)));
+        return Optional
+            .ofNullable(index.codebooks().getOrDefault(type, Map.of()).get(reference.trim().toLowerCase(Locale.ROOT)));
     }
 
     /**
@@ -41,11 +43,13 @@ public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldState
      */
     @Override
     public Optional<WarframeWorldStateCodebookEntryDTO> findLanguage(String reference) {
-        if (StrUtil.isBlank(reference)) return Optional.empty();
+        if (StrUtil.isBlank(reference))
+            return Optional.empty();
         Snapshot index = officialIndex.snapshot();
         String name = index.language().get(reference.trim().toLowerCase(Locale.ROOT));
-        return name == null ? Optional.empty() : Optional.of(new WarframeWorldStateCodebookEntryDTO(
-                reference, name, "", "", WarframeOfficialWorldStateIndex.referenceSource(index.batchId()),
+        return name == null ? Optional.empty()
+            : Optional.of(new WarframeWorldStateCodebookEntryDTO(reference, name, "", "",
+                WarframeOfficialWorldStateIndex.referenceSource(index.batchId()),
                 WarframeReferenceResolutionStatus.RESOLVED, "", false));
     }
 

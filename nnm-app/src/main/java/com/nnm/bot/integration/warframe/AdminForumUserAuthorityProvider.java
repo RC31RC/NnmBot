@@ -12,8 +12,7 @@ import java.util.Map;
  * 在应用组装层连接后台 RBAC 与 Warframe 论坛，保持两个业务模块单向独立。
  */
 @Component
-public class AdminForumUserAuthorityProvider
-        implements ForumUserAuthorityProvider {
+public class AdminForumUserAuthorityProvider implements ForumUserAuthorityProvider {
 
     @Resource
     private RbacHierarchyService hierarchyService;

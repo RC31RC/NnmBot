@@ -10,8 +10,7 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum BotChannelErrorCode implements ErrorCode {
 
-    INSTANCE_NOT_FOUND(404, "机器人实例不存在", HttpStatus.NOT_FOUND),
-    INSTANCE_DISABLED(409, "机器人实例已禁用", HttpStatus.CONFLICT),
+    INSTANCE_NOT_FOUND(404, "机器人实例不存在", HttpStatus.NOT_FOUND), INSTANCE_DISABLED(409, "机器人实例已禁用", HttpStatus.CONFLICT),
     INSTANCE_CONFIG_INVALID(400, "机器人实例连接配置无效", HttpStatus.BAD_REQUEST),
     PLATFORM_MISMATCH(400, "机器人实例协议不匹配", HttpStatus.BAD_REQUEST),
     INSTANCE_START_FAILED(502, "机器人实例启动失败", HttpStatus.BAD_GATEWAY),
@@ -33,6 +32,7 @@ public enum BotChannelErrorCode implements ErrorCode {
     RESPONSE_STRATEGY_NOT_REGISTERED(500, "机器人响应策略未注册", HttpStatus.INTERNAL_SERVER_ERROR),
     REPLY_INSTANCE_UNAVAILABLE(503, "当前群组没有在线且具备所需能力的回复实例", HttpStatus.SERVICE_UNAVAILABLE),
     UNSUPPORTED_MESSAGE_CAPABILITY(501, "当前机器人渠道不支持该消息能力", HttpStatus.NOT_IMPLEMENTED),
+    REFERENCED_IMAGE_UNAVAILABLE(422, "无法取得图片或被引用图片，请将图片与命令一起发送", HttpStatus.UNPROCESSABLE_ENTITY),
     UPSTREAM_RESPONSE_INVALID(502, "渠道上游响应无效", HttpStatus.BAD_GATEWAY);
 
     private final int code;

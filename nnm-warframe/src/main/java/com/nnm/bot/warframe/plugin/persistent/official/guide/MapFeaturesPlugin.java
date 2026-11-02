@@ -16,8 +16,8 @@ import com.nnm.bot.warframe.persistent.official.service.guide.WarframeGuideServi
 import jakarta.annotation.Resource;
 import java.util.List;
 
-@BotPluginCommand(code = WarframeCommandCodes.MAP_FEATURES, matchType = MatchType.PREFIX,
-        name = "开放世界地图标注", gameCode = "warframe", order = 75)
+@BotPluginCommand(code = WarframeCommandCodes.MAP_FEATURES, matchType = MatchType.PREFIX, name = "开放世界地图标注",
+    gameCode = "warframe", order = 75)
 public final class MapFeaturesPlugin extends AbstractGuidePlugin {
 
     /**
@@ -37,29 +37,29 @@ public final class MapFeaturesPlugin extends AbstractGuidePlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         Query query;
         try {
             query = query(invocation.arguments(), true);
         } catch (IllegalArgumentException exception) {
             return CommandResult.rejected(exception.getMessage());
         }
-        WarframeGuideVO<FeatureVO> display = guideService.map(query.keyword(), query.world(), query.layer(), query.page());
-        StringBuilder text = new StringBuilder("开放世界地图标注：").append(display.pagination())
-                .append("\n坐标为来源地图图片坐标，不是经纬度");
+        WarframeGuideVO<FeatureVO> display =
+            guideService.map(query.keyword(), query.world(), query.layer(), query.page());
+        StringBuilder text = new StringBuilder("开放世界地图标注：").append(display.pagination()).append("\n坐标为来源地图图片坐标，不是经纬度");
         for (FeatureVO feature : display.items()) {
-            text.append("\n\n").append(feature.name() == null ? "未命名标注" : feature.name())
-                    .append(" · ").append(WarframeGuideVO.worldName(feature.world()))
-                    .append("\n图层：").append(feature.layer());
+            text.append("\n\n").append(feature.name() == null ? "未命名标注" : feature.name()).append(" · ")
+                .append(WarframeGuideVO.worldName(feature.world())).append("\n图层：").append(feature.layer());
             GeometryVO geometry = feature.geometry();
             if (geometry == null) {
                 text.append("\n位置未提供");
             } else if ("Point".equals(geometry.type()) && geometry.pointCoordinates().size() >= 2) {
-                text.append("\n图片坐标：").append(geometry.pointCoordinates().get(0).toPlainString())
-                        .append(" / ").append(geometry.pointCoordinates().get(1).toPlainString());
+                text.append("\n图片坐标：").append(geometry.pointCoordinates().get(0).toPlainString()).append(" / ")
+                    .append(geometry.pointCoordinates().get(1).toPlainString());
             } else if (geometry.boundaryRingCount() > 0) {
                 text.append("\n区域：").append(geometry.boundaryRingCount()).append(" 个边界环");
             }
@@ -68,7 +68,8 @@ public final class MapFeaturesPlugin extends AbstractGuidePlugin {
                 text.append("\n").append(properties.description());
             }
         }
-        if (CollUtil.isEmpty(display.items())) text.append("\n没有找到匹配的地图标注");
+        if (CollUtil.isEmpty(display.items()))
+            text.append("\n没有找到匹配的地图标注");
         return CommandResult.view("warframe.guide", text.toString(), display);
     }
 }

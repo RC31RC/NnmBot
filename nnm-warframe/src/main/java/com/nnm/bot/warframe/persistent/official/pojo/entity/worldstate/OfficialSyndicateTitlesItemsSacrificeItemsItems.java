@@ -52,5 +52,7 @@ public class OfficialSyndicateTitlesItemsSacrificeItemsItems extends OfficialChi
     private OfficialSyndicateTitlesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSyndicateTitlesItemsSacrificeItemsItemsItemReferencesItems> officialSyndicateTitlesItemsSacrificeItemsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialSyndicateTitlesItemsSacrificeItemsItemsItemReferencesItems> officialSyndicateTitlesItemsSacrificeItemsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

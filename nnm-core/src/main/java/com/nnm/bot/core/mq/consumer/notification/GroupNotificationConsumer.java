@@ -1,10 +1,12 @@
 package com.nnm.bot.core.mq.consumer.notification;
 
+import com.nnm.bot.core.constant.NotificationConstants.LockPurpose;
 import com.nnm.bot.core.constant.NotificationConstants.GroupResultStatus;
 
 import com.nnm.bot.core.mq.message.notification.GroupNotificationRequest;
 import com.nnm.bot.core.message.model.BotProactiveTarget;
-import io.github.rdt.lock.LockScope;
+import io.github.rdt.lock.LockKey;
+import io.github.rdt.lock.RdtLock;
 import com.nnm.bot.core.mq.message.notification.GroupNotificationMessage;
 import com.nnm.bot.core.channel.notification.GroupNotificationResult;
 import com.nnm.bot.core.channel.notification.store.GroupNotificationResultStore;
@@ -38,43 +40,46 @@ public class GroupNotificationConsumer implements RdtMessageConsumer<GroupNotifi
     private NotificationCancellationStore cancellations;
 
     @Override
+    @RdtLock
     public void consume(GroupNotificationMessage message) {
         GroupNotificationRequest request = message.payload();
         if (request == null || request.requestId() == null || request.expiresAt() == null
-                || !Instant.now().isBefore(request.expiresAt())) return;
+            || !Instant.now().isBefore(request.expiresAt()))
+            return;
         BotProactiveTarget target = request.target();
         BotChannelKey key = new BotChannelKey(target.platform(), target.botAccountId());
-        if (!runtime.isLocalOwner(key)) return;
-        try (LockScope scope = locks.beginScope()) {
-            locks.lock("group-notification:" + request.requestId());
-            if (results.find(request.requestId()).isPresent() || !runtime.isLocalOwner(key)
-                    || !Instant.now().isBefore(request.expiresAt())) return;
-            if (cancellations.cancelled(request.resources().submissionId())) {
-                results.save(request.requestId(), new GroupNotificationResult(GroupResultStatus.CANCELLED,
-                        "通知已取消，尚未发送", null));
-                return;
-            }
-            results.save(request.requestId(), new GroupNotificationResult(
-                    GroupResultStatus.IN_PROGRESS, "通知正在发送", null));
-            try {
-                DeliveryReport report = dispatcher.dispatch(target, request.content(), request.resources(), request.expiresAt());
-                results.save(request.requestId(), outcome(report));
-            } catch (RuntimeException error) {
-                GroupNotificationResult result = error instanceof ReplyDeliveryException delivery
-                        ? outcome(delivery.report()) : new GroupNotificationResult(GroupResultStatus.UNKNOWN,
-                                "渠道发送结果未知，请核实后再决定是否重试", null);
-                try {
-                    results.save(request.requestId(), result);
-                } catch (RuntimeException persistenceFailure) {
-                    error.addSuppressed(persistenceFailure);
-                }
-                log.error("Group notification outcome unknown request={} platform={} account={} conversation={}",
-                        request.requestId(), target.platform(), target.botAccountId(), target.conversationId(), error);
-                throw error;
-            }
-            log.info("Group notification sent request={} platform={} account={} conversation={}",
-                    request.requestId(), target.platform(), target.botAccountId(), target.conversationId());
+        if (!runtime.isLocalOwner(key))
+            return;
+        locks.lock(
+            LockKey.forOperation(GroupNotificationConsumer.class, LockPurpose.REQUEST.key(), request.requestId()));
+        if (results.find(request.requestId()).isPresent() || !runtime.isLocalOwner(key)
+            || !Instant.now().isBefore(request.expiresAt()))
+            return;
+        if (cancellations.cancelled(request.resources().submissionId())) {
+            results.save(request.requestId(),
+                new GroupNotificationResult(GroupResultStatus.CANCELLED, "通知已取消，尚未发送", null));
+            return;
         }
+        results.save(request.requestId(), new GroupNotificationResult(GroupResultStatus.IN_PROGRESS, "通知正在发送", null));
+        try {
+            DeliveryReport report =
+                dispatcher.dispatch(target, request.content(), request.resources(), request.expiresAt());
+            results.save(request.requestId(), outcome(report));
+        } catch (RuntimeException error) {
+            GroupNotificationResult result =
+                error instanceof ReplyDeliveryException delivery ? outcome(delivery.report())
+                    : new GroupNotificationResult(GroupResultStatus.UNKNOWN, "渠道发送结果未知，请核实后再决定是否重试", null);
+            try {
+                results.save(request.requestId(), result);
+            } catch (RuntimeException persistenceFailure) {
+                error.addSuppressed(persistenceFailure);
+            }
+            log.error("Group notification outcome unknown request={} platform={} account={} conversation={}",
+                request.requestId(), target.platform(), target.botAccountId(), target.conversationId(), error);
+            throw error;
+        }
+        log.info("Group notification sent request={} platform={} account={} conversation={}", request.requestId(),
+            target.platform(), target.botAccountId(), target.conversationId());
     }
 
     private GroupNotificationResult outcome(DeliveryReport report) {

@@ -40,10 +40,8 @@ public class WarframeOfficialWorldStateIndex {
     private final ReentrantLock reloadLock = new ReentrantLock();
 
     /** 需要动态补全的辛迪加及官方静态奖励分区。 */
-    private static final Map<String, String> REWARD_CATEGORIES = Map.of(
-            "HexSyndicate", "Hex Bounty Rewards",
-            "ZarimanSyndicate", "Zariman Bounty Rewards",
-            "EntratiLabSyndicate", "Albrecht's Laboratories Bounty Rewards");
+    private static final Map<String, String> REWARD_CATEGORIES = Map.of("HexSyndicate", "Hex Bounty Rewards",
+        "ZarimanSyndicate", "Zariman Bounty Rewards", "EntratiLabSyndicate", "Albrecht's Laboratories Bounty Rewards");
 
     /** 统一读取自维护优先的类型化官方记录。 */
     @Resource
@@ -105,55 +103,61 @@ public class WarframeOfficialWorldStateIndex {
      * @return 快照对象。
      */
     private Snapshot load(String batchId) {
-        Map<String, Reference> nodes = read(WarframeOfficialDataDomain.REGION, OfficialRegionDTO.class,
+        Map<String,
+            Reference> nodes = read(WarframeOfficialDataDomain.REGION, OfficialRegionDTO.class,
                 (key, value) -> new Reference(key, first(value.getZhName(), value.getName(), value.getNameEn()),
-                        first(value.getNameEn(), value.getName()), null,
-                        localized(value.getMissionTypeNameZh(), value.getMissionTypeName(), value.getMissionType()),
-                        localized(value.getZhSystemName(), value.getSystemName(), null), value.getMissionType()));
-        Map<String, Reference> challengeReferences = read(WarframeOfficialDataDomain.CHALLENGE, OfficialChallengeDTO.class,
-                (key, value) -> {
-                    String description = first(value.getDescriptionZh(), value.getDescriptionEn(), value.getDescription());
-                    if (description != null && value.getRequiredCount() != null) {
-                        description = description.replace("|COUNT|", value.getRequiredCount().stripTrailingZeros().toPlainString());
-                    }
-                    return new Reference(key, first(value.getNameZh(), value.getName()),
-                            first(value.getNameEn(), value.getName()), description, null, null, null);
-                });
+                    first(value.getNameEn(), value.getName()), null,
+                    localized(value.getMissionTypeNameZh(), value.getMissionTypeName(), value.getMissionType()),
+                    localized(value.getZhSystemName(), value.getSystemName(), null), value.getMissionType()));
+        Map<String, Reference> challengeReferences =
+            read(WarframeOfficialDataDomain.CHALLENGE, OfficialChallengeDTO.class, (key, value) -> {
+                String description = first(value.getDescriptionZh(), value.getDescriptionEn(), value.getDescription());
+                if (description != null && value.getRequiredCount() != null) {
+                    description =
+                        description.replace("|COUNT|", value.getRequiredCount().stripTrailingZeros().toPlainString());
+                }
+                return new Reference(key, first(value.getNameZh(), value.getName()),
+                    first(value.getNameEn(), value.getName()), description, null, null, null);
+            });
 
         Map<String, List<RewardPool>> pools = readPools();
-        Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks = new EnumMap<>(WarframeReferenceType.class);
-        addCodebook(codebooks, WarframeReferenceType.MISSION_TYPE, WarframeOfficialDataDomain.MISSION_TYPE, OfficialMissionTypeDTO.class,
-                OfficialMissionTypeDTO::getNameKey, OfficialMissionTypeDTO::getName,
-                OfficialMissionTypeDTO::getNameEn, OfficialMissionTypeDTO::getNameZh, value -> null, batchId);
-        addCodebook(codebooks, WarframeReferenceType.FACTION, WarframeOfficialDataDomain.FACTION, OfficialFactionDTO.class,
-                OfficialFactionDTO::getNameKey, OfficialFactionDTO::getName,
-                OfficialFactionDTO::getNameEn, OfficialFactionDTO::getNameZh, value -> null, batchId);
-        addCodebook(codebooks, WarframeReferenceType.FISSURE_TIER, WarframeOfficialDataDomain.FISSURE_MODIFIER, OfficialFissureModifierDTO.class,
-                value -> null, OfficialFissureModifierDTO::getName,
-                OfficialFissureModifierDTO::getNameEn, OfficialFissureModifierDTO::getNameZh, value -> null, batchId);
-        addCodebook(codebooks, WarframeReferenceType.SORTIE_BOSS, WarframeOfficialDataDomain.BOSS, OfficialBossDTO.class,
-                OfficialBossDTO::getNameKey, OfficialBossDTO::getName,
-                OfficialBossDTO::getNameEn, OfficialBossDTO::getNameZh, value -> null, batchId);
-        addCodebook(codebooks, WarframeReferenceType.SYNDICATE, WarframeOfficialDataDomain.SYNDICATE, OfficialSyndicateDTO.class,
-                value -> null, OfficialSyndicateDTO::getName,
-                OfficialSyndicateDTO::getNameEn, OfficialSyndicateDTO::getNameZh, value -> null, batchId);
-        addCodebook(codebooks, WarframeReferenceType.UPGRADE_TYPE, WarframeOfficialDataDomain.UPGRADE_TYPE, OfficialUpgradeTypeDTO.class,
-                value -> null, OfficialUpgradeTypeDTO::getName,
-                OfficialUpgradeTypeDTO::getNameEn, OfficialUpgradeTypeDTO::getNameZh, value -> null, batchId);
+        Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks =
+            new EnumMap<>(WarframeReferenceType.class);
+        addCodebook(codebooks, WarframeReferenceType.MISSION_TYPE, WarframeOfficialDataDomain.MISSION_TYPE,
+            OfficialMissionTypeDTO.class, OfficialMissionTypeDTO::getNameKey, OfficialMissionTypeDTO::getName,
+            OfficialMissionTypeDTO::getNameEn, OfficialMissionTypeDTO::getNameZh, value -> null, batchId);
+        addCodebook(codebooks, WarframeReferenceType.FACTION, WarframeOfficialDataDomain.FACTION,
+            OfficialFactionDTO.class, OfficialFactionDTO::getNameKey, OfficialFactionDTO::getName,
+            OfficialFactionDTO::getNameEn, OfficialFactionDTO::getNameZh, value -> null, batchId);
+        addCodebook(codebooks, WarframeReferenceType.FISSURE_TIER, WarframeOfficialDataDomain.FISSURE_MODIFIER,
+            OfficialFissureModifierDTO.class, value -> null, OfficialFissureModifierDTO::getName,
+            OfficialFissureModifierDTO::getNameEn, OfficialFissureModifierDTO::getNameZh, value -> null, batchId);
+        addCodebook(codebooks, WarframeReferenceType.SORTIE_BOSS, WarframeOfficialDataDomain.BOSS,
+            OfficialBossDTO.class, OfficialBossDTO::getNameKey, OfficialBossDTO::getName, OfficialBossDTO::getNameEn,
+            OfficialBossDTO::getNameZh, value -> null, batchId);
+        addCodebook(codebooks, WarframeReferenceType.SYNDICATE, WarframeOfficialDataDomain.SYNDICATE,
+            OfficialSyndicateDTO.class, value -> null, OfficialSyndicateDTO::getName, OfficialSyndicateDTO::getNameEn,
+            OfficialSyndicateDTO::getNameZh, value -> null, batchId);
+        addCodebook(codebooks, WarframeReferenceType.UPGRADE_TYPE, WarframeOfficialDataDomain.UPGRADE_TYPE,
+            OfficialUpgradeTypeDTO.class, value -> null, OfficialUpgradeTypeDTO::getName,
+            OfficialUpgradeTypeDTO::getNameEn, OfficialUpgradeTypeDTO::getNameZh, value -> null, batchId);
 
         Map<String, WarframeWorldStateCodebookEntryDTO> nodeEntries = new LinkedHashMap<>();
-        nodes.forEach((key, node) -> nodeEntries.put(normalize(key), new WarframeWorldStateCodebookEntryDTO(
-                key, localized(node.nameZh(), node.nameEn(), node.nameEn())
-                + (node.systemName() == null ? "" : "（" + node.systemName() + "）"), "", node.missionType(),
-                referenceSource(batchId), WarframeReferenceResolutionStatus.RESOLVED, "", false)));
+        nodes.forEach((key, node) -> nodeEntries.put(normalize(key),
+            new WarframeWorldStateCodebookEntryDTO(key,
+                localized(node.nameZh(), node.nameEn(), node.nameEn())
+                    + (node.systemName() == null ? "" : "（" + node.systemName() + "）"),
+                "", node.missionType(), referenceSource(batchId), WarframeReferenceResolutionStatus.RESOLVED, "",
+                false)));
         codebooks.put(WarframeReferenceType.NODE, Map.copyOf(nodeEntries));
 
-        Map<String, String> language = read(WarframeOfficialDataDomain.LANGUAGE_STRING, OfficialLanguageStringDTO.class,
-                (key, value) -> english() ? value.getText() : first(value.getZhText(), value.getText()))
-                .entrySet().stream().filter(entry -> entry.getValue() != null)
-                .collect(LinkedHashMap::new, (map, entry) -> map.put(normalize(entry.getKey()), entry.getValue()), Map::putAll);
+        Map<String,
+            String> language = read(WarframeOfficialDataDomain.LANGUAGE_STRING, OfficialLanguageStringDTO.class,
+                (key, value) -> english() ? value.getText() : first(value.getZhText(), value.getText())).entrySet()
+                .stream().filter(entry -> entry.getValue() != null).collect(LinkedHashMap::new,
+                    (map, entry) -> map.put(normalize(entry.getKey()), entry.getValue()), Map::putAll);
         return new Snapshot(batchId, Map.copyOf(nodes), Map.copyOf(challengeReferences), Map.copyOf(pools),
-                Map.copyOf(codebooks), Map.copyOf(language));
+            Map.copyOf(codebooks), Map.copyOf(language));
     }
 
     /**
@@ -163,19 +167,23 @@ public class WarframeOfficialWorldStateIndex {
      */
     private Map<String, List<RewardPool>> readPools() {
         Map<String, List<RewardPool>> result = new LinkedHashMap<>();
-        Map<String, OfficialBountyDTO> byKey = read(WarframeOfficialDataDomain.BOUNTY, OfficialBountyDTO.class,
-                (key, value) -> value);
+        Map<String, OfficialBountyDTO> byKey =
+            read(WarframeOfficialDataDomain.BOUNTY, OfficialBountyDTO.class, (key, value) -> value);
         for (Map.Entry<String, String> category : REWARD_CATEGORIES.entrySet()) {
             OfficialBountyDTO bounty = byKey.get("rewardPools/" + category.getValue());
             List<RewardPool> values = new ArrayList<>();
             if (bounty != null && bounty.getStages() != null) {
                 for (var stage : bounty.getStages()) {
                     var source = stage.rewardPool();
-                    if (source == null) continue;
+                    if (source == null)
+                        continue;
                     String name = localized(source.getSourceNameZh(), source.getSourceNameEn(), source.getSourceName());
                     List<String> rewards = new ArrayList<>();
-                    if (source.getGroups() != null) for (var group : source.getGroups()) collectRewards(group, rewards);
-                    values.add(new RewardPool(source.getPoolId(), name, List.copyOf(rewards), trailingOrder(source.getPoolId())));
+                    if (source.getGroups() != null)
+                        for (var group : source.getGroups())
+                            collectRewards(group, rewards);
+                    values.add(new RewardPool(source.getPoolId(), name, List.copyOf(rewards),
+                        trailingOrder(source.getPoolId())));
                 }
             }
             values.sort(Comparator.comparingInt(RewardPool::order).thenComparing(RewardPool::id));
@@ -191,10 +199,12 @@ public class WarframeOfficialWorldStateIndex {
      * @param result 当前正在组装的业务结果。
      */
     private void collectRewards(OfficialBountyDTO.StagesGroupsGroupsGroupsGroupsDTO group, List<String> result) {
-        if (group.getRewards() != null) for (var item : group.getRewards()) {
-            String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
-            if (name != null) result.add(name);
-        }
+        if (group.getRewards() != null)
+            for (var item : group.getRewards()) {
+                String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
+                if (name != null)
+                    result.add(name);
+            }
     }
 
     /**
@@ -204,11 +214,15 @@ public class WarframeOfficialWorldStateIndex {
      * @param result 当前正在组装的业务结果。
      */
     private void collectRewards(OfficialBountyDTO.StagesGroupsGroupsGroupsDTO group, List<String> result) {
-        if (group.getGroups() != null) for (var child : group.getGroups()) collectRewards(child, result);
-        if (group.getRewards() != null) for (var item : group.getRewards()) {
-            String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
-            if (name != null) result.add(name);
-        }
+        if (group.getGroups() != null)
+            for (var child : group.getGroups())
+                collectRewards(child, result);
+        if (group.getRewards() != null)
+            for (var item : group.getRewards()) {
+                String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
+                if (name != null)
+                    result.add(name);
+            }
     }
 
     /**
@@ -218,11 +232,15 @@ public class WarframeOfficialWorldStateIndex {
      * @param result 当前正在组装的业务结果。
      */
     private void collectRewards(OfficialBountyDTO.StagesGroupsGroupsDTO group, List<String> result) {
-        if (group.getGroups() != null) for (var child : group.getGroups()) collectRewards(child, result);
-        if (group.getRewards() != null) for (var item : group.getRewards()) {
-            String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
-            if (name != null) result.add(name);
-        }
+        if (group.getGroups() != null)
+            for (var child : group.getGroups())
+                collectRewards(child, result);
+        if (group.getRewards() != null)
+            for (var item : group.getRewards()) {
+                String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
+                if (name != null)
+                    result.add(name);
+            }
     }
 
     /**
@@ -232,11 +250,15 @@ public class WarframeOfficialWorldStateIndex {
      * @param result 当前正在组装的业务结果。
      */
     private void collectRewards(OfficialBountyDTO.StagesGroupsDTO group, List<String> result) {
-        if (group.getGroups() != null) for (var child : group.getGroups()) collectRewards(child, result);
-        if (group.getRewards() != null) for (var item : group.getRewards()) {
-            String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
-            if (name != null) result.add(name);
-        }
+        if (group.getGroups() != null)
+            for (var child : group.getGroups())
+                collectRewards(child, result);
+        if (group.getRewards() != null)
+            for (var item : group.getRewards()) {
+                String name = localized(item.getItemNameZh(), item.getItemNameEn(), item.getItemName());
+                if (name != null)
+                    result.add(name);
+            }
     }
 
     /**
@@ -254,22 +276,22 @@ public class WarframeOfficialWorldStateIndex {
      * @param batchId 当前冻结导入批次的标识。
      */
     private <T extends OfficialRecordDTO> void addCodebook(
-            Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks,
-            WarframeReferenceType type, WarframeOfficialDataDomain domain, Class<T> dtoType,
-            Function<T, String> nameKey, Function<T, String> name,
-            Function<T, String> nameEn, Function<T, String> nameZh,
-            Function<T, String> description, String batchId) {
+        Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks,
+        WarframeReferenceType type, WarframeOfficialDataDomain domain, Class<T> dtoType, Function<T, String> nameKey,
+        Function<T, String> name, Function<T, String> nameEn, Function<T, String> nameZh,
+        Function<T, String> description, String batchId) {
         Map<String, WarframeWorldStateCodebookEntryDTO> entries = new LinkedHashMap<>();
         read(domain, dtoType, (key, value) -> {
             String localizedName = localized(nameZh.apply(value), nameEn.apply(value), name.apply(value));
-            if (StrUtil.isBlank(localizedName) || localizedName.startsWith("/")) return null;
-            WarframeWorldStateCodebookEntryDTO entry = new WarframeWorldStateCodebookEntryDTO(
-                    key, localizedName, Objects.toString(description.apply(value), ""), "", referenceSource(batchId),
-                    WarframeReferenceResolutionStatus.RESOLVED, "", false);
+            if (StrUtil.isBlank(localizedName) || localizedName.startsWith("/"))
+                return null;
+            WarframeWorldStateCodebookEntryDTO entry = new WarframeWorldStateCodebookEntryDTO(key, localizedName,
+                Objects.toString(description.apply(value), ""), "", referenceSource(batchId),
+                WarframeReferenceResolutionStatus.RESOLVED, "", false);
             entries.put(normalize(key), entry);
-            for (String alias : Stream.of(
-                    name.apply(value), nameEn.apply(value), nameKey.apply(value)).toList()) {
-                if (StrUtil.isNotBlank(alias)) entries.putIfAbsent(normalize(alias), entry);
+            for (String alias : Stream.of(name.apply(value), nameEn.apply(value), nameKey.apply(value)).toList()) {
+                if (StrUtil.isNotBlank(alias))
+                    entries.putIfAbsent(normalize(alias), entry);
             }
             return entry;
         });
@@ -284,13 +306,14 @@ public class WarframeOfficialWorldStateIndex {
      * @param mapper 组件已经配置的 Jackson 映射器。
      * @return 以本方法约定的业务键组织的数据映射。
      */
-    private <T extends OfficialRecordDTO, R> Map<String, R> read(
-            WarframeOfficialDataDomain domain, Class<T> dtoType, RecordMapper<T, R> mapper) {
+    private <T extends OfficialRecordDTO, R> Map<String, R> read(WarframeOfficialDataDomain domain, Class<T> dtoType,
+        RecordMapper<T, R> mapper) {
         Map<String, R> result = new LinkedHashMap<>();
         for (var row : catalog.records(domain)) {
             T value = dtoType.cast(row.data());
             R mapped = mapper.map(row.bkey(), value);
-            if (mapped != null) result.put(row.bkey(), mapped);
+            if (mapped != null)
+                result.put(row.bkey(), mapped);
         }
         return result;
     }
@@ -319,7 +342,9 @@ public class WarframeOfficialWorldStateIndex {
      * @return 按约定优先顺序取得的首个有效文本；均缺省时为空。
      */
     private static String first(String... values) {
-        for (String value : values) if (StrUtil.isNotBlank(value)) return value;
+        for (String value : values)
+            if (StrUtil.isNotBlank(value))
+                return value;
         return null;
     }
 
@@ -340,7 +365,8 @@ public class WarframeOfficialWorldStateIndex {
      * @return 奖励池标识末尾的排序号；未提供有效排序号时返回最大整数。
      */
     private static int trailingOrder(String value) {
-        if (value == null) return Integer.MAX_VALUE;
+        if (value == null)
+            return Integer.MAX_VALUE;
         int separator = value.lastIndexOf(':');
         try {
             return separator < 0 ? Integer.MAX_VALUE : Integer.parseInt(value.substring(separator + 1));
@@ -373,6 +399,7 @@ public class WarframeOfficialWorldStateIndex {
 
     /**
      * 已采纳静态资料的不可变代码簿快照。
+     *
      * @param batchId 官方批次
      * @param nodes 星图节点索引
      * @param challenges 挑战定义索引
@@ -380,10 +407,10 @@ public class WarframeOfficialWorldStateIndex {
      * @param codebooks 各类别的官方引用代码簿
      * @param language 官方语言键和值
      */
-    public record Snapshot(String batchId, Map<String, Reference> nodes,
-                           Map<String, Reference> challenges, Map<String, List<RewardPool>> pools,
-                           Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks,
-                           Map<String, String> language) {
+    public record Snapshot(String batchId, Map<String, Reference> nodes, Map<String, Reference> challenges,
+        Map<String, List<RewardPool>> pools,
+        Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks,
+        Map<String, String> language) {
         /**
          * 构造未采纳官方数据时的空代码簿。
          *
@@ -405,6 +432,7 @@ public class WarframeOfficialWorldStateIndex {
 
     /**
      * 解析动态引用所需的官方静态字段。
+     *
      * @param key 原始引用键
      * @param nameZh 中文名称
      * @param nameEn 英文名称
@@ -413,8 +441,8 @@ public class WarframeOfficialWorldStateIndex {
      * @param systemName 所属星球或区域
      * @param missionTypeKey 任务类型原始代码
      */
-    public record Reference(String key, String nameZh, String nameEn, String descriptionZh,
-                            String missionType, String systemName, String missionTypeKey) {
+    public record Reference(String key, String nameZh, String nameEn, String descriptionZh, String missionType,
+        String systemName, String missionTypeKey) {
         /**
          * 优先返回中文名称，缺少时使用英文名称。
          *
@@ -427,6 +455,7 @@ public class WarframeOfficialWorldStateIndex {
 
     /**
      * 一个静态候选奖励池，不代表本轮必然奖励。
+     *
      * @param id 奖励池标识
      * @param name 奖励池名称
      * @param rewards 候选奖励名称

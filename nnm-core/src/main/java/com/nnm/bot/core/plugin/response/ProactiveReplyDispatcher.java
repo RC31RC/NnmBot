@@ -46,34 +46,43 @@ public class ProactiveReplyDispatcher {
     private NotificationDeliveryGuard deliveryGuard;
 
     public List<ResponsePlan> preview(BotProactiveTarget target, NotificationContent content,
-                                      NotificationResourceManifest manifest) {
+        NotificationResourceManifest manifest) {
         ReplyTarget capabilities = senders.target(target);
         Map<UUID, CommandAttachment> attachments = new LinkedHashMap<>();
         RuntimeException failure = null;
         try {
-            for (UUID id : content.resourceIds()) attachments.put(id, resources.materialize(manifest, id));
-            return planner.plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP), List.of(), content.replies(attachments::get))
-                    .map(plans -> planner.compile(capabilities, plans)).orElse(List.of());
+            for (UUID id : content.resourceIds())
+                attachments.put(id, resources.materialize(manifest, id));
+            return planner
+                .plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP), List.of(),
+                    content.replies(attachments::get))
+                .map(plans -> planner.compile(capabilities, plans)).orElse(List.of());
         } catch (RuntimeException exception) {
             failure = exception;
             throw exception;
         } finally {
             RuntimeException cleanup = null;
             for (CommandAttachment attachment : attachments.values()) {
-                try { attachment.close(); } catch (RuntimeException exception) {
-                    if (cleanup == null) cleanup = exception;
-                    else cleanup.addSuppressed(exception);
+                try {
+                    attachment.close();
+                } catch (RuntimeException exception) {
+                    if (cleanup == null)
+                        cleanup = exception;
+                    else
+                        cleanup.addSuppressed(exception);
                 }
             }
             if (cleanup != null) {
-                if (failure != null) failure.addSuppressed(cleanup);
-                else throw cleanup;
+                if (failure != null)
+                    failure.addSuppressed(cleanup);
+                else
+                    throw cleanup;
             }
         }
     }
 
     public DeliveryReport dispatch(BotProactiveTarget target, NotificationContent content,
-                                   NotificationResourceManifest manifest, Instant expiresAt) {
+        NotificationResourceManifest manifest, Instant expiresAt) {
         List<ResponsePlan> plans = List.of();
         List<PreparedBotMessage> prepared = new ArrayList<>();
         Map<UUID, CommandAttachment> attachments = new LinkedHashMap<>();
@@ -82,11 +91,14 @@ public class ProactiveReplyDispatcher {
         RuntimeException failure = null;
         int attempted = -1;
         try {
-            for (UUID id : content.resourceIds()) attachments.put(id, resources.materialize(manifest, id));
+            for (UUID id : content.resourceIds())
+                attachments.put(id, resources.materialize(manifest, id));
             ReplyTarget capabilities = senders.target(target);
-            plans = planner.plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP), List.of(), content.replies(attachments::get))
-                    .map(selected -> planner.compile(capabilities, selected))
-                    .orElseThrow(() -> new BotMessageNotSentException("目标能力已变化，通知无法完整发送"));
+            plans = planner
+                .plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP), List.of(),
+                    content.replies(attachments::get))
+                .map(selected -> planner.compile(capabilities, selected))
+                .orElseThrow(() -> new BotMessageNotSentException("目标能力已变化，通知无法完整发送"));
             for (ResponsePlan plan : plans) {
                 validate(target, expiresAt, manifest.submissionId());
                 prepared.add(senders.prepare(target, plan.parts()));
@@ -97,24 +109,24 @@ public class ProactiveReplyDispatcher {
                 BotMessageReceipt receipt = prepared.get(index).send();
                 ResponsePlan plan = plans.get(index);
                 items.add(new DeliveryReport.Item(plan.logicalMessage(), plan.part(), target.botAccountId(),
-                        receipt.platformMessageId(), DeliveryStatus.ACCEPTED, null));
+                    receipt.platformMessageId(), DeliveryStatus.ACCEPTED, null));
                 attempted = -1;
             }
         } catch (RuntimeException exception) {
             failure = exception;
             if (plans.isEmpty()) {
                 for (int index = 0; index < content.messages().size(); index++) {
-                    items.add(new DeliveryReport.Item(index, 0, target.botAccountId(), null,
-                            DeliveryStatus.NOT_SENT, exception.getMessage()));
+                    items.add(new DeliveryReport.Item(index, 0, target.botAccountId(), null, DeliveryStatus.NOT_SENT,
+                        exception.getMessage()));
                 }
             } else {
                 for (int index = items.size(); index < plans.size(); index++) {
                     DeliveryStatus status = index != attempted || exception instanceof BotMessageNotSentException
-                            ? DeliveryStatus.NOT_SENT : exception instanceof BotMessageRejectedException
+                        ? DeliveryStatus.NOT_SENT : exception instanceof BotMessageRejectedException
                             ? DeliveryStatus.REJECTED : DeliveryStatus.UNKNOWN;
                     ResponsePlan plan = plans.get(index);
                     items.add(new DeliveryReport.Item(plan.logicalMessage(), plan.part(), target.botAccountId(), null,
-                            status, exception.getMessage()));
+                        status, exception.getMessage()));
                 }
             }
         } finally {
@@ -122,15 +134,17 @@ public class ProactiveReplyDispatcher {
             attachments.values().forEach(attachment -> cleanup(attachment, cleanupFailures));
         }
         DeliveryReport report = DeliveryReport.from(items, plans, cleanupFailures);
-        if (failure != null) throw new ReplyDeliveryException(report, failure);
+        if (failure != null)
+            throw new ReplyDeliveryException(report, failure);
         return report;
     }
 
     private void validate(BotProactiveTarget target, Instant expiresAt, UUID submissionId) {
-        if (cancellations.cancelled(submissionId)) throw new BotMessageNotSentException("通知已取消，未提交部分停止发送");
+        if (cancellations.cancelled(submissionId))
+            throw new BotMessageNotSentException("通知已取消，未提交部分停止发送");
         deliveryGuard.validate(submissionId, target);
         if (!Instant.now().isBefore(expiresAt)
-                || !runtime.isLocalOwner(new BotChannelKey(target.platform(), target.botAccountId()))) {
+            || !runtime.isLocalOwner(new BotChannelKey(target.platform(), target.botAccountId()))) {
             throw new BotMessageNotSentException("通知已过期或当前节点不再持有目标连接");
         }
     }

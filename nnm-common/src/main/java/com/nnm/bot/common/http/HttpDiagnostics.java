@@ -9,12 +9,10 @@ import java.util.regex.Pattern;
 
 /** HTTP 日志和返回给管理端的诊断统一去除凭据、查询参数和换行。 */
 public final class HttpDiagnostics {
-    private static final Pattern URL_PATTERN = Pattern.compile(
-            "(?i)(https?://[^\\s?#]+)(?:\\?[^\\s#]*)?(?:#[^\\s]*)?");
+    private static final Pattern URL_PATTERN = Pattern.compile("(?i)(https?://[^\\s?#]+)(?:\\?[^\\s#]*)?(?:#[^\\s]*)?");
     private static final int MAX_MESSAGE_LENGTH = 300;
 
-    private HttpDiagnostics() {
-    }
+    private HttpDiagnostics() {}
 
     public static String safeUrl(String url) {
         if (url == null) {
@@ -22,8 +20,7 @@ public final class HttpDiagnostics {
         }
         try {
             URI uri = URI.create(url);
-            return new URI(uri.getScheme(), null, uri.getHost(), uri.getPort(),
-                    uri.getPath(), null, null).toString();
+            return new URI(uri.getScheme(), null, uri.getHost(), uri.getPort(), uri.getPath(), null, null).toString();
         } catch (IllegalArgumentException | URISyntaxException exception) {
             return "[invalid-url]";
         }
@@ -45,6 +42,6 @@ public final class HttpDiagnostics {
         matcher.appendTail(result);
         String safeMessage = result.toString();
         return safeMessage.length() <= MAX_MESSAGE_LENGTH ? safeMessage
-                : safeMessage.substring(0, MAX_MESSAGE_LENGTH) + "...(truncated)";
+            : safeMessage.substring(0, MAX_MESSAGE_LENGTH) + "...(truncated)";
     }
 }

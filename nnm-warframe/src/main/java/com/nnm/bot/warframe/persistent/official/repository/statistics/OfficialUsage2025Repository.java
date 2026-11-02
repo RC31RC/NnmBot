@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.statistics.OfficialU
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** statistics/usage-2025.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** statistics/usage-2025.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialUsage2025Repository extends OfficialMainRepository<OfficialUsage2025Root> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

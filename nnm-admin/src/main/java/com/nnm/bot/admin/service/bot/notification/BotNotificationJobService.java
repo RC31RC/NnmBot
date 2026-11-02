@@ -7,7 +7,10 @@ import java.util.UUID;
 
 public interface BotNotificationJobService {
     BotNotificationJobDTO submit(long ownerId, BotGroupNotificationDTO request);
+
     List<BotNotificationJobDTO> list(long ownerId);
+
     BotNotificationJobDTO cancel(long ownerId, UUID id);
+
     void dispatchDue();
 }

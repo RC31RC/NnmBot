@@ -52,5 +52,7 @@ public class OfficialMiscDissectionPartsItems extends OfficialChildRow {
     private OfficialMiscRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialMiscDissectionPartsItemsItemReferencesItems> officialMiscDissectionPartsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialMiscDissectionPartsItemsItemReferencesItems> officialMiscDissectionPartsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

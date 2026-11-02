@@ -13,14 +13,14 @@ public interface BotGroupBotRepository extends JpaRepository<BotGroupBot, Long> 
 
     List<BotGroupBot> findAllByGroupIdInAndEnabledTrue(Collection<Long> groupIds);
 
-    Optional<BotGroupBot> findByGroupIdAndPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
-            Long groupId, String platform, String scopeType, String scopeKey, Long botInstanceId);
+    Optional<BotGroupBot> findByGroupIdAndPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(Long groupId, String platform,
+        String scopeType, String scopeKey, Long botInstanceId);
 
-    Optional<BotGroupBot> findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
-            String platform, String scopeType, String scopeKey, Long botInstanceId);
+    Optional<BotGroupBot> findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(String platform, String scopeType,
+        String scopeKey, Long botInstanceId);
 
-    List<BotGroupBot> findAllByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
-            String platform, String scopeType, String scopeKey, Long botInstanceId);
+    List<BotGroupBot> findAllByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(String platform, String scopeType,
+        String scopeKey, Long botInstanceId);
 
     void deleteAllByGroupId(Long groupId);
 }

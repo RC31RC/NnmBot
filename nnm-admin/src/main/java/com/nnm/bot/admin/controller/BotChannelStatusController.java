@@ -29,7 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /** 管理端机器人实例运行状态的 SSE 订阅入口。 */
 @Slf4j
 @RestController
-@RequestMapping("/api/admin/v1/bot-instances")
+@RequestMapping("/api/admin/bot-instances")
 public class BotChannelStatusController {
 
     @Resource
@@ -49,8 +49,7 @@ public class BotChannelStatusController {
         SseEmitter emitter = new SseEmitter(0L);
         ReentrantLock sendLock = new ReentrantLock();
         AtomicBoolean closed = new AtomicBoolean();
-        AtomicReference<Subscription> subscription =
-                new AtomicReference<>();
+        AtomicReference<Subscription> subscription = new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> keepAlive = new AtomicReference<>();
         Map<String, BotChannelSnapshot> sentSnapshots = new HashMap<>();
 
@@ -74,21 +73,20 @@ public class BotChannelStatusController {
 
         try {
             ScheduledFuture<?> scheduledKeepAlive = taskScheduler.scheduleAtFixedRate(
-                    () -> sendKeepAlive(emitter, sendLock, cleanup),
-                    cacheProperties.statusHeartbeat());
+                () -> sendKeepAlive(emitter, sendLock, cleanup), cacheProperties.statusHeartbeat());
             keepAlive.set(scheduledKeepAlive);
             if (closed.get() && keepAlive.compareAndSet(scheduledKeepAlive, null)) {
                 scheduledKeepAlive.cancel(false);
             }
 
             Subscription registered = broadcaster.subscribe(
-                    snapshot -> sendSnapshotIfChanged(emitter, sendLock, cleanup, sentSnapshots, snapshot),
-                    failure -> {
-                        cleanup.run();
-                        emitter.completeWithError(failure);
-                    });
+                snapshot -> sendSnapshotIfChanged(emitter, sendLock, cleanup, sentSnapshots, snapshot), failure -> {
+                    cleanup.run();
+                    emitter.completeWithError(failure);
+                });
             subscription.set(registered);
-            if (closed.get() && subscription.compareAndSet(registered, null)) registered.close();
+            if (closed.get() && subscription.compareAndSet(registered, null))
+                registered.close();
         } catch (RuntimeException exception) {
             cleanup.run();
             emitter.completeWithError(exception);
@@ -96,12 +94,8 @@ public class BotChannelStatusController {
         return emitter;
     }
 
-    private void sendSnapshotIfChanged(
-            SseEmitter emitter,
-            ReentrantLock sendLock,
-            Runnable cleanup,
-            Map<String, BotChannelSnapshot> sentSnapshots,
-            BotChannelSnapshot snapshot) {
+    private void sendSnapshotIfChanged(SseEmitter emitter, ReentrantLock sendLock, Runnable cleanup,
+        Map<String, BotChannelSnapshot> sentSnapshots, BotChannelSnapshot snapshot) {
         sendLock.lock();
         try {
             BotChannelSnapshot previous = sentSnapshots.get(snapshot.instanceId());
@@ -116,21 +110,11 @@ public class BotChannelStatusController {
         }
     }
 
-    private boolean sendSnapshotLocked(
-            SseEmitter emitter,
-            Runnable cleanup,
-            BotChannelSnapshot snapshot) {
-        BotChannelStatusVO event = new BotChannelStatusVO(
-                snapshot.instanceId(),
-                snapshot.key().platform(),
-                snapshot.key().botAccountId(),
-                snapshot.status(),
-                snapshot.statusChangedAt(),
-                snapshot.lastError());
+    private boolean sendSnapshotLocked(SseEmitter emitter, Runnable cleanup, BotChannelSnapshot snapshot) {
+        BotChannelStatusVO event = new BotChannelStatusVO(snapshot.instanceId(), snapshot.key().platform(),
+            snapshot.key().botAccountId(), snapshot.status(), snapshot.statusChangedAt(), snapshot.lastError());
         try {
-            emitter.send(SseEmitter.event()
-                    .name("status")
-                    .data(event));
+            emitter.send(SseEmitter.event().name("status").data(event));
             return true;
         } catch (IOException | RuntimeException exception) {
             log.debug("机器人实例状态 SSE 发送失败", exception);
@@ -141,24 +125,17 @@ public class BotChannelStatusController {
     }
 
     private boolean sameSnapshot(BotChannelSnapshot left, BotChannelSnapshot right) {
-        return left != null
-                && Objects.equals(left.instanceId(), right.instanceId())
-                && Objects.equals(left.key(), right.key())
-                && left.status() == right.status()
-                && Objects.equals(left.statusChangedAt(), right.statusChangedAt())
-                && Objects.equals(left.lastError(), right.lastError());
+        return left != null && Objects.equals(left.instanceId(), right.instanceId())
+            && Objects.equals(left.key(), right.key()) && left.status() == right.status()
+            && Objects.equals(left.statusChangedAt(), right.statusChangedAt())
+            && Objects.equals(left.lastError(), right.lastError());
     }
 
-    private void sendKeepAlive(
-            SseEmitter emitter,
-            ReentrantLock sendLock,
-            Runnable cleanup) {
+    private void sendKeepAlive(SseEmitter emitter, ReentrantLock sendLock, Runnable cleanup) {
         try {
             sendLock.lock();
             try {
-                emitter.send(SseEmitter.event()
-                        .name("keepalive")
-                        .data("ping"));
+                emitter.send(SseEmitter.event().name("keepalive").data("ping"));
             } finally {
                 sendLock.unlock();
             }

@@ -6,8 +6,8 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.world.WarframeVendorDet
 import com.nnm.bot.warframe.persistent.official.pojo.dto.world.WarframeVendorDetailsDTO.ItemDTO;
 import java.util.List;
 
-public record WarframeVendorDefinitionVO(String query, VendorSection section, int page, int totalPages,
-        int totalCount, List<String> vendors, List<EntryVO> items) {
+public record WarframeVendorDefinitionVO(String query, VendorSection section, int page, int totalPages, int totalCount,
+    List<String> vendors, List<EntryVO> items) {
     /**
      * 构造商店定义展示对象，并保存初始化参数。
      *
@@ -35,12 +35,12 @@ public record WarframeVendorDefinitionVO(String query, VendorSection section, in
      * @return 商人静态定义的分页视图。
      */
     public static WarframeVendorDefinitionVO page(String query, VendorSection section, List<String> vendors,
-            List<EntryVO> matches, int requested) {
-        int pages = Math.max(1, (int) ((matches.size() + 7L) / 8));
+        List<EntryVO> matches, int requested) {
+        int pages = Math.max(1, (int)((matches.size() + 7L) / 8));
         int page = Math.max(1, Math.min(requested, pages));
         int from = (page - 1) * 8;
         return new WarframeVendorDefinitionVO(query, section, page, pages, matches.size(), vendors,
-                matches.subList(from, Math.min(from + 8, matches.size())));
+            matches.subList(from, Math.min(from + 8, matches.size())));
     }
 
     /**
@@ -50,34 +50,42 @@ public record WarframeVendorDefinitionVO(String query, VendorSection section, in
      */
     public String text() {
         StringBuilder text = new StringBuilder("商人静态").append(section == VendorSection.ITEMS ? "商品" : "随机价格")
-                .append("：").append(page).append("/").append(totalPages).append(" 页，共 ").append(totalCount).append(" 条")
-                .append("\n静态定义，不代表当前库存或本轮价格");
+            .append("：").append(page).append("/").append(totalPages).append(" 页，共 ").append(totalCount).append(" 条")
+            .append("\n静态定义，不代表当前库存或本轮价格");
         for (EntryVO entry : items) {
-            text.append("\n\n").append(entry.name()).append("\n商人：").append(entry.vendorBkey())
-                    .append("\n来源序号：").append(entry.order()).append("\n").append(entry.reference());
+            text.append("\n\n").append(entry.name()).append("\n商人：").append(entry.vendorBkey()).append("\n来源序号：")
+                .append(entry.order()).append("\n").append(entry.reference());
             if (entry.item() != null) {
                 ItemDTO item = entry.item();
                 text.append("\n数量：").append(count(item.quantity()));
-                if (item.binNumber() != null) text.append("\n分箱：").append(item.binNumber());
-                if (item.credits() != null) text.append("\n信用点：").append(item.credits().text());
-                if (item.platinum() != null) text.append("\n白金：").append(item.platinum().text());
-                if (item.durationHours() != null) text.append("\n持续小时：").append(item.durationHours().text());
+                if (item.binNumber() != null)
+                    text.append("\n分箱：").append(item.binNumber());
+                if (item.credits() != null)
+                    text.append("\n信用点：").append(item.credits().text());
+                if (item.platinum() != null)
+                    text.append("\n白金：").append(item.platinum().text());
+                if (item.durationHours() != null)
+                    text.append("\n持续小时：").append(item.durationHours().text());
                 if (item.syndicateStandingCost() != null) {
-                    text.append("\n集团声望：").append(item.syndicateStandingCost())
-                            .append(" / ").append(item.syndicateTag());
+                    text.append("\n集团声望：").append(item.syndicateStandingCost()).append(" / ")
+                        .append(item.syndicateTag());
                 }
-                if (item.focusCost() != null) text.append("\n专精：").append(item.focusCost()).append(" / ").append(item.focusPolarity());
-                if (item.purchaseLimit() != null) text.append("\n购买上限：").append(item.purchaseLimit());
-                if (item.probability() != null) text.append("\n来源概率：").append(item.probability().toPlainString());
+                if (item.focusCost() != null)
+                    text.append("\n专精：").append(item.focusCost()).append(" / ").append(item.focusPolarity());
+                if (item.purchaseLimit() != null)
+                    text.append("\n购买上限：").append(item.purchaseLimit());
+                if (item.probability() != null)
+                    text.append("\n来源概率：").append(item.probability().toPlainString());
                 for (PriceVO price : entry.prices()) {
                     text.append("\n兑换材料：").append(price.name()).append(" × ").append(price.count());
                 }
             } else {
-                text.append("\n分箱：").append(entry.binNumber()).append("\n数量范围：")
-                        .append(entry.countMin()).append(" - ").append(entry.countMax());
+                text.append("\n分箱：").append(entry.binNumber()).append("\n数量范围：").append(entry.countMin()).append(" - ")
+                    .append(entry.countMax());
             }
         }
-        if (CollUtil.isEmpty(items)) text.append("\n没有匹配的已采纳静态定义");
+        if (CollUtil.isEmpty(items))
+            text.append("\n没有匹配的已采纳静态定义");
         return text.toString();
     }
 
@@ -92,9 +100,9 @@ public record WarframeVendorDefinitionVO(String query, VendorSection section, in
     }
 
     public record EntryVO(Long id, String key, Long parentId, String parentBkey, String vendorBkey,
-            String parentSourceCode, String sourceCode, String resolutionMode, int order, String reference,
-            String name, WarframeVendorDetailsDTO.VendorDTO vendor, WarframeVendorDetailsDTO.ItemDTO item,
-            List<PriceVO> prices, Integer binNumber, Long countMin, Long countMax) {
+        String parentSourceCode, String sourceCode, String resolutionMode, int order, String reference, String name,
+        WarframeVendorDetailsDTO.VendorDTO vendor, WarframeVendorDetailsDTO.ItemDTO item, List<PriceVO> prices,
+        Integer binNumber, Long countMin, Long countMax) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *
@@ -121,7 +129,7 @@ public record WarframeVendorDefinitionVO(String query, VendorSection section, in
         }
     }
 
-    public record PriceVO(Long id, String key, Long parentId, String parentBkey, String sourceCode,
-            int order, String reference, String name, Long count) {
+    public record PriceVO(Long id, String key, Long parentId, String parentBkey, String sourceCode, int order,
+        String reference, String name, Long count) {
     }
 }

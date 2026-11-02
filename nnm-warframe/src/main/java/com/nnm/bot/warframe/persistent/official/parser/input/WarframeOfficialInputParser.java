@@ -16,8 +16,7 @@ public final class WarframeOfficialInputParser {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private WarframeOfficialInputParser() {
-    }
+    private WarframeOfficialInputParser() {}
 
     /**
      * 解析完整的一条官方记录，拒绝未知字段及记录之后的多余 JSON。
@@ -27,16 +26,14 @@ public final class WarframeOfficialInputParser {
      * @param input 待解析或校验的输入。
      * @return 官方记录对象。
      */
-    public static OfficialRecordDTO parseCompleteJson(
-            ObjectMapper mapper,
-            WarframeOfficialDataDomain domain,
-            String input) {
+    public static OfficialRecordDTO parseCompleteJson(ObjectMapper mapper, WarframeOfficialDataDomain domain,
+        String input) {
         BusinessAssert.isTrue(domain != null && domain != WarframeOfficialDataDomain.OTHER,
-                WarframeManagementErrorCode.DATASET_INVALID, "官方数据集尚未登记类型化字段合同");
+            WarframeManagementErrorCode.DATASET_INVALID, "官方数据集尚未登记类型化字段合同");
         try {
             OfficialRecordDTO result = mapper.readerFor(OfficialInputTypes.type(domain))
-                    .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                    .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(input);
+                .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(input);
             BusinessAssert.isTrue(result != null, WarframeManagementErrorCode.DATASET_INVALID, "官方记录必须是非空对象");
             return result;
         } catch (IOException exception) {
@@ -53,17 +50,14 @@ public final class WarframeOfficialInputParser {
      * @return 官方记录对象。
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
-    public static OfficialRecordDTO parseCurrentValue(
-            ObjectMapper mapper,
-            WarframeOfficialDataDomain domain,
-            JsonParser parser)
-            throws IOException {
+    public static OfficialRecordDTO parseCurrentValue(ObjectMapper mapper, WarframeOfficialDataDomain domain,
+        JsonParser parser) throws IOException {
         BusinessAssert.isTrue(domain != null && domain != WarframeOfficialDataDomain.OTHER,
-                WarframeManagementErrorCode.DATASET_INVALID, "官方数据集尚未登记类型化字段合同");
+            WarframeManagementErrorCode.DATASET_INVALID, "官方数据集尚未登记类型化字段合同");
         try {
             OfficialRecordDTO result = mapper.readerFor(OfficialInputTypes.type(domain))
-                    .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                    .without(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(parser);
+                .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .without(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(parser);
             BusinessAssert.isTrue(result != null, WarframeManagementErrorCode.DATASET_INVALID, "官方记录必须是非空对象");
             return result;
         } catch (JsonMappingException exception) {
@@ -82,11 +76,12 @@ public final class WarframeOfficialInputParser {
         StringBuilder pointer = new StringBuilder();
         if (exception instanceof JsonMappingException mapping) {
             for (var reference : mapping.getPath()) {
-                String segment = reference.getFieldName() == null ? Integer.toString(reference.getIndex()) : reference.getFieldName();
+                String segment = reference.getFieldName() == null ? Integer.toString(reference.getIndex())
+                    : reference.getFieldName();
                 pointer.append('/').append(segment.replace("~", "~0").replace("/", "~1"));
             }
         }
         return new BusinessException(WarframeManagementErrorCode.DATASET_INVALID,
-                "官方 JSON 与类型化输入合同不符：" + domain.productPath() + "#" + pointer + "：" + exception.getMessage(), exception);
+            "官方 JSON 与类型化输入合同不符：" + domain.productPath() + "#" + pointer + "：" + exception.getMessage(), exception);
     }
 }

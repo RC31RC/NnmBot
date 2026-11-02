@@ -7,8 +7,5 @@ package com.nnm.bot.core.channel.model;
  * @param displayName 平台侧显示名称
  * @param role 平台侧成员角色
  */
-public record BotDiscoveredMember(
-        String platformUserId,
-        String displayName,
-        String role) {
+public record BotDiscoveredMember(String platformUserId, String displayName, String role) {
 }

@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.auth.impl;
 
+import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.admin.service.auth.RbacAccountService;
 
 import com.nnm.bot.admin.repository.system.SysUserRepository;
@@ -15,7 +16,7 @@ public class RbacAccountServiceImpl implements RbacAccountService {
 
     public void checkEnabled(long userId) {
         if (!userRepository.existsByIdAndEnabledTrue(userId)) {
-            throw new BusinessException(401, "账号不可用");
+            throw new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用");
         }
     }
 }

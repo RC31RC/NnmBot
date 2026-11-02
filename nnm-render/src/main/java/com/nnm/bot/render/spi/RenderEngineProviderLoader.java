@@ -45,9 +45,8 @@ public class RenderEngineProviderLoader {
             loadExternal(properties.getDirectory(), providers);
         }
         return providers.values().stream()
-                .sorted(Comparator.comparingInt(RenderEngineProvider::order)
-                        .thenComparing(RenderEngineProvider::id))
-                .toList();
+            .sorted(Comparator.comparingInt(RenderEngineProvider::order).thenComparing(RenderEngineProvider::id))
+            .toList();
     }
 
     private void loadExternal(Path directory, LinkedHashMap<String, RenderEngineProvider> providers) {
@@ -55,16 +54,16 @@ public class RenderEngineProviderLoader {
             return;
         }
         try (Stream<Path> paths = Files.list(directory)) {
-            List<URL> jars = paths.filter(path -> path.getFileName().toString().endsWith(".jar"))
-                    .sorted().map(this::toUrl).toList();
+            List<URL> jars =
+                paths.filter(path -> path.getFileName().toString().endsWith(".jar")).sorted().map(this::toUrl).toList();
             if (jars.isEmpty()) {
                 return;
             }
-            URLClassLoader loader = new URLClassLoader(jars.toArray(URL[]::new),
-                    RenderEngineProvider.class.getClassLoader());
+            URLClassLoader loader =
+                new URLClassLoader(jars.toArray(URL[]::new), RenderEngineProvider.class.getClassLoader());
             classLoaders.add(loader);
             Iterator<Provider<RenderEngineProvider>> discovered =
-                    ServiceLoader.load(RenderEngineProvider.class, loader).stream().iterator();
+                ServiceLoader.load(RenderEngineProvider.class, loader).stream().iterator();
             int discoveryErrors = 0;
             while (discoveryErrors < MAX_DISCOVERY_ERRORS) {
                 try {
@@ -78,8 +77,7 @@ public class RenderEngineProviderLoader {
                 }
             }
             if (discoveryErrors == MAX_DISCOVERY_ERRORS) {
-                log.warn("Stopped render provider discovery after {} errors from {}",
-                        MAX_DISCOVERY_ERRORS, directory);
+                log.warn("Stopped render provider discovery after {} errors from {}", MAX_DISCOVERY_ERRORS, directory);
             }
         } catch (Exception e) {
             log.warn("Failed to load render providers from {}: {}", directory, e.getMessage());
@@ -171,8 +169,8 @@ public class RenderEngineProviderLoader {
         }
     }
 
-    private record RegisteredProvider(String id, int order, RenderEngineProvider delegate)
-            implements RenderEngineProvider {
+    private record RegisteredProvider(String id, int order,
+        RenderEngineProvider delegate) implements RenderEngineProvider {
 
         @Override
         public boolean isAvailable(RenderEngineProviderContext context) {

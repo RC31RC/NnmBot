@@ -27,6 +27,8 @@ public class WarframeGroupWatchRuleDTO {
      * @return 游戏资料分组订阅监控规则对象。
      */
     public static WarframeGroupWatchRuleDTO from(WarframeGroupWatchRule rule) {
-        return new WarframeGroupWatchRuleDTO(rule.getId(), rule.getGroupId(), rule.getMemberId(), rule.getWatchType(), rule.getWatchKey(), rule.getWatchValue(), rule.isEnabled(), rule.isNotifyEnabled(), rule.getMatchedEventsJson(), rule.getCreatedAt(), rule.getUpdatedAt());
+        return new WarframeGroupWatchRuleDTO(rule.getId(), rule.getGroupId(), rule.getMemberId(), rule.getWatchType(),
+            rule.getWatchKey(), rule.getWatchValue(), rule.isEnabled(), rule.isNotifyEnabled(),
+            rule.getMatchedEventsJson(), rule.getCreatedAt(), rule.getUpdatedAt());
     }
 }

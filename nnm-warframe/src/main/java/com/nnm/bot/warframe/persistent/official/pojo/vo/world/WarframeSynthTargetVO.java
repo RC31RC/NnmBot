@@ -26,10 +26,11 @@ public record WarframeSynthTargetVO(String query, List<EntryVO> items, int page,
      * @return 结合仪式目标的分页视图。
      */
     public static WarframeSynthTargetVO page(String query, List<EntryVO> entries, int page) {
-        if (page < 1) throw new IllegalArgumentException("Page must be positive");
-        int from = (int) Math.min((long) (page - 1) * 4, entries.size());
-        return new WarframeSynthTargetVO(query, entries.subList(from, Math.min(from + 4, entries.size())),
-                page, Math.max(1, (int) ((entries.size() + 3L) / 4)), entries.size());
+        if (page < 1)
+            throw new IllegalArgumentException("Page must be positive");
+        int from = (int)Math.min((long)(page - 1) * 4, entries.size());
+        return new WarframeSynthTargetVO(query, entries.subList(from, Math.min(from + 4, entries.size())), page,
+            Math.max(1, (int)((entries.size() + 3L) / 4)), entries.size());
     }
 
     /**
@@ -41,8 +42,8 @@ public record WarframeSynthTargetVO(String query, List<EntryVO> items, int page,
         return page + "/" + totalPages + " 页，共 " + totalCount + " 个目标";
     }
 
-    public record EntryVO(String imageKey, String name, String locale, List<LocationVO> locations,
-                        String sourceCode, String resolutionMode) {
+    public record EntryVO(String imageKey, String name, String locale, List<LocationVO> locations, String sourceCode,
+        String resolutionMode) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *
@@ -59,6 +60,6 @@ public record WarframeSynthTargetVO(String query, List<EntryVO> items, int page,
     }
 
     public record LocationVO(String mission, String planet, String missionType, String faction, String level,
-                           String spawnRate, LocalDate lastVerified) {
+        String spawnRate, LocalDate lastVerified) {
     }
 }

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/v1/warframe/forum/articles")
+@RequestMapping("/api/admin/warframe/forum/articles")
 public class ForumArticleController {
 
     @Resource
@@ -38,14 +38,13 @@ public class ForumArticleController {
      */
     @PostMapping("/query")
     @SaCheckPermission("warframe:forum:view")
-    public ApiResponse<PageResult<ForumArticleVO>> query(
-            @RequestBody
-            ForumArticleQuery request) {
+    public ApiResponse<PageResult<ForumArticleVO>> query(@RequestBody ForumArticleQuery request) {
         return ApiResponse.ok(service.query(request, currentOperator()));
     }
 
     /**
      * 读取文章栏目、标签与当前操作者的论坛权限选项。
+     *
      * @return 以统一接口响应包装的本次操作结果。
      */
     @PostMapping("/options")
@@ -62,10 +61,7 @@ public class ForumArticleController {
      */
     @PostMapping("/detail")
     @SaCheckPermission("warframe:forum:view")
-    public ApiResponse<ForumArticleVO> detail(
-            @Valid
-            @RequestBody
-            ForumArticleIdQuery request) {
+    public ApiResponse<ForumArticleVO> detail(@Valid @RequestBody ForumArticleIdQuery request) {
         return ApiResponse.ok(service.detail(request, currentOperator()));
     }
 
@@ -77,10 +73,7 @@ public class ForumArticleController {
      */
     @PostMapping("/create")
     @SaCheckPermission("warframe:forum:create")
-    public ApiResponse<String> create(
-            @Valid
-            @RequestBody
-            ForumArticleSaveDTO request) {
+    public ApiResponse<String> create(@Valid @RequestBody ForumArticleSaveDTO request) {
         return ApiResponse.ok(String.valueOf(service.create(request, currentOperator())));
     }
 
@@ -92,10 +85,7 @@ public class ForumArticleController {
      */
     @PostMapping("/update")
     @SaCheckPermission("warframe:forum:update")
-    public ApiResponse<Void> update(
-            @Valid
-            @RequestBody
-            ForumArticleSaveDTO request) {
+    public ApiResponse<Void> update(@Valid @RequestBody ForumArticleSaveDTO request) {
         service.update(request, currentOperator());
         return ApiResponse.ok();
     }
@@ -108,24 +98,19 @@ public class ForumArticleController {
      */
     @PostMapping("/delete")
     @SaCheckPermission("warframe:forum:delete")
-    public ApiResponse<Void> delete(
-            @Valid
-            @RequestBody
-            ForumArticleDeleteDTO request) {
+    public ApiResponse<Void> delete(@Valid @RequestBody ForumArticleDeleteDTO request) {
         service.delete(request, currentOperator());
         return ApiResponse.ok();
     }
 
     /**
      * 从已认证会话构造本次论坛操作显式传递的用户上下文。
+     *
      * @return 论坛操作者对象。
      */
     private ForumOperatorDTO currentOperator() {
         long userId = StpUtil.getLoginIdAsLong();
-        return new ForumOperatorDTO(
-                userId,
-                authorityProvider.effectiveLevel(userId),
-                StpUtil.hasPermission("warframe:forum:update"),
-                StpUtil.hasPermission("warframe:forum:delete"));
+        return new ForumOperatorDTO(userId, authorityProvider.effectiveLevel(userId),
+            StpUtil.hasPermission("warframe:forum:update"), StpUtil.hasPermission("warframe:forum:delete"));
     }
 }

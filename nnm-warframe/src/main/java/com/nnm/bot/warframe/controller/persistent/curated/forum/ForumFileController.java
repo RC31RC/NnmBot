@@ -30,65 +30,44 @@ public class ForumFileController {
      * @param file 本次上传或读取的文件。
      * @return 以统一接口响应包装的本次操作结果。
      */
-    @PostMapping(
-            value = "/api/admin/v1/warframe/forum/files/upload",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @SaCheckPermission(
-            value = {"warframe:forum:create", "warframe:forum:update"},
-            mode = SaMode.OR)
-    public ApiResponse<ForumFileVO> upload(
-            @RequestPart("file")
-            MultipartFile file) {
+    @PostMapping(value = "/api/admin/warframe/forum/files/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @SaCheckPermission(value = {"warframe:forum:create", "warframe:forum:update"}, mode = SaMode.OR)
+    public ApiResponse<ForumFileVO> upload(@RequestPart("file") MultipartFile file) {
         return ApiResponse.ok(fileService.storeTemporary(file));
     }
 
     /**
      * 将永久文件读取结果转换为带媒体类型和缓存头的 HTTP 响应。
+     *
      * @param year 年份。
      * @param month 月份。
      * @param fileName 文件名称。
      * @return 响应实体对象。
      */
-    @GetMapping("/api/public/v1/warframe/forum/files/{year}/{month}/{fileName:.+}")
-    public ResponseEntity<org.springframework.core.io.Resource> file(
-            @PathVariable
-            String year,
-            @PathVariable
-            String month,
-            @PathVariable
-            String fileName) {
-        ForumStoredFileDTO storedFile =
-                fileService.loadPermanent(year, month, fileName);
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(storedFile.contentType()))
-                .contentLength(storedFile.size())
-                .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable())
-                .header("X-Content-Type-Options", "nosniff")
-                .body(storedFile.resource());
+    @GetMapping("/api/public/warframe/forum/files/{year}/{month}/{fileName:.+}")
+    public ResponseEntity<org.springframework.core.io.Resource> file(@PathVariable String year,
+        @PathVariable String month, @PathVariable String fileName) {
+        ForumStoredFileDTO storedFile = fileService.loadPermanent(year, month, fileName);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(storedFile.contentType()))
+            .contentLength(storedFile.size())
+            .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable())
+            .header("X-Content-Type-Options", "nosniff").body(storedFile.resource());
     }
 
     /**
      * 读取允许访问的临时文件，并按实际文件类型返回 HTTP 响应。
+     *
      * @param year 年份。
      * @param month 月份。
      * @param fileName 文件名称。
      * @return 响应实体对象。
      */
-    @GetMapping("/api/public/v1/warframe/forum/temp-files/{year}/{month}/{fileName:.+}")
-    public ResponseEntity<org.springframework.core.io.Resource> temporaryFile(
-            @PathVariable
-            String year,
-            @PathVariable
-            String month,
-            @PathVariable
-            String fileName) {
-        ForumStoredFileDTO storedFile =
-                fileService.loadTemporary(year, month, fileName);
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(storedFile.contentType()))
-                .contentLength(storedFile.size())
-                .cacheControl(CacheControl.noStore())
-                .header("X-Content-Type-Options", "nosniff")
-                .body(storedFile.resource());
+    @GetMapping("/api/public/warframe/forum/temp-files/{year}/{month}/{fileName:.+}")
+    public ResponseEntity<org.springframework.core.io.Resource> temporaryFile(@PathVariable String year,
+        @PathVariable String month, @PathVariable String fileName) {
+        ForumStoredFileDTO storedFile = fileService.loadTemporary(year, month, fileName);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(storedFile.contentType()))
+            .contentLength(storedFile.size()).cacheControl(CacheControl.noStore())
+            .header("X-Content-Type-Options", "nosniff").body(storedFile.resource());
     }
 }

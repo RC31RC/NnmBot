@@ -33,10 +33,7 @@ public interface ForumFileService {
      * @param contentMarkdown 内容文档。
      * @return 论坛已准备内容对象。
      */
-    ForumPreparedContentDTO toPublicContent(
-            String coverObjectId,
-            String contentHtml,
-            String contentMarkdown);
+    ForumPreparedContentDTO toPublicContent(String coverObjectId, String contentHtml, String contentMarkdown);
 
     /**
      * 读取已经转为永久保存的文件内容。
@@ -66,10 +63,7 @@ public interface ForumFileService {
      * @param contentMarkdown 内容文档。
      * @return 论坛已准备内容对象。
      */
-    ForumPreparedContentDTO promoteReferencedFiles(
-            String coverUrl,
-            String contentHtml,
-            String contentMarkdown);
+    ForumPreparedContentDTO promoteReferencedFiles(String coverUrl, String contentHtml, String contentMarkdown);
 
     /**
      * 提取正文实际引用的永久文件标识，供更新和删除时计算差异。
@@ -79,10 +73,7 @@ public interface ForumFileService {
      * @param contentMarkdown 内容文档。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    Set<String> referencedPermanentFiles(
-            String coverUrl,
-            String contentHtml,
-            String contentMarkdown);
+    Set<String> referencedPermanentFiles(String coverUrl, String contentHtml, String contentMarkdown);
 
     /**
      * 登记永久文件的删除操作，仅在当前事务成功提交后执行。

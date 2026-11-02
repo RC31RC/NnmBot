@@ -18,9 +18,8 @@ import org.hibernate.annotations.Check;
 @Setter
 @Entity
 @Check(constraints = "sort_order >= 0")
-@Table(name = "bot_command_group_member", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_bot_command_group_member_command", columnNames = "command_code")
-})
+@Table(name = "bot_command_group_member",
+    uniqueConstraints = {@UniqueConstraint(name = "uq_bot_command_group_member_command", columnNames = "command_code")})
 public class BotCommandGroupMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

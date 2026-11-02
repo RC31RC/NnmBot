@@ -5,13 +5,13 @@ import io.github.rdt.support.RetryClassifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Application exception semantics shared by RDT consumers and scheduled tasks. */
+/** RDT 消费者与定时任务共用的应用异常分类规则。 */
 @Configuration(proxyBeanMethods = false)
 public class RdtRetryConfiguration {
 
     @Bean
     public RetryClassifier rdtRetryClassifier() {
-        // Do not inspect causes: a business rejection must not become retryable because of its cause.
+        // 不递归检查 cause，避免业务拒绝因底层原因被误判为可重试。
         return failure -> failure instanceof SystemException;
     }
 }

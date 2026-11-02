@@ -11,11 +11,7 @@ public interface PointAccountService {
 
     PointChangeResult refund(String originalIdempotencyKey, String description);
 
-    PointChangeResult adjust(long groupId,
-                             long memberId,
-                             long targetPoints,
-                             String idempotencyKey,
-                             String description);
+    PointChangeResult adjust(long groupId, long memberId, long targetPoints, String idempotencyKey, String description);
 
     Optional<PointBalance> balance(long groupId, long memberId);
 

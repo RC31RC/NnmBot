@@ -36,18 +36,21 @@ public class WarframeNightwaveDefinitionServiceImpl implements WarframeNightwave
     @Override
     public WarframeNightwaveDefinitionVO query(String keyword, NightwaveSection section, int page) {
         String season = catalog.record(WarframeOfficialDataDomain.NIGHTWAVE, METADATA_BKEY)
-                .map(root -> first(((OfficialNightwaveDTO) root.data()).getAffiliationTag())).orElse("");
+            .map(root -> first(((OfficialNightwaveDTO)root.data()).getAffiliationTag())).orElse("");
         List<EntryVO> result = new ArrayList<>();
         for (var root : catalog.records(WarframeOfficialDataDomain.NIGHTWAVE)) {
             String prefix = section == NightwaveSection.CHALLENGES ? "challenges/" : "rewards/";
-            if (!root.bkey().startsWith(prefix) || !selection.matches(root, keyword)) continue;
-            OfficialNightwaveDTO value = (OfficialNightwaveDTO) root.data();
-            result.add(new EntryVO(root.databaseId(), root.bkey(), null, season, OFFICIAL_SOURCE_CODE, OFFICIAL_SOURCE_CODE, "ROOT_SELECTED",
-                    root.bkey(), null, name(root), first(value.getDescriptionZh(), value.getDescriptionEn(), value.getDescription()), first(value.getIcon()),
-                    first(value.getIconUrl()), count(value.getRequired()), count(value.getStanding()), count(value.getItemCount()),
-                    first(value.getTipZh(), value.getTipEn(), value.getTip()), first(value.getTipIcon()), ""));
+            if (!root.bkey().startsWith(prefix) || !selection.matches(root, keyword))
+                continue;
+            OfficialNightwaveDTO value = (OfficialNightwaveDTO)root.data();
+            result.add(new EntryVO(root.databaseId(), root.bkey(), null, season, OFFICIAL_SOURCE_CODE,
+                OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", root.bkey(), null, name(root),
+                first(value.getDescriptionZh(), value.getDescriptionEn(), value.getDescription()),
+                first(value.getIcon()), first(value.getIconUrl()), count(value.getRequired()),
+                count(value.getStanding()), count(value.getItemCount()),
+                first(value.getTipZh(), value.getTipEn(), value.getTip()), first(value.getTipIcon()), ""));
         }
         return WarframeNightwaveDefinitionVO.page(keyword, section,
-                StrUtil.isBlank(season) ? List.of() : List.of(season), result, page);
+            StrUtil.isBlank(season) ? List.of() : List.of(season), result, page);
     }
 }

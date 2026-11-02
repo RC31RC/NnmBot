@@ -83,5 +83,7 @@ public class OfficialRelicStatesEntriesItemReferencesItems extends OfficialChild
     private OfficialRelicStatesEntries parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRelicStatesEntriesItemReferencesItemsRotationsItems> officialRelicStatesEntriesItemReferencesItemsRotationsItemsRows = new ArrayList<>();
+    private List<
+        OfficialRelicStatesEntriesItemReferencesItemsRotationsItems> officialRelicStatesEntriesItemReferencesItemsRotationsItemsRows =
+            new ArrayList<>();
 }

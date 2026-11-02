@@ -17,7 +17,6 @@ public interface BotChannelInstanceRepository extends JpaRepository<BotChannelIn
     Optional<BotChannelInstance> findByInstanceIdIgnoreCase(String instanceId);
 
     @EntityGraph(attributePaths = {"oneBotConfig", "qqOfficialConfig"})
-    Optional<BotChannelInstance> findByPlatformAndBotAccountId(
-            BotPlatform platform, String botAccountId);
+    Optional<BotChannelInstance> findByPlatformAndBotAccountId(BotPlatform platform, String botAccountId);
 
 }

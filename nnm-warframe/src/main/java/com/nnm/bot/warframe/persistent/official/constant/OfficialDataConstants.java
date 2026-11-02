@@ -6,15 +6,29 @@ public final class OfficialDataConstants {
     public static final int RECORD_BATCH_SIZE = 250;
     public static final String METADATA_BKEY = "$metadata";
     public static final String OFFICIAL_SOURCE_CODE = "NNM_DATASET";
+
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private OfficialDataConstants() {
+    private OfficialDataConstants() {}
+
+    /** 官方数据刷新及审核所使用的稳定互斥用途。 */
+    public enum LockPurpose {
+        ADMISSION("admission"), DATASET("dataset"), METADATA("metadata");
+
+        private final String key;
+
+        LockPurpose(String key) {
+            this.key = key;
+        }
+
+        public String key() {
+            return key;
+        }
     }
 
     public enum MaintenanceType {
-        OFFICIAL,
-        SELF_MAINTAINED
+        OFFICIAL, SELF_MAINTAINED
     }
 
     public enum ImportStatus {
@@ -27,14 +41,14 @@ public final class OfficialDataConstants {
 
     /** 持久化形状码同时区分字段缺失、显式 null 和具体 JSON 类型。 */
     public enum FieldState {
-        MISSING(0, null), NULL(1, null), STRING(2, "string"), NUMBER(3, "number"),
-        BOOLEAN(4, "boolean"), OBJECT(5, "object"), ARRAY(6, "array");
+        MISSING(0, null), NULL(1, null), STRING(2, "string"), NUMBER(3, "number"), BOOLEAN(4, "boolean"),
+        OBJECT(5, "object"), ARRAY(6, "array");
 
         private final short code;
         private final String jsonType;
 
         FieldState(int code, String jsonType) {
-            this.code = (short) code;
+            this.code = (short)code;
             this.jsonType = jsonType;
         }
 
@@ -47,16 +61,17 @@ public final class OfficialDataConstants {
         }
 
         public static FieldState fromCode(Short code) {
-            if (code == null) return MISSING;
+            if (code == null)
+                return MISSING;
             for (FieldState state : values()) {
-                if (state.code == code) return state;
+                if (state.code == code)
+                    return state;
             }
             throw new IllegalStateException("未知官方持久化字段形状：" + code);
         }
     }
 
     public enum SourceMode {
-        LOCAL,
-        REMOTE
+        LOCAL, REMOTE
     }
 }

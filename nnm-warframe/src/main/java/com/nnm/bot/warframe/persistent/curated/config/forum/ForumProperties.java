@@ -68,23 +68,20 @@ public class ForumProperties {
     @PostConstruct
     public void validate() {
         storage.validate();
-        if (publicBaseUrl == null
-                || publicBaseUrl.getHost() == null
-                || (!"http".equalsIgnoreCase(publicBaseUrl.getScheme())
+        if (publicBaseUrl == null || publicBaseUrl.getHost() == null
+            || (!"http".equalsIgnoreCase(publicBaseUrl.getScheme())
                 && !"https".equalsIgnoreCase(publicBaseUrl.getScheme()))) {
-            throw new IllegalArgumentException(
-                    "nnm.warframe.forum.public-base-url must be an absolute HTTP URL");
+            throw new IllegalArgumentException("nnm.warframe.forum.public-base-url must be an absolute HTTP URL");
         }
-        if (StrUtil.isBlank(publicDetailPath)
-                || !publicDetailPath.startsWith("/#/warframe/forum/detail")) {
+        if (StrUtil.isBlank(publicDetailPath) || !publicDetailPath.startsWith("/#/warframe/forum/detail")) {
             throw new IllegalArgumentException(
-                    "nnm.warframe.forum.public-detail-path must be a hash route under "
-                            + "/#/warframe/forum/detail");
+                "nnm.warframe.forum.public-detail-path must be a hash route under " + "/#/warframe/forum/detail");
         }
     }
 
     /**
      * 构造指定文章的公开访问地址，便于机器人消息引用。
+     *
      * @param articleId 文章标识。
      * @return 公开文章地址对应的文本。
      */
@@ -96,6 +93,7 @@ public class ForumProperties {
 
     /**
      * 构造指定文章的站内访问路径。
+     *
      * @param articleId 文章标识。
      * @return 公开文章地址对应的文本。
      */

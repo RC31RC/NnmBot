@@ -179,17 +179,26 @@ public class OfficialKeysChainStagesItems extends OfficialChildRow {
     private OfficialKeysRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysChainStagesItemsItemReferencesItems> officialKeysChainStagesItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialKeysChainStagesItemsItemReferencesItems> officialKeysChainStagesItemsItemReferencesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysChainStagesItemsItemsToGiveWhenTriggeredItems> officialKeysChainStagesItemsItemsToGiveWhenTriggeredItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysChainStagesItemsItemsToGiveWhenTriggeredItems> officialKeysChainStagesItemsItemsToGiveWhenTriggeredItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysChainStagesItemsMessageToSendWhenTriggeredAttachmentsItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredAttachmentsItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysChainStagesItemsMessageToSendWhenTriggeredAttachmentsItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredAttachmentsItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysChainStagesItemsMessageToSendWhenTriggeredItemReferencesItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysChainStagesItemsMessageToSendWhenTriggeredItemReferencesItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredItemReferencesItemsRows =
+            new ArrayList<>();
 }

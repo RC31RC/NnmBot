@@ -35,8 +35,9 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Shiro 客户端处理器的多实例版本。
  *
- * <p>Shiro 默认处理器在任一连接断开时会清空整个机器人容器，
- * 多个 WebSocket 地址同时使用时会误伤其他账号，因此这里只清理当前会话。</p>
+ * <p>
+ * Shiro 默认处理器在任一连接断开时会清空整个机器人容器， 多个 WebSocket 地址同时使用时会误伤其他账号，因此这里只清理当前会话。
+ * </p>
  */
 @Component
 public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
@@ -48,37 +49,29 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
     @Resource
     private OneBotMessageArrivalStore messageArrivals;
 
-    public MultiOneBotWebSocketClientHandler(
-            EventHandler eventHandler,
-            BotFactory botFactory,
-            ActionHandler actionHandler,
-            ShiroAsyncTask shiroAsyncTask,
-            BotContainer botContainer,
-            CoreEvent coreEvent,
-            WebSocketProperties wsProperties,
-            @Qualifier("shiroTaskExecutor")
-            ThreadPoolTaskExecutor shiroTaskExecutor) {
-        super(eventHandler, botFactory, actionHandler, shiroAsyncTask,
-                botContainer, coreEvent, wsProperties, shiroTaskExecutor);
+    public MultiOneBotWebSocketClientHandler(EventHandler eventHandler, BotFactory botFactory,
+        ActionHandler actionHandler, ShiroAsyncTask shiroAsyncTask, BotContainer botContainer, CoreEvent coreEvent,
+        WebSocketProperties wsProperties, @Qualifier("shiroTaskExecutor") ThreadPoolTaskExecutor shiroTaskExecutor) {
+        super(eventHandler, botFactory, actionHandler, shiroAsyncTask, botContainer, coreEvent, wsProperties,
+            shiroTaskExecutor);
         this.botContainer = botContainer;
         this.coreEvent = coreEvent;
         this.shiroTaskExecutor = shiroTaskExecutor;
     }
 
     public void trackAccount(WebSocketSession session, long accountId) {
-        sessionAccounts.computeIfAbsent(session.getId(), ignored -> ConcurrentHashMap.newKeySet())
-                .add(accountId);
+        sessionAccounts.computeIfAbsent(session.getId(), ignored -> ConcurrentHashMap.newKeySet()).add(accountId);
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         long receivedAt = System.currentTimeMillis();
-        JsonObjectWrapper payload = JsonUtils.isValid(message.getPayload())
-                ? JsonObjectWrapper.parseObject(message.getPayload()) : null;
+        JsonObjectWrapper payload =
+            JsonUtils.isValid(message.getPayload()) ? JsonObjectWrapper.parseObject(message.getPayload()) : null;
         Object selfId = payload == null ? null : payload.get(Connection.SELF_ID);
         String accountId = selfId == null ? null : selfId.toString();
         if (payload != null && accountId != null && "message".equals(payload.get("post_type"))
-                && payload.get("message_id") != null) {
+            && payload.get("message_id") != null) {
             messageArrivals.record(session.getId(), accountId, payload.get("message_id").toString(), receivedAt);
         }
         if (ObjectUtil.isNotNull(accountId)) {
@@ -106,6 +99,7 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
             removeSessionBot(session, accountId);
         }
     }
+
     // 移除当前会话的机器人
     private void removeSessionBot(WebSocketSession session, long accountId) {
         AtomicReference<Bot> removed = new AtomicReference<>();
@@ -132,8 +126,7 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
         }
         String significant = normalized.replaceFirst("^0+(?!$)", "");
         if (significant.length() > 19
-                || (significant.length() == 19
-                && significant.compareTo("9223372036854775807") > 0)) {
+            || (significant.length() == 19 && significant.compareTo("9223372036854775807") > 0)) {
             return 0L;
         }
         return Long.parseLong(normalized);

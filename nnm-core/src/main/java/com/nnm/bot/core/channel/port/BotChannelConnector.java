@@ -3,7 +3,7 @@ package com.nnm.bot.core.channel.port;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.constant.BotPlatform;
 
-/** A connector owns isolated protocol sessions, never cluster placement or command execution. */
+/** 连接器只管理隔离的协议会话，不负责集群分配或命令执行。 */
 public interface BotChannelConnector {
     BotPlatform platform();
 

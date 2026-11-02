@@ -20,6 +20,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.vo.equipment.WarframeCompan
 public class WarframeCompanionServiceImpl implements WarframeCompanionService {
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 读取本业务直接使用的已采纳同伴资料。
      *
@@ -39,19 +40,20 @@ public class WarframeCompanionServiceImpl implements WarframeCompanionService {
     @Override
     public List<WarframeCompanionVO.EntryVO> find(String keyword) {
         return data.find(Category.COMPANION, keyword).stream().map(row -> {
-            OfficialSentinelsDTO value = (OfficialSentinelsDTO) row.data();
+            OfficialSentinelsDTO value = (OfficialSentinelsDTO)row.data();
             List<ReferenceVO> exalted = new ArrayList<>();
-            for (String child : values(value.getExalted()))exalted.add(new ReferenceVO(child, child));
+            for (String child : values(value.getExalted()))
+                exalted.add(new ReferenceVO(child, child));
             List<UpgradeVO> upgrades = new ArrayList<>();
-            for (OfficialSentinelsDTO.DefaultUpgradesDTO child : values(value.getDefaultUpgrades())){
-                upgrades.add(new UpgradeVO(new ReferenceVO(first(child.getItemType()), ""),
-                        integer(child.getSlot())));
+            for (OfficialSentinelsDTO.DefaultUpgradesDTO child : values(value.getDefaultUpgrades())) {
+                upgrades.add(new UpgradeVO(new ReferenceVO(first(child.getItemType()), ""), integer(child.getSlot())));
             }
-            return new WarframeCompanionVO.EntryVO(row.bkey(), name(row), first(value.getDescriptionZh(), value.getDescriptionEn(), value.getDescription()),
-                    "", first(value.getProductCategory()), null,
-                    null, decimal(value.getHealth()), decimal(value.getShield()), decimal(value.getArmor()),
-                    decimal(value.getPower()), decimal(value.getStamina()), null, exalted, upgrades,
-                    null, null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
+            return new WarframeCompanionVO.EntryVO(row.bkey(), name(row),
+                first(value.getDescriptionZh(), value.getDescriptionEn(), value.getDescription()), "",
+                first(value.getProductCategory()), null, null, decimal(value.getHealth()), decimal(value.getShield()),
+                decimal(value.getArmor()), decimal(value.getPower()), decimal(value.getStamina()), null, exalted,
+                upgrades, null, null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE,
+                "ROOT_SELECTED");
         }).toList();
     }
 

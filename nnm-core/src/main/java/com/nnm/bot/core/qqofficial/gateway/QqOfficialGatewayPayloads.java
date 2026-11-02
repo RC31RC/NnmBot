@@ -7,25 +7,17 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 final class QqOfficialGatewayPayloads {
 
-    private QqOfficialGatewayPayloads() {
-    }
+    private QqOfficialGatewayPayloads() {}
 
     static ObjectNode identify(ObjectMapper objectMapper, String token, long intents) {
-        ObjectNode data = objectMapper.createObjectNode()
-                .put("token", "QQBot " + token)
-                .put("intents", intents);
+        ObjectNode data = objectMapper.createObjectNode().put("token", "QQBot " + token).put("intents", intents);
         data.set("shard", objectMapper.createArrayNode().add(0).add(1));
         return objectMapper.createObjectNode().put("op", 2).set("d", data);
     }
 
-    static ObjectNode resume(ObjectMapper objectMapper,
-                             String token,
-                             String sessionId,
-                             int sequence) {
-        ObjectNode data = objectMapper.createObjectNode()
-                .put("token", "QQBot " + token)
-                .put("session_id", sessionId)
-                .put("seq", sequence);
+    static ObjectNode resume(ObjectMapper objectMapper, String token, String sessionId, int sequence) {
+        ObjectNode data = objectMapper.createObjectNode().put("token", "QQBot " + token).put("session_id", sessionId)
+            .put("seq", sequence);
         return objectMapper.createObjectNode().put("op", 6).set("d", data);
     }
 

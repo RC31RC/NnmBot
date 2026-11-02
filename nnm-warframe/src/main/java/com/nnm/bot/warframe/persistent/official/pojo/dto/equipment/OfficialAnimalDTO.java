@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** ANIMAL 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialAnimalDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 动物保护的物品引用；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("conservation__itemReferences")
@@ -263,7 +263,8 @@ public class OfficialAnimalDTO extends OfficialObjectDTO implements OfficialReco
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -279,7 +280,7 @@ public class OfficialAnimalDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ConservationItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ConservationItemReferencesDTO extends OfficialObjectDTO {
         /** 动物保护的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")

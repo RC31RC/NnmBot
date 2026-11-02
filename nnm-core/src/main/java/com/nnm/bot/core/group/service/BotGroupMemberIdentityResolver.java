@@ -22,27 +22,23 @@ public class BotGroupMemberIdentityResolver {
     @Resource
     private CanonicalMemberResolver canonicalMembers;
 
-    public Optional<BotGroupMember> findByContext(
-            Long groupId, BotMessageContext context) {
+    public Optional<BotGroupMember> findByContext(Long groupId, BotMessageContext context) {
         if (context.execution() != null && context.execution().groupView() != null
-                && context.execution().groupView().id() == groupId) {
+            && context.execution().groupView().id() == groupId) {
             return Optional.ofNullable(context.execution().member()).map(member -> member.entity());
         }
         return this.findByPlatformIdentity(groupId, context.platform(), context.senderId());
     }
 
-    public Optional<BotGroupMember> findByPlatformIdentity(
-            Long groupId, BotPlatform platform, String identity) {
+    public Optional<BotGroupMember> findByPlatformIdentity(Long groupId, BotPlatform platform, String identity) {
         return identityAdapters.find(memberRepository, groupId, platform, identity)
-                .map(member -> resolveCanonical(groupId, member));
+            .map(member -> resolveCanonical(groupId, member));
     }
 
     /**
-     * 在真正要写入积分、签到或订阅等持久数据的边界幂等建立成员。
-     * 普通命令入口不得调用此方法。
+     * 在真正要写入积分、签到或订阅等持久数据的边界幂等建立成员。 普通命令入口不得调用此方法。
      */
-    public Optional<BotGroupMember> findOrCreateForWrite(
-            Long groupId, BotMessageContext context) {
+    public Optional<BotGroupMember> findOrCreateForWrite(Long groupId, BotMessageContext context) {
         Optional<BotGroupMember> existing = findByPlatformIdentity(groupId, context.platform(), context.senderId());
         if (existing.isPresent()) {
             return existing;
@@ -60,7 +56,8 @@ public class BotGroupMemberIdentityResolver {
             return Optional.of(memberRepository.save(member));
         } catch (RuntimeException exception) {
             // 唯一索引竞态下重读胜出的记录，避免同一平台身份产生两条成员。
-            return Optional.of(findByPlatformIdentity(groupId, context.platform(), context.senderId()).orElseThrow(() -> exception));
+            return Optional.of(
+                findByPlatformIdentity(groupId, context.platform(), context.senderId()).orElseThrow(() -> exception));
         }
     }
 
@@ -69,8 +66,7 @@ public class BotGroupMemberIdentityResolver {
             return Optional.empty();
         }
         return groupContextResolver.resolve(context)
-                .flatMap(groupContext -> findOrCreateForWrite(
-                        groupContext.group().getId(), context));
+            .flatMap(groupContext -> findOrCreateForWrite(groupContext.group().getId(), context));
     }
 
     public long canonicalMemberId(long groupId, long memberId) {
@@ -86,6 +82,6 @@ public class BotGroupMemberIdentityResolver {
             return member;
         }
         return memberRepository.findById(canonicalId).filter(target -> target.getGroupId().equals(groupId))
-                .orElseThrow(() -> new IllegalStateException("成员合并目标不存在或不属于当前群组"));
+            .orElseThrow(() -> new IllegalStateException("成员合并目标不存在或不属于当前群组"));
     }
 }

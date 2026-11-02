@@ -17,12 +17,13 @@ public record CommandExecutionContext(Group groupView, Binding bindingView, List
         return groupView == null ? null : new BotGroupCommandContext(groupView.entity(), bindingView.entity());
     }
 
-    public record Member(Long id, long groupId, String qqId, String memberOpenid, String kookId,
-                         boolean qqIdVerified, LocalDateTime qqBoundAt, String displayName, String role, boolean enabled) {
+    public record Member(Long id, long groupId, String qqId, String memberOpenid, String kookId, boolean qqIdVerified,
+        LocalDateTime qqBoundAt, String displayName, String role, boolean enabled) {
         public static Member of(BotGroupMember value) {
-            return value == null ? null : new Member(value.getId(), value.getGroupId(), value.getQqId(),
-                    value.getMemberOpenid(), value.getKookId(), value.isQqIdVerified(), value.getQqBoundAt(),
-                    value.getDisplayName(), value.getMemberRole(), value.isEnabled());
+            return value == null ? null
+                : new Member(value.getId(), value.getGroupId(), value.getQqId(), value.getMemberOpenid(),
+                    value.getKookId(), value.isQqIdVerified(), value.getQqBoundAt(), value.getDisplayName(),
+                    value.getMemberRole(), value.isEnabled());
         }
 
         public BotGroupMember entity() {

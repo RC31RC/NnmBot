@@ -16,12 +16,10 @@ public class WarframeImageDataProperties {
     private String officialUrlTemplate = "https://content.warframe.com/PublicExport/{path}!{hash}";
     private String forumUrlTemplate = "https://media.invisioncic.com/Mwarframe/pages_media/{forumName}.png";
     private String browseUrlTemplate = "https://browse.wf/{path}";
-    private List<String> allowedHosts = List.of(
-            "content.warframe.com", "media.invisioncic.com", "cdn.warframestat.us", "browse.wf");
+    private List<String> allowedHosts =
+        List.of("content.warframe.com", "media.invisioncic.com", "cdn.warframestat.us", "browse.wf");
     private Duration refreshInterval = Duration.ofDays(1);
     private Duration retryInterval = Duration.ofMinutes(10);
-    private Duration initialDelay = Duration.ofMinutes(2);
-    private Duration refreshCheckInterval = Duration.ofMinutes(15);
     private boolean enabled = true;
 
     /**
@@ -32,11 +30,8 @@ public class WarframeImageDataProperties {
         validateTemplate(officialUrlTemplate, "{path}", "{hash}");
         validateTemplate(forumUrlTemplate, "{forumName}");
         validateTemplate(browseUrlTemplate, "{path}");
-        if (invalid(refreshInterval) || invalid(retryInterval) || invalid(initialDelay)
-                || invalid(refreshCheckInterval)
-                || CollUtil.isEmpty(allowedHosts)
-                || allowedHosts.stream().anyMatch(host -> host == null
-                || !host.matches("[a-zA-Z0-9.-]+"))) {
+        if (invalid(refreshInterval) || invalid(retryInterval) || CollUtil.isEmpty(allowedHosts)
+            || allowedHosts.stream().anyMatch(host -> host == null || !host.matches("[a-zA-Z0-9.-]+"))) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.image-data cache or host policy");
         }
     }
@@ -60,8 +55,7 @@ public class WarframeImageDataProperties {
         }
         URI uri = URI.create(sample);
         validateUrl(uri);
-        if (allowedHosts == null || allowedHosts.stream().noneMatch(
-                host -> host.equalsIgnoreCase(uri.getHost()))) {
+        if (allowedHosts == null || allowedHosts.stream().noneMatch(host -> host.equalsIgnoreCase(uri.getHost()))) {
             throw new IllegalArgumentException("Image URL template host is not allowed");
         }
     }
@@ -72,9 +66,8 @@ public class WarframeImageDataProperties {
      * @param uri 地址。
      */
     private static void validateUrl(URI uri) {
-        if (uri == null || !List.of("https", "http").contains(uri.getScheme())
-                || uri.getHost() == null || uri.getUserInfo() != null
-                || uri.getFragment() != null) {
+        if (uri == null || !List.of("https", "http").contains(uri.getScheme()) || uri.getHost() == null
+            || uri.getUserInfo() != null || uri.getFragment() != null) {
             throw new IllegalArgumentException("Image source must be an absolute HTTP URL");
         }
     }

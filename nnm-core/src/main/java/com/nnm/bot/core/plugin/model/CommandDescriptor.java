@@ -20,15 +20,8 @@ import java.util.Objects;
  * @param matchType 命令查找策略
  * @param order 展示顺序和回退匹配顺序
  */
-public record CommandDescriptor(
-        String code,
-        String name,
-        List<CommandTrigger> triggers,
-        String description,
-        String permission,
-        MatchType matchType,
-        int order
-) {
+public record CommandDescriptor(String code, String name, List<CommandTrigger> triggers, String description,
+    String permission, MatchType matchType, int order) {
 
     public CommandDescriptor {
         code = requireText(code, "code");
@@ -44,9 +37,8 @@ public record CommandDescriptor(
         for (CommandTrigger trigger : triggers) {
             lookup.put(trigger.name().toLowerCase(Locale.ROOT), trigger);
         }
-        lookup.putIfAbsent(
-                name.toLowerCase(Locale.ROOT),
-                new CommandTrigger(name, CommandBoundaryPolicy.defaultFor(name)));
+        lookup.putIfAbsent(name.toLowerCase(Locale.ROOT),
+            new CommandTrigger(name, CommandBoundaryPolicy.defaultFor(name)));
         return List.copyOf(lookup.values());
     }
 

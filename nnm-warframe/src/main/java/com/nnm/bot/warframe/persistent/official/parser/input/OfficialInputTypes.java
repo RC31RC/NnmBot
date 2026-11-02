@@ -79,8 +79,7 @@ public final class OfficialInputTypes {
     /**
      * 禁止实例化逐文件输入类型登记表。
      */
-    private OfficialInputTypes() {
-    }
+    private OfficialInputTypes() {}
 
     /**
      * 取得官方 JSON 所属的具体输入类型。

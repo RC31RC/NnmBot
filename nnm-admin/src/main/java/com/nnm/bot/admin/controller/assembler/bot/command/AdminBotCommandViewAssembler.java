@@ -20,45 +20,25 @@ import java.util.List;
 
 /** 在 HTTP 展示边界转换数据，保持服务传输合同独立。 */
 public final class AdminBotCommandViewAssembler {
-    private AdminBotCommandViewAssembler() {
-    }
+    private AdminBotCommandViewAssembler() {}
 
     public static BotCommandCostVO toBotCommandCostVO(BotCommandCostDTO value) {
-        if (value == null) return null;
-        return new BotCommandCostVO(
-                value.commandCode(),
-                value.costPoints(),
-                value.enabled(),
-                value.rewardPoints(),
-                value.rewardEnabled());
+        if (value == null)
+            return null;
+        return new BotCommandCostVO(value.commandCode(), value.costPoints(), value.enabled(), value.rewardPoints(),
+            value.rewardEnabled());
     }
 
     public static BotCommandVO toBotCommandVO(BotCommandDTO value) {
-        if (value == null) return null;
-        return new BotCommandVO(
-                value.id(),
-                value.isNew(),
-                value.code(),
-                value.name(),
-                value.gameCode(),
-                value.description(),
-                value.matchType(),
-                value.enabled(),
-                value.showInHelp(),
-                value.presentation(),
-                value.views(),
-                value.allowRelatedAction(),
-                value.relatedParameters(),
-                value.actionContextKeys(),
-                value.triggers() == null ? null : value.triggers().stream().map(AdminBotCommandViewAssembler::toBotCommandTriggerVO).toList(),
-                value.cooldownSeconds(),
-                value.mentionInvoker(),
-                value.permissionOverride(),
-                value.groupRoleRequired(),
-                value.templateIds(),
-                value.templateCodes(),
-                value.createdAt(),
-                value.updatedAt());
+        if (value == null)
+            return null;
+        return new BotCommandVO(value.id(), value.isNew(), value.code(), value.name(), value.gameCode(),
+            value.description(), value.matchType(), value.enabled(), value.showInHelp(), value.presentation(),
+            value.views(), value.allowRelatedAction(), value.relatedParameters(), value.actionContextKeys(),
+            value.triggers() == null ? null
+                : value.triggers().stream().map(AdminBotCommandViewAssembler::toBotCommandTriggerVO).toList(),
+            value.cooldownSeconds(), value.mentionInvoker(), value.permissionOverride(), value.groupRoleRequired(),
+            value.templateIds(), value.templateCodes(), value.createdAt(), value.updatedAt());
     }
 
     public static List<BotCommandVO> toBotCommandVO(List<BotCommandDTO> values) {
@@ -66,14 +46,11 @@ public final class AdminBotCommandViewAssembler {
     }
 
     public static BotCommandGroupVO toBotCommandGroupVO(BotCommandGroupDTO value) {
-        if (value == null) return null;
-        return new BotCommandGroupVO(
-                value.id(),
-                value.code(),
-                value.name(),
-                value.enabled(),
-                value.version(),
-                value.members() == null ? null : value.members().stream().map(AdminBotCommandViewAssembler::toBotCommandGroupMemberVO).toList());
+        if (value == null)
+            return null;
+        return new BotCommandGroupVO(value.id(), value.code(), value.name(), value.enabled(), value.version(),
+            value.members() == null ? null
+                : value.members().stream().map(AdminBotCommandViewAssembler::toBotCommandGroupMemberVO).toList());
     }
 
     public static List<BotCommandGroupVO> toBotCommandGroupVO(List<BotCommandGroupDTO> values) {
@@ -81,24 +58,17 @@ public final class AdminBotCommandViewAssembler {
     }
 
     public static BotCommandGroupMemberVO toBotCommandGroupMemberVO(BotCommandGroupMemberDTO value) {
-        if (value == null) return null;
-        return new BotCommandGroupMemberVO(
-                value.commandCode(),
-                value.title(),
-                value.sortOrder(),
-                value.parameterBindings());
+        if (value == null)
+            return null;
+        return new BotCommandGroupMemberVO(value.commandCode(), value.title(), value.sortOrder(),
+            value.parameterBindings());
     }
 
     public static BotCommandGroupPreviewVO toBotCommandGroupPreviewVO(BotCommandGroupPreviewDTO value) {
-        if (value == null) return null;
-        return new BotCommandGroupPreviewVO(
-                value.sourceCode(),
-                value.targetCode(),
-                value.title(),
-                value.command(),
-                value.reason(),
-                value.qqPresentation(),
-                value.oneBotText());
+        if (value == null)
+            return null;
+        return new BotCommandGroupPreviewVO(value.sourceCode(), value.targetCode(), value.title(), value.command(),
+            value.reason(), value.qqPresentation(), value.oneBotText());
     }
 
     public static List<BotCommandGroupPreviewVO> toBotCommandGroupPreviewVO(List<BotCommandGroupPreviewDTO> values) {
@@ -106,13 +76,10 @@ public final class AdminBotCommandViewAssembler {
     }
 
     public static BotCommandRoleVO toBotCommandRoleVO(BotCommandRoleDTO value) {
-        if (value == null) return null;
-        return new BotCommandRoleVO(
-                value.roleId(),
-                value.roleCode(),
-                value.roleName(),
-                value.enabled(),
-                value.assigned());
+        if (value == null)
+            return null;
+        return new BotCommandRoleVO(value.roleId(), value.roleCode(), value.roleName(), value.enabled(),
+            value.assigned());
     }
 
     public static List<BotCommandRoleVO> toBotCommandRoleVO(List<BotCommandRoleDTO> values) {
@@ -120,28 +87,17 @@ public final class AdminBotCommandViewAssembler {
     }
 
     public static BotCommandTriggerVO toBotCommandTriggerVO(BotCommandTriggerDTO value) {
-        if (value == null) return null;
-        return new BotCommandTriggerVO(
-                value.name(),
-                value.boundaryPolicy());
+        if (value == null)
+            return null;
+        return new BotCommandTriggerVO(value.name(), value.boundaryPolicy());
     }
 
     public static BotTemplateVO toBotTemplateVO(BotTemplateDTO value) {
-        if (value == null) return null;
-        return new BotTemplateVO(
-                value.id(),
-                value.templateCode(),
-                value.viewKey(),
-                value.name(),
-                value.commandId(),
-                value.sortOrder(),
-                value.htmlContent(),
-                value.markdownContent(),
-                value.plainTextContent(),
-                value.enabled(),
-                value.commandCount(),
-                value.createdAt(),
-                value.updatedAt());
+        if (value == null)
+            return null;
+        return new BotTemplateVO(value.id(), value.templateCode(), value.viewKey(), value.name(), value.commandId(),
+            value.sortOrder(), value.htmlContent(), value.markdownContent(), value.plainTextContent(), value.enabled(),
+            value.commandCount(), value.createdAt(), value.updatedAt());
     }
 
     public static List<BotTemplateVO> toBotTemplateVO(List<BotTemplateDTO> values) {

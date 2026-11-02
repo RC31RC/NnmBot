@@ -30,9 +30,10 @@ public class DatabaseBotTopologyLoader implements BotTopologyLoader {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ, propagation = Propagation.REQUIRES_NEW)
     public BotTopologySnapshot load() {
         // 连接配置、群组和绑定来自同一数据库快照，避免刷新时拼出半新半旧的拓扑。
-        Map<Long, BotChannelInstanceRecord> records = instances.findAllByOrderByPlatformAscInstanceIdAsc().stream()
+        Map<Long,
+            BotChannelInstanceRecord> records = instances.findAllByOrderByPlatformAscInstanceIdAsc().stream()
                 .collect(Collectors.toMap(instance -> instance.getId(),
-                        instance -> DatabaseBotChannelInstanceProvider.toRecord(instance, cipher)));
+                    instance -> DatabaseBotChannelInstanceProvider.toRecord(instance, cipher)));
         return BotTopologySnapshot.of(records, groups.findAll(), bindings.findAll());
     }
 }

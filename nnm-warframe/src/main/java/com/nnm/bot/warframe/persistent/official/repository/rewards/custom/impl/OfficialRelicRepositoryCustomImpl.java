@@ -33,7 +33,7 @@ public class OfficialRelicRepositoryCustomImpl implements OfficialRelicRepositor
         QOfficialRelicRoot self = new QOfficialRelicRoot("selfMaintainedRoot");
         QOfficialRelicStatesEntries state = QOfficialRelicStatesEntries.officialRelicStatesEntries;
         QOfficialRelicStatesEntriesRewardsItems reward =
-                QOfficialRelicStatesEntriesRewardsItems.officialRelicStatesEntriesRewardsItems;
+            QOfficialRelicStatesEntriesRewardsItems.officialRelicStatesEntriesRewardsItems;
         QOfficialRelicLocationsItems location = QOfficialRelicLocationsItems.officialRelicLocationsItems;
 
         BooleanExpression preferred = preferred(root, self);
@@ -41,35 +41,36 @@ public class OfficialRelicRepositoryCustomImpl implements OfficialRelicRepositor
 
         if (StrUtil.isNotBlank(keyword)) {
             String queryText = keyword.trim().toLowerCase(Locale.ROOT);
-            BooleanExpression rootMatch = root.bkey.containsIgnoreCase(queryText)
-                    .or(root.officialName.containsIgnoreCase(queryText))
-                    .or(root.localizedName.containsIgnoreCase(queryText))
-                    .or(root.name.containsIgnoreCase(queryText))
-                    .or(root.nameEn.containsIgnoreCase(queryText))
-                    .or(root.nameZh.containsIgnoreCase(queryText));
-            BooleanExpression rewardMatch = JPAExpressions.selectOne().from(state).join(reward)
-                    .on(reward.bkey.eq(state.id))
-                    .where(state.bkey.eq(root.id).and(reward.itemUniqueName.containsIgnoreCase(queryText)
+            BooleanExpression rootMatch =
+                root.bkey.containsIgnoreCase(queryText).or(root.officialName.containsIgnoreCase(queryText))
+                    .or(root.localizedName.containsIgnoreCase(queryText)).or(root.name.containsIgnoreCase(queryText))
+                    .or(root.nameEn.containsIgnoreCase(queryText)).or(root.nameZh.containsIgnoreCase(queryText));
+            BooleanExpression rewardMatch =
+                JPAExpressions.selectOne().from(state).join(reward).on(reward.bkey.eq(state.id))
+                    .where(state.bkey.eq(root.id)
+                        .and(reward.itemUniqueName.containsIgnoreCase(queryText)
                             .or(reward.itemName.containsIgnoreCase(queryText))
                             .or(reward.itemNameEn.containsIgnoreCase(queryText))
                             .or(reward.itemNameZh.containsIgnoreCase(queryText))
-                            .or(reward.rewardName.containsIgnoreCase(queryText)))).exists();
+                            .or(reward.rewardName.containsIgnoreCase(queryText))))
+                    .exists();
             BooleanExpression locationMatch = JPAExpressions.selectOne().from(location)
-                    .where(location.bkey.eq(root.id).and(location.source.containsIgnoreCase(queryText)
-                            .or(location.sourceZh.containsIgnoreCase(queryText)))).exists();
+                .where(location.bkey.eq(root.id).and(
+                    location.source.containsIgnoreCase(queryText).or(location.sourceZh.containsIgnoreCase(queryText))))
+                .exists();
             predicate = predicate.and(rootMatch.or(rewardMatch).or(locationMatch));
         }
 
         return new JPAQueryFactory(entityManager).select(root.id).distinct().from(root).where(predicate)
-                .orderBy(root.id.asc()).fetch();
+            .orderBy(root.id.asc()).fetch();
     }
 
     private static BooleanExpression preferred(QOfficialRelicRoot root, QOfficialRelicRoot self) {
         return root.maintenanceType.eq(MaintenanceType.SELF_MAINTAINED)
-                .or(JPAExpressions.selectOne().from(self)
-                        .where(self.bkey.lower().eq(root.bkey.lower())
-                                .and(self.maintenanceType.eq(MaintenanceType.SELF_MAINTAINED))
-                                .and(self.enabled.isTrue())).notExists());
+            .or(JPAExpressions.selectOne().from(self)
+                .where(self.bkey.lower().eq(root.bkey.lower())
+                    .and(self.maintenanceType.eq(MaintenanceType.SELF_MAINTAINED)).and(self.enabled.isTrue()))
+                .notExists());
     }
 
 }

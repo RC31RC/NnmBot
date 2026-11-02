@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1/warframe/groups/{groupId}/members/{memberId}/subscriptions")
+@RequestMapping("/api/admin/warframe/groups/{groupId}/members/{memberId}/subscriptions")
 public class WarframeSubscriptionController {
     @Resource
     private WarframeSubscriptionManagementService service;
@@ -31,11 +31,8 @@ public class WarframeSubscriptionController {
      */
     @PostMapping("/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<WarframeMemberSubscriptionVO>> list(
-            @PathVariable
-            long groupId,
-            @PathVariable
-            long memberId) {
+    public ApiResponse<List<WarframeMemberSubscriptionVO>> list(@PathVariable long groupId,
+        @PathVariable long memberId) {
         return ApiResponse.ok(service.list(groupId, memberId));
     }
 
@@ -50,16 +47,8 @@ public class WarframeSubscriptionController {
      */
     @PutMapping("/{ruleId}")
     @SaCheckPermission("bot:group:update")
-    public ApiResponse<Void> update(
-            @PathVariable
-            long groupId,
-            @PathVariable
-            long memberId,
-            @PathVariable
-            long ruleId,
-            @Valid
-            @RequestBody
-            WarframeSubscriptionUpdateDTO request) {
+    public ApiResponse<Void> update(@PathVariable long groupId, @PathVariable long memberId, @PathVariable long ruleId,
+        @Valid @RequestBody WarframeSubscriptionUpdateDTO request) {
         service.update(groupId, memberId, ruleId, request);
         return ApiResponse.ok();
     }
@@ -74,13 +63,8 @@ public class WarframeSubscriptionController {
      */
     @DeleteMapping("/{ruleId}")
     @SaCheckPermission("bot:group:update")
-    public ApiResponse<Void> delete(
-            @PathVariable
-            long groupId,
-            @PathVariable
-            long memberId,
-            @PathVariable
-            long ruleId) {
+    public ApiResponse<Void> delete(@PathVariable long groupId, @PathVariable long memberId,
+        @PathVariable long ruleId) {
         service.delete(groupId, memberId, ruleId);
         return ApiResponse.ok();
     }

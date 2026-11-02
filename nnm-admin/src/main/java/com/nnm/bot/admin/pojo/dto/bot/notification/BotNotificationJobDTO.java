@@ -5,5 +5,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public record BotNotificationJobDTO(UUID id, JobStatus status, Instant scheduledAt, UUID taskId,
-                                      List<Long> groupIds, BotGroupNotificationReportDTO report, String error) { }
+public record BotNotificationJobDTO(UUID id, JobStatus status, Instant scheduledAt, UUID taskId, List<Long> groupIds,
+    BotGroupNotificationReportDTO report, String error) {
+}

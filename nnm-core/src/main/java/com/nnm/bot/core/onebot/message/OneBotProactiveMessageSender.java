@@ -31,7 +31,9 @@ public class OneBotProactiveMessageSender implements BotProactiveMessageSender {
     private ReplyProperties limits;
 
     @Override
-    public BotPlatform platform() { return BotPlatform.ONEBOT; }
+    public BotPlatform platform() {
+        return BotPlatform.ONEBOT;
+    }
 
     @Override
     public boolean supports(BotProactiveTarget target, BotChannelCapability capability) {
@@ -40,17 +42,17 @@ public class OneBotProactiveMessageSender implements BotProactiveMessageSender {
 
     @Override
     public boolean supportsComposition(BotProactiveTarget target, List<PartKind> kinds) {
-        return !kinds.isEmpty() && kinds.stream().allMatch(kind ->
-                kind == PartKind.TEXT || kind == PartKind.IMAGE);
+        return !kinds.isEmpty() && kinds.stream().allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.IMAGE);
     }
 
     @Override
     public PreparedBotMessage prepare(BotProactiveTarget target, List<BotMessagePart> parts) {
         Bot bot = botContainer.robots.get(parseId(target.botAccountId()));
-        if (bot == null) throw new BotMessageNotSentException("OneBot 机器人当前未连接");
+        if (bot == null)
+            throw new BotMessageNotSentException("OneBot 机器人当前未连接");
         long group = parseId(target.conversationId());
-        if (parts.isEmpty() || parts.stream().anyMatch(part -> !(part instanceof BotMessagePart.Text)
-                && !(part instanceof BotMessagePart.Image))) {
+        if (parts.isEmpty() || parts.stream()
+            .anyMatch(part -> !(part instanceof BotMessagePart.Text) && !(part instanceof BotMessagePart.Image))) {
             throw new BotMessageNotSentException("OneBot 主动消息不支持当前内容组合");
         }
         MsgUtils builder = MsgUtils.builder();
@@ -62,8 +64,7 @@ public class OneBotProactiveMessageSender implements BotProactiveMessageSender {
                     try {
                         builder.img(image.resource().readAllBytes(limits.getMaxImageBytes()));
                     } catch (IOException exception) {
-                        throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                                "读取主动消息图片失败", exception);
+                        throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED, "读取主动消息图片失败", exception);
                     }
                 }
                 default -> throw new BotMessageNotSentException("Unsupported proactive content");
@@ -71,7 +72,8 @@ public class OneBotProactiveMessageSender implements BotProactiveMessageSender {
         }
         String message = builder.build();
         return new PreparedBotMessage(() -> OneBotMessageSender.receipt(bot.sendGroupMsg(group, message, false)),
-                () -> { }, BotMessageSendPermit.unrestricted());
+            () -> {
+            }, BotMessageSendPermit.unrestricted());
     }
 
     private long parseId(String value) {

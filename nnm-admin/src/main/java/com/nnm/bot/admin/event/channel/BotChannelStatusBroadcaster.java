@@ -47,7 +47,8 @@ public class BotChannelStatusBroadcaster {
     public List<BotChannelSnapshot> snapshots() {
         refreshLock.lock();
         try {
-            if (latest == null) latest = List.copyOf(statusService.snapshots());
+            if (latest == null)
+                latest = List.copyOf(statusService.snapshots());
             return latest;
         } finally {
             refreshLock.unlock();
@@ -65,13 +66,14 @@ public class BotChannelStatusBroadcaster {
             try {
                 collected = List.copyOf(statusService.snapshots());
             } catch (RuntimeException failure) {
-                for (Listener listener : listeners) fail(listener, failure);
+                for (Listener listener : listeners)
+                    fail(listener, failure);
                 return;
             }
-            Map<String, BotChannelSnapshot> previous = latest == null ? Map.of() : latest.stream()
-                    .collect(Collectors.toMap(BotChannelSnapshot::instanceId, Function.identity()));
-            List<BotChannelSnapshot> changes = collected.stream()
-                    .filter(snapshot -> !snapshot.equals(previous.get(snapshot.instanceId()))).toList();
+            Map<String, BotChannelSnapshot> previous = latest == null ? Map.of()
+                : latest.stream().collect(Collectors.toMap(BotChannelSnapshot::instanceId, Function.identity()));
+            List<BotChannelSnapshot> changes =
+                collected.stream().filter(snapshot -> !snapshot.equals(previous.get(snapshot.instanceId()))).toList();
             latest = collected;
             for (Listener listener : listeners) {
                 try {

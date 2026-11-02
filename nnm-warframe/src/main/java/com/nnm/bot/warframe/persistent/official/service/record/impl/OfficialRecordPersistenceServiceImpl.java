@@ -1,6 +1,9 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
 import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordIdentityQuery;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -14,6 +17,7 @@ import com.nnm.bot.warframe.persistent.official.service.record.OfficialRecordPer
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -33,6 +37,8 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
     private OfficialRepositoryRegistry repositories;
     @Resource
     private OfficialTableRelations relations;
+    @Resource
+    private ObjectMapper objectMapper;
 
     /**
      * 取得当前独立数据文件或人工资料类型对应的 Repository。
@@ -92,7 +98,8 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
         // 管理端记录 ID 在各数据集间唯一；普通命令按已知数据集直达对应 Repository。
         for (OfficialMainRepository<?> repository : repositories.all()) {
             Optional<? extends OfficialRecord> found = repository.findById(id);
-            if (found.isPresent()) return Optional.of(found.get());
+            if (found.isPresent())
+                return Optional.of(found.get());
         }
         return Optional.empty();
     }
@@ -105,14 +112,16 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
      */
     @Override
     public List<OfficialRecord> findAllById(Collection<Long> ids) {
-        if (CollUtil.isEmpty(ids)) return List.of();
+        if (CollUtil.isEmpty(ids))
+            return List.of();
         Collection<Long> remaining = new LinkedHashSet<>(ids);
         List<OfficialRecord> result = new ArrayList<>();
         for (OfficialMainRepository<?> repository : repositories.all()) {
             List<? extends OfficialRecord> found = repository.findAllById(remaining);
             result.addAll(found);
             found.forEach(record -> remaining.remove(record.getId()));
-            if (CollUtil.isEmpty(remaining)) break;
+            if (CollUtil.isEmpty(remaining))
+                break;
         }
         return result;
     }
@@ -126,7 +135,7 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
     @Override
     public Optional<OfficialRecord> findForMaintenance(OfficialRecordIdentityQuery query) {
         return repository(query.domain()).findByMaintenanceTypeAndBkeyIgnoreCase(query.maintenanceType(), query.bkey())
-                .map(record -> record);
+            .map(record -> record);
     }
 
     /**
@@ -157,8 +166,8 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
     @Transactional
     public void deleteRecords(Collection<Long> ids) {
         Map<String, List<Long>> grouped = new LinkedHashMap<>();
-        findDataByIds(ids).forEach(record -> grouped.computeIfAbsent(record.getDomainCode(),
-                ignored -> new ArrayList<>()).add(record.getId()));
+        findDataByIds(ids).forEach(record -> grouped
+            .computeIfAbsent(record.getDomainCode(), ignored -> new ArrayList<>()).add(record.getId()));
         grouped.forEach((domain, selected) -> {
             relations.deleteChildren(domain, selected);
             repository(domain).deleteAllByIdInBatch(selected);
@@ -169,13 +178,16 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
      * 按独立主表合同同步本 JSON 的必要子孙表。
      *
      * @param records 待批量处理的业务记录。
+     * @param inputs 按主键索引的类型化输入。
      * @param removedIds 移除的标识集合。
      */
     @Override
     @Transactional
-    public void synchronizeTables(List<OfficialRecord> records, Collection<Long> removedIds) {
-        if (CollUtil.isNotEmpty(removedIds)) deleteRecords(removedIds);
-        relations.replace(records);
+    public void synchronizeTables(List<OfficialRecord> records, Map<Long, OfficialRecordDTO> inputs,
+        Collection<Long> removedIds) {
+        if (CollUtil.isNotEmpty(removedIds))
+            deleteRecords(removedIds);
+        relations.replace(records, inputs);
         // 固定源字段回写主表后显式 save；不依赖 Hibernate 脏检查隐式写入。
         records.forEach(this::save);
     }
@@ -202,7 +214,8 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
     public Optional<WarframeOfficialRecordDTO> findDataById(long id) {
         for (OfficialMainRepository<?> repository : repositories.all()) {
             Optional<WarframeOfficialRecordDTO> found = repository.findDataById(id);
-            if (found.isPresent()) return found;
+            if (found.isPresent())
+                return found;
         }
         return Optional.empty();
     }
@@ -215,14 +228,16 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
      */
     @Override
     public List<WarframeOfficialRecordDTO> findDataByIds(Collection<Long> ids) {
-        if (CollUtil.isEmpty(ids)) return List.of();
+        if (CollUtil.isEmpty(ids))
+            return List.of();
         Collection<Long> remaining = new LinkedHashSet<>(ids);
         List<WarframeOfficialRecordDTO> result = new ArrayList<>();
         for (OfficialMainRepository<?> repository : repositories.all()) {
             List<WarframeOfficialRecordDTO> found = repository.findDataByIds(remaining);
             result.addAll(found);
             found.forEach(record -> remaining.remove(record.getId()));
-            if (CollUtil.isEmpty(remaining)) break;
+            if (CollUtil.isEmpty(remaining))
+                break;
         }
         return result;
     }
@@ -233,23 +248,65 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
      * @return 计算已采纳记录的内容指纹，用于校验审批基线对应的文本。
      */
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public String contentFingerprint() {
+        return calculateContentFingerprint(
+            repositories.all().stream().map(repository -> repository.domain().productPath()).toList());
+    }
+
+    /**
+     * 只校验待审核文件所属主表和官方详情树；其他文件的变更不会使该预览失效。
+     *
+     * @param paths 待校验文件路径集合。
+     * @return 当前文件记录的稳定指纹。
+     */
+    @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public String contentFingerprint(Collection<String> paths) {
+        return calculateContentFingerprint(paths);
+    }
+
+    private String calculateContentFingerprint(Collection<String> paths) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             for (OfficialMainRepository<?> repository : repositories.all()) {
+                if (!paths.contains(repository.domain().productPath()))
+                    continue;
                 update(digest, repository.domain().domainCode());
                 try (var rows = repository.findAllProjectedByOrderByIdAsc()) {
                     rows.forEach(projection -> {
                         WarframeOfficialRecordDTO row = projection.toData();
-                        for (Object value : new Object[]{row.getId(), row.getBkey(),
-                                row.getMaintenanceType(), row.isEnabled(), row.getRawJson(), row.getLocalizedRawJson(),
-                                row.getWikiSlug(), row.getMarketSlug(),
-                                row.getOfficialName(), row.getLocalizedName(), row.getParentName(), row.getProductCategory(),
-                                row.getDescription(), row.getLongDescription(), row.getExcludeFromCodex(), row.getUpdatedAt()}) {
+                        for (Object value : new Object[] {row.getId(), row.getBkey(), row.getMaintenanceType(),
+                            row.isEnabled(), row.getWikiSlug(), row.getMarketSlug(), row.getOfficialName(),
+                            row.getLocalizedName(), row.getParentName(), row.getProductCategory(), row.getDescription(),
+                            row.getLongDescription(), row.getExcludeFromCodex(), row.getUpdatedAt()}) {
                             update(digest, value);
                         }
                     });
+                }
+            }
+            // 审核基线覆盖官方记录的整棵持久化树，不能只看主表或已采纳文件摘要。
+            for (OfficialMainRepository<?> repository : repositories.all()) {
+                if (!paths.contains(repository.domain().productPath()))
+                    continue;
+                var identities = repository.findAllProjectedByMaintenanceType(MaintenanceType.OFFICIAL);
+                for (int start = 0; start < identities.size(); start += RECORD_BATCH_SIZE) {
+                    var batch = identities.subList(start, Math.min(start + RECORD_BATCH_SIZE, identities.size()));
+                    List<Long> ids = batch.stream().map(row -> row.getId()).toList();
+                    Map<Long, OfficialRecordDTO> details = relations.load(repository.domain().domainCode(), ids);
+                    for (var identity : batch) {
+                        update(digest, identity.getBkey());
+                        OfficialRecordDTO detail = details.get(identity.getId());
+                        if (detail == null)
+                            throw new IllegalStateException("官方主表记录缺少持久化详情：" + identity.getId());
+                        try {
+                            byte[] bytes = objectMapper.writeValueAsBytes(detail);
+                            update(digest, bytes.length);
+                            digest.update(bytes);
+                        } catch (JsonProcessingException exception) {
+                            throw new IllegalStateException("官方记录详情无法生成审批指纹：" + identity.getId(), exception);
+                        }
+                    }
                 }
             }
             return HexFormat.of().formatHex(digest.digest());
@@ -267,7 +324,7 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
     private static void update(MessageDigest digest, Object value) {
         byte[] bytes = Objects.toString(value, "").getBytes(StandardCharsets.UTF_8);
         digest.update(Integer.toString(bytes.length).getBytes(StandardCharsets.US_ASCII));
-        digest.update((byte) ':');
+        digest.update((byte)':');
         digest.update(bytes);
     }
 
@@ -281,10 +338,11 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
     public Map<String, Long> officialIdentities(Collection<String> paths) {
         Map<String, Long> identities = new LinkedHashMap<>();
         for (OfficialMainRepository<?> repository : repositories.all()) {
-            if (!paths.contains(repository.domain().productPath())) continue;
+            if (!paths.contains(repository.domain().productPath()))
+                continue;
             // 闭合标量投影，不加载主表实体或完整源文本。
             repository.findAllProjectedByMaintenanceType(MaintenanceType.OFFICIAL)
-                    .forEach(row -> identities.put(repository.domain().domainCode() + ":" + row.getBkey(), row.getId()));
+                .forEach(row -> identities.put(repository.domain().domainCode() + ":" + row.getBkey(), row.getId()));
         }
         return identities;
     }

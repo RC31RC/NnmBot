@@ -5,9 +5,7 @@ import java.util.Locale;
 
 /** Warframe 物品别名的维护来源。 */
 public enum WarframeAliasSourceType {
-    OFFICIAL,
-    COMMUNITY,
-    MANUAL;
+    OFFICIAL, COMMUNITY, MANUAL;
 
     /**
      * 将外部输入解析为明确的业务数据对象。

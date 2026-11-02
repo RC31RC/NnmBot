@@ -12,6 +12,7 @@ public interface WarframeBountyDefinitionService {
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     Optional<WarframeBountyDefinitionDetailsDTO> find(String jobType);
+
     /**
      * 按给定筛选条件分页读取赏金静态定义。
      *

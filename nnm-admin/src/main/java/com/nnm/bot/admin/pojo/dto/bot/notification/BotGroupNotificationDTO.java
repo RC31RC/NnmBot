@@ -11,19 +11,11 @@ import java.util.List;
 import java.util.UUID;
 import java.time.Instant;
 
-public record BotGroupNotificationDTO(
-        @NotNull
-        UUID submissionId,
-        @NotEmpty
-        @Size(max = 200)
-        List<
-                @NotNull
-                @Positive
-                Long> groupIds,
-        @NotNull
-        NotificationContent content,
-        Instant scheduledAt) {
+public record BotGroupNotificationDTO(@NotNull UUID submissionId,
+    @NotEmpty @Size(max = 200) List<@NotNull @Positive Long> groupIds, @NotNull NotificationContent content,
+    Instant scheduledAt) {
     public BotGroupNotificationDTO {
-        if (groupIds != null) groupIds = Collections.unmodifiableList(new ArrayList<>(groupIds));
+        if (groupIds != null)
+            groupIds = Collections.unmodifiableList(new ArrayList<>(groupIds));
     }
 }

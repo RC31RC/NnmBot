@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.crafting.OfficialDoj
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** crafting/dojo-recipes.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** crafting/dojo-recipes.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialDojoRecipeRepository extends OfficialMainRepository<OfficialDojoRecipeRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

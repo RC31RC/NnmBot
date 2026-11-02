@@ -19,7 +19,7 @@ function verifyRouting(query) {
 }
 
 withPostgres(async ({ apply, query }) => {
-  apply("docs/sql/init.sql");
+  apply("sql/init.sql");
   query(`INSERT INTO nnmbot.bot_group_bot
     (id, group_id, bot_instance_id, platform, scope_type, scope_key)
     VALUES (92001, 91001, 93001, 'ONEBOT', 'GROUP', '94001')`);

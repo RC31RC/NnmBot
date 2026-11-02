@@ -27,14 +27,18 @@ public class WarframeMarketApiProperties {
      *
      * @return 每个统计时段按金币/铂金加权比值保留的推荐数量。。
      */
-    public int getDucatsLimit() { return ducatsLimit; }
+    public int getDucatsLimit() {
+        return ducatsLimit;
+    }
 
     /**
      * 设置每个统计时段按金币/铂金加权比值保留的推荐数量。。
      *
      * @param ducatsLimit 杜卡德金币上限。
      */
-    public void setDucatsLimit(int ducatsLimit) { this.ducatsLimit = ducatsLimit; }
+    public void setDucatsLimit(int ducatsLimit) {
+        this.ducatsLimit = ducatsLimit;
+    }
 
     /**
      * 读取WM 普通订单每页条数；拍卖查询保持独立的分页规则。。
@@ -194,8 +198,7 @@ public class WarframeMarketApiProperties {
         requireHttpUrl(v1BaseUrl, "nnm.warframe.pull.market-api.v1-base-url");
         requireHttpUrl(v2BaseUrl, "nnm.warframe.pull.market-api.v2-base-url");
         if (!"v1".equalsIgnoreCase(version) && !"v2".equalsIgnoreCase(version)) {
-            throw new IllegalArgumentException(
-                    "nnm.warframe.pull.market-api.version must be v1 or v2");
+            throw new IllegalArgumentException("nnm.warframe.pull.market-api.version must be v1 or v2");
         }
         requireText(language, "nnm.warframe.pull.market-api.language");
         requireText(platform, "nnm.warframe.pull.market-api.platform");
@@ -204,13 +207,13 @@ public class WarframeMarketApiProperties {
 
     /**
      * 校验市场接口地址使用允许的 HTTP 协议并包含有效主机。
+     *
      * @param value 待处理的字段值。
      * @param name 当前业务对象的名称。
      */
     private static void requireHttpUrl(URI value, String name) {
         if (value == null || value.getHost() == null
-                || (!"http".equalsIgnoreCase(value.getScheme())
-                && !"https".equalsIgnoreCase(value.getScheme()))) {
+            || (!"http".equalsIgnoreCase(value.getScheme()) && !"https".equalsIgnoreCase(value.getScheme()))) {
             throw new IllegalArgumentException(name + " must be an absolute HTTP URL");
         }
     }

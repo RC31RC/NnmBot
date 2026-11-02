@@ -27,7 +27,9 @@ public class WarframeCycleServiceImpl implements WarframeCycleService {
      * 校验当前配置或输入是否满足业务约束。
      */
     @PostConstruct
-    void validate() { properties.validate(); }
+    void validate() {
+        properties.validate();
+    }
 
     /**
      * 解析引用或输入对应的实际业务对象。
@@ -37,33 +39,34 @@ public class WarframeCycleServiceImpl implements WarframeCycleService {
      */
     @Override
     public WorldStateDTO resolve(WorldStateDTO state) {
-        if (state == null) return null;
+        if (state == null)
+            return null;
         Instant now = warframeClock.instant();
-        Instant anchor = state.syndicateMissions().stream()
-                .filter(mission -> "CetusSyndicate".equals(mission.syndicate()))
-                .map(WorldStateDTO.SyndicateMissionDTO::expiry)
-                .filter(Objects::nonNull).max(Instant::compareTo).orElse(null);
+        Instant anchor =
+            state.syndicateMissions().stream().filter(mission -> "CetusSyndicate".equals(mission.syndicate()))
+                .map(WorldStateDTO.SyndicateMissionDTO::expiry).filter(Objects::nonNull).max(Instant::compareTo)
+                .orElse(null);
         CetusCycleDTO cetus = state.cetusCycle();
         if (cetus == null || !valid(cetus.expiry(), now)) {
             cetus = WarframeCycleCalculator.cetus(now, anchor, properties.getCetusAnchorMaxAge());
         }
         CambionCycleDTO cambion = state.cambionCycle();
         if (cambion == null || !valid(cambion.expiry(), now)) {
-            cambion = cetus == null ? null : new WorldStateDTO.CambionCycleDTO(
-                    cetus.isDay() ? "fass" : "vome", cetus.expiry());
+            cambion = cetus == null ? null
+                : new WorldStateDTO.CambionCycleDTO(cetus.isDay() ? "fass" : "vome", cetus.expiry());
         }
         ZarimanCycleDTO zariman = state.zarimanCycle();
         if (zariman == null || !valid(zariman.expiry(), now)) {
-            zariman = WarframeCycleCalculator.zariman(
-                    now, anchor, properties.getZarimanBountyOffset(),
-                    properties.getZarimanCorpusEpoch(), properties.getCetusAnchorMaxAge());
+            zariman = WarframeCycleCalculator.zariman(now, anchor, properties.getZarimanBountyOffset(),
+                properties.getZarimanCorpusEpoch(), properties.getCetusAnchorMaxAge());
         }
         DuviriCycleDTO duviri = state.duviriCycle();
         if (duviri == null || !valid(duviri.expiry(), now)) {
             duviri = WarframeCycleCalculator.duviri(now, properties.getDuviriEpoch());
         }
         EarthCycleDTO earth = state.earthCycle();
-        if (earth == null || !valid(earth.expiry(), now)) earth = WarframeCycleCalculator.earth(now);
+        if (earth == null || !valid(earth.expiry(), now))
+            earth = WarframeCycleCalculator.earth(now);
         VallisCycleDTO vallis = state.vallisCycle();
         if (vallis == null || !valid(vallis.expiry(), now)) {
             vallis = WarframeCycleCalculator.vallis(now, properties.getVallisWarmEpoch());

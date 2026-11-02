@@ -4,19 +4,9 @@ import java.time.Instant;
 import java.util.List;
 
 /** 文件级完整快照审核；不把尚未迁移的业务域标成结构化入库完成。 */
-public record WarframeOfficialPreviewVO(
-        String id,
-        WarframeOfficialVersionVO version,
-        String buildId,
-        String baselineId,
-        String status,
-        Instant expiresAt,
-        long totalBytes,
-        int addedRecords,
-        int changedRecords,
-        int removedRecords,
-        List<String> unmappedPaths,
-        List<FileChangeVO> files) {
+public record WarframeOfficialPreviewVO(String id, WarframeOfficialVersionVO version, String buildId, String baselineId,
+    String status, Instant expiresAt, long totalBytes, int addedRecords, int changedRecords, int removedRecords,
+    List<String> unmappedPaths, List<FileChangeVO> files) {
     /**
      * 构造数据文件预览展示对象，并保存初始化参数。
      *

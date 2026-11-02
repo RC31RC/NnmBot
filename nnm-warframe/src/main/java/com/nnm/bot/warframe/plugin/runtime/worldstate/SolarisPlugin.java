@@ -8,9 +8,8 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 索拉里斯联合赏金命令。 */
-@BotPluginCommand(
-        code = WarframeCommandCodes.SOLARIS, name = "索拉里斯", gameCode = "warframe", order = 55,
-        allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.SOLARIS, name = "索拉里斯", gameCode = "warframe", order = 55,
+    allowRelatedAction = true)
 public class SolarisPlugin extends AbstractWorldStateCommandPlugin {
 
     /**
@@ -18,7 +17,7 @@ public class SolarisPlugin extends AbstractWorldStateCommandPlugin {
      */
     public SolarisPlugin() {
         super(state -> WarframeWorldStateProjector.syndicate(state, "索拉里斯",
-                        value -> contains(value, "solaris", "vallis", "索拉里斯")));
+            value -> contains(value, "solaris", "vallis", "索拉里斯")));
     }
 
     /**
@@ -30,7 +29,6 @@ public class SolarisPlugin extends AbstractWorldStateCommandPlugin {
      */
     private static boolean contains(String value, String... candidates) {
         String normalized = ObjectUtil.isNull(value) ? "" : value.toLowerCase(Locale.ROOT);
-        return Arrays.stream(candidates)
-                .anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
+        return Arrays.stream(candidates).anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
     }
 }

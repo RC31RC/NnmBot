@@ -26,26 +26,11 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "sys_user")
-@NamedEntityGraphs({
-        @NamedEntityGraph(
-                name = SysUser.GRAPH_ROLES,
-                attributeNodes =
-                        @NamedAttributeNode("roles")
-        ),
-        @NamedEntityGraph(
-                name = SysUser.GRAPH_AUTHORITIES,
-                attributeNodes =
-                        @NamedAttributeNode(value = "roles", subgraph = "roleAuthorities"),
-                subgraphs =
-                        @NamedSubgraph(
-                        name = "roleAuthorities",
-                        attributeNodes = {
-                                @NamedAttributeNode("permissions"),
-                                @NamedAttributeNode("menus")
-                        }
-                )
-        )
-})
+@NamedEntityGraphs({@NamedEntityGraph(name = SysUser.GRAPH_ROLES, attributeNodes = @NamedAttributeNode("roles")),
+    @NamedEntityGraph(name = SysUser.GRAPH_AUTHORITIES,
+        attributeNodes = @NamedAttributeNode(value = "roles", subgraph = "roleAuthorities"),
+        subgraphs = @NamedSubgraph(name = "roleAuthorities",
+            attributeNodes = {@NamedAttributeNode("permissions"), @NamedAttributeNode("menus")}))})
 public class SysUser {
 
     public static final String GRAPH_ROLES = "SysUser.roles";
@@ -90,13 +75,8 @@ public class SysUser {
 
     /** 用户被授予的系统角色。 */
     @ManyToMany
-    @JoinTable(
-            name = "sys_user_role",
-            joinColumns =
-                    @JoinColumn(name = "user_id"),
-            inverseJoinColumns =
-                    @JoinColumn(name = "role_id")
-    )
+    @JoinTable(name = "sys_user_role", joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<SysRole> roles = new LinkedHashSet<>();
 
     /** 创建时间。 */

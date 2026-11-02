@@ -22,10 +22,12 @@ public class OfficialItemRelationMapper {
         List<ComponentVO> result = new ArrayList<>();
         switch (row.data()) {
             case OfficialBundleDTO value -> components(row, value, 0, result);
-            default -> { }
+            default -> {
+            }
         }
         return List.copyOf(result);
     }
+
     /**
      * OfficialBundleDTO 的固定关系字段。
      *
@@ -34,11 +36,14 @@ public class OfficialItemRelationMapper {
      * @param depth 深度。
      * @param result 当前正在组装的业务结果。
      */
-    private void components(WarframeOfficialRecordReadDTO row, OfficialBundleDTO value, int depth, List<ComponentVO> result) {
+    private void components(WarframeOfficialRecordReadDTO row, OfficialBundleDTO value, int depth,
+        List<ComponentVO> result) {
         for (var item : values(value.getComponents())) {
-            result.add(new ComponentVO(row.bkey(), name(row), row.domainCode(), "", "", null, depth, "", "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED"));
+            result.add(new ComponentVO(row.bkey(), name(row), row.domainCode(), "", "", null, depth, "", "",
+                OFFICIAL_SOURCE_CODE, "ROOT_SELECTED"));
         }
     }
+
     /**
      * 仅处理拥有该关系字段的具体官方模型。
      *
@@ -48,7 +53,8 @@ public class OfficialItemRelationMapper {
     public List<DropVO> drops(WarframeOfficialRecordReadDTO row) {
         List<DropVO> result = new ArrayList<>();
         switch (row.data()) {
-            default -> { }
+            default -> {
+            }
         }
         return List.copyOf(result);
     }

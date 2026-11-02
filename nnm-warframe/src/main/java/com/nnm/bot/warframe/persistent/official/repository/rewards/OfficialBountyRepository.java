@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.rewards.OfficialBoun
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** rewards/bounties.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** rewards/bounties.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialBountyRepository extends OfficialMainRepository<OfficialBountyRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

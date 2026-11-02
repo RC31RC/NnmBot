@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1/bot-templates")
+@RequestMapping("/api/admin/bot-templates")
 public class BotTemplateManagementController {
 
     @Resource
@@ -29,38 +29,26 @@ public class BotTemplateManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotTemplateVO>> list(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<BotTemplateVO>> list(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotTemplateVO(service.list()));
     }
 
     @PostMapping
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Long> create(
-            @Valid
-            @RequestBody
-    BotTemplateSaveDTO request) {
+    public ApiResponse<Long> create(@Valid @RequestBody BotTemplateSaveDTO request) {
         return ApiResponse.ok(service.create(request));
     }
 
     @PutMapping("/{id}")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> update(
-            @PathVariable
-            long id,
-            @Valid
-            @RequestBody
-            BotTemplateSaveDTO request) {
+    public ApiResponse<Void> update(@PathVariable long id, @Valid @RequestBody BotTemplateSaveDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/{id}")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> delete(
-            @PathVariable
-            long id) {
+    public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);
         return ApiResponse.ok();
     }

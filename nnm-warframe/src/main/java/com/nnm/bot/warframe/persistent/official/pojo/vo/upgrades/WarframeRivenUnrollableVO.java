@@ -3,8 +3,7 @@ package com.nnm.bot.warframe.persistent.official.pojo.vo.upgrades;
 import cn.hutool.core.collection.CollUtil;
 import java.util.List;
 
-public record WarframeRivenUnrollableVO(
-        String query, int page, int totalPages, int totalCount, List<EntryVO> items) {
+public record WarframeRivenUnrollableVO(String query, int page, int totalPages, int totalCount, List<EntryVO> items) {
     private static final int PAGE_SIZE = 8;
 
     /**
@@ -33,7 +32,7 @@ public record WarframeRivenUnrollableVO(
         int page = Math.max(1, Math.min(requested, pages));
         int start = (page - 1) * PAGE_SIZE;
         return new WarframeRivenUnrollableVO(query, page, pages, entries.size(),
-                entries.subList(start, Math.min(start + PAGE_SIZE, entries.size())));
+            entries.subList(start, Math.min(start + PAGE_SIZE, entries.size())));
     }
 
     /**
@@ -42,8 +41,8 @@ public record WarframeRivenUnrollableVO(
      * @return 按当前对象字段组成的文本内容。
      */
     public String text() {
-        StringBuilder text = new StringBuilder("紫卡不可洗属性：").append(page).append('/').append(totalPages)
-                .append(" 页，共 ").append(totalCount).append(" 条");
+        StringBuilder text = new StringBuilder("紫卡不可洗属性：").append(page).append('/').append(totalPages).append(" 页，共 ")
+            .append(totalCount).append(" 条");
         for (EntryVO entry : items) {
             text.append('\n').append(entry.weaponName()).append(" · ").append(entry.attributeTag());
         }
@@ -53,7 +52,7 @@ public record WarframeRivenUnrollableVO(
         return text.toString();
     }
 
-    public record EntryVO(String weaponKey, String weaponName, String attributeTag,
-                        String sourceCode, String resolutionMode) {
+    public record EntryVO(String weaponKey, String weaponName, String attributeTag, String sourceCode,
+        String resolutionMode) {
     }
 }

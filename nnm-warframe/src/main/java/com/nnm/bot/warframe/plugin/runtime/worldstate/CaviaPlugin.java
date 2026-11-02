@@ -7,17 +7,15 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 科维兽赏金命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.CAVIA, name = "科维兽赏金",
-        gameCode = "warframe", order = 61,
-        allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.CAVIA, name = "科维兽赏金", gameCode = "warframe", order = 61,
+    allowRelatedAction = true)
 // 官方快照 syndicateMissions；过滤 Cavia 集团。任务文本/奖励引用由 WorldStateDTO 代码簿及社区数据补全。
 public class CaviaPlugin extends AbstractWorldStateCommandPlugin {
     /**
      * 构造科维兽插件，并保存初始化参数。
      */
     public CaviaPlugin() {
-        super(state -> WarframeWorldStateProjector.syndicate(state, "科维兽赏金",
-                value -> contains(value, "cavia", "科维")));
+        super(state -> WarframeWorldStateProjector.syndicate(state, "科维兽赏金", value -> contains(value, "cavia", "科维")));
     }
 
     /**
@@ -29,7 +27,6 @@ public class CaviaPlugin extends AbstractWorldStateCommandPlugin {
      */
     private static boolean contains(String value, String... candidates) {
         String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
-        return Arrays.stream(candidates)
-                .anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
+        return Arrays.stream(candidates).anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
     }
 }

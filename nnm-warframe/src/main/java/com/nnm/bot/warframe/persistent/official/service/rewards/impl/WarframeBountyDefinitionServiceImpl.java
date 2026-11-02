@@ -22,6 +22,7 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
     private WarframeOfficialRecordReadService catalog;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 按给定业务条件查询赏金静态定义。
      *
@@ -31,8 +32,8 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
     @Override
     public Optional<WarframeBountyDefinitionDetailsDTO> find(String jobType) {
         return catalog.records(WarframeOfficialDataDomain.BOUNTY).stream()
-                .filter(row -> row.bkey().equals("definitions/" + jobType) || row.bkey().equals(jobType))
-                .findFirst().map(row -> details((OfficialBountyDTO) row.data(), jobType));
+            .filter(row -> row.bkey().equals("definitions/" + jobType) || row.bkey().equals(jobType)).findFirst()
+            .map(row -> details((OfficialBountyDTO)row.data(), jobType));
     }
 
     /**
@@ -46,16 +47,19 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
     public WarframeBountyVO page(String keyword, int page) {
         List<WarframeBountyVO.EntryVO> result = new ArrayList<>();
         for (var root : catalog.records(WarframeOfficialDataDomain.BOUNTY)) {
-            if (!root.bkey().startsWith("definitions/") || !data.matches(root, keyword)) continue;
-            var value = details((OfficialBountyDTO) root.data(), root.bkey().substring("definitions/".length()));
+            if (!root.bkey().startsWith("definitions/") || !data.matches(root, keyword))
+                continue;
+            var value = details((OfficialBountyDTO)root.data(), root.bkey().substring("definitions/".length()));
             result.add(new WarframeBountyVO.EntryVO(value.jobType(), name(root), description(root.data()),
-                    first(((OfficialBountyDTO) root.data()).getIcon()), "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", value.stages()));
+                first(((OfficialBountyDTO)root.data()).getIcon()), "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED",
+                value.stages()));
         }
         return WarframeBountyVO.page(keyword, result, page);
     }
 
     /**
      * 将具体官方赏金定义及稳定身份映射为非受管详情 DTO。
+     *
      * @param root 主记录。
      * @param key 当前记录或字段的查找键。
      * @return 游戏资料赏金定义详情对象。
@@ -65,10 +69,11 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
         int stage = 0;
         for (var choices : values(root.getStages())) {
             int option = 0;
-            for (String choice : values(choices.references())) stages.add(new StageOptionDTO(stage, option++, choice));
+            for (String choice : values(choices.references()))
+                stages.add(new StageOptionDTO(stage, option++, choice));
             stage++;
         }
-        return new WarframeBountyDefinitionDetailsDTO(key, first(root.getNameZh(), root.getNameEn(), root.getName()), description(root),
-                first(root.getIcon()), stages);
+        return new WarframeBountyDefinitionDetailsDTO(key, first(root.getNameZh(), root.getNameEn(), root.getName()),
+            description(root), first(root.getIcon()), stages);
     }
 }

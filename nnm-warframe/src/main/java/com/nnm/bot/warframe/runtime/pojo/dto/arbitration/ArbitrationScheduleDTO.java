@@ -12,8 +12,8 @@ import java.util.List;
  * @param fetchedAt 查询窗口内最早的存档更新时间；当前采纳入口记录采纳时刻，空窗口为 null
  * @param zone 自然日筛选和展示采用的配置时区
  */
-public record ArbitrationScheduleDTO(
-        List<ArbitrationScheduleEntryDTO> entries, String notice, Instant fetchedAt, ZoneId zone) {
+public record ArbitrationScheduleDTO(List<ArbitrationScheduleEntryDTO> entries, String notice, Instant fetchedAt,
+    ZoneId zone) {
     /**
      * 防止调用者修改结果列表并影响复用该投影的其他查询。
      *

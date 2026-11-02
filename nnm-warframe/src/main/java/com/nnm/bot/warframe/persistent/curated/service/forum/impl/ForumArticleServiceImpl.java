@@ -74,18 +74,11 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     @Override
     @Transactional(readOnly = true)
-    public PageResult<ForumArticleVO> query(
-            ForumArticleQuery request,
-            ForumOperatorDTO operator) {
+    public PageResult<ForumArticleVO> query(ForumArticleQuery request, ForumOperatorDTO operator) {
         int current = normalizeCurrent(request.current());
         int size = normalizeSize(request.size());
-        PageRequest pageable = PageRequest.of(
-                current - 1,
-                size,
-                Sort.by(
-                        Sort.Order.asc("sortOrder"),
-                        Sort.Order.desc("updatedAt"),
-                        Sort.Order.asc("id")));
+        PageRequest pageable = PageRequest.of(current - 1, size,
+            Sort.by(Sort.Order.asc("sortOrder"), Sort.Order.desc("updatedAt"), Sort.Order.asc("id")));
         Page<ForumArticleDTO> page = repository.query(request, pageable);
         List<ForumArticleVO> records = toItems(page.getContent(), operator);
         return PageResult.of(records, page.getNumber() + 1, page.getSize(), page.getTotalElements());
@@ -108,10 +101,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
             }
             splitTags(article.getTags()).forEach(tags::add);
         }
-        return new ForumArticleOptionsVO(
-                List.copyOf(categories),
-                List.copyOf(tags),
-                CollUtil.isEmpty(articles));
+        return new ForumArticleOptionsVO(List.copyOf(categories), List.copyOf(tags), CollUtil.isEmpty(articles));
     }
 
     /**
@@ -127,16 +117,11 @@ public class ForumArticleServiceImpl implements ForumArticleService {
             return List.of();
         }
         return repository.findAllProjectedByEnabledTrue().stream()
-                .map(article -> new ScoredArticle(article, score(article, query)))
-                .filter(scored -> scored.score() > 0)
-                .sorted(Comparator
-                        .comparingInt(ScoredArticle::score).reversed()
-                        .thenComparing(scored -> scored.article().getSortOrder())
-                        .thenComparing(scored -> scored.article().getId()))
-                .limit(5)
-                .map(ScoredArticle::article)
-                .map(article -> toItem(article, null, Integer.MAX_VALUE))
-                .toList();
+            .map(article -> new ScoredArticle(article, score(article, query))).filter(scored -> scored.score() > 0)
+            .sorted(Comparator.comparingInt(ScoredArticle::score).reversed()
+                .thenComparing(scored -> scored.article().getSortOrder())
+                .thenComparing(scored -> scored.article().getId()))
+            .limit(5).map(ScoredArticle::article).map(article -> toItem(article, null, Integer.MAX_VALUE)).toList();
     }
 
     /**
@@ -148,9 +133,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ForumArticleVO detail(
-            ForumArticleIdQuery request,
-            ForumOperatorDTO operator) {
+    public ForumArticleVO detail(ForumArticleIdQuery request, ForumOperatorDTO operator) {
         ForumArticleDTO article = findData(request.id());
         return toItem(article, operator, assignedLevel(article.getCreatedByUserId()));
     }
@@ -165,10 +148,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
     @Transactional(readOnly = true)
     public ForumArticlePublicVO publicDetail(long id) {
         ForumArticleDTO article = findData(id);
-        BusinessAssert.isTrue(
-                article.isEnabled(),
-                CommonErrorCode.DATA_NOT_FOUND,
-                "论坛文章不存在");
+        BusinessAssert.isTrue(article.isEnabled(), CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在");
         ForumPreparedContentDTO content = publicContent(article);
         return ForumArticlePublicVO.from(article, content);
     }
@@ -182,9 +162,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     @Override
     @Transactional
-    public long create(
-            ForumArticleSaveDTO request,
-            ForumOperatorDTO operator) {
+    public long create(ForumArticleSaveDTO request, ForumOperatorDTO operator) {
         String slug = requiredTrimmed(request.slug(), "文章标识不能为空");
         ensureSlugAvailable(slug, null);
         ForumMetadata metadata = normalizeMetadata(request.category(), request.tags());
@@ -195,10 +173,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         // 在提升附件前完成 ID 分配；RDT 不可用时不切换算法，也不产生对象存储副作用。
         long articleId = ids.next();
         ForumPreparedContentDTO content =
-                fileService.promoteReferencedFiles(
-                        request.coverUrl(),
-                        request.contentHtml(),
-                        request.contentMarkdown());
+            fileService.promoteReferencedFiles(request.coverUrl(), request.contentHtml(), request.contentMarkdown());
         ForumArticle article = new ForumArticle();
         article.setId(articleId);
         article.setPageUrl(forumProperties.publicArticleUri(articleId));
@@ -217,21 +192,16 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     @Override
     @Transactional
-    public void update(
-            ForumArticleSaveDTO request,
-            ForumOperatorDTO operator) {
-        BusinessAssert.isTrue(request.id() != null && request.id() > 0,
-                CommonErrorCode.PARAM_INVALID, "修改或删除文章必须提供有效 id");
+    public void update(ForumArticleSaveDTO request, ForumOperatorDTO operator) {
+        BusinessAssert.isTrue(request.id() != null && request.id() > 0, CommonErrorCode.PARAM_INVALID,
+            "修改或删除文章必须提供有效 id");
         ForumArticle article = findArticle(request.id());
         checkCanUpdate(article, operator);
         String slug = requiredTrimmed(request.slug(), "文章标识不能为空");
         ensureSlugAvailable(slug, request.id());
         ForumMetadata metadata = normalizeMetadata(request.category(), request.tags());
         ForumPreparedContentDTO content =
-                fileService.promoteReferencedFiles(
-                        request.coverUrl(),
-                        request.contentHtml(),
-                request.contentMarkdown());
+            fileService.promoteReferencedFiles(request.coverUrl(), request.contentHtml(), request.contentMarkdown());
         apply(article, request, metadata);
         applyPreparedContent(article, storageContent(content));
         article.setSlug(slug);
@@ -247,23 +217,17 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     @Override
     @Transactional
-    public void delete(
-            ForumArticleDeleteDTO request,
-            ForumOperatorDTO operator) {
-        BusinessAssert.isTrue(request.id() != null && request.id() > 0,
-                CommonErrorCode.PARAM_INVALID, "修改或删除文章必须提供有效 id");
+    public void delete(ForumArticleDeleteDTO request, ForumOperatorDTO operator) {
+        BusinessAssert.isTrue(request.id() != null && request.id() > 0, CommonErrorCode.PARAM_INVALID,
+            "修改或删除文章必须提供有效 id");
         ForumArticle article = findArticle(request.id());
         checkCanDelete(article, operator);
-        Set<String> filesToDelete = new LinkedHashSet<>(fileService.referencedPermanentFiles(
-                article.getCoverObjectId(),
-                article.getContentHtml(),
-                article.getContentMarkdown()));
+        Set<String> filesToDelete = new LinkedHashSet<>(fileService.referencedPermanentFiles(article.getCoverObjectId(),
+            article.getContentHtml(), article.getContentMarkdown()));
         if (CollUtil.isNotEmpty(filesToDelete)) {
             for (ForumArticleDTO otherArticle : repository.findAllProjectedByIdNot(article.getId())) {
-                filesToDelete.removeAll(fileService.referencedPermanentFiles(
-                        otherArticle.getCoverObjectId(),
-                        otherArticle.getContentHtml(),
-                        otherArticle.getContentMarkdown()));
+                filesToDelete.removeAll(fileService.referencedPermanentFiles(otherArticle.getCoverObjectId(),
+                    otherArticle.getContentHtml(), otherArticle.getContentMarkdown()));
                 if (CollUtil.isEmpty(filesToDelete)) {
                     break;
                 }
@@ -281,21 +245,14 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param operator 操作者。
      * @return 文章详情及当前用户可用的操作组成的列表。
      */
-    private List<ForumArticleVO> toItems(
-            Collection<? extends ForumArticleContentDTO> articles,
-            ForumOperatorDTO operator) {
-        Set<Long> ownerIds = articles.stream()
-                .map(ForumArticleContentDTO::getCreatedByUserId)
-                .collect(Collectors.toSet());
+    private List<ForumArticleVO> toItems(Collection<? extends ForumArticleContentDTO> articles,
+        ForumOperatorDTO operator) {
+        Set<Long> ownerIds =
+            articles.stream().map(ForumArticleContentDTO::getCreatedByUserId).collect(Collectors.toSet());
         Map<Long, Integer> levels = authorityProvider.assignedLevels(ownerIds);
-        return articles.stream()
-                .map(article -> toItem(
-                        article,
-                        operator,
-                        levels.getOrDefault(
-                                article.getCreatedByUserId(),
-                                Integer.MAX_VALUE)))
-                .toList();
+        return articles.stream().map(
+            article -> toItem(article, operator, levels.getOrDefault(article.getCreatedByUserId(), Integer.MAX_VALUE)))
+            .toList();
     }
 
     /**
@@ -306,10 +263,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param ownerAuthorityLevel 所属人权限等级。
      * @return 文章详情及当前用户可用的操作。
      */
-    private ForumArticleVO toItem(
-            ForumArticleContentDTO article,
-            ForumOperatorDTO operator,
-            int ownerAuthorityLevel) {
+    private ForumArticleVO toItem(ForumArticleContentDTO article, ForumOperatorDTO operator, int ownerAuthorityLevel) {
         ForumPreparedContentDTO content = publicContent(article);
         return ForumArticleVO.from(article, operator, ownerAuthorityLevel, content);
     }
@@ -320,8 +274,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param content 内容。
      * @return 论坛已准备内容对象。
      */
-    private ForumPreparedContentDTO storageContent(
-            ForumPreparedContentDTO content) {
+    private ForumPreparedContentDTO storageContent(ForumPreparedContentDTO content) {
         ForumPreparedContentDTO storage = fileService.toStorageContent(content);
         return storage == null ? content : storage;
     }
@@ -333,12 +286,10 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 论坛已准备内容对象。
      */
     private ForumPreparedContentDTO publicContent(ForumArticleContentDTO article) {
-        ForumPreparedContentDTO content = fileService.toPublicContent(
-                article.getCoverObjectId(), article.getContentHtml(), article.getContentMarkdown());
-        return content == null
-                ? new ForumPreparedContentDTO(
-                        article.getCoverObjectId(), article.getContentHtml(), article.getContentMarkdown())
-                : content;
+        ForumPreparedContentDTO content = fileService.toPublicContent(article.getCoverObjectId(),
+            article.getContentHtml(), article.getContentMarkdown());
+        return content == null ? new ForumPreparedContentDTO(article.getCoverObjectId(), article.getContentHtml(),
+            article.getContentMarkdown()) : content;
     }
 
     /**
@@ -348,10 +299,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 规范化标签对应的文本。
      */
     private static String normalizeTag(String value) {
-        return normalize(value)
-                .replace(",", "")
-                .replace("，", "")
-                .replace("、", "");
+        return normalize(value).replace(",", "").replace("，", "").replace("、", "");
     }
 
     /**
@@ -361,16 +309,12 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param query 当前业务的查询条件。
      * @return 文章与查询条件的匹配分值；不匹配时为零。
      */
-    private static int score(
-            ForumArticleContentDTO article,
-            ForumArticleSearchQuery query) {
+    private static int score(ForumArticleContentDTO article, ForumArticleSearchQuery query) {
         String title = normalize(article.getTitle());
         String slug = normalize(article.getSlug());
         String category = normalize(article.getCategory());
         String summary = normalize(article.getSummary());
-        List<String> tags = splitTags(article.getTags()).stream()
-                .map(ForumArticleServiceImpl::normalize)
-                .toList();
+        List<String> tags = splitTags(article.getTags()).stream().map(ForumArticleServiceImpl::normalize).toList();
 
         int score = 0;
         if (StrUtil.isNotBlank(query.title())) {
@@ -432,19 +376,16 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         if (StrUtil.isBlank(tags)) {
             return List.of();
         }
-        return Arrays.stream(tags.split("[,，、\\s]+"))
-                .map(String::trim)
-                .filter(value -> StrUtil.isNotBlank(value))
-                .distinct()
-                .toList();
+        return Arrays.stream(tags.split("[,，、\\s]+")).map(String::trim).filter(value -> StrUtil.isNotBlank(value))
+            .distinct().toList();
     }
 
     /**
      * 将分类和标签归一化为数据库中的标准值。
      *
-     *   <p>选项来自已有文章，因此管理端即使绕过下拉框直接调用接口，也不能写入
-     *   一套新的分类或近似标签。数据库为空时保留初始化能力，允许第一篇文章建立
-     *   初始分类和标签选项。</p>
+     * <p>
+     * 选项来自已有文章，因此管理端即使绕过下拉框直接调用接口，也不能写入 一套新的分类或近似标签。数据库为空时保留初始化能力，允许第一篇文章建立 初始分类和标签选项。
+     * </p>
      *
      * @param category 分类。
      * @param tags 标签。
@@ -453,35 +394,19 @@ public class ForumArticleServiceImpl implements ForumArticleService {
     private ForumMetadata normalizeMetadata(String category, String tags) {
         List<ForumArticleDTO> existingArticles = repository.findAllProjectedBy();
         boolean allowInitialization = CollUtil.isEmpty(existingArticles);
-        Map<String, String> categoryOptions = existingArticles.stream()
-                .map(ForumArticleContentDTO::getCategory)
-                .filter(StrUtil::isNotBlank)
-                .map(String::trim)
-                .collect(Collectors.toMap(
-                        value -> normalize(value),
-                        value -> value,
-                        (first, ignored) -> first));
-        Map<String, String> tagOptions = existingArticles.stream()
-                .flatMap(article -> splitTags(article.getTags()).stream())
-                .map(String::trim)
-                .filter(StrUtil::isNotBlank)
-                .collect(Collectors.toMap(
-                        value -> normalize(value),
-                        value -> value,
-                        (first, ignored) -> first));
+        Map<String,
+            String> categoryOptions = existingArticles.stream().map(ForumArticleContentDTO::getCategory)
+                .filter(StrUtil::isNotBlank).map(String::trim)
+                .collect(Collectors.toMap(value -> normalize(value), value -> value, (first, ignored) -> first));
+        Map<String,
+            String> tagOptions = existingArticles.stream().flatMap(article -> splitTags(article.getTags()).stream())
+                .map(String::trim).filter(StrUtil::isNotBlank)
+                .collect(Collectors.toMap(value -> normalize(value), value -> value, (first, ignored) -> first));
 
-        String normalizedCategory = normalizeOption(
-                category,
-                categoryOptions,
-                "分类",
-                allowInitialization);
-        List<String> normalizedTags = normalizeTagOptions(
-                tags,
-                tagOptions,
-                allowInitialization);
-        return new ForumMetadata(
-                normalizedCategory,
-                CollUtil.isEmpty(normalizedTags) ? null : String.join(", ", normalizedTags));
+        String normalizedCategory = normalizeOption(category, categoryOptions, "分类", allowInitialization);
+        List<String> normalizedTags = normalizeTagOptions(tags, tagOptions, allowInitialization);
+        return new ForumMetadata(normalizedCategory,
+            CollUtil.isEmpty(normalizedTags) ? null : String.join(", ", normalizedTags));
     }
 
     /**
@@ -493,11 +418,8 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param allowInitialization 允许初始化。
      * @return 规范化选项对应的文本。
      */
-    private static String normalizeOption(
-            String value,
-            Map<String, String> options,
-            String fieldName,
-            boolean allowInitialization) {
+    private static String normalizeOption(String value, Map<String, String> options, String fieldName,
+        boolean allowInitialization) {
         if (StrUtil.isBlank(value)) {
             return null;
         }
@@ -506,10 +428,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
             return trimmed;
         }
         String standardValue = options.get(normalize(trimmed));
-        BusinessAssert.isTrue(
-                standardValue != null,
-                CommonErrorCode.PARAM_INVALID,
-                fieldName + "必须从已有选项中选择");
+        BusinessAssert.isTrue(standardValue != null, CommonErrorCode.PARAM_INVALID, fieldName + "必须从已有选项中选择");
         return standardValue;
     }
 
@@ -521,10 +440,8 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param allowInitialization 允许初始化。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    private static List<String> normalizeTagOptions(
-            String rawTags,
-            Map<String, String> options,
-            boolean allowInitialization) {
+    private static List<String> normalizeTagOptions(String rawTags, Map<String, String> options,
+        boolean allowInitialization) {
         List<String> requestedTags = splitTags(rawTags);
         if (CollUtil.isEmpty(requestedTags)) {
             return List.of();
@@ -535,10 +452,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         LinkedHashSet<String> normalized = new LinkedHashSet<>();
         for (String requestedTag : requestedTags) {
             String standardValue = options.get(normalize(requestedTag));
-            BusinessAssert.isTrue(
-                    standardValue != null,
-                    CommonErrorCode.PARAM_INVALID,
-                    "标签必须从已有选项中选择：" + requestedTag);
+            BusinessAssert.isTrue(standardValue != null, CommonErrorCode.PARAM_INVALID, "标签必须从已有选项中选择：" + requestedTag);
             normalized.add(standardValue);
         }
         return List.copyOf(normalized);
@@ -551,8 +465,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 规范化后的文本，供比较或查找使用。
      */
     private static String normalize(String value) {
-        return StrUtil.emptyIfNull(value).trim().toLowerCase(Locale.ROOT)
-                .replaceAll("\\s+", "");
+        return StrUtil.emptyIfNull(value).trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
     }
 
     /**
@@ -563,7 +476,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     private ForumArticleDTO findData(long id) {
         return repository.findProjectedById(id)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在"));
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在"));
     }
 
     /**
@@ -574,7 +487,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     private ForumArticle findArticle(long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在"));
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在"));
     }
 
     /**
@@ -584,9 +497,8 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param id 目标记录的本地主键。
      */
     private void ensureSlugAvailable(String slug, Long id) {
-        boolean duplicated = id == null
-                ? repository.existsBySlugIgnoreCase(slug)
-                : repository.existsBySlugIgnoreCaseAndIdNot(slug, id);
+        boolean duplicated =
+            id == null ? repository.existsBySlugIgnoreCase(slug) : repository.existsBySlugIgnoreCaseAndIdNot(slug, id);
         BusinessAssert.isFalse(duplicated, CommonErrorCode.DATA_CONFLICT, "论坛文章 slug 已存在");
     }
 
@@ -596,14 +508,10 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param article 文章。
      * @param operator 操作者。
      */
-    private void checkCanUpdate(
-            ForumArticleContentDTO article,
-            ForumOperatorDTO operator) {
+    private void checkCanUpdate(ForumArticleContentDTO article, ForumOperatorDTO operator) {
         BusinessAssert.isTrue(
-                operator.canUpdate(
-                        article.getCreatedByUserId(),
-                        assignedLevel(article.getCreatedByUserId())),
-                ForumErrorCode.ARTICLE_OPERATION_DENIED);
+            operator.canUpdate(article.getCreatedByUserId(), assignedLevel(article.getCreatedByUserId())),
+            ForumErrorCode.ARTICLE_OPERATION_DENIED);
     }
 
     /**
@@ -612,14 +520,10 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param article 文章。
      * @param operator 操作者。
      */
-    private void checkCanDelete(
-            ForumArticleContentDTO article,
-            ForumOperatorDTO operator) {
+    private void checkCanDelete(ForumArticleContentDTO article, ForumOperatorDTO operator) {
         BusinessAssert.isTrue(
-                operator.canDelete(
-                        article.getCreatedByUserId(),
-                        assignedLevel(article.getCreatedByUserId())),
-                ForumErrorCode.ARTICLE_OPERATION_DENIED);
+            operator.canDelete(article.getCreatedByUserId(), assignedLevel(article.getCreatedByUserId())),
+            ForumErrorCode.ARTICLE_OPERATION_DENIED);
     }
 
     /**
@@ -629,8 +533,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 当前操作计算或读取的数值。
      */
     private int assignedLevel(long userId) {
-        return authorityProvider.assignedLevels(Set.of(userId))
-                .getOrDefault(userId, Integer.MAX_VALUE);
+        return authorityProvider.assignedLevels(Set.of(userId)).getOrDefault(userId, Integer.MAX_VALUE);
     }
 
     /**
@@ -643,10 +546,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         try {
             return repository.saveAndFlush(article);
         } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(
-                    CommonErrorCode.DATA_CONFLICT,
-                    "论坛文章数据冲突",
-                    exception);
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "论坛文章数据冲突", exception);
         }
     }
 
@@ -657,10 +557,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param request 本次新增、修改或执行操作使用的已接收参数。
      * @param metadata 元数据。
      */
-    private static void apply(
-            ForumArticle article,
-            ForumArticleSaveDTO request,
-            ForumMetadata metadata) {
+    private static void apply(ForumArticle article, ForumArticleSaveDTO request, ForumMetadata metadata) {
         article.setTitle(request.title());
         article.setSummary(request.summary());
         article.setTags(metadata.tags());
@@ -678,9 +575,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @param article 文章。
      * @param content 内容。
      */
-    private static void applyPreparedContent(
-            ForumArticle article,
-            ForumPreparedContentDTO content) {
+    private static void applyPreparedContent(ForumArticle article, ForumPreparedContentDTO content) {
         article.setCoverObjectId(content.coverUrl());
         article.setContentHtml(content.contentHtml());
         article.setContentMarkdown(content.contentMarkdown());

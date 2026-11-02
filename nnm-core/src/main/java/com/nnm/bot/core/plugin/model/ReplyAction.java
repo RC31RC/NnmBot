@@ -6,7 +6,9 @@ import java.util.Objects;
 /** 动作只描述导航或填入文本，不携带平台 JSON，也不直接执行业务。 */
 public sealed interface ReplyAction {
     String label();
+
     String value();
+
     boolean required();
 
     record Link(String label, String value, boolean required) implements ReplyAction {
@@ -15,7 +17,7 @@ public sealed interface ReplyAction {
             value = checked(value, 2048);
             URI uri = URI.create(value);
             if (!("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
-                    || uri.getHost() == null || uri.getRawUserInfo() != null) {
+                || uri.getHost() == null || uri.getRawUserInfo() != null) {
                 throw new IllegalArgumentException("Action URL must be absolute HTTP(S) without credentials");
             }
         }

@@ -40,8 +40,9 @@ import java.util.Set;
 /**
  * 命令执行权限策略。
  *
- * <p>机器人能力角色、系统角色和逻辑群组角色是三套独立关系：
- * 能力角色决定机器人能不能提供命令，系统角色和群组角色决定当前用户能不能使用命令。</p>
+ * <p>
+ * 机器人能力角色、系统角色和逻辑群组角色是三套独立关系： 能力角色决定机器人能不能提供命令，系统角色和群组角色决定当前用户能不能使用命令。
+ * </p>
  */
 @Component
 @Slf4j
@@ -69,20 +70,17 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
     private BotGroupMemberIdentityResolver groupMemberIdentityResolver;
 
     @Override
-    public CommandAccessDecision check(BotMessageContext context,
-                                        CommandDescriptor descriptor,
-                                        CommandExecutionConfiguration configuration) {
-        BotCommand command = this.commandRepository.findByCodeIgnoreCase(descriptor.code())
-                .orElse(null);
+    public CommandAccessDecision check(BotMessageContext context, CommandDescriptor descriptor,
+        CommandExecutionConfiguration configuration) {
+        BotCommand command = this.commandRepository.findByCodeIgnoreCase(descriptor.code()).orElse(null);
         if (ObjectUtil.isNull(command)) {
             String commandCode = descriptor.code().strip().toLowerCase(Locale.ROOT);
-            return SystemCommandCodes.ALL.contains(commandCode)
-                    ? CommandAccessDecision.permit()
-                    : CommandAccessDecision.denied("当前业务命令未完成数据库配置");
+            return SystemCommandCodes.ALL.contains(commandCode) ? CommandAccessDecision.permit()
+                : CommandAccessDecision.denied("当前业务命令未完成数据库配置");
         }
 
-        CommandAccessDecision instanceDecision = this.checkBotInstance(
-                context.platform(), context.botAccountId(), command);
+        CommandAccessDecision instanceDecision =
+            this.checkBotInstance(context.platform(), context.botAccountId(), command);
         if (!instanceDecision.allowed()) {
             return instanceDecision;
         }
@@ -97,58 +95,50 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
 
     @Override
     public CommandAccessDecision checkInstance(BotPlatform platform, String botAccountId,
-                                               CommandDescriptor descriptor) {
+        CommandDescriptor descriptor) {
         return commandRepository.findByCodeIgnoreCase(descriptor.code())
-                .map(command -> checkBotInstance(platform, botAccountId, command))
-                .orElseGet(() -> CommandAccessPolicy.super.checkInstance(platform, botAccountId, descriptor));
+            .map(command -> checkBotInstance(platform, botAccountId, command))
+            .orElseGet(() -> CommandAccessPolicy.super.checkInstance(platform, botAccountId, descriptor));
     }
 
-    private CommandAccessDecision checkBotInstance(BotPlatform platform, String botAccountId,
-                                                    BotCommand command) {
+    private CommandAccessDecision checkBotInstance(BotPlatform platform, String botAccountId, BotCommand command) {
         // 系统命令是每个实例的内置能力，不受机器人能力角色绑定影响。
         if (SystemCommandCodes.ALL.contains(command.getCode().toLowerCase(Locale.ROOT))) {
             return CommandAccessDecision.permit();
         }
-        List<BotCommandRobotRole> bindings =
-                this.commandRoleRepository.findAllByCommandId(command.getId());
+        List<BotCommandRobotRole> bindings = this.commandRoleRepository.findAllByCommandId(command.getId());
         if (bindings.isEmpty()) {
-            log.debug("机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, "
-                            + "reason=未配置机器人能力角色",
-                    command.getCode(), command.getId(), platform, botAccountId);
+            log.debug("机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, " + "reason=未配置机器人能力角色",
+                command.getCode(), command.getId(), platform, botAccountId);
             return CommandAccessDecision.denied("当前命令未配置机器人能力角色");
         }
         OptionalLong instanceId = this.instanceIdentityResolver.resolveId(platform, botAccountId);
         if (instanceId.isEmpty()) {
-            log.debug("机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, "
-                            + "bindingCount={}, reason=机器人实例不存在",
-                    command.getCode(), command.getId(), platform, botAccountId,
-                    bindings.size());
+            log.debug(
+                "机器人能力角色校验拒绝：commandCode={}, commandId={}, platform={}, botAccountId={}, "
+                    + "bindingCount={}, reason=机器人实例不存在",
+                command.getCode(), command.getId(), platform, botAccountId, bindings.size());
             return CommandAccessDecision.denied("当前机器人实例不存在");
         }
-        Set<Long> enabledRoleIds = bindings.stream()
-                .map(BotCommandRobotRole::getRobotRoleId)
-                .filter(roleId -> this.roleRepository.findById(roleId)
-                        .map(BotRobotRole::isEnabled)
-                        .orElse(false))
-                .collect(Collectors.toSet());
-        Set<Long> boundRoleIds = enabledRoleIds.stream()
+        Set<Long> enabledRoleIds = bindings.stream().map(BotCommandRobotRole::getRobotRoleId)
+            .filter(roleId -> this.roleRepository.findById(roleId).map(BotRobotRole::isEnabled).orElse(false))
+            .collect(Collectors.toSet());
+        Set<Long> boundRoleIds =
+            enabledRoleIds.stream()
                 .filter(roleId -> this.roleInstanceRepository.findAllByRobotRoleId(roleId).stream()
-                        .anyMatch(item -> item.getBotInstanceId().equals(instanceId.getAsLong())))
+                    .anyMatch(item -> item.getBotInstanceId().equals(instanceId.getAsLong())))
                 .collect(Collectors.toSet());
         boolean allowed = !boundRoleIds.isEmpty();
-        log.debug("机器人能力角色校验：commandCode={}, commandId={}, platform={}, botAccountId={}, "
-                        + "bindingCount={}, instanceId={}, enabledRoleIds={}, boundRoleIds={}, allowed={}",
-                command.getCode(), command.getId(), platform, botAccountId,
-                bindings.size(), instanceId.getAsLong(), enabledRoleIds, boundRoleIds, allowed);
-        return allowed
-                ? CommandAccessDecision.permit()
-                : CommandAccessDecision.denied("当前机器人未绑定该命令能力");
+        log.debug(
+            "机器人能力角色校验：commandCode={}, commandId={}, platform={}, botAccountId={}, "
+                + "bindingCount={}, instanceId={}, enabledRoleIds={}, boundRoleIds={}, allowed={}",
+            command.getCode(), command.getId(), platform, botAccountId, bindings.size(), instanceId.getAsLong(),
+            enabledRoleIds, boundRoleIds, allowed);
+        return allowed ? CommandAccessDecision.permit() : CommandAccessDecision.denied("当前机器人未绑定该命令能力");
     }
 
-    private CommandAccessDecision checkSystemRole(BotMessageContext context,
-                                                   BotCommand command) {
-        List<BotCommandRole> bindings =
-                this.systemRoleBindingRepository.findAllByCommandId(command.getId());
+    private CommandAccessDecision checkSystemRole(BotMessageContext context, BotCommand command) {
+        List<BotCommandRole> bindings = this.systemRoleBindingRepository.findAllByCommandId(command.getId());
         if (bindings.isEmpty()) {
             return CommandAccessDecision.permit();
         }
@@ -158,18 +148,13 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
             // QQ 官方通常只能提供 OpenID；没有绑定该 OpenID 时不能冒充系统管理员。
             return CommandAccessDecision.denied("当前平台身份未绑定启用的系统用户");
         }
-        Set<Long> requiredRoleIds = bindings.stream()
-                .map(BotCommandRole::getRoleId)
-                .collect(Collectors.toSet());
-        boolean allowed = user.get().getRoles().stream()
-                .anyMatch(role -> role.isEnabled() && requiredRoleIds.contains(role.getId()));
-        return allowed
-                ? CommandAccessDecision.permit()
-                : CommandAccessDecision.denied("当前系统用户没有该命令所需角色");
+        Set<Long> requiredRoleIds = bindings.stream().map(BotCommandRole::getRoleId).collect(Collectors.toSet());
+        boolean allowed =
+            user.get().getRoles().stream().anyMatch(role -> role.isEnabled() && requiredRoleIds.contains(role.getId()));
+        return allowed ? CommandAccessDecision.permit() : CommandAccessDecision.denied("当前系统用户没有该命令所需角色");
     }
 
-    private CommandAccessDecision checkGroupRole(BotMessageContext context,
-                                                  BotCommand command) {
+    private CommandAccessDecision checkGroupRole(BotMessageContext context, BotCommand command) {
         String requiredRole = normalizeRole(command.getGroupRoleRequired());
         if (StrUtil.isBlank(requiredRole)) {
             return CommandAccessDecision.permit();
@@ -183,29 +168,24 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
             return CommandAccessDecision.denied("当前用户不是已启用的逻辑群组成员");
         }
         boolean allowed = "OWNER".equals(member.getMemberRole())
-                || "ADMIN".equals(requiredRole) && "ADMIN".equals(member.getMemberRole());
-        return allowed
-                ? CommandAccessDecision.permit()
-                : CommandAccessDecision.denied("当前群组成员没有该命令所需角色");
+            || "ADMIN".equals(requiredRole) && "ADMIN".equals(member.getMemberRole());
+        return allowed ? CommandAccessDecision.permit() : CommandAccessDecision.denied("当前群组成员没有该命令所需角色");
     }
 
     private Optional<SysUser> resolveSystemUser(BotMessageContext context) {
         return this.identityRepository
-                .findFirstByPlatformInAndExternalUserIdOrderByIdAsc(
-                        this.identityPlatforms(context), context.senderId())
-                .flatMap(identity -> this.userRepository.findWithRolesById(identity.getUserId()));
+            .findFirstByPlatformInAndExternalUserIdOrderByIdAsc(this.identityPlatforms(context), context.senderId())
+            .flatMap(identity -> this.userRepository.findWithRolesById(identity.getUserId()));
     }
 
     private BotGroupMember resolveGroupMember(BotMessageContext context) {
         // 解析器会优先使用入口只读上下文，权限检查不重复查询群组、绑定和主成员。
         return groupContextResolver.resolve(context)
-                .flatMap(group -> groupMemberIdentityResolver.findByContext(group.group().getId(), context))
-                .orElse(null);
+            .flatMap(group -> groupMemberIdentityResolver.findByContext(group.group().getId(), context)).orElse(null);
     }
 
     private List<String> identityPlatforms(BotMessageContext context) {
-        if (context.platform() == BotPlatform.ONEBOT
-                || context.platform() == BotPlatform.QQ_OFFICIAL) {
+        if (context.platform() == BotPlatform.ONEBOT || context.platform() == BotPlatform.QQ_OFFICIAL) {
             return List.of(context.platform().name(), "QQ");
         }
         return List.of(context.platform().name());

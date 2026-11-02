@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** 管理端动态世界状态的 HTTP 入口。 */
 @RestController
-@RequestMapping("/api/admin/v1/warframe")
+@RequestMapping("/api/admin/warframe")
 public class WarframeWorldStateManagementController {
 
     @Resource
@@ -62,8 +62,8 @@ public class WarframeWorldStateManagementController {
             worldStateService.refresh(reporter);
             return worldStateManagementService.current();
         };
-        return ApiResponse.ok(taskService.findActive(taskType)
-                .map(existing -> new AdminTaskSubmission(existing, taskType))
+        return ApiResponse
+            .ok(taskService.findActive(taskType).map(existing -> new AdminTaskSubmission(existing, taskType))
                 .orElseGet(() -> taskService.submit(taskType, permission, work)));
     }
 }

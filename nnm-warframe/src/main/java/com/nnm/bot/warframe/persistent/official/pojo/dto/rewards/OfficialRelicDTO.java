@@ -16,8 +16,8 @@ import lombok.Getter;
 
 /** RELIC 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 图标状态；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("iconStatus")
@@ -388,7 +388,8 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, null);
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, null);
     }
 
     /**
@@ -404,7 +405,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 LocationsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class LocationsDTO extends OfficialObjectDTO {
         /** 获取地点列表的启动概率；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("activationProbability")
@@ -591,7 +592,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 MarketListingsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MarketListingsDTO extends OfficialObjectDTO {
         /** 关联市场商品列表的游戏引用；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("gameRef")
@@ -718,7 +719,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StatesKeyItemReferencesRotationsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StatesKeyItemReferencesRotationsDTO extends OfficialObjectDTO {
         /** 状态集合的物品引用的轮次的物品的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("item__domain")
@@ -890,7 +891,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StatesKeyItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StatesKeyItemReferencesDTO extends OfficialObjectDTO {
         /** 状态集合的物品引用的字段；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("field")
@@ -1002,7 +1003,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StatesKeyRewardsDropTableEntriesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StatesKeyRewardsDropTableEntriesDTO extends OfficialObjectDTO {
         /** 状态集合的奖励的掉落表条目的分类；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("category")
@@ -1235,7 +1236,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StatesKeyRewardsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StatesKeyRewardsItemReferencesDTO extends OfficialObjectDTO {
         /** 状态集合的奖励的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1377,7 +1378,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StatesKeyRewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StatesKeyRewardsDTO extends OfficialObjectDTO {
         /** 状态集合的奖励的掉落几率百分比；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("dropChancePercent")
@@ -1639,7 +1640,7 @@ public class OfficialRelicDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StatesKeyDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StatesKeyDTO extends OfficialObjectDTO {
         /** 状态集合的分类；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("category")

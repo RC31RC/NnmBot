@@ -8,7 +8,7 @@ const javaBase = path.join(repo, 'nnm-warframe/src/main/java/com/nnm/bot/warfram
 
 function modelRows(contract, base = javaBase) {
   const domains = fs.readFileSync(path.join(base, 'persistent/official/constant/WarframeOfficialDataDomain.java'), 'utf8');
-  const files = new Map([...domains.matchAll(/^\s+(\w+)\("([^"]+\.json)"/gm)].map(match => [match[1], match[2]]));
+  const files = new Map([...domains.matchAll(/^\s+(\w+)\("([^"]+\.json\.gz)"/gm)].map(match => [match[1], match[2]]));
   const mains = contract.models.filter(model => model.parentTable === null);
   if (mains.length !== 71 || Object.keys(contract.roots).length !== 71) {
     throw new Error('The official contract must contain 71 independent JSON main models');

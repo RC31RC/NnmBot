@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/public/v1/warframe/forum/articles")
+@RequestMapping("/api/public/warframe/forum/articles")
 public class ForumPublicArticleController {
 
     @Resource
@@ -23,9 +23,7 @@ public class ForumPublicArticleController {
      * @return 以统一接口响应包装的本次操作结果。
      */
     @GetMapping("/{id}")
-    public ApiResponse<ForumArticlePublicVO> detail(
-            @PathVariable
-            long id) {
+    public ApiResponse<ForumArticlePublicVO> detail(@PathVariable long id) {
         return ApiResponse.ok(service.publicDetail(id));
     }
 }

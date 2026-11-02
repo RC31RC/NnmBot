@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.mapper.dataset;
 
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRawRecordDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.vo.snapshot.WarframeOfficialRawRecordVO;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
@@ -14,11 +16,11 @@ public final class WarframeOfficialImportViewMapper {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private WarframeOfficialImportViewMapper() {
-    }
+    private WarframeOfficialImportViewMapper() {}
 
     /**
      * 将非受管官方版本数据转换为前端版本选项。
+     *
      * @param value 待处理的字段值。
      * @return 可供刷新选择的官方版本。
      */
@@ -34,10 +36,21 @@ public final class WarframeOfficialImportViewMapper {
      */
     public static WarframeOfficialPreviewVO preview(WarframeOfficialPreviewDTO value) {
         return new WarframeOfficialPreviewVO(value.id(), version(value.version()), value.buildId(), value.baselineId(),
-                value.status(), value.expiresAt(), value.totalBytes(), value.addedRecords(), value.changedRecords(),
-                value.removedRecords(), value.unmappedPaths(), value.files().stream()
-                .map(file -> new WarframeOfficialPreviewVO.FileChangeVO(file.path(), file.sha256(), file.bytes(),
-                        file.recordCount(), file.changeType())).toList());
+            value.status(), value.expiresAt(), value.totalBytes(), value.addedRecords(), value.changedRecords(),
+            value.removedRecords(), value.unmappedPaths(),
+            value.files().stream().map(file -> new WarframeOfficialPreviewVO.FileChangeVO(file.path(), file.sha256(),
+                file.bytes(), file.recordCount(), file.changeType())).toList());
+    }
+
+    /**
+     * 将按需读取的原始记录转换为管理端展示合同。
+     *
+     * @param value 原始版本记录。
+     * @return 前后两个版本的原文。
+     */
+    public static WarframeOfficialRawRecordVO record(WarframeOfficialRawRecordDTO value) {
+        return new WarframeOfficialRawRecordVO(value.previousJson(), value.incomingJson(),
+            value.previousLocalizedJson(), value.incomingLocalizedJson());
     }
 
     /**
@@ -47,11 +60,13 @@ public final class WarframeOfficialImportViewMapper {
      * @return 包含当前页记录及总数的分页结果。
      */
     public static PageResult<WarframeOfficialRecordChangeVO> changes(PageResult<WarframeOfficialRecordChangeDTO> page) {
-        return PageResult.of(page.records().stream().map(value -> new WarframeOfficialRecordChangeVO(
-                value.path(), value.recordKey(), value.displayName(), value.changeType(), value.previousJson(),
-                value.incomingJson(), value.previousLocalizedJson(), value.incomingLocalizedJson(),
-                value.fieldChanges().stream().map(field -> new WarframeOfficialFieldChangeVO(
-                        field.pointer(), field.previousJson(), field.incomingJson())).toList())).toList(),
-                page.current(), page.size(), page.total());
+        return PageResult.of(
+            page.records().stream()
+                .map(value -> new WarframeOfficialRecordChangeVO(value.path(), value.recordKey(), value.displayName(),
+                    value.changeType(),
+                    value.fieldChanges().stream().map(field -> new WarframeOfficialFieldChangeVO(field.pointer(),
+                        field.previousJson(), field.incomingJson())).toList()))
+                .toList(),
+            page.current(), page.size(), page.total());
     }
 }

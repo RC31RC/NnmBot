@@ -7,18 +7,12 @@ import java.util.List;
 /**
  * 一次 Warframe Market 订单查询的完整快照。
  *
- * <p>保留原始 JSON 是为了在上游字段变化时可以排查解析问题，并让后续
- * 统计类命令按需扩展，而不必重新请求上游。</p>
+ * <p>
+ * 保留原始 JSON 是为了在上游字段变化时可以排查解析问题，并让后续 统计类命令按需扩展，而不必重新请求上游。
+ * </p>
  */
-public record WarframeMarketOrderSnapshotDTO(
-        String itemName,
-        Integer maxRank,
-        String platform,
-        List<WarframeMarketOrderDTO> orders,
-        String rawJson,
-        WarframeMarketItemDTO item,
-        String apiVersion,
-        String error) {
+public record WarframeMarketOrderSnapshotDTO(String itemName, Integer maxRank, String platform,
+    List<WarframeMarketOrderDTO> orders, String rawJson, WarframeMarketItemDTO item, String apiVersion, String error) {
 
     /**
      * 构造市场订单快照传输对象，并保存初始化参数。
@@ -29,14 +23,9 @@ public record WarframeMarketOrderSnapshotDTO(
      * @param orders 订单集合。
      * @param rawJson 用于审核或排障的原始响应文本。
      */
-    public WarframeMarketOrderSnapshotDTO(
-            String itemName,
-            Integer maxRank,
-            String platform,
-            List<WarframeMarketOrderDTO> orders,
-            String rawJson) {
-        this(itemName, maxRank, platform, orders, rawJson,
-                new WarframeMarketItemDTO(itemName, maxRank), "", "");
+    public WarframeMarketOrderSnapshotDTO(String itemName, Integer maxRank, String platform,
+        List<WarframeMarketOrderDTO> orders, String rawJson) {
+        this(itemName, maxRank, platform, orders, rawJson, new WarframeMarketItemDTO(itemName, maxRank), "", "");
     }
 
     /**

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1/bot-robot-roles")
+@RequestMapping("/api/admin/bot-robot-roles")
 public class BotRobotRoleManagementController {
 
     @Resource
@@ -29,38 +29,26 @@ public class BotRobotRoleManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotRobotRoleVO>> list(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<BotRobotRoleVO>> list(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminBotRoleViewAssembler.toBotRobotRoleVO(service.list()));
     }
 
     @PostMapping
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Long> create(
-            @Valid
-            @RequestBody
-    BotRobotRoleSaveDTO request) {
+    public ApiResponse<Long> create(@Valid @RequestBody BotRobotRoleSaveDTO request) {
         return ApiResponse.ok(service.create(request));
     }
 
     @PutMapping("/{id}")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> update(
-            @PathVariable
-            long id,
-            @Valid
-            @RequestBody
-            BotRobotRoleSaveDTO request) {
+    public ApiResponse<Void> update(@PathVariable long id, @Valid @RequestBody BotRobotRoleSaveDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/{id}")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> delete(
-            @PathVariable
-            long id) {
+    public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);
         return ApiResponse.ok();
     }

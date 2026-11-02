@@ -7,8 +7,9 @@ import java.util.function.Consumer;
 /**
  * 管理端长任务端口。
  *
- * <p>提交接口与进度订阅解耦：业务服务只发布阶段进度，Web 层决定使用 SSE
- * 或普通查询读取状态。实现可以是进程内状态中心，也可以替换为持久化任务系统。</p>
+ * <p>
+ * 提交接口与进度订阅解耦：业务服务只发布阶段进度，Web 层决定使用 SSE 或普通查询读取状态。实现可以是进程内状态中心，也可以替换为持久化任务系统。
+ * </p>
  */
 public interface AdminTaskService {
 
@@ -22,6 +23,9 @@ public interface AdminTaskService {
 
     /** 返回读取任务进度所需权限，SSE 与普通查询必须使用同一权限边界。 */
     Optional<String> requiredPermission(UUID taskId);
+
+    /** 请求取消正在执行的任务；只有实际执行线程退出后才释放活动任务状态。 */
+    void cancel(UUID taskId);
 
     /** 查找同类型仍在排队或执行的任务，供业务接口避免重复刷新。 */
     Optional<UUID> findActive(String taskType);

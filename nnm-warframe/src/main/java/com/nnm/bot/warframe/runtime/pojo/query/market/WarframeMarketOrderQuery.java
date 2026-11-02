@@ -5,9 +5,8 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** 命令层完成名称解析后的订单查询条件；页码从 1 开始。 */
-public record WarframeMarketOrderQuery(
-        String itemInput, String marketSlug, String platform,
-        OrderFilter filter, boolean maxLevel, int page) {
+public record WarframeMarketOrderQuery(String itemInput, String marketSlug, String platform, OrderFilter filter,
+    boolean maxLevel, int page) {
 
     /**
      * 构造市场订单查询，并保存初始化参数。

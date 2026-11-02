@@ -21,7 +21,8 @@ public class WarframeOfficialFileServiceImpl implements WarframeOfficialFileServ
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     public Optional<WarframeOfficialFile> find(String path) {
-        if (WarframeOfficialDataDomain.fromPath(path) == null) return Optional.empty();
+        if (WarframeOfficialDataDomain.fromPath(path) == null)
+            return Optional.empty();
         return files.findById(path).filter(file -> file.getAdoptedSha256() != null);
     }
 }

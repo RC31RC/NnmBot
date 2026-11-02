@@ -31,7 +31,7 @@ function entityTables() {
 
 withPostgres(async cluster => {
   const { apply, query, jdbcUrl } = cluster;
-  apply("docs/sql/init.sql");
+  apply("sql/init.sql");
 
   const tables = entityTables();
   for (const table of tables) {
@@ -52,7 +52,9 @@ withPostgres(async cluster => {
     ["bot_command_template", ["html_content", "markdown_content", "plain_text_content"]],
     ["bot_command_group_member", ["parameter_bindings"]],
     ["bot_notification_job", ["owner_id", "request", "resources", "scheduled_at", "status", "report"]],
-    ["wf_official_weapon_root", ["bkey", "maintenance_type", "raw_json"]],
+    ["wf_official_weapon_root", ["bkey", "maintenance_type"]],
+    ["wf_official_dataset_file", ["source_url", "candidate_source_url"]],
+    ["wf_official_dataset_batch", ["change_object_key"]],
     ["wf_community_alias", ["record_key", "alias_name", "target_name"]],
     ["wf_community_riven_alias", ["attribute_code", "alias_name"]],
     ["wf_official_relic_states_entries_rewards_items", ["id", "bkey", "sort_order"]]
@@ -74,7 +76,7 @@ withPostgres(async cluster => {
       `Independent main table has no total-parent id: ${model.table}`);
     assert.equal(query(`SELECT count(*) FROM information_schema.columns
       WHERE table_schema='nnmbot' AND table_name=${quote(model.table)}
-        AND column_name IN ('bkey','maintenance_type','raw_json')`), "3", model.table);
+        AND column_name IN ('bkey','maintenance_type')`), "2", model.table);
   }
   for (const model of officialModels.models.filter(model => model.parentTable)) {
     assert.equal(query(`SELECT count(*) FROM information_schema.columns
@@ -120,31 +122,35 @@ withPostgres(async cluster => {
   }
   console.log(`PASS tables=${tables.length}, comments, official trees and community whitelist`);
 
-  // 只在隔离库演练明确列出的退役导入表清理，人工资料表必须保留。
-  const communityBefore = query(`SELECT row_to_json(t)::text FROM nnmbot.wf_community_riven_alias t ORDER BY id`);
-  query(`CREATE TABLE nnmbot.wf_arbitration_schedule (id bigint PRIMARY KEY);
-    CREATE TABLE nnmbot.wf_community_source (id bigint PRIMARY KEY);
-    CREATE TABLE nnmbot.wf_community_record (id bigint PRIMARY KEY, source_id bigint REFERENCES nnmbot.wf_community_source);
-    CREATE TABLE nnmbot.wf_community_raw (id bigint PRIMARY KEY, record_id bigint REFERENCES nnmbot.wf_community_record);
-    CREATE VIEW nnmbot.cleanup_dependency_guard AS SELECT id FROM nnmbot.wf_community_source;
-    CREATE TABLE nnmbot.wf_communityx_cleanup_guard (id bigint);
-    COMMENT ON TABLE nnmbot.wf_communityx_cleanup_guard IS '测试字面前缀匹配，禁止连带删除';
-    COMMENT ON COLUMN nnmbot.wf_communityx_cleanup_guard.id IS '测试非退役表身份';`);
-  assert.throws(() => apply("docs/sql/01_remove_legacy_community_and_arbitration_runtime_tables.sql"),
-    "Non-retired dependencies must block the whole cleanup transaction");
-  assert.equal(query("SELECT to_regclass('nnmbot.wf_arbitration_schedule') IS NOT NULL"), "t",
-    "Failed cleanup must roll back the arbitration drop as well");
-  query("DROP VIEW nnmbot.cleanup_dependency_guard");
-  apply("docs/sql/01_remove_legacy_community_and_arbitration_runtime_tables.sql");
-  apply("docs/sql/01_remove_legacy_community_and_arbitration_runtime_tables.sql");
   assert.equal(query(`SELECT count(*) FROM pg_tables WHERE schemaname='nnmbot'
-    AND tablename IN ('wf_community_source', 'wf_community_record', 'wf_community_raw', 'wf_arbitration_schedule')`), "0");
-  assert.equal(query("SELECT to_regclass('nnmbot.wf_communityx_cleanup_guard') IS NOT NULL"), "t",
-    "Cleanup must match the literal retired prefix only");
-  assert.equal(query(`SELECT row_to_json(t)::text FROM nnmbot.wf_community_riven_alias t ORDER BY id`),
-    communityBefore, "Community rows must remain unchanged");
-  query("DROP TABLE nnmbot.wf_communityx_cleanup_guard");
-  console.log("PASS legacy cleanup: atomic rollback, explicit scope, idempotence, community rows preserved");
+    AND tablename IN ('wf_community_source', 'wf_community_record', 'wf_community_raw', 'wf_arbitration_schedule')`), "0",
+    "Merged baseline must not recreate retired import or runtime tables");
+  assert.equal(query(`SELECT count(*) FROM nnmbot.sys_menu
+    WHERE name='WarframeSupplementalData'
+      OR path IN ('supplemental', '/warframe/supplemental-data')
+      OR component='/warframe/supplemental-data'`), "0",
+    "Merged baseline must not recreate the obsolete supplemental-data menu");
+  assert.equal(query(`SELECT count(*) FROM information_schema.columns WHERE table_schema='nnmbot'
+    AND table_name IN (${officialTreeTables}) AND column_name IN ('raw_json','localized_raw_json')`), "0",
+    "Official record JSON must remain in object storage");
+  assert.equal(query(`SELECT count(*) FROM information_schema.columns WHERE table_schema='nnmbot'
+    AND table_name='wf_official_dataset_file' AND column_name IN ('source_url','candidate_source_url')
+    AND data_type='text' AND is_nullable='YES'`), "2",
+    "Official source URLs are optional for local sources");
+  assert.equal(query(`SELECT count(*) FROM information_schema.columns WHERE table_schema='nnmbot'
+    AND table_name='wf_official_dataset_batch' AND column_name='change_object_key'
+    AND data_type='character varying' AND character_maximum_length=300 AND is_nullable='NO'`), "1",
+    "Official preview batches require a stable object-storage difference key");
+  query(`BEGIN;
+    INSERT INTO nnmbot.wf_official_dataset_batch
+      (id, source_ref, commit_sha, build_id, manifest_json, preview_json, change_object_key,
+       baseline_hash, parser_contract_version, status, created_at, expires_at)
+    SELECT 'sql-baseline-' || lower(status), 'test', repeat('0', 40), 'test', '{}', '{}',
+      'test/' || lower(status) || '/changes.json', repeat('0', 64), 1, status,
+      CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour'
+    FROM (VALUES ('PENDING'), ('APPLIED'), ('EXPIRED'), ('ARCHIVED')) AS batch(status);
+    ROLLBACK;`);
+  console.log("PASS merged baseline: retired tables/menu absent, source URLs, object-storage metadata and batch lifecycle");
 
   // 在本脚本自己的临时数据库验证手工补充入口，不接触应用配置或开发者数据库。
   const htmlBefore = query(`SELECT md5(string_agg(id::text || ':' || html_content, ',' ORDER BY id))

@@ -11,7 +11,7 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.ActionRaw;
 import com.mikuac.shiro.dto.action.common.MsgId;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.core.constant.BotChannelCapability;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.constant.BotPlatform;
@@ -47,20 +47,18 @@ public class OneBotMessageSender implements BotMessageSender {
 
     @Override
     public boolean supports(BotMessageContext context, BotChannelCapability capability) {
-        return capability == BotChannelCapability.TEXT_MESSAGE
-                || capability == BotChannelCapability.IMAGE_MESSAGE
-                || capability == BotChannelCapability.FILE_MESSAGE;
+        return capability == BotChannelCapability.TEXT_MESSAGE || capability == BotChannelCapability.IMAGE_MESSAGE
+            || capability == BotChannelCapability.FILE_MESSAGE;
     }
 
     @Override
     public boolean supportsComposition(BotMessageContext context, List<PartKind> parts) {
-        return !parts.isEmpty() && parts.stream().allMatch(kind ->
-                kind == PartKind.TEXT || kind == PartKind.IMAGE);
+        return !parts.isEmpty() && parts.stream().allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.IMAGE);
     }
 
     @Override
     public PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
-                                      BotMessageSendPermit permit) {
+        BotMessageSendPermit permit) {
         if (blocks.size() == 1 && blocks.getFirst() instanceof File file) {
             return prepareFile(context, file.resource(), permit);
         }
@@ -69,7 +67,8 @@ public class OneBotMessageSender implements BotMessageSender {
             String message = hasMention ? withMention(context, text.content(), mentionUserId) : text.content();
             return prepareMessage(context, message, !hasMention, permit);
         }
-        if (blocks.isEmpty()) throw new IllegalArgumentException("Message blocks must not be empty");
+        if (blocks.isEmpty())
+            throw new IllegalArgumentException("Message blocks must not be empty");
         MsgUtils message = messageBuilder(context, mentionUserId);
         for (BotMessagePart block : blocks) {
             switch (block) {
@@ -78,12 +77,11 @@ public class OneBotMessageSender implements BotMessageSender {
                     try {
                         message.img(image.resource().readAllBytes(replyProperties.getMaxImageBytes()));
                     } catch (IOException failure) {
-                        throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                                "读取待发送图片失败", failure);
+                        throw new SystemException(BotChannelErrorCode.FILE_STAGING_FAILED, "读取待发送图片失败", failure);
                     }
                 }
-                default -> throw new BotChannelCapabilityException(platform(),
-                        BotChannelCapability.IMAGE_MESSAGE, "非法顺序图文内容");
+                default ->
+                    throw new BotChannelCapabilityException(platform(), BotChannelCapability.IMAGE_MESSAGE, "非法顺序图文内容");
             }
         }
         return prepareMessage(context, message.build(), false, permit);
@@ -94,45 +92,44 @@ public class OneBotMessageSender implements BotMessageSender {
     }
 
     private PreparedBotMessage prepareMessage(BotMessageContext context, String message, boolean escape,
-                                              BotMessageSendPermit permit) {
+        BotMessageSendPermit permit) {
         OneBotMessageSource source = context.nativeSource(OneBotMessageSource.class);
-        return new PreparedBotMessage(
-                () -> receipt(source.bot().sendMsg(source.event(), message, escape)), () -> {}, permit);
+        return new PreparedBotMessage(() -> receipt(source.bot().sendMsg(source.event(), message, escape)), () -> {
+        }, permit);
     }
 
     private PreparedBotMessage prepareFile(BotMessageContext context, BotFile file, BotMessageSendPermit permit) {
         OneBotMessageSource source = context.nativeSource(OneBotMessageSource.class);
         if (!context.isGroupMessage() && !context.isPrivateMessage()) {
             throw new BotChannelCapabilityException(platform(), BotChannelCapability.FILE_MESSAGE,
-                    "作用域 " + context.scope());
+                "作用域 " + context.scope());
         }
         long targetId = Long.parseLong(context.conversationId());
         StagedFile staged;
         try {
             staged = fileTransferService.stage(source.bot(), file);
         } catch (IOException exception) {
-            throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                    "暂存 OneBot 文件失败: " + file.fileName(), exception);
+            throw new SystemException(BotChannelErrorCode.FILE_STAGING_FAILED, "暂存 OneBot 文件失败: " + file.fileName(),
+                exception);
         }
         // upload_*_file 是产生文件消息的动作，不能在资源准备阶段执行，也不额外发一条提及。
         return new PreparedBotMessage(() -> {
             ActionRaw result = context.isGroupMessage()
-                    ? source.bot().uploadGroupFile(targetId, staged.uploadReference(), file.fileName())
-                    : source.bot().uploadPrivateFile(targetId, staged.uploadReference(), file.fileName());
+                ? source.bot().uploadGroupFile(targetId, staged.uploadReference(), file.fileName())
+                : source.bot().uploadPrivateFile(targetId, staged.uploadReference(), file.fileName());
             ensureFileSuccess(result, file, staged);
             return new BotMessageReceipt(null);
         }, () -> {
             try {
                 staged.close();
             } catch (IOException exception) {
-                throw new BusinessException(BotChannelErrorCode.FILE_CLEANUP_FAILED,
-                        "清理 OneBot 临时文件失败: " + staged.cleanupPath(), exception);
+                throw new SystemException(BotChannelErrorCode.FILE_CLEANUP_FAILED,
+                    "清理 OneBot 临时文件失败: " + staged.cleanupPath(), exception);
             }
         }, permit);
     }
 
-    private static String withMention(BotMessageContext context, String text,
-                                      String mentionUserId) {
+    private static String withMention(BotMessageContext context, String text, String mentionUserId) {
         // 附加 at 后 auto_escape 必须关闭；正文单独转义，避免用户文本被解释为 CQ 指令。
         String escaped = text.replace("&", "&amp;").replace("[", "&#91;").replace("]", "&#93;");
         return messageBuilder(context, mentionUserId).text(escaped).build();
@@ -160,37 +157,29 @@ public class OneBotMessageSender implements BotMessageSender {
 
     static BotMessageReceipt receipt(ActionData<MsgId> result) {
         if (result != null && "failed".equalsIgnoreCase(result.getStatus())) {
-            throw new BotMessageRejectedException("OneBot 明确拒绝消息: " + result, false);
+            // SDK 超时也合成 failed，不能证明平台未接受，更不能据此退款。
+            throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 消息结果无法确认: " + result);
         }
         if (ObjectUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
-                || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
-            throw new BusinessException(
-                    BotChannelErrorCode.MESSAGE_SEND_FAILED,
-                    "OneBot 消息发送失败: " + result);
+            || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
+            throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 消息发送失败: " + result);
         }
         if (result.getData() == null || result.getData().getMessageId() == null) {
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID,
-                    "OneBot 消息创建回执缺少 message_id");
+            throw new SystemException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "OneBot 消息创建回执缺少 message_id");
         }
         return new BotMessageReceipt(result.getData().getMessageId().toString());
     }
 
-    private static void ensureFileSuccess(
-            ActionRaw result,
-            BotFile file,
-            StagedFile stagedFile) {
+    private static void ensureFileSuccess(ActionRaw result, BotFile file, StagedFile stagedFile) {
         if (result != null && "failed".equalsIgnoreCase(result.getStatus())) {
-            throw new BotMessageRejectedException("OneBot 明确拒绝文件: " + result, false);
+            throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 文件结果无法确认: " + result);
         }
         if (ObjectUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
-                || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
-            throw new BusinessException(
-                    BotChannelErrorCode.MESSAGE_SEND_FAILED,
-                    "OneBot 文件发送失败: result=" + result
-                            + ", file=" + file.fileName()
-                            + ", size=" + stagedFile.fileSize()
-                            + ", transferMode=" + stagedFile.transferMode()
-                            + ", uploadReference=" + stagedFile.uploadReference());
+            || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
+            throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED,
+                "OneBot 文件发送失败: result=" + result + ", file=" + file.fileName() + ", size=" + stagedFile.fileSize()
+                    + ", transferMode=" + stagedFile.transferMode() + ", uploadReference="
+                    + stagedFile.uploadReference());
         }
     }
 }

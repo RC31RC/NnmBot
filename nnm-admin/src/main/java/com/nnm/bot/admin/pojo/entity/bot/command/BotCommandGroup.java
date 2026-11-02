@@ -17,9 +17,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "bot_command_group", uniqueConstraints = {
-        @UniqueConstraint(name = "bot_command_group_code_key", columnNames = "code")
-})
+@Table(name = "bot_command_group",
+    uniqueConstraints = {@UniqueConstraint(name = "bot_command_group_code_key", columnNames = "code")})
 public class BotCommandGroup {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

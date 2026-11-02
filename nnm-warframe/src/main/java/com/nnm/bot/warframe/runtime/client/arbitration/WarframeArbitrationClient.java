@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.client.arbitration;
 
 import com.nnm.bot.common.http.HttpClient;
-import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationPullProperties;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +13,7 @@ public class WarframeArbitrationClient {
     @Resource
     private HttpClient httpClient;
     @Resource
-    private WarframeArbitrationPullProperties properties;
+    private WarframeArbitrationSourceProperties properties;
 
     /**
      * 按配置获取外部响应。
@@ -22,8 +22,8 @@ public class WarframeArbitrationClient {
      */
     public String fetch() {
         byte[] response = httpClient.getLimitedBytes(properties.getUrl().toString(),
-                Map.of("Accept", "application/json, text/plain", "Accept-Encoding", "identity"),
-                properties.getMaxResponseBytes());
+            Map.of("Accept", "application/json, text/plain", "Accept-Encoding", "identity"),
+            properties.getMaxResponseBytes());
         return new String(response, StandardCharsets.UTF_8);
     }
 }

@@ -7,7 +7,7 @@ import java.util.List;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
 
 public record WarframeEnemyVO(EnemySection section, String query, int page, int totalPages, int totalCount,
-        List<EntryVO> items) {
+    List<EntryVO> items) {
     /**
      * 构造敌人展示对象，并保存初始化参数。
      *
@@ -32,11 +32,11 @@ public record WarframeEnemyVO(EnemySection section, String query, int page, int 
      * @return 敌人资料的分页视图。
      */
     public static WarframeEnemyVO page(String query, EnemySection section, List<EntryVO> matches, int requested) {
-        int pages = Math.max(1, (int) ((matches.size() + 3L) / 4));
+        int pages = Math.max(1, (int)((matches.size() + 3L) / 4));
         int page = Math.max(1, Math.min(requested, pages));
         int from = (page - 1) * 4;
         return new WarframeEnemyVO(section, query, page, pages, matches.size(),
-                matches.subList(from, Math.min(from + 4, matches.size())));
+            matches.subList(from, Math.min(from + 4, matches.size())));
     }
 
     /**
@@ -46,24 +46,26 @@ public record WarframeEnemyVO(EnemySection section, String query, int page, int 
      */
     public String text() {
         StringBuilder text = new StringBuilder(section.domain().label()).append("：").append(page).append("/")
-                .append(totalPages).append(" 页，共 ").append(totalCount).append(" 条");
+            .append(totalPages).append(" 页，共 ").append(totalCount).append(" 条");
         for (EntryVO entry : items) {
             text.append("\n\n").append(entry.name()).append("\n").append(entry.key());
-            if (entry.description() != null) text.append("\n").append(entry.description());
+            if (entry.description() != null)
+                text.append("\n").append(entry.description());
             entry.facts().forEach(fact -> text.append("\n").append(fact.label()).append("：").append(fact.value()));
             for (ChildVO child : entry.children()) {
                 child.facts().forEach(fact -> text.append("\n").append(fact.label()).append("：").append(fact.value()));
-                child.children().forEach(item -> item.facts().forEach(fact ->
-                        text.append("\n  ").append(fact.label()).append("：").append(fact.value())));
+                child.children().forEach(item -> item.facts()
+                    .forEach(fact -> text.append("\n  ").append(fact.label()).append("：").append(fact.value())));
             }
         }
-        if (CollUtil.isEmpty(items)) text.append("\n没有匹配的").append(section.domain().label());
+        if (CollUtil.isEmpty(items))
+            text.append("\n没有匹配的").append(section.domain().label());
         return text.toString();
     }
 
     public record EntryVO(Long id, String key, String name, String description, String imageReference, String iconUrl,
-            String sourceCode, String resolutionMode, OfficialObjectDTO details,
-            List<FactVO> facts, List<ChildVO> children) {
+        String sourceCode, String resolutionMode, OfficialObjectDTO details, List<FactVO> facts,
+        List<ChildVO> children) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *
@@ -86,7 +88,7 @@ public record WarframeEnemyVO(EnemySection section, String query, int page, int 
     }
 
     public record ChildVO(Long id, String key, Long parentId, String parentBkey, String sourceCode, int order,
-            OfficialObjectDTO details, List<FactVO> facts, List<ChildVO> children) {
+        OfficialObjectDTO details, List<FactVO> facts, List<ChildVO> children) {
         /**
          * 构造子记录展示对象，并保存初始化参数。
          *

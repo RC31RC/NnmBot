@@ -25,32 +25,36 @@ public class ObjectStorageProperties {
     private Duration writeTimeout = Duration.ofSeconds(60);
     private Duration callTimeout = Duration.ofMinutes(2);
     private int maxConcurrentRequests = 2;
+    private int cleanupMaxAttempts = 2;
+    private Duration cleanupRetryDelay = Duration.ofMillis(250);
 
     @PostConstruct
     public void validate() {
         Assert.notBlank(endpoint, "nnm.storage.endpoint is required");
         URI uri = URI.create(endpoint);
-        Assert.isTrue(("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
-                        && StrUtil.isNotBlank(uri.getHost()) && uri.getUserInfo() == null
-                        && uri.getQuery() == null && uri.getFragment() == null
-                        && (StrUtil.isEmpty(uri.getPath()) || "/".equals(uri.getPath())),
-                "nnm.storage.endpoint must be an HTTP(S) origin");
+        Assert.isTrue(
+            ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme())) && StrUtil.isNotBlank(uri.getHost())
+                && uri.getUserInfo() == null && uri.getQuery() == null && uri.getFragment() == null
+                && (StrUtil.isEmpty(uri.getPath()) || "/".equals(uri.getPath())),
+            "nnm.storage.endpoint must be an HTTP(S) origin");
         Assert.notBlank(accessKey, "nnm.storage.access-key is required");
         Assert.notBlank(secretKey, "nnm.storage.secret-key is required");
-        Assert.isTrue(bucket != null && bucket.matches("[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]")
-                        && !bucket.contains(".."), "nnm.storage.bucket is invalid");
+        Assert.isTrue(bucket != null && bucket.matches("[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]") && !bucket.contains(".."),
+            "nnm.storage.bucket is invalid");
         Assert.notBlank(region, "nnm.storage.region is required");
         validateTimeout(connectTimeout, "connect-timeout");
         validateTimeout(readTimeout, "read-timeout");
         validateTimeout(writeTimeout, "write-timeout");
         validateTimeout(callTimeout, "call-timeout");
         Assert.isTrue(maxConcurrentRequests > 0 && maxConcurrentRequests <= 8,
-                "nnm.storage.max-concurrent-requests must be between 1 and 8");
+            "nnm.storage.max-concurrent-requests must be between 1 and 8");
+        Assert.isTrue(cleanupMaxAttempts >= 1 && cleanupMaxAttempts <= 3,
+            "nnm.storage.cleanup-max-attempts must be between 1 and 3");
+        validateTimeout(cleanupRetryDelay, "cleanup-retry-delay");
     }
 
     private void validateTimeout(Duration timeout, String name) {
-        Assert.isTrue(timeout != null && timeout.toMillis() > 0
-                        && timeout.toMillis() <= Integer.MAX_VALUE,
-                "nnm.storage.{} must be positive and fit SDK milliseconds", name);
+        Assert.isTrue(timeout != null && timeout.toMillis() > 0 && timeout.toMillis() <= Integer.MAX_VALUE,
+            "nnm.storage.{} must be positive and fit SDK milliseconds", name);
     }
 }

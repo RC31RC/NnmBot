@@ -25,7 +25,7 @@
             <artifactId>xz</artifactId>
             <version>1.10</version>
         </dependency>
-        <dependency>
+                <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-common</artifactId>
         </dependency>

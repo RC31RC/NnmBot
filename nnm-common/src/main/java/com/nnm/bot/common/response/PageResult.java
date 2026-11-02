@@ -7,16 +7,8 @@ import java.util.Objects;
 /**
  * 与具体框架无关的分页响应，供各业务模块复用。
  */
-public record PageResult<T>(
-        @JsonPropertyDescription("记录")
-        List<T> records,
-        @JsonPropertyDescription("当前页")
-        int current,
-        @JsonPropertyDescription("每页数量")
-        int size,
-        @JsonPropertyDescription("总数量")
-        long total
-) {
+public record PageResult<T>(@JsonPropertyDescription("记录") List<T> records, @JsonPropertyDescription("当前页") int current,
+    @JsonPropertyDescription("每页数量") int size, @JsonPropertyDescription("总数量") long total) {
 
     public PageResult {
         records = List.copyOf(Objects.requireNonNull(records, "records must not be null"));
@@ -31,8 +23,7 @@ public record PageResult<T>(
         }
     }
 
-    public static <T> PageResult<T> of(
-            List<T> records, int current, int size, long total) {
+    public static <T> PageResult<T> of(List<T> records, int current, int size, long total) {
         return new PageResult<>(records, current, size, total);
     }
 }

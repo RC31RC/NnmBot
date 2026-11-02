@@ -13,9 +13,5 @@ public interface JmComicWholeFileService {
      *
      * @return 接口未提供下载地址时返回空；下载或格式处理失败时抛出可追溯异常
      */
-    Optional<JmComicDocument> download(
-            AbstractJmClient client,
-            String albumId,
-            String fallbackTitle,
-            Path workspace);
+    Optional<JmComicDocument> download(AbstractJmClient client, String albumId, String fallbackTitle, Path workspace);
 }

@@ -7,10 +7,11 @@ import java.time.Duration;
 
 /** 本地消费并发与重试策略，不接受消息载荷覆盖。 */
 public final class WarframeItemIndexInvalidationConsumerDescriptor extends ConsumerDescriptor {
-    public static final String GROUP = "warframe-item-index-v1";
+    public static final String GROUP = "warframe-item-index";
 
     /**
      * 读取管理端展示的缓存失效消费者名称。
+     *
      * @return 展示名称对应的文本。
      */
     @Override
@@ -40,14 +41,12 @@ public final class WarframeItemIndexInvalidationConsumerDescriptor extends Consu
 
     /**
      * 声明缓存失效消息的消费与重试策略。
+     *
      * @return 队列选项对象。
      */
     @Override
     public QueueOptions options() {
-        return QueueOptions.builder()
-                .maxAttempts(3)
-                .retryDelay(Duration.ofSeconds(1))
-                .visibilityTimeout(Duration.ofSeconds(5))
-                .build();
+        return QueueOptions.builder().maxAttempts(3).retryDelay(Duration.ofSeconds(1))
+            .visibilityTimeout(Duration.ofSeconds(5)).build();
     }
 }

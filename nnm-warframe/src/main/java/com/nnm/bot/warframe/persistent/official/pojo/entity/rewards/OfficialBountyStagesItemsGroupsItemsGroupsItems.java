@@ -63,8 +63,12 @@ public class OfficialBountyStagesItemsGroupsItemsGroupsItems extends OfficialChi
     private OfficialBountyStagesItemsGroupsItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItems> officialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsRows = new ArrayList<>();
+    private List<
+        OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItems> officialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialBountyStagesItemsGroupsItemsGroupsItemsRewardsItems> officialBountyStagesItemsGroupsItemsGroupsItemsRewardsItemsRows = new ArrayList<>();
+    private List<
+        OfficialBountyStagesItemsGroupsItemsGroupsItemsRewardsItems> officialBountyStagesItemsGroupsItemsGroupsItemsRewardsItemsRows =
+            new ArrayList<>();
 }

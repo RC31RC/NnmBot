@@ -8,6 +8,5 @@ import com.nnm.bot.core.plugin.model.CommandDescriptor;
  */
 public interface CommandCooldownGuard {
 
-    boolean tryAcquire(BotMessageContext context, CommandDescriptor descriptor,
-                       long cooldownSeconds);
+    boolean tryAcquire(BotMessageContext context, CommandDescriptor descriptor, long cooldownSeconds);
 }

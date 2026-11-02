@@ -30,8 +30,8 @@ public class WarframeRivenWeeklyParser {
     @PostConstruct
     void initialize() {
         inputReader = WarframeInputBinding.strictMapper(objectMapper).readerForListOf(RivenWeeklyRawData.class)
-                .with(JsonReadFeature.ALLOW_SINGLE_QUOTES.mappedFeature())
-                .with(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES.mappedFeature());
+            .with(JsonReadFeature.ALLOW_SINGLE_QUOTES.mappedFeature())
+            .with(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES.mappedFeature());
     }
 
     /**
@@ -44,20 +44,18 @@ public class WarframeRivenWeeklyParser {
      */
     public List<RivenWeeklyEntryDTO> parse(String body, int maxRecords) throws IOException {
         List<RivenWeeklyRawData> rows = inputReader.readValue(body);
-        Assert.isTrue(CollUtil.isNotEmpty(rows) && rows.size() <= maxRecords,
-                "周紫卡响应必须为非空且未超过上限的数组");
+        Assert.isTrue(CollUtil.isNotEmpty(rows) && rows.size() <= maxRecords, "周紫卡响应必须为非空且未超过上限的数组");
         List<RivenWeeklyEntryDTO> entries = new ArrayList<>();
         Set<List<Object>> identities = new HashSet<>();
         for (RivenWeeklyRawData row : rows) {
             Assert.isTrue(row != null && StrUtil.isNotBlank(row.getItemType()) && row.getRerolled() != null,
-                    "周紫卡记录缺少类别或洗练标记");
+                "周紫卡记录缺少类别或洗练标记");
             String weapon = row.getCompatibility();
             String type = row.getItemType();
-            Assert.isTrue(identities.add(List.of(type, weapon == null ? "" : weapon, row.getRerolled())),
-                    "周紫卡记录身份重复");
-            entries.add(new RivenWeeklyEntryDTO(weapon, type, row.getRerolled(),
-                    number(row.getAverage()), number(row.getMedian()), number(row.getMinimum()), number(row.getMaximum()),
-                    number(row.getStandardDeviation()), number(row.getPopulation())));
+            Assert.isTrue(identities.add(List.of(type, weapon == null ? "" : weapon, row.getRerolled())), "周紫卡记录身份重复");
+            entries.add(new RivenWeeklyEntryDTO(weapon, type, row.getRerolled(), number(row.getAverage()),
+                number(row.getMedian()), number(row.getMinimum()), number(row.getMaximum()),
+                number(row.getStandardDeviation()), number(row.getPopulation())));
         }
         return List.copyOf(entries);
     }

@@ -17,6 +17,5 @@ public final class OneBotProtocolConstants {
     public static final String WS_SCHEME = "ws";
     public static final String WSS_SCHEME = "wss";
 
-    private OneBotProtocolConstants() {
-    }
+    private OneBotProtocolConstants() {}
 }

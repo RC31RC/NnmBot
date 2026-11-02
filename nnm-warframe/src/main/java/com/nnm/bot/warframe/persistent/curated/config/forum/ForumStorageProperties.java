@@ -8,18 +8,14 @@ public class ForumStorageProperties {
 
     private long maxFileBytes = 50L * 1024 * 1024;
 
-    private String publicPath = "/api/public/v1/warframe/forum/files";
+    private String publicPath = "/api/public/warframe/forum/files";
 
-    private String temporaryPublicPath = "/api/public/v1/warframe/forum/temp-files";
+    private String temporaryPublicPath = "/api/public/warframe/forum/temp-files";
 
     private Duration temporaryRetention = Duration.ofHours(2);
 
-    /** 各实例分别清理自己的临时附件。 */
-    private Duration cleanupInterval = Duration.ofHours(2);
-
-    private Set<String> allowedExtensions = new LinkedHashSet<>(Set.of(
-            "avif", "doc", "docx", "gif", "jpeg", "jpg", "m4v", "mov", "mp4",
-            "pdf", "png", "ppt", "pptx", "txt", "webm", "webp", "xls", "xlsx", "zip"));
+    private Set<String> allowedExtensions = new LinkedHashSet<>(Set.of("avif", "doc", "docx", "gif", "jpeg", "jpg",
+        "m4v", "mov", "mp4", "pdf", "png", "ppt", "pptx", "txt", "webm", "webp", "xls", "xlsx", "zip"));
 
     /**
      * 读取最大文件字节。
@@ -94,30 +90,11 @@ public class ForumStorageProperties {
     }
 
     /**
-     * 读取各实例分别清理自己的临时附件。。
-     *
-     * @return 各实例分别清理自己的临时附件。。
-     */
-    public Duration getCleanupInterval() {
-        return cleanupInterval;
-    }
-
-    /**
-     * 设置各实例分别清理自己的临时附件。。
-     *
-     * @param cleanupInterval 清理间隔。
-     */
-    public void setCleanupInterval(Duration cleanupInterval) {
-        this.cleanupInterval = cleanupInterval;
-    }
-
-    /**
      * 校验当前配置或输入是否满足业务约束。
      */
     public void validate() {
         if (maxFileBytes < 1 || temporaryRetention == null || temporaryRetention.isNegative()
-                || temporaryRetention.isZero() || cleanupInterval == null
-                || cleanupInterval.isNegative() || cleanupInterval.isZero()) {
+            || temporaryRetention.isZero()) {
             throw new IllegalArgumentException("Invalid nnm.warframe.forum.storage configuration");
         }
     }

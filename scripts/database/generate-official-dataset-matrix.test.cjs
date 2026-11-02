@@ -12,11 +12,11 @@ test('every official JSON has its own real main entity, Repository and DTO', () 
   assert.equal(new Set(rows.map(row => row.repository)).size, 71);
   assert.equal(new Set(rows.map(row => row.dto)).size, 71);
   assert.equal(rows.reduce((sum, row) => sum + row.children, 0), 236);
-  const weapons = rows.find(row => row.file === 'equipment/weapons.json');
+  const weapons = rows.find(row => row.file === 'equipment/weapons.json.gz');
   assert.equal(path.basename(weapons.repository), 'OfficialWeaponRepository.java');
   assert.equal(path.basename(weapons.dto), 'OfficialWeaponDTO.java');
   const output = document(contract);
-  assert.equal(output.split('\n').filter(line => /^\| `.*\.json` \|/.test(line)).length, 71);
+  assert.equal(output.split('\n').filter(line => /^\| `.*\.json\.gz` \|/.test(line)).length, 71);
   assert.doesNotMatch(output, /\/Users\//);
 });
 

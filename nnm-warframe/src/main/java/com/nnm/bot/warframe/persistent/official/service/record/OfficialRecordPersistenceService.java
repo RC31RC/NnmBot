@@ -82,9 +82,11 @@ public interface OfficialRecordPersistenceService {
      * 按独立主表合同同步本 JSON 的必要子孙表。
      *
      * @param records 待批量处理的业务记录。
+     * @param inputs 按主键索引的类型化输入。
      * @param removedIds 移除的标识集合。
      */
-    void synchronizeTables(List<OfficialRecord> records, Collection<Long> removedIds);
+    void synchronizeTables(List<OfficialRecord> records, Map<Long, OfficialRecordDTO> inputs,
+        Collection<Long> removedIds);
 
     /**
      * 从具体关系表恢复非受管的逐文件详情 DTO。
@@ -117,6 +119,14 @@ public interface OfficialRecordPersistenceService {
      * @return 计算已采纳记录的内容指纹，用于校验审批基线对应的文本。
      */
     String contentFingerprint();
+
+    /**
+     * 计算指定文件主表及官方详情子树的内容指纹，避免独立文件审核相互阻塞。
+     *
+     * @param paths 待校验的官方文件路径。
+     * @return 这些文件当前记录的稳定指纹。
+     */
+    String contentFingerprint(Collection<String> paths);
 
     /**
      * 读取上游维护记录的稳定业务身份。

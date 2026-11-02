@@ -23,6 +23,7 @@ public class WarframeEnemyServiceImpl implements WarframeEnemyService {
     private WarframeOfficialRecordReadService catalog;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 选择当前查询需要的敌人外观记录。
      *
@@ -30,7 +31,8 @@ public class WarframeEnemyServiceImpl implements WarframeEnemyService {
      */
     @Override
     public List<WarframeOfficialRecordReadDTO> selectedAvatars() {
-        return catalog.records(WarframeOfficialDataDomain.ENEMY).stream().filter(row -> row.bkey().startsWith("avatars/")).toList();
+        return catalog.records(WarframeOfficialDataDomain.ENEMY).stream()
+            .filter(row -> row.bkey().startsWith("avatars/")).toList();
     }
 
     /**
@@ -53,11 +55,12 @@ public class WarframeEnemyServiceImpl implements WarframeEnemyService {
         };
         List<EntryVO> result = new ArrayList<>();
         for (var root : catalog.records(WarframeOfficialDataDomain.ENEMY)) {
-            if (!root.bkey().startsWith(prefix) || !data.matches(root, keyword)) continue;
+            if (!root.bkey().startsWith(prefix) || !data.matches(root, keyword))
+                continue;
             List<FactVO> facts = OfficialFactMapper.facts(root.data(), root.bkey());
-            result.add(new EntryVO(root.databaseId(), root.bkey(), name(root), description(root.data()),
-                    icon(root.data()), iconUrl(root.data()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED",
-                    root.data(), facts, List.of()));
+            result.add(
+                new EntryVO(root.databaseId(), root.bkey(), name(root), description(root.data()), icon(root.data()),
+                    iconUrl(root.data()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", root.data(), facts, List.of()));
         }
         return WarframeEnemyVO.page(keyword, section, result, page);
     }

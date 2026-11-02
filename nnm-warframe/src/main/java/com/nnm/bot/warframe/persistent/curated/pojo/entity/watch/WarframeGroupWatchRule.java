@@ -16,8 +16,9 @@ import java.time.LocalDateTime;
 /**
  * 群组成员长期维护的 Warframe 蹲任务规则。
  *
- * <p>groupId 和 memberId 是跨模块的逻辑关联，不声明 JPA 关联，避免 Warframe
- * 模块反向依赖管理端数据模型。</p>
+ * <p>
+ * groupId 和 memberId 是跨模块的逻辑关联，不声明 JPA 关联，避免 Warframe 模块反向依赖管理端数据模型。
+ * </p>
  */
 @Getter
 @Setter

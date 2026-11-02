@@ -5,8 +5,8 @@ import cn.hutool.core.collection.CollUtil;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record WarframeMaterialVO(String query, String category, int page, int totalPages,
-        int totalCount, List<EntryVO> items, String notice) {
+public record WarframeMaterialVO(String query, String category, int page, int totalPages, int totalCount,
+    List<EntryVO> items, String notice) {
     /**
      * 构造材料展示对象，并保存初始化参数。
      *
@@ -36,8 +36,8 @@ public record WarframeMaterialVO(String query, String category, int page, int to
         int page = Math.max(1, Math.min(requestedPage, pages));
         int start = (page - 1) * 6;
         return new WarframeMaterialVO(query, category, page, pages, matches.size(),
-                matches.subList(start, Math.min(start + 6, matches.size())),
-                CollUtil.isEmpty(matches) ? "没有找到匹配的物品" : null);
+            matches.subList(start, Math.min(start + 6, matches.size())),
+            CollUtil.isEmpty(matches) ? "没有找到匹配的物品" : null);
     }
 
     /**
@@ -47,19 +47,21 @@ public record WarframeMaterialVO(String query, String category, int page, int to
      */
     public String text() {
         String header = category + "：" + page + "/" + totalPages + " 页，共 " + totalCount + " 条";
-        if (CollUtil.isEmpty(items)) return header + "\n" + notice;
-        return header + "\n" + items.stream().map(entry -> entry.name()
-                + (entry.itemType() == null ? "" : " · " + entry.itemType())
+        if (CollUtil.isEmpty(items))
+            return header + "\n" + notice;
+        return header + "\n"
+            + items.stream().map(entry -> entry.name() + (entry.itemType() == null ? "" : " · " + entry.itemType())
                 + (entry.tradable() == null ? "" : entry.tradable() ? " · 可交易" : " · 不可交易")
-                + (CollUtil.isEmpty(entry.attributes()) ? "" : "\n" + entry.attributes().stream()
-                        .map(attribute -> attribute.label() + "：" + attribute.value()).collect(Collectors.joining(" · ")))
+                + (CollUtil.isEmpty(entry.attributes()) ? ""
+                    : "\n" + entry.attributes().stream().map(attribute -> attribute.label() + "：" + attribute.value())
+                        .collect(Collectors.joining(" · ")))
                 + (StrUtil.isBlank(entry.description()) ? "" : "\n" + entry.description()))
                 .collect(Collectors.joining("\n\n"));
     }
 
-    public record EntryVO(String uniqueName, String name, String description, String itemType,
-            Boolean tradable, String imageReference, String iconUrl, String sourceCode,
-            String resolutionMode, String propertiesJson, List<AttributeVO> attributes) {
+    public record EntryVO(String uniqueName, String name, String description, String itemType, Boolean tradable,
+        String imageReference, String iconUrl, String sourceCode, String resolutionMode, String propertiesJson,
+        List<AttributeVO> attributes) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *
@@ -93,11 +95,10 @@ public record WarframeMaterialVO(String query, String category, int page, int to
          * @param resolutionMode 解析状态模式。
          * @param propertiesJson 配置协议数据。
          */
-        public EntryVO(String uniqueName, String name, String description, String itemType,
-                Boolean tradable, String imageReference, String iconUrl, String sourceCode,
-                String resolutionMode, String propertiesJson) {
-            this(uniqueName, name, description, itemType, tradable, imageReference, iconUrl,
-                    sourceCode, resolutionMode, propertiesJson, List.of());
+        public EntryVO(String uniqueName, String name, String description, String itemType, Boolean tradable,
+            String imageReference, String iconUrl, String sourceCode, String resolutionMode, String propertiesJson) {
+            this(uniqueName, name, description, itemType, tradable, imageReference, iconUrl, sourceCode, resolutionMode,
+                propertiesJson, List.of());
         }
     }
 

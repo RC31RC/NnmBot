@@ -10,6 +10,6 @@ public interface BotScopeRepository extends JpaRepository<BotScope, Long> {
 
     List<BotScope> findAllByOrderByPlatformAscScopeTypeAscScopeKeyAsc();
 
-    Optional<BotScope> findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(
-            String platform, String scopeType, String scopeKey, Long botInstanceId);
+    Optional<BotScope> findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(String platform, String scopeType,
+        String scopeKey, Long botInstanceId);
 }

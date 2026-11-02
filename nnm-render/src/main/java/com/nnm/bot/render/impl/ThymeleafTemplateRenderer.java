@@ -46,15 +46,12 @@ public class ThymeleafTemplateRenderer implements TemplateRenderer {
             throw new IllegalArgumentException("inline html template is too large");
         }
         String lowerCase = html.toLowerCase(Locale.ROOT);
-        if (lowerCase.contains("<script")
-                || lowerCase.contains("th:utext")
-                || lowerCase.contains("@{")
-                || TYPE_EXPRESSION.matcher(html).find()
-                || lowerCase.contains("__")) {
+        if (lowerCase.contains("<script") || lowerCase.contains("th:utext") || lowerCase.contains("@{")
+            || TYPE_EXPRESSION.matcher(html).find() || lowerCase.contains("__")) {
             throw new IllegalArgumentException("inline html contains unsupported expression");
         }
-        // Thymeleaf resolves local th:each/th:with scopes and absent optional values.
-        // Comparing expression roots with input keys rejects valid scoped templates.
+        // 由 Thymeleaf 解析 th:each/th:with 的局部作用域和缺失的可选值。
+        // 不能仅按入参键检查表达式根，否则会拒绝合法的局部变量模板。
     }
 
     private static StringTemplateResolver inlineTemplateResolver() {

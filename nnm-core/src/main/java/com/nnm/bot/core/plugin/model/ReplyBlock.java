@@ -11,7 +11,8 @@ public sealed interface ReplyBlock {
     record Text(String content) implements ReplyBlock {
         public Text {
             Objects.requireNonNull(content, "content");
-            if (content.isBlank()) throw new IllegalArgumentException("Empty text block");
+            if (content.isBlank())
+                throw new IllegalArgumentException("Empty text block");
         }
     }
 
@@ -22,11 +23,10 @@ public sealed interface ReplyBlock {
             if (viewKey == null || !viewKey.matches("[a-z][a-z0-9_.-]{0,79}")) {
                 throw new IllegalArgumentException("Invalid viewKey");
             }
-            data = (T) snapshot(Objects.requireNonNull(data, "data"));
+            data = (T)snapshot(Objects.requireNonNull(data, "data"));
             if (summary != null) {
                 summary = summary.strip();
-                if (summary.isEmpty() || summary.length() > 4000
-                        || summary.chars().anyMatch(Character::isISOControl)) {
+                if (summary.isEmpty() || summary.length() > 4000 || summary.chars().anyMatch(Character::isISOControl)) {
                     throw new IllegalArgumentException("Invalid view summary");
                 }
             }
@@ -61,12 +61,14 @@ public sealed interface ReplyBlock {
         if (value instanceof Map<?, ?> map) {
             Map<String, Object> copy = new LinkedHashMap<>();
             map.forEach((key, item) -> {
-                if (!(key instanceof String name)) throw new IllegalArgumentException("Data keys must be strings");
+                if (!(key instanceof String name))
+                    throw new IllegalArgumentException("Data keys must be strings");
                 copy.put(name, snapshot(item));
             });
             return Collections.unmodifiableMap(copy);
         }
-        if (value instanceof Collection<?> collection) return collection.stream().map(ReplyBlock::snapshot).toList();
+        if (value instanceof Collection<?> collection)
+            return collection.stream().map(ReplyBlock::snapshot).toList();
         if (value != null && value.getClass().isArray()) {
             throw new IllegalArgumentException("Use immutable lists instead of arrays in view data");
         }

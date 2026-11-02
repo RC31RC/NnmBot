@@ -22,6 +22,7 @@ public interface WarframeItemResolverService {
 
     /**
      * 结合官方名称、译名与社区别名生成市场查询候选词。
+     *
      * @param input 待解析或校验的输入。
      * @return 按当前条件筛选或转换后的数据集合。
      */
@@ -29,6 +30,7 @@ public interface WarframeItemResolverService {
 
     /**
      * 结合官方紫卡武器定义及别名生成拍卖武器查询候选词。
+     *
      * @param input 待解析或校验的输入。
      * @return 按当前条件筛选或转换后的数据集合。
      */

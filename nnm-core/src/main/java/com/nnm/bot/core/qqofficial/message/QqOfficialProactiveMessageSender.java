@@ -34,25 +34,27 @@ public class QqOfficialProactiveMessageSender implements BotProactiveMessageSend
 
     @Override
     public boolean supports(BotProactiveTarget target, BotChannelCapability capability) {
-        if (!qualified(target)) return false;
+        if (!qualified(target))
+            return false;
         if (capability == BotChannelCapability.NATIVE_KEYBOARD) {
             return replyProperties.keyboardAllowed(target.botAccountId(), BotMessageScope.GROUP);
         }
         return capability == BotChannelCapability.TEXT_MESSAGE || capability == BotChannelCapability.IMAGE_MESSAGE
-                || capability == BotChannelCapability.MARKDOWN_MESSAGE || capability == BotChannelCapability.FILE_MESSAGE;
+            || capability == BotChannelCapability.MARKDOWN_MESSAGE || capability == BotChannelCapability.FILE_MESSAGE;
     }
 
     @Override
     public boolean supportsComposition(BotProactiveTarget target, List<PartKind> kinds) {
-        if (!qualified(target)) return false;
+        if (!qualified(target))
+            return false;
         if (kinds.contains(PartKind.KEYBOARD) || kinds.contains(PartKind.MARKDOWN)) {
-            return kinds.stream().allMatch(kind -> kind == PartKind.TEXT
-                    || kind == PartKind.MARKDOWN || kind == PartKind.KEYBOARD)
-                    && (!kinds.contains(PartKind.KEYBOARD)
+            return kinds.stream()
+                .allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.MARKDOWN || kind == PartKind.KEYBOARD)
+                && (!kinds.contains(PartKind.KEYBOARD)
                     || replyProperties.keyboardAllowed(target.botAccountId(), BotMessageScope.GROUP));
         }
         return kinds.equals(List.of(PartKind.TEXT, PartKind.IMAGE))
-                || kinds.equals(List.of(PartKind.TEXT, PartKind.FILE));
+            || kinds.equals(List.of(PartKind.TEXT, PartKind.FILE));
     }
 
     @Override
@@ -61,13 +63,13 @@ public class QqOfficialProactiveMessageSender implements BotProactiveMessageSend
             throw new BotMessageNotSentException("QQ 主动群消息未通过账号和群组资格登记");
         }
         if (parts.stream().anyMatch(BotMessagePart.Keyboard.class::isInstance)
-                && !replyProperties.keyboardAllowed(target.botAccountId(), BotMessageScope.GROUP)) {
+            && !replyProperties.keyboardAllowed(target.botAccountId(), BotMessageScope.GROUP)) {
             throw new BotMessageNotSentException("QQ 原生键盘资格已变化，尚未发送");
         }
         QqOfficialMessageSource source = new QqOfficialMessageSource("PROACTIVE_GROUP_MESSAGE",
-                QqOfficialChatType.GROUP, target.conversationId(), null, target.botAccountId(), null, null);
+            QqOfficialChatType.GROUP, target.conversationId(), null, target.botAccountId(), null, null);
         return gatewayClient.apiClient(target.botAccountId()).prepare(source, parts,
-                BotMessageSendPermit.unrestricted());
+            BotMessageSendPermit.unrestricted());
     }
 
     private boolean qualified(BotProactiveTarget target) {

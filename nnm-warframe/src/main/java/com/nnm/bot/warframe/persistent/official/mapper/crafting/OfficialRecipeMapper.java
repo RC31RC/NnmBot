@@ -37,9 +37,16 @@ public class OfficialRecipeMapper {
         List<WarframeRecipeVO.IngredientVO> ingredients = new ArrayList<>();
         for (var item : values(value.getIngredients())) {
             Long quantity = count(item.getItemCount());
-            ingredients.add(new WarframeRecipeVO.IngredientVO(first(item.getItemType()), first(item.getItemNameZh(), item.getItemNameEn(), item.getItemName()), quantity == null ? 0 : quantity));
+            ingredients.add(new WarframeRecipeVO.IngredientVO(first(item.getItemType()),
+                first(item.getItemNameZh(), item.getItemNameEn(), item.getItemName()),
+                quantity == null ? 0 : quantity));
         }
-        return new WarframeRecipeVO.EntryVO(row.bkey(), first(value.getUniqueName()), name(row), first(value.getRecipeKind()), "", first(value.getResultType()), first(value.getResultItemNameZh(), value.getResultItemNameEn(), value.getResultItemName(), value.getName()), count(value.getBuildPrice()), count(value.getBuildTime()), count(value.getSkipBuildTimePrice()), null, count(value.getNum()), first(value.getQuantityBasis()), ingredients, "", first(value.getResultItemIconUrl(), value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
+        return new WarframeRecipeVO.EntryVO(row.bkey(), first(value.getUniqueName()), name(row),
+            first(value.getRecipeKind()), "", first(value.getResultType()),
+            first(value.getResultItemNameZh(), value.getResultItemNameEn(), value.getResultItemName(), value.getName()),
+            count(value.getBuildPrice()), count(value.getBuildTime()), count(value.getSkipBuildTimePrice()), null,
+            count(value.getNum()), first(value.getQuantityBasis()), ingredients, "",
+            first(value.getResultItemIconUrl(), value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
     }
 
     /**
@@ -53,8 +60,12 @@ public class OfficialRecipeMapper {
         List<WarframeRecipeVO.IngredientVO> ingredients = new ArrayList<>();
         for (var item : values(value.getIngredients())) {
             Long quantity = count(item.getItemCount());
-            ingredients.add(new WarframeRecipeVO.IngredientVO(first(item.getItemType()), "", quantity == null ? 0 : quantity));
+            ingredients
+                .add(new WarframeRecipeVO.IngredientVO(first(item.getItemType()), "", quantity == null ? 0 : quantity));
         }
-        return new WarframeRecipeVO.EntryVO(row.bkey(), "", name(row), "dojo", "", first(value.getResultType()), first(value.getName()), count(value.getPrice()), count(value.getTime()), count(value.getSkipTimePrice()), count(value.getReplicatePrice()), null, "", ingredients, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
+        return new WarframeRecipeVO.EntryVO(row.bkey(), "", name(row), "dojo", "", first(value.getResultType()),
+            first(value.getName()), count(value.getPrice()), count(value.getTime()), count(value.getSkipTimePrice()),
+            count(value.getReplicatePrice()), null, "", ingredients, first(value.getIcon()), first(value.getIconUrl()),
+            OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
     }
 }

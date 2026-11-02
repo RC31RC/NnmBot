@@ -34,18 +34,21 @@ public class WarframeItemNameServiceImpl implements WarframeItemNameService {
     @Override
     public Map<String, WarframeReferenceResolutionDTO> resolveAll(Collection<String> itemKeys) {
         Set<String> keys = itemKeys.stream().filter(StrUtil::isNotBlank).collect(Collectors.toSet());
-        if (CollUtil.isEmpty(keys)) return Map.of();
+        if (CollUtil.isEmpty(keys))
+            return Map.of();
         Map<String, WarframeOfficialRecordReadDTO> items = new LinkedHashMap<>();
         officialCatalogService.records().stream().filter(item -> keys.contains(item.bkey()))
-                .forEach(item -> items.putIfAbsent(item.bkey(), item));
+            .forEach(item -> items.putIfAbsent(item.bkey(), item));
         Map<String, WarframeReferenceResolutionDTO> result = new LinkedHashMap<>();
         for (String key : keys) {
             var item = items.get(key);
             String name = key;
             String source = null;
             if (item != null) {
-                if (usable(item.localizedName())) name = item.localizedName();
-                else if (usable(item.officialName())) name = item.officialName();
+                if (usable(item.localizedName()))
+                    name = item.localizedName();
+                else if (usable(item.officialName()))
+                    name = item.officialName();
                 source = name.equals(key) ? null : item.domainCode();
             }
             if (source == null) {
@@ -55,8 +58,9 @@ public class WarframeItemNameServiceImpl implements WarframeItemNameService {
                     source = entry.get().source();
                 }
             }
-            result.put(key, new WarframeReferenceResolutionDTO(key, name, key, source,
-                    source == null ? WarframeReferenceResolutionStatus.UNRESOLVED : WarframeReferenceResolutionStatus.RESOLVED,
+            result.put(key,
+                new WarframeReferenceResolutionDTO(key, name, key, source, source == null
+                    ? WarframeReferenceResolutionStatus.UNRESOLVED : WarframeReferenceResolutionStatus.RESOLVED,
                     source == null ? List.of() : List.of(key)));
         }
         return Map.copyOf(result);

@@ -40,10 +40,11 @@ public class WarframeSubscriptionManagementServiceImpl implements WarframeSubscr
     public List<WarframeMemberSubscriptionVO> list(long groupId, long memberId) {
         long canonicalId = requireMember(groupId, memberId, false);
         return rules.findAllProjectedByGroupIdAndMemberId(groupId, canonicalId).stream()
-                .sorted(Comparator.comparing(WarframeGroupWatchRuleDTO::getId))
-                .map(rule -> new WarframeMemberSubscriptionVO(rule.getId(), rule.getWatchType(), rule.getWatchKey(),
-                        rule.getWatchValue(), rule.isEnabled(), rule.isNotifyEnabled(), rule.getCreatedAt(), rule.getUpdatedAt()))
-                .toList();
+            .sorted(Comparator.comparing(WarframeGroupWatchRuleDTO::getId))
+            .map(rule -> new WarframeMemberSubscriptionVO(rule.getId(), rule.getWatchType(), rule.getWatchKey(),
+                rule.getWatchValue(), rule.isEnabled(), rule.isNotifyEnabled(), rule.getCreatedAt(),
+                rule.getUpdatedAt()))
+            .toList();
     }
 
     /**
@@ -94,7 +95,7 @@ public class WarframeSubscriptionManagementServiceImpl implements WarframeSubscr
         BusinessAssert.isTrue(groups.existsById(groupId), CommonErrorCode.DATA_NOT_FOUND, "群组不存在");
         long canonicalId = canonicalMembers.resolve(groupId, memberId);
         BotGroupMember member = (forWrite ? members.findByIdAndGroupId(canonicalId, groupId)
-                : members.findById(canonicalId).filter(value -> value.getGroupId().equals(groupId))).orElse(null);
+            : members.findById(canonicalId).filter(value -> value.getGroupId().equals(groupId))).orElse(null);
         BusinessAssert.notNull(member, CommonErrorCode.DATA_NOT_FOUND, "成员不存在或不属于当前群组");
         return canonicalId;
     }
@@ -109,7 +110,7 @@ public class WarframeSubscriptionManagementServiceImpl implements WarframeSubscr
      */
     private WarframeGroupWatchRule requireRule(long groupId, long memberId, long ruleId) {
         WarframeGroupWatchRule rule = rules.findFirstById(ruleId)
-                .filter(value -> value.getGroupId().equals(groupId) && value.getMemberId().equals(memberId)).orElse(null);
+            .filter(value -> value.getGroupId().equals(groupId) && value.getMemberId().equals(memberId)).orElse(null);
         return BusinessAssert.notNull(rule, CommonErrorCode.DATA_NOT_FOUND, "订阅不存在或不属于当前成员");
     }
 }

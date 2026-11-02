@@ -4,7 +4,7 @@ import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotMemberQueryResult;
 import com.nnm.bot.core.constant.BotPlatform;
 
-/** Queries members for a known platform group or other member-bearing scope. */
+/** 查询已知平台群组或其他支持成员列表的作用域。 */
 public interface BotGroupMemberQueryProvider {
 
     BotPlatform platform();

@@ -10,10 +10,7 @@ import java.util.List;
  * @param item 唯一命中的物品；是否允许模糊命中由所调用的解析入口决定
  * @param candidates 同名或匹配分值接近时的候选物品，不可直接取首项作为确认
  */
-public record WarframeItemResolutionDTO(
-        WarframeItemDTO item,
-        List<WarframeItemDTO> candidates
-) {
+public record WarframeItemResolutionDTO(WarframeItemDTO item, List<WarframeItemDTO> candidates) {
 
     /**
      * 固定候选快照，防止调用方在后续匹配或异步渲染时修改列表。

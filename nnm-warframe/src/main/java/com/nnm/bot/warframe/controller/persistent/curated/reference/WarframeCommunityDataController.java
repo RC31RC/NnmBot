@@ -5,7 +5,11 @@ import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeComm
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.common.task.AdminTaskService;
+import com.nnm.bot.common.task.AdminTaskSubmission;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityDatasetVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityPendingPreviewVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityPreviewPageVO;
@@ -19,10 +23,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1/warframe/community")
+@RequestMapping("/api/admin/warframe/community")
 public class WarframeCommunityDataController {
     @Resource
     private WarframeCommunityDataService service;
+    @Resource
+    private AdminTaskService tasks;
 
     /**
      * 列出当前支持的数据文件。
@@ -36,6 +42,17 @@ public class WarframeCommunityDataController {
     }
 
     /**
+     * 列出未过期的社区待审核预览。
+     *
+     * @return 管理端待审核索引列表。
+     */
+    @PostMapping("/previews/pending")
+    @SaCheckPermission("warframe:community:view")
+    public ApiResponse<List<WarframeCommunityPendingPreviewVO>> pendingPreviews() {
+        return ApiResponse.ok(service.pendingPreviews().stream().map(WarframeCommunityViewMapper::pending).toList());
+    }
+
+    /**
      * 执行当前业务域的查询并组织结果。
      *
      * @param dataset 本次操作所属的数据文件或社区资料类型。
@@ -44,11 +61,8 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/query")
     @SaCheckPermission("warframe:community:view")
-    public ApiResponse<PageResult<WarframeCommunityRecordVO>> query(
-            @PathVariable
-            String dataset,
-            @RequestBody(required = false)
-            WarframeCommunityQuery query) {
+    public ApiResponse<PageResult<WarframeCommunityRecordVO>> query(@PathVariable String dataset,
+        @RequestBody(required = false) WarframeCommunityQuery query) {
         return ApiResponse.ok(service.query(dataset, query));
     }
 
@@ -61,11 +75,8 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/preview")
     @SaCheckPermission("warframe:community:update")
-    public ApiResponse<WarframeCommunityPreviewPageVO> preview(
-            @PathVariable
-            String dataset,
-            @RequestBody
-            String input) {
+    public ApiResponse<WarframeCommunityPreviewPageVO> preview(@PathVariable String dataset,
+        @RequestBody String input) {
         WarframeCommunityPreviewDTO preview = service.preview(dataset, input);
         return ApiResponse.ok(WarframeCommunityViewMapper.preview(service.previewPage(dataset, preview.id(), 1, 20)));
     }
@@ -79,11 +90,8 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/upload-preview")
     @SaCheckPermission("warframe:community:update")
-    public ApiResponse<WarframeCommunityPreviewPageVO> upload(
-            @PathVariable
-            String dataset,
-            @RequestPart("file")
-            MultipartFile file) {
+    public ApiResponse<WarframeCommunityPreviewPageVO> upload(@PathVariable String dataset,
+        @RequestPart("file") MultipartFile file) {
         WarframeCommunityPreviewDTO preview = service.uploadPreview(dataset, file);
         return ApiResponse.ok(WarframeCommunityViewMapper.preview(service.previewPage(dataset, preview.id(), 1, 20)));
     }
@@ -96,11 +104,30 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/pull-preview")
     @SaCheckPermission("warframe:community:sync")
-    public ApiResponse<WarframeCommunityPreviewPageVO> pull(
-            @PathVariable
-            String dataset) {
-        WarframeCommunityPreviewDTO preview = service.pullPreview(dataset);
-        return ApiResponse.ok(WarframeCommunityViewMapper.preview(service.previewPage(dataset, preview.id(), 1, 20)));
+    public ApiResponse<AdminTaskSubmission> pull(@PathVariable String dataset) {
+        String code = WarframeCommunityDataset.parse(dataset).code();
+        String type = "WARFRAME_COMMUNITY_PULL:" + code;
+        return ApiResponse.ok(tasks.findActive(type).map(id -> new AdminTaskSubmission(id, type))
+            .orElseGet(() -> tasks.submit(type, "warframe:community:sync", reporter -> {
+                reporter.report("DOWNLOAD", "正在拉取社区资料");
+                WarframeCommunityPreviewDTO preview = service.pullPreview(code);
+                reporter.report("PREVIEW", "社区资料差异预览已生成");
+                return WarframeCommunityViewMapper.preview(service.previewPage(code, preview.id(), 1, 20));
+            })));
+    }
+
+    /**
+     * 丢弃未采纳的社区数据预览。
+     *
+     * @param dataset 社区数据集代码。
+     * @param id 待丢弃预览 ID。
+     * @return 空的成功响应。
+     */
+    @PostMapping("/{dataset}/preview/{id}/discard")
+    @SaCheckPermission("warframe:community:apply")
+    public ApiResponse<Void> discard(@PathVariable String dataset, @PathVariable String id) {
+        service.discard(dataset, id);
+        return ApiResponse.ok();
     }
 
     /**
@@ -114,16 +141,23 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/preview/{id}")
     @SaCheckPermission("warframe:community:view")
-    public ApiResponse<WarframeCommunityPreviewPageVO> previewPage(
-            @PathVariable
-            String dataset,
-            @PathVariable
-            String id,
-            @RequestParam(defaultValue = "1")
-            int current,
-            @RequestParam(defaultValue = "20")
-            int size) {
+    public ApiResponse<WarframeCommunityPreviewPageVO> previewPage(@PathVariable String dataset,
+        @PathVariable String id, @RequestParam(defaultValue = "1") int current,
+        @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.ok(WarframeCommunityViewMapper.preview(service.previewPage(dataset, id, current, size)));
+    }
+
+    /**
+     * 返回冻结预览的全部操作 ID，供分页审核全选使用。
+     *
+     * @param dataset 社区数据集代码。
+     * @param id 冻结预览 ID。
+     * @return 全部可选择的操作 ID。
+     */
+    @PostMapping("/{dataset}/preview/{id}/operation-ids")
+    @SaCheckPermission("warframe:community:view")
+    public ApiResponse<List<String>> operationIds(@PathVariable String dataset, @PathVariable String id) {
+        return ApiResponse.ok(service.operationIds(dataset, id));
     }
 
     /**
@@ -135,11 +169,8 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/apply")
     @SaCheckPermission("warframe:community:apply")
-    public ApiResponse<WarframeCommunityApplyVO> apply(
-            @PathVariable
-            String dataset,
-            @RequestBody
-            WarframeCommunityApplyDTO request) {
+    public ApiResponse<WarframeCommunityApplyVO> apply(@PathVariable String dataset,
+        @RequestBody WarframeCommunityApplyDTO request) {
         return ApiResponse.ok(service.apply(dataset, request));
     }
 
@@ -152,11 +183,7 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/records/{id}/delete")
     @SaCheckPermission("warframe:community:delete")
-    public ApiResponse<Void> delete(
-            @PathVariable
-            String dataset,
-            @PathVariable
-            long id) {
+    public ApiResponse<Void> delete(@PathVariable String dataset, @PathVariable long id) {
         service.delete(dataset, id);
         return ApiResponse.ok();
     }
@@ -170,11 +197,7 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/source")
     @SaCheckPermission("warframe:community:update")
-    public ApiResponse<Void> source(
-            @PathVariable
-            String dataset,
-            @RequestBody
-            WarframeCommunitySourceDTO request) {
+    public ApiResponse<Void> source(@PathVariable String dataset, @RequestBody WarframeCommunitySourceDTO request) {
         service.source(dataset, request.rawUrl());
         return ApiResponse.ok();
     }

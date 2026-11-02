@@ -13,12 +13,8 @@ import java.util.List;
 /**
  * 群组签到命令。签到对象是逻辑群组成员，不是后台系统用户。
  */
-@BotPluginCommand(
-        code = SystemCommandCodes.SIGN_IN,
-        name = "签到",
-        gameCode = "system",
-        order = Integer.MIN_VALUE + 2)
-public class SignInPlugin extends BotPlugin {
+@BotPluginCommand(code = SystemCommandCodes.SIGN_IN, name = "签到", gameCode = "system", order = Integer.MIN_VALUE + 2)
+public class SignInPlugin extends BotPlugin<Void> {
 
     @Override
     public List<CommandView> views() {
@@ -29,7 +25,7 @@ public class SignInPlugin extends BotPlugin {
     private GroupCommandService groupCommandService;
 
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         return groupCommandService.signIn(invocation.context());
     }
 

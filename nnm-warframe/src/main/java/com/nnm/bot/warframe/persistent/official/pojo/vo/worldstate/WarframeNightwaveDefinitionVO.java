@@ -5,7 +5,7 @@ import com.nnm.bot.warframe.persistent.official.constant.WarframeCatalogConstant
 import java.util.List;
 
 public record WarframeNightwaveDefinitionVO(String query, NightwaveSection section, int page, int totalPages,
-        int totalCount, List<String> seasons, List<EntryVO> items) {
+    int totalCount, List<String> seasons, List<EntryVO> items) {
     /**
      * 构造夜波定义展示对象，并保存初始化参数。
      *
@@ -33,12 +33,12 @@ public record WarframeNightwaveDefinitionVO(String query, NightwaveSection secti
      * @return 午夜电波静态定义的分页视图。
      */
     public static WarframeNightwaveDefinitionVO page(String query, NightwaveSection section, List<String> seasons,
-            List<EntryVO> matches, int requested) {
-        int pages = Math.max(1, (int) ((matches.size() + 7L) / 8));
+        List<EntryVO> matches, int requested) {
+        int pages = Math.max(1, (int)((matches.size() + 7L) / 8));
         int page = Math.max(1, Math.min(requested, pages));
         int from = (page - 1) * 8;
         return new WarframeNightwaveDefinitionVO(query, section, page, pages, matches.size(), seasons,
-                matches.subList(from, Math.min(from + 8, matches.size())));
+            matches.subList(from, Math.min(from + 8, matches.size())));
     }
 
     /**
@@ -48,21 +48,25 @@ public record WarframeNightwaveDefinitionVO(String query, NightwaveSection secti
      */
     public String text() {
         StringBuilder text = new StringBuilder("电波静态").append(section == NightwaveSection.CHALLENGES ? "挑战" : "奖励")
-                .append("：").append(page).append("/").append(totalPages).append(" 页，共 ").append(totalCount).append(" 条");
+            .append("：").append(page).append("/").append(totalPages).append(" 页，共 ").append(totalCount).append(" 条");
         for (EntryVO entry : items) {
             text.append("\n\n").append(entry.name()).append("\n季节：").append(entry.seasonTag());
-            if (entry.rewardOrder() != null) text.append("\n来源序号：").append(entry.rewardOrder());
+            if (entry.rewardOrder() != null)
+                text.append("\n来源序号：").append(entry.rewardOrder());
             text.append("\n").append(entry.reference());
-            if (entry.description() != null) text.append("\n").append(entry.description());
+            if (entry.description() != null)
+                text.append("\n").append(entry.description());
             if (section == NightwaveSection.CHALLENGES) {
-                text.append("\n所需计数：").append(count(entry.requiredCount()))
-                        .append("\n声望：").append(count(entry.standing()));
-                if (entry.tip() != null) text.append("\n提示：").append(entry.tip());
+                text.append("\n所需计数：").append(count(entry.requiredCount())).append("\n声望：")
+                    .append(count(entry.standing()));
+                if (entry.tip() != null)
+                    text.append("\n提示：").append(entry.tip());
             } else {
                 text.append("\n数量：").append(count(entry.itemCount()));
             }
         }
-        if (CollUtil.isEmpty(items)) text.append("\n没有匹配的已采纳静态定义");
+        if (CollUtil.isEmpty(items))
+            text.append("\n没有匹配的已采纳静态定义");
         return text.toString();
     }
 
@@ -77,8 +81,8 @@ public record WarframeNightwaveDefinitionVO(String query, NightwaveSection secti
     }
 
     public record EntryVO(Long id, String key, Long parentId, String seasonTag, String parentSourceCode,
-            String sourceCode, String resolutionMode, String reference, Integer rewardOrder, String name,
-            String description, String imageReference, String iconUrl, Long requiredCount, Long standing,
-            Long itemCount, String tip, String tipImageReference, String tipIconUrl) {
+        String sourceCode, String resolutionMode, String reference, Integer rewardOrder, String name,
+        String description, String imageReference, String iconUrl, Long requiredCount, Long standing, Long itemCount,
+        String tip, String tipImageReference, String tipIconUrl) {
     }
 }

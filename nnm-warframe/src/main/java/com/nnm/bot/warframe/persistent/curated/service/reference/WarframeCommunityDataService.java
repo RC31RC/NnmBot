@@ -5,6 +5,7 @@ import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityDatasetVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPendingPreviewDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewPageDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
@@ -18,6 +19,7 @@ public interface WarframeCommunityDataService {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     List<WarframeCommunityDatasetVO> datasets();
+
     /**
      * 按查询条件筛选社区人工资料并返回分页结果。
      *
@@ -26,6 +28,7 @@ public interface WarframeCommunityDataService {
      * @return 包含当前页记录及总数的分页结果。
      */
     PageResult<WarframeCommunityRecordVO> query(String dataset, WarframeCommunityQuery query);
+
     /**
      * 生成变更预览，供后续确认采纳。
      *
@@ -34,6 +37,14 @@ public interface WarframeCommunityDataService {
      * @return 游戏资料社区预览对象。
      */
     WarframeCommunityPreviewDTO preview(String dataset, String json);
+
+    /**
+     * 列出尚未过期、未丢弃或采纳的社区预览。
+     *
+     * @return 全部社区资料类型的待审核索引。
+     */
+    List<WarframeCommunityPendingPreviewDTO> pendingPreviews();
+
     /**
      * 读取上传文件并生成人工资料的变更预览。
      *
@@ -42,6 +53,7 @@ public interface WarframeCommunityDataService {
      * @return 游戏资料社区预览对象。
      */
     WarframeCommunityPreviewDTO uploadPreview(String dataset, MultipartFile file);
+
     /**
      * 读取已配置的人工资料输入并生成变更预览。
      *
@@ -49,6 +61,7 @@ public interface WarframeCommunityDataService {
      * @return 游戏资料社区预览对象。
      */
     WarframeCommunityPreviewDTO pullPreview(String dataset);
+
     /**
      * 读取已冻结预览中的一页变更。
      *
@@ -59,6 +72,24 @@ public interface WarframeCommunityDataService {
      * @return 游戏资料社区预览分页对象。
      */
     WarframeCommunityPreviewPageDTO previewPage(String dataset, String id, int page, int size);
+
+    /**
+     * 返回当前冻结预览中全部可选操作的 ID，供跨页全选使用。
+     *
+     * @param dataset 社区数据集代码。
+     * @param id 冻结预览 ID。
+     * @return 全部操作 ID。
+     */
+    List<String> operationIds(String dataset, String id);
+
+    /**
+     * 丢弃指定的有效社区预览，不改变已采纳的业务记录。
+     *
+     * @param dataset 社区数据集代码。
+     * @param id 待丢弃预览 ID。
+     */
+    void discard(String dataset, String id);
+
     /**
      * 采纳已经确认的业务变更。
      *
@@ -67,6 +98,7 @@ public interface WarframeCommunityDataService {
      * @return 本次社区资料采纳结果及变更数量。
      */
     WarframeCommunityApplyVO apply(String dataset, WarframeCommunityApplyDTO request);
+
     /**
      * 校验权限后删除社区人工资料，并维护关联资源。
      *
@@ -74,6 +106,7 @@ public interface WarframeCommunityDataService {
      * @param id 目标记录的本地主键。
      */
     void delete(String dataset, long id);
+
     /**
      * 取得或更新当前业务使用的数据来源。
      *

@@ -8,7 +8,7 @@ import com.nnm.bot.warframe.runtime.rawdata.arbitration.ArbitrationScheduleRawDa
 import com.nnm.bot.warframe.runtime.rawdata.arbitration.ArbitrationScheduleRawData.EntryRawData;
 import jakarta.annotation.PostConstruct;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationPullProperties;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeWorldStateCodebookEntryDTO;
 import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateCodebookService;
@@ -29,7 +29,7 @@ public class WarframeArbitrationScheduleParser {
     @Resource
     private ObjectMapper objectMapper;
     @Resource
-    private WarframeArbitrationPullProperties properties;
+    private WarframeArbitrationSourceProperties properties;
     @Resource
     private WarframeWorldStateCodebookService codebook;
 
@@ -66,8 +66,8 @@ public class WarframeArbitrationScheduleParser {
      */
     private List<ArbitrationScheduleEntryDTO> parseJson(String body) {
         try {
-            List<EntryRawData> rows = body.startsWith("[")
-                    ? inputMapper.readerForListOf(EntryRawData.class).readValue(body)
+            List<EntryRawData> rows =
+                body.startsWith("[") ? inputMapper.readerForListOf(EntryRawData.class).readValue(body)
                     : inputMapper.readValue(body, ArbitrationScheduleRawData.class).getEntries();
             if (CollUtil.isEmpty(rows) || rows.size() > properties.getMaxRecords()) {
                 throw new IllegalArgumentException("仲裁排期集合为空或超过上限");
@@ -80,7 +80,7 @@ public class WarframeArbitrationScheduleParser {
                 Instant activation = instant(row.getActivation(), "activation");
                 Instant expiry = instant(row.getExpiry(), "expiry");
                 if (!ids.add(id) || !activations.add(activation)
-                        || !Duration.between(activation, expiry).equals(Duration.ofHours(1))) {
+                    || !Duration.between(activation, expiry).equals(Duration.ofHours(1))) {
                     throw new IllegalArgumentException("Invalid or duplicate arbitration interval: " + id);
                 }
                 String node = display(row.getNodeZh(), row.getNode(), "node", 200);
@@ -89,7 +89,7 @@ public class WarframeArbitrationScheduleParser {
                 String planet = display(row.getPlanetZh(), row.getPlanet(), "planet", 100);
                 var bounds = row.getBounds();
                 entries.add(new ArbitrationScheduleEntryDTO(id, activation, expiry, node, mission, enemy, planet,
-                        bounds == null ? "{}" : objectMapper.writeValueAsString(bounds)));
+                    bounds == null ? "{}" : objectMapper.writeValueAsString(bounds)));
             }
             return entries.stream().sorted(Comparator.comparing(ArbitrationScheduleEntryDTO::activation)).toList();
         } catch (JsonProcessingException exception) {
@@ -109,7 +109,8 @@ public class WarframeArbitrationScheduleParser {
         for (String rawLine : body.split("\\R", -1)) {
             lineNumber++;
             String line = rawLine.trim();
-            if (StrUtil.isEmpty(line) || line.startsWith("#") || line.startsWith("//")) continue;
+            if (StrUtil.isEmpty(line) || line.startsWith("#") || line.startsWith("//"))
+                continue;
             String[] columns = line.split(",", -1);
             if (columns.length != 2 || StrUtil.isBlank(columns[0]) || StrUtil.isBlank(columns[1])) {
                 throw new IllegalArgumentException("Invalid arbitration line " + lineNumber);
@@ -117,16 +118,18 @@ public class WarframeArbitrationScheduleParser {
             try {
                 Instant activation = Instant.ofEpochSecond(Long.parseLong(columns[0].trim()));
                 if (activation.getEpochSecond() <= 0 || rows.putIfAbsent(activation, columns[1].trim()) != null
-                        || rows.size() > properties.getMaxRecords()) {
+                    || rows.size() > properties.getMaxRecords()) {
                     throw new IllegalArgumentException("Invalid or duplicate arbitration time at line " + lineNumber);
                 }
             } catch (NumberFormatException exception) {
                 throw new IllegalArgumentException("Invalid arbitration timestamp at line " + lineNumber, exception);
             }
         }
-        if (CollUtil.isEmpty(rows)) throw new IllegalArgumentException("Arbitration source contains no rows");
+        if (CollUtil.isEmpty(rows))
+            throw new IllegalArgumentException("Arbitration source contains no rows");
         List<ArbitrationScheduleEntryDTO> entries = new ArrayList<>(rows.size());
-        for (var row : rows.entrySet()) entries.add(resolveTextEntry(row.getKey(), row.getValue()));
+        for (var row : rows.entrySet())
+            entries.add(resolveTextEntry(row.getKey(), row.getValue()));
         return List.copyOf(entries);
     }
 
@@ -139,18 +142,17 @@ public class WarframeArbitrationScheduleParser {
      */
     private ArbitrationScheduleEntryDTO resolveTextEntry(Instant activation, String nodeReference) {
         WarframeWorldStateCodebookEntryDTO node = codebook.findNode(nodeReference)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown arbitration node: " + nodeReference));
-        WarframeWorldStateCodebookEntryDTO mission = codebook.findMissionType(node.relatedReference())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Unknown arbitration mission type: " + node.relatedReference()));
+            .orElseThrow(() -> new IllegalArgumentException("Unknown arbitration node: " + nodeReference));
+        WarframeWorldStateCodebookEntryDTO mission = codebook.findMissionType(node.relatedReference()).orElseThrow(
+            () -> new IllegalArgumentException("Unknown arbitration mission type: " + node.relatedReference()));
         WarframeWorldStateCodebookEntryDTO faction = codebook.findFaction(node.factionReference())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Unknown arbitration faction: " + node.factionReference()));
+            .orElseThrow(() -> new IllegalArgumentException("Unknown arbitration faction: " + node.factionReference()));
         String planet = extractPlanet(node.displayName());
-        if (StrUtil.isBlank(planet)) throw new IllegalArgumentException("Arbitration node has no planet: " + nodeReference);
+        if (StrUtil.isBlank(planet))
+            throw new IllegalArgumentException("Arbitration node has no planet: " + nodeReference);
         return new ArbitrationScheduleEntryDTO("arbys:" + activation.getEpochSecond(), activation,
-                activation.plus(Duration.ofHours(1)), node.displayName(), mission.displayName(),
-                faction.displayName(), planet, "{}");
+            activation.plus(Duration.ofHours(1)), node.displayName(), mission.displayName(), faction.displayName(),
+            planet, "{}");
     }
 
     /**
@@ -202,6 +204,6 @@ public class WarframeArbitrationScheduleParser {
         String normalized = nodeName.replace('（', '(').replace('）', ')');
         int opening = normalized.lastIndexOf('(');
         return opening >= 0 && normalized.endsWith(")")
-                ? normalized.substring(opening + 1, normalized.length() - 1).trim() : "";
+            ? normalized.substring(opening + 1, normalized.length() - 1).trim() : "";
     }
 }

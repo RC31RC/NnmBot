@@ -1,5 +1,9 @@
 package com.nnm.bot.core.plugin.execution.impl;
 
+import com.nnm.bot.core.constant.CommandExecutionConstants.IngressEvent;
+import com.nnm.bot.core.constant.CommandExecutionConstants.IngressPhase;
+import com.nnm.bot.core.message.cache.MessageReferenceCache;
+
 import com.nnm.bot.core.constant.CommandExecutionConstants.IngressState;
 
 import com.nnm.bot.core.config.ExecutorProperties.CommandIngress;
@@ -20,11 +24,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Objects;
-import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
@@ -34,10 +38,23 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
 
+/** 本机命令准入与有界派发；短状态锁内不执行匹配、背压等待或外部 I/O。 */
 @Slf4j
 @Service
 public class CommandIngressServiceImpl implements CommandIngressService, SmartLifecycle {
 
+    /** 队列轮询只用于响应停机，不承担业务等待超时。 */
+    private static final long QUEUE_POLL_MILLIS = 100;
+    /** 调用状态和集合节点的保守估算基数，单位字节。 */
+    private static final long MESSAGE_OVERHEAD_BYTES = 512;
+    /** 每个附件对象及索引的保守估算，单位字节。 */
+    private static final long ATTACHMENT_OVERHEAD_BYTES = 128;
+    /** 每个 UTF-16 字符对应的 UTF-8 最多预留字节。 */
+    private static final int UTF8_BYTES_PER_CHARACTER = 3;
+
+    /** 非命令图片只登记有界摘要，供后续显式引用使用。 */
+    @Resource
+    private MessageReferenceCache referenceCache;
     @Resource
     private ExecutorProperties properties;
     @Resource
@@ -69,8 +86,8 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
     public void initialize() {
         properties.validate();
         if (routingProperties.receiptRetention().compareTo(
-                properties.getCommandIngress().getMaxQueueWait().plus(routingProperties.correlationWindow())) < 0) {
-            throw new IllegalArgumentException("Receipt retention must cover command queue wait and correlation window");
+            properties.getCommandIngress().getMaxQueueWait().plus(routingProperties.correlationWindow())) < 0) {
+            throw new IllegalArgumentException("回执保留时长必须覆盖命令排队与关联窗口");
         }
         queue = new ArrayBlockingQueue<>(properties.getCommandIngress().getQueueCapacity());
         meters = meterRegistryProvider.getIfAvailable();
@@ -86,253 +103,282 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
     public CommandIngressResult accept(BotMessageContext context, BooleanSupplier connectionValid) {
         Objects.requireNonNull(context, "context must not be null");
         Objects.requireNonNull(connectionValid, "connectionValid must not be null");
-        event("received");
+        event(IngressEvent.RECEIVED);
         long bytes = payloadBytes(context);
         if (bytes > properties.getCommandIngress().getMaxMessageBytes()) {
             return rejected(CommandIngressResult.REJECTED_TOO_LARGE, context, null);
         }
-        CommandMatch match;
-        try {
-            match = registry.match(context).orElse(null);
-        } catch (RuntimeException failure) {
-            event("match_failed");
-            throw failure;
-        }
+        referenceCache.observe(context);
+        CommandMatch match = matchObserved(context);
         if (match == null) {
-            event("unmatched");
+            event(IngressEvent.UNMATCHED);
             return CommandIngressResult.NOT_MATCHED;
         }
-        stateLock.lock();
-        try {
+        return withStateLock(() -> {
             if (!accepting) {
                 return rejected(CommandIngressResult.REJECTED_SHUTDOWN, context, match);
             }
             CommandIngress limits = properties.getCommandIngress();
             if (waiting >= limits.getQueueCapacity()
-                    || pending.size() >= properties.getApplicationConcurrency() + limits.getQueueCapacity()
-                    || bytes > limits.getMaxPendingBytes() - reservedBytes) {
+                || pending.size() >= properties.getApplicationConcurrency() + limits.getQueueCapacity()
+                || bytes > limits.getMaxPendingBytes() - reservedBytes) {
                 return rejected(CommandIngressResult.REJECTED_CAPACITY, context, match);
             }
             PendingCommand task = new PendingCommand(match, connectionValid, bytes);
             if (!queue.offer(task)) {
-                throw new IllegalStateException("Command queue and admission accounting diverged");
+                throw new IllegalStateException("命令队列与准入容量状态不一致");
             }
             pending.add(task);
             waiting++;
             reservedBytes += bytes;
-            event("accepted");
+            event(IngressEvent.ACCEPTED);
             return CommandIngressResult.ACCEPTED;
-        } finally {
-            stateLock.unlock();
-        }
+        });
     }
 
     @Override
     public void start() {
-        stateLock.lock();
-        try {
-            if (accepting) return;
+        withStateLock(() -> {
+            if (accepting)
+                return;
             if (dispatchThread != null && dispatchThread.isAlive()) {
-                throw new IllegalStateException("Previous command dispatcher is still stopping");
+                throw new IllegalStateException("上一个命令派发器尚未停止");
             }
             stopping = false;
             accepting = true;
             // 独立生命周期线程可以等待应用容量，绝不占用它所提交的应用执行额度。
             dispatchThread = Thread.ofPlatform().daemon().name("nnm-command-ingress").start(this::drain);
-        } finally {
-            stateLock.unlock();
-        }
+        });
     }
 
     private void drain() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                stateLock.lock();
-                try {
-                    if (stopping && waiting == 0) return;
-                } finally {
-                    stateLock.unlock();
-                }
-                PendingCommand task = queue.poll(100, TimeUnit.MILLISECONDS);
-                if (task == null) continue;
-                stateLock.lock();
-                try {
-                    if (task.state != IngressState.QUEUED) continue;
-                    task.state = IngressState.DISPATCHING;
-                    dispatching++;
-                } finally {
-                    stateLock.unlock();
-                }
+                if (withStateLock(() -> stopping && waiting == 0))
+                    return;
+                PendingCommand task = queue.poll(QUEUE_POLL_MILLIS, TimeUnit.MILLISECONDS);
+                if (task == null)
+                    continue;
+                if (!markDispatching(task))
+                    continue;
                 try {
                     applicationExecutor.execute(() -> execute(task));
                 } catch (TaskRejectedException failure) {
-                    finish(task, "submission_rejected");
-                    if (!isStopping()) throw failure;
+                    finish(task, IngressEvent.SUBMISSION_REJECTED);
+                    if (!isStopping())
+                        throw failure;
                 }
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         } finally {
-            stateLock.lock();
-            try {
+            withStateLock(() -> {
                 accepting = false;
                 stopping = true;
                 cancelWaiting();
                 drained.signalAll();
-            } finally {
-                stateLock.unlock();
-            }
+            });
         }
     }
 
     private void execute(PendingCommand task) {
         long started = System.nanoTime();
-        stateLock.lock();
+        if (!markRunning(task, started))
+            return;
+        timing(IngressPhase.WAIT, started - task.submitted);
+        IngressEvent outcome = IngressEvent.FAILED;
         try {
-            if (task.state != IngressState.DISPATCHING) return;
-            if (started - task.submitted >= properties.getCommandIngress().getMaxQueueWait().toNanos()) {
-                finish(task, "expired");
+            if (!task.connectionValid.getAsBoolean()) {
+                outcome = IngressEvent.CONNECTION_INVALID;
                 return;
+            }
+            dispatcher.dispatch(task.match);
+            outcome = IngressEvent.COMPLETED;
+        } finally {
+            long elapsed = System.nanoTime() - started;
+            // 容量归还不依赖指标记录成功；执行异常直接向任务边界传播。
+            finish(task, IngressEvent.TERMINATED);
+            timing(IngressPhase.EXECUTION, elapsed);
+            event(outcome);
+        }
+    }
+
+    /** 在短锁内结束一次任务；持锁调用方使用 finishLocked 避免隐藏重入。 */
+    private void finish(PendingCommand task, IngressEvent outcome) {
+        withStateLock(() -> finishLocked(task, outcome));
+    }
+
+    /** 调用方必须持有 stateLock，状态与容量一并归还。 */
+    private void finishLocked(PendingCommand task, IngressEvent outcome) {
+        if (task.state == IngressState.TERMINATED)
+            return;
+        if (task.state == IngressState.RUNNING)
+            running--;
+        else
+            waiting--;
+        if (task.state == IngressState.DISPATCHING)
+            dispatching--;
+        task.state = IngressState.TERMINATED;
+        pending.remove(task);
+        reservedBytes -= task.bytes;
+        event(outcome);
+        drained.signalAll();
+    }
+
+    /** 从队列取出只标记派发，不在持锁时提交可能背压的执行器。 */
+    private boolean markDispatching(PendingCommand task) {
+        return withStateLock(() -> {
+            if (task.state != IngressState.QUEUED)
+                return false;
+            task.state = IngressState.DISPATCHING;
+            dispatching++;
+            return true;
+        });
+    }
+
+    /** 排队已超时则直接归还容量，只有有效派发可以转为运行。 */
+    private boolean markRunning(PendingCommand task, long started) {
+        return withStateLock(() -> {
+            if (task.state != IngressState.DISPATCHING)
+                return false;
+            if (started - task.submitted >= properties.getCommandIngress().getMaxQueueWait().toNanos()) {
+                finishLocked(task, IngressEvent.EXPIRED);
+                return false;
             }
             task.state = IngressState.RUNNING;
             waiting--;
             dispatching--;
             running++;
-        } finally {
-            stateLock.unlock();
-        }
-        timing("wait", started - task.submitted);
-        try {
-            if (!task.connectionValid.getAsBoolean()) {
-                event("connection_invalid");
-                return;
-            }
-            dispatcher.dispatch(task.match);
-            event("completed");
-        } catch (RuntimeException | Error failure) {
-            event("failed");
-            throw failure;
-        } finally {
-            timing("execution", System.nanoTime() - started);
-            finish(task, "terminated");
-        }
-    }
-
-    private void finish(PendingCommand task, String outcome) {
-        stateLock.lock();
-        try {
-            if (task.state == IngressState.TERMINATED) return;
-            if (task.state == IngressState.RUNNING) running--;
-            else waiting--;
-            if (task.state == IngressState.DISPATCHING) dispatching--;
-            task.state = IngressState.TERMINATED;
-            pending.remove(task);
-            reservedBytes -= task.bytes;
-            event(outcome);
-            drained.signalAll();
-        } finally {
-            stateLock.unlock();
-        }
+            return true;
+        });
     }
 
     @Override
     public void stop() {
         long deadline = System.nanoTime() + properties.getAwaitTermination().toNanos();
-        Thread worker;
-        stateLock.lock();
+        withStateLock(() -> stopAndAwaitLocked(deadline));
+    }
+
+    /** Condition 暂时释放状态锁；唤醒后重新检查，线程中断时仍完成等待任务清理。 */
+    private void stopAndAwaitLocked(long deadline) {
+        accepting = false;
+        stopping = true;
+        Thread worker = dispatchThread;
         try {
-            accepting = false;
-            stopping = true;
-            worker = dispatchThread;
-            try {
-                long remaining;
-                while (!pending.isEmpty() && (remaining = deadline - System.nanoTime()) > 0) {
-                    drained.awaitNanos(remaining);
-                }
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException("Interrupted while draining command ingress", interrupted);
-            } finally {
-                cancelWaiting();
-                if (worker != null) worker.interrupt();
+            long remaining;
+            while (!pending.isEmpty() && (remaining = deadline - System.nanoTime()) > 0) {
+                drained.awaitNanos(remaining);
             }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("等待命令任务结束时被中断", interrupted);
         } finally {
-            stateLock.unlock();
+            cancelWaiting();
+            if (worker != null)
+                worker.interrupt();
         }
     }
 
     private void cancelWaiting() {
         queue.clear();
         for (PendingCommand task : new ArrayList<>(pending)) {
-            if (task.state != IngressState.RUNNING) finish(task, "cancelled");
+            if (task.state != IngressState.RUNNING)
+                finishLocked(task, IngressEvent.CANCELLED);
         }
     }
 
     private boolean isStopping() {
-        stateLock.lock();
-        try {
-            return stopping;
-        } finally {
-            stateLock.unlock();
-        }
+        return withStateLock(() -> stopping);
     }
 
     @Override
     public boolean isRunning() {
-        stateLock.lock();
-        try {
-            return accepting;
-        } finally {
-            stateLock.unlock();
-        }
+        return withStateLock(() -> accepting);
     }
 
     public Snapshot snapshot() {
+        return withStateLock(
+            () -> new Snapshot(waiting - dispatching, dispatching, running, pending.size(), reservedBytes));
+    }
+
+    /** 仅在匹配观测边界记录失败，不让基础设施捕获散落在接纳逻辑中。 */
+    private CommandMatch matchObserved(BotMessageContext context) {
+        try {
+            return registry.match(context).orElse(null);
+        } catch (RuntimeException failure) {
+            event(IngressEvent.MATCH_FAILED);
+            throw failure;
+        }
+    }
+
+    /** 短状态读取或迁移的唯一锁边界。 */
+    private <T> T withStateLock(Supplier<T> action) {
         stateLock.lock();
         try {
-            return new Snapshot(waiting - dispatching, dispatching, running, pending.size(), reservedBytes);
+            return action.get();
         } finally {
             stateLock.unlock();
         }
     }
 
+    /** 无返回值的状态迁移沿用同一个锁边界。 */
+    private void withStateLock(Runnable action) {
+        withStateLock(() -> {
+            action.run();
+            return null;
+        });
+    }
+
     private CommandIngressResult rejected(CommandIngressResult result, BotMessageContext context, CommandMatch match) {
-        event(result.name().toLowerCase(Locale.ROOT));
+        event(switch (result) {
+            case REJECTED_CAPACITY -> IngressEvent.REJECTED_CAPACITY;
+            case REJECTED_SHUTDOWN -> IngressEvent.REJECTED_SHUTDOWN;
+            case REJECTED_TOO_LARGE -> IngressEvent.REJECTED_TOO_LARGE;
+            default -> throw new IllegalArgumentException("非拒绝状态不能登记为入口拒绝");
+        });
         log.debug("Command ingress rejected platform={} account={} messageId={} command={} reason={}",
-                context.platform(), context.botAccountId(), context.messageId(),
-                match == null ? null : match.invocation().commandCode(), result);
+            context.platform(), context.botAccountId(), context.messageId(),
+            match == null ? null : match.invocation().commandCode(), result);
         return result;
     }
 
-    private void event(String outcome) {
-        if (meters != null) meters.counter("nnm.command.ingress.events", "outcome", outcome).increment();
+    private void event(IngressEvent outcome) {
+        if (meters != null)
+            meters.counter("nnm.command.ingress.events", "outcome", outcome.tag()).increment();
     }
 
-    private void timing(String phase, long nanos) {
-        if (meters != null) meters.timer("nnm.command.ingress.duration", "phase", phase)
-                .record(Duration.ofNanos(nanos));
+    private void timing(IngressPhase phase, long nanos) {
+        if (meters != null)
+            meters.timer("nnm.command.ingress.duration", "phase", phase.tag()).record(Duration.ofNanos(nanos));
     }
 
     private long payloadBytes(BotMessageContext context) {
         // UTF-16 每字符最多预留 3 个 UTF-8 字节；原生来源仅保留发送定位信息。
-        long characters = length(context.rawMessage()) * 2 + length(context.message())
-                + length(context.botAccountId()) + length(context.senderId())
-                + length(context.conversationId()) + length(context.messageId());
+        long characters = length(context.rawMessage()) * 2 + length(context.message()) + length(context.botAccountId())
+            + length(context.senderId()) + length(context.conversationId()) + length(context.messageId());
         for (BotIncomingAttachment attachment : context.attachments()) {
-            characters += length(attachment.fileName()) + length(attachment.contentType())
-                    + length(attachment.url()) + length(attachment.fileId());
-            for (Entry<String,String> entry : attachment.metadata().entrySet()) {
+            characters += length(attachment.fileName()) + length(attachment.contentType()) + length(attachment.url())
+                + length(attachment.fileId());
+            for (Entry<String, String> entry : attachment.metadata().entrySet()) {
                 characters += length(entry.getKey()) + length(entry.getValue());
             }
         }
-        return 512 + characters * 3 + context.attachments().size() * 128L;
+        if (context.reference() != null) {
+            characters += length(context.reference().id());
+            for (BotIncomingAttachment attachment : context.reference().attachments()) {
+                characters += attachment.toString().length();
+            }
+        }
+        return MESSAGE_OVERHEAD_BYTES + characters * UTF8_BYTES_PER_CHARACTER
+            + context.attachments().size() * ATTACHMENT_OVERHEAD_BYTES;
     }
 
     private static long length(String value) {
         return value == null ? 0 : value.length();
     }
 
-    public record Snapshot(int queued, int dispatching, int running, int inFlight, long reservedBytes) { }
+    public record Snapshot(int queued, int dispatching, int running, int inFlight, long reservedBytes) {
+    }
 
     private static final class PendingCommand {
         private final CommandMatch match;

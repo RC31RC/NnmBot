@@ -19,11 +19,13 @@ public class OfficialObjectSerializer extends JsonSerializer<OfficialObjectDTO> 
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     @Override
-    public void serialize(OfficialObjectDTO value, JsonGenerator generator, SerializerProvider provider) throws IOException {
+    public void serialize(OfficialObjectDTO value, JsonGenerator generator, SerializerProvider provider)
+        throws IOException {
         generator.writeStartObject();
         for (Field field : OfficialObjectFields.fields(value.getClass())) {
             String key = field.getAnnotation(JsonProperty.class).value();
-            if (!value.isPresent(key)) continue;
+            if (!value.isPresent(key))
+                continue;
             generator.writeFieldName(key);
             try {
                 provider.defaultSerializeValue(field.get(value), generator);

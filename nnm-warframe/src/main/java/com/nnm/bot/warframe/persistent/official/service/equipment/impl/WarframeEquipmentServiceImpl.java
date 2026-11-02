@@ -19,6 +19,7 @@ public class WarframeEquipmentServiceImpl implements WarframeEquipmentService {
     private OfficialEquipmentMapper mapper;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 读取本业务直接使用的已采纳战甲及武器资料。
      *

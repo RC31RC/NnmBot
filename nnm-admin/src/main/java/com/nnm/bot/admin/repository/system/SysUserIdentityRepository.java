@@ -8,9 +8,8 @@ import java.util.Optional;
 
 public interface SysUserIdentityRepository extends JpaRepository<SysUserIdentity, Long> {
 
-    Optional<SysUserIdentity> findByPlatformAndExternalUserId(String platform,
-                                                                String externalUserId);
+    Optional<SysUserIdentity> findByPlatformAndExternalUserId(String platform, String externalUserId);
 
-    Optional<SysUserIdentity> findFirstByPlatformInAndExternalUserIdOrderByIdAsc(
-            Collection<String> platforms, String externalUserId);
+    Optional<SysUserIdentity> findFirstByPlatformInAndExternalUserIdOrderByIdAsc(Collection<String> platforms,
+        String externalUserId);
 }

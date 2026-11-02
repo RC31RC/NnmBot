@@ -1,6 +1,8 @@
 package com.nnm.bot.core.qqofficial.discovery;
 
 import io.github.rdt.lock.LockScope;
+import io.github.rdt.lock.LockKey;
+import io.github.rdt.lock.RdtLock;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
 import com.nnm.bot.core.channel.model.BotDiscoveredScope;
@@ -36,13 +38,16 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
     public void initialize() {
         manager = CacheManager.getInstance("qq-observations-" + UUID.randomUUID());
         touches = Cache2kBuilder.of(String.class, Boolean.class).manager(manager).name("touches")
-                .entryCapacity(properties.observationTouchCapacity()).expireAfterWrite(properties.observationTouchInterval()).build();
+            .entryCapacity(properties.observationTouchCapacity())
+            .expireAfterWrite(properties.observationTouchInterval()).build();
     }
 
     public void observeGroup(String account, String group) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group)) return;
+        if (StrUtil.isBlank(account) || StrUtil.isBlank(group))
+            return;
         String key = account.length() + ":" + account + group;
-        if (!touches.putIfAbsent(key, true)) return;
+        if (!touches.putIfAbsent(key, true))
+            return;
         try {
             update(account, group, true);
         } catch (RuntimeException failure) {
@@ -53,62 +58,75 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
     }
 
     public void deactivateGroup(String account, String group) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group)) return;
+        if (StrUtil.isBlank(account) || StrUtil.isBlank(group))
+            return;
         update(account, group, false);
         touches.remove(account.length() + ":" + account + group);
     }
 
     public void observeMember(String account, String group, String member, String name, String role) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group) || StrUtil.isBlank(member)) return;
+        if (StrUtil.isBlank(account) || StrUtil.isBlank(group) || StrUtil.isBlank(member))
+            return;
+        // 成员锁必须先释放，再触发群组触摸；不能让一个注解作用域持有两把相反顺序的锁。
         try (LockScope scope = lockManager.beginScope()) {
             // 同一成员的名称、角色需要读改写；不同成员之间不再串行等待整群锁。
-            lockManager.lock(memberLockName(account, group, member));
-            ObservedMember previous = cache.<ObservedMember>get(memberMap(account, group), member, ObservedMember.class).orElse(null);
-            cache.put(memberMap(account, group), member, new ObservedMember(member,
+            lockManager
+                .lock(LockKey.forResource(QqOfficialObservedScopeStore.class, memberLockName(account, group, member)));
+            ObservedMember previous =
+                cache.<ObservedMember>get(memberMap(account, group), member, ObservedMember.class).orElse(null);
+            cache.put(memberMap(account, group), member,
+                new ObservedMember(member,
                     StrUtil.isBlank(name) ? previous == null ? null : previous.displayName() : name,
                     StrUtil.isBlank(role) ? previous == null ? null : previous.role() : role, Instant.now()),
-                    properties.observationRetention());
+                properties.observationRetention());
         }
         observeGroup(account, group);
     }
 
+    @RdtLock
     public void removeMember(String account, String group, String member) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group) || StrUtil.isBlank(member)) return;
-        try (LockScope scope = lockManager.beginScope()) {
-            lockManager.lock(memberLockName(account, group, member));
-            cache.remove(memberMap(account, group), member);
-        }
+        if (StrUtil.isBlank(account) || StrUtil.isBlank(group) || StrUtil.isBlank(member))
+            return;
+        lockManager
+            .lock(LockKey.forResource(QqOfficialObservedScopeStore.class, memberLockName(account, group, member)));
+        cache.remove(memberMap(account, group), member);
     }
 
     public List<BotDiscoveredScope> findActive(String account) {
-        if (StrUtil.isBlank(account)) return List.of();
+        if (StrUtil.isBlank(account))
+            return List.of();
         return cache.<GroupObservation>getAll(groupMap(account), GroupObservation.class).values().stream()
-                .filter(group -> group.active() && live(group.lastObservedAt())).sorted(Comparator.comparing(GroupObservation::groupOpenid))
-                .map(group -> {
-                    List<BotDiscoveredMember> members = cache.<ObservedMember>getAll(
-                                    memberMap(account, group.groupOpenid()), ObservedMember.class).values().stream()
-                            .filter(member -> live(member.lastObservedAt()))
-                            .sorted(Comparator.comparing(ObservedMember::memberOpenid))
-                            .map(member -> new BotDiscoveredMember(member.memberOpenid(), member.displayName(), normalizeRole(member.role())))
-                            .toList();
-                    // 字段各自可能过期，观察数据始终按增量处理，不能用它批量删除数据库成员。
-                    return new BotDiscoveredScope("GROUP", group.groupOpenid(), group.displayName(), group.memberCount(), members, false);
-                }).toList();
+            .filter(group -> group.active() && live(group.lastObservedAt()))
+            .sorted(Comparator.comparing(GroupObservation::groupOpenid)).map(group -> {
+                List<BotDiscoveredMember> members =
+                    cache.<ObservedMember>getAll(memberMap(account, group.groupOpenid()), ObservedMember.class).values()
+                        .stream().filter(member -> live(member.lastObservedAt()))
+                        .sorted(Comparator.comparing(ObservedMember::memberOpenid))
+                        .map(member -> new BotDiscoveredMember(member.memberOpenid(), member.displayName(),
+                            normalizeRole(member.role())))
+                        .toList();
+                // 字段各自可能过期，观察数据始终按增量处理，不能用它批量删除数据库成员。
+                return new BotDiscoveredScope("GROUP", group.groupOpenid(), group.displayName(), group.memberCount(),
+                    members, false);
+            }).toList();
     }
 
     private void update(String account, String group, boolean active) {
+        // 同类内部调用不会经过 @RdtLock 代理；这里只锁短暂的群组缓存读改写。
         try (LockScope scope = lockManager.beginScope()) {
             // 锁粒度缩小到单群，热门群不再阻塞同账号的其他群组。
-            lockManager.lock(lockName(account, group));
+            lockManager.lock(LockKey.forResource(QqOfficialObservedScopeStore.class, lockName(account, group)));
             writeGroup(account, group, active);
         }
     }
 
     private void writeGroup(String account, String group, boolean active) {
-        GroupObservation previous = cache.<GroupObservation>get(groupMap(account), group, GroupObservation.class).orElse(null);
-        cache.put(groupMap(account), group, new GroupObservation(group,
-                previous == null ? null : previous.displayName(), previous == null ? null : previous.memberCount(),
-                active, Instant.now()), properties.observationRetention());
+        GroupObservation previous =
+            cache.<GroupObservation>get(groupMap(account), group, GroupObservation.class).orElse(null);
+        cache.put(groupMap(account), group,
+            new GroupObservation(group, previous == null ? null : previous.displayName(),
+                previous == null ? null : previous.memberCount(), active, Instant.now()),
+            properties.observationRetention());
     }
 
     private boolean live(Instant observedAt) {
@@ -127,18 +145,27 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
         };
     }
 
-    private String groupMap(String account) { return "qq-observed-groups:" + account; }
-    private String memberMap(String account, String group) { return "qq-observed-members:" + account.length() + ":" + account + group; }
-    private String lockName(String account, String group) { return "qq-observed-group:" + account.length() + ":" + account + group; }
+    private String groupMap(String account) {
+        return "qq-observed-groups:" + account;
+    }
+
+    private String memberMap(String account, String group) {
+        return "qq-observed-members:" + account.length() + ":" + account + group;
+    }
+
+    private String lockName(String account, String group) {
+        return "qq-observed-group:" + account.length() + ":" + account + group;
+    }
 
     @PreDestroy
     @Override
     public void close() {
-        if (manager != null) manager.close();
+        if (manager != null)
+            manager.close();
     }
 
-    public record GroupObservation(String groupOpenid, String displayName, Integer memberCount,
-                                   boolean active, Instant lastObservedAt) {
+    public record GroupObservation(String groupOpenid, String displayName, Integer memberCount, boolean active,
+        Instant lastObservedAt) {
     }
 
     public record ObservedMember(String memberOpenid, String displayName, String role, Instant lastObservedAt) {

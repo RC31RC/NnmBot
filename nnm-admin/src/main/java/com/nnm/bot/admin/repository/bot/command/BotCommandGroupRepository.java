@@ -7,5 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BotCommandGroupRepository extends JpaRepository<BotCommandGroup, Long> {
     Optional<BotCommandGroup> findByCodeIgnoreCase(String code);
+
     List<BotCommandGroup> findAllByOrderByCodeAsc();
 }

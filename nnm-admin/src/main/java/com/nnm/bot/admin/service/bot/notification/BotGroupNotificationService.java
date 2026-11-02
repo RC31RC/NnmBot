@@ -8,7 +8,8 @@ import com.nnm.bot.admin.pojo.dto.bot.notification.BotNotificationPreviewDTO;
 import java.util.List;
 
 public interface BotGroupNotificationService {
-    BotGroupNotificationReportDTO send(BotGroupNotificationDTO request,
-            NotificationResourceManifest manifest, TaskProgressReporter reporter) throws InterruptedException;
+    BotGroupNotificationReportDTO send(BotGroupNotificationDTO request, NotificationResourceManifest manifest,
+        TaskProgressReporter reporter) throws InterruptedException;
+
     List<BotNotificationPreviewDTO> preview(long ownerId, BotGroupNotificationDTO request);
 }

@@ -16,17 +16,18 @@ public class WarframeCommunityProperties {
     private Duration previewTtl = Duration.ofMinutes(30);
     private Duration connectTimeout = Duration.ofSeconds(5);
     private Duration readTimeout = Duration.ofSeconds(20);
-    private List<String> allowedHosts = List.of();
+    private List<String> allowedHosts =
+        List.of("cdn.jsdelivr.net", "testingcf.jsdelivr.net", "jsd.onmicrosoft.cn", "raw.githubusercontent.com");
 
     /**
      * 校验当前配置或输入是否满足业务约束。
      */
     @PostConstruct
     public void validate() {
-        if (maxBytes < 1 || maxBytes > 16 * 1024 * 1024 || maxRecords < 1 || maxRecords > 50_000
-                || invalid(previewTtl) || invalid(connectTimeout) || invalid(readTimeout)
-                || allowedHosts == null || allowedHosts.stream().anyMatch(host -> host == null
-                || !host.matches("[a-zA-Z0-9.-]+") || host.startsWith(".") || host.endsWith("."))) {
+        if (maxBytes < 1 || maxBytes > 16 * 1024 * 1024 || maxRecords < 1 || maxRecords > 50_000 || invalid(previewTtl)
+            || invalid(connectTimeout) || invalid(readTimeout) || allowedHosts == null
+            || allowedHosts.stream().anyMatch(host -> host == null || !host.matches("[a-zA-Z0-9.-]+")
+                || host.startsWith(".") || host.endsWith("."))) {
             throw new IllegalArgumentException("Invalid nnm.warframe.community import limits or host policy");
         }
     }

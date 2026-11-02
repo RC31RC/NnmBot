@@ -20,6 +20,7 @@ public class WarframeMaterialServiceImpl implements WarframeMaterialService {
     private OfficialMaterialMapper mapper;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 读取本业务直接使用的已采纳材料及资源资料。
      *

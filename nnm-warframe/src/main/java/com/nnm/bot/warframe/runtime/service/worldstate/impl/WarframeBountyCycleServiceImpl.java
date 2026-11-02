@@ -58,7 +58,8 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
      */
     @Override
     public WorldStateDTO enrich(WorldStateDTO state) {
-        if (state.syndicateMissions().stream().noneMatch(mission -> mission.syndicate() != null && SUPPORTED.contains(mission.syndicate()))) {
+        if (state.syndicateMissions().stream()
+            .noneMatch(mission -> mission.syndicate() != null && SUPPORTED.contains(mission.syndicate()))) {
             return state;
         }
         Snapshot index;
@@ -68,12 +69,14 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
             log.warn("Bounty static index unavailable; official WorldStateDTO remains usable", exception);
             return state;
         }
-        if (!index.available()) return state;
+        if (!index.available())
+            return state;
         BountyCycleRawData cycle = null;
         String status = properties.isEnabled() ? "unavailable" : "disabled";
         if (properties.isEnabled()) {
             try {
-                byte[] body = httpClient.getLimitedBytes(properties.getUrl().toString(), Map.of(), properties.getMaxBytes());
+                byte[] body =
+                    httpClient.getLimitedBytes(properties.getUrl().toString(), Map.of(), properties.getMaxBytes());
                 cycle = inputReader.readValue(body);
                 if (cycle == null || cycle.getExpiry() == null || cycle.getBounties() == null) {
                     cycle = null;
@@ -89,7 +92,8 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
         }
         List<SyndicateMissionDTO> missions = new ArrayList<>();
         for (SyndicateMissionDTO mission : state.syndicateMissions()) {
-            missions.add(mission.syndicate() != null && SUPPORTED.contains(mission.syndicate()) ? merge(mission, cycle, status, index) : mission);
+            missions.add(mission.syndicate() != null && SUPPORTED.contains(mission.syndicate())
+                ? merge(mission, cycle, status, index) : mission);
         }
         return state.withSyndicateMissions(missions);
     }
@@ -104,9 +108,9 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
      * @return 保留官方任务并携带本轮补充任务、静态奖池和状态的非受管 DTO。
      */
     private WorldStateDTO.SyndicateMissionDTO merge(SyndicateMissionDTO official, BountyCycleRawData cycle,
-                                              String fallbackStatus, Snapshot index) {
-        List<BountyStaticPoolDTO> pools = index.pools().getOrDefault(official.syndicate(), List.of())
-                .stream().map(pool -> new WorldStateDTO.BountyStaticPoolDTO(pool.id(), pool.name(), pool.rewards())).toList();
+        String fallbackStatus, Snapshot index) {
+        List<BountyStaticPoolDTO> pools = index.pools().getOrDefault(official.syndicate(), List.of()).stream()
+            .map(pool -> new WorldStateDTO.BountyStaticPoolDTO(pool.id(), pool.name(), pool.rewards())).toList();
         List<BountyCycleJobDTO> jobs = new ArrayList<>();
         String status = fallbackStatus;
         if (CollUtil.isNotEmpty(official.jobs())) {
@@ -139,17 +143,17 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
                         Reference challenge = index.challenges().get(challengeKey);
                         // 成品尚未发布 ally agent 身份映射时只保留原始键，禁止从 tmp 复制名字表或猜测。
                         jobs.add(new WorldStateDTO.BountyCycleJobDTO(nodeKey, node == null ? null : node.displayName(),
-                                node == null ? null : node.systemName(), node == null ? null : node.missionType(),
-                                challengeKey, challenge == null ? null : challenge.displayName(),
-                                challenge == null ? null : challenge.descriptionZh(), ally, null,
-                                node == null || challenge == null ? "unresolved_static_reference"
-                                        : ally == null ? "resolved" : "ally_unresolved",
-                                node == null ? null : node.missionTypeKey(), tier, rows.size()));
+                            node == null ? null : node.systemName(), node == null ? null : node.missionType(),
+                            challengeKey, challenge == null ? null : challenge.displayName(),
+                            challenge == null ? null : challenge.descriptionZh(), ally, null,
+                            node == null || challenge == null ? "unresolved_static_reference"
+                                : ally == null ? "resolved" : "ally_unresolved",
+                            node == null ? null : node.missionTypeKey(), tier, rows.size()));
                     }
                 }
             }
         }
         return new WorldStateDTO.SyndicateMissionDTO(official.id(), official.syndicate(), official.node(),
-                official.activation(), official.expiry(), official.jobs(), official.nodes(), jobs, pools, status);
+            official.activation(), official.expiry(), official.jobs(), official.nodes(), jobs, pools, status);
     }
 }

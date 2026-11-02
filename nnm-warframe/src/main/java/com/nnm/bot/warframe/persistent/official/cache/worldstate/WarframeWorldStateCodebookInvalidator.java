@@ -9,8 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 在事务提交后刷新本实例的世界状态引用资料，并通知其他实例失效。
- * 消费者只执行本地刷新，避免循环广播。
+ * 在事务提交后刷新本实例的世界状态引用资料，并通知其他实例失效。 消费者只执行本地刷新，避免循环广播。
  */
 @Component
 @Slf4j

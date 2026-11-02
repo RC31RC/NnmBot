@@ -15,8 +15,7 @@ public class QqOfficialMemberIdentityAdapter implements BotGroupMemberIdentityAd
     }
 
     @Override
-    public Optional<BotGroupMember> find(
-            BotGroupMemberRepository repository, long groupId, String platformUserId) {
+    public Optional<BotGroupMember> find(BotGroupMemberRepository repository, long groupId, String platformUserId) {
         return repository.findByGroupIdAndMemberOpenid(groupId, platformUserId);
     }
 

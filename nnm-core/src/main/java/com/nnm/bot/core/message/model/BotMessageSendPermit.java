@@ -14,16 +14,18 @@ public interface BotMessageSendPermit extends AutoCloseable {
     static BotMessageSendPermit unrestricted() {
         return new BotMessageSendPermit() {
             @Override
-            public Integer messageSequence() { return null; }
+            public Integer messageSequence() {
+                return null;
+            }
 
             @Override
-            public void beforeSend() { }
+            public void beforeSend() {}
 
             @Override
-            public void rejected() { }
+            public void rejected() {}
 
             @Override
-            public void close() { }
+            public void close() {}
         };
     }
 }

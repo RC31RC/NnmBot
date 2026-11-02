@@ -31,8 +31,7 @@ import java.util.List;
  */
 @Component
 @Slf4j
-public class OneBotScopeDiscoveryProvider
-        implements BotLocalScopeDiscoveryProvider, BotGroupMemberQueryProvider {
+public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvider, BotGroupMemberQueryProvider {
 
     @Resource
     private BotContainer botContainer;
@@ -55,10 +54,8 @@ public class OneBotScopeDiscoveryProvider
         try {
             accountId = Long.parseLong(botAccountId);
         } catch (NumberFormatException exception) {
-            throw new BusinessException(
-                    BotChannelErrorCode.INVALID_ACCOUNT_ID,
-                    "OneBot 账号不是有效的 QQ 号: " + botAccountId,
-                    exception);
+            throw new BusinessException(BotChannelErrorCode.INVALID_ACCOUNT_ID, "OneBot 账号不是有效的 QQ 号: " + botAccountId,
+                exception);
         }
         Bot bot = this.botContainer.robots.get(accountId);
         if (ObjectUtil.isNull(bot)) {
@@ -69,34 +66,26 @@ public class OneBotScopeDiscoveryProvider
             if (ObjectUtil.isNull(response) || ObjectUtil.isNull(response.getData())) {
                 return BotScopeDiscoveryResult.unsupported("OneBot 未返回群组列表");
             }
-            List<BotDiscoveredScope> scopes = response.getData().stream()
-                    .filter(group -> ObjectUtil.isNotNull(group.getGroupId()))
-                    .map(group -> {
-                        MemberDiscovery members = loadMembers(bot, group.getGroupId());
-                        return new BotDiscoveredScope(
-                                "GROUP",
-                                String.valueOf(group.getGroupId()),
-                                firstText(group.getGroupName(), group.getGroupMemo()),
-                                group.getMemberCount(),
-                                members.members(),
-                                members.complete());
-                    })
-                    .toList();
+            List<BotDiscoveredScope> scopes =
+                response.getData().stream().filter(group -> ObjectUtil.isNotNull(group.getGroupId())).map(group -> {
+                    MemberDiscovery members = loadMembers(bot, group.getGroupId());
+                    return new BotDiscoveredScope("GROUP", String.valueOf(group.getGroupId()),
+                        firstText(group.getGroupName(), group.getGroupMemo()), group.getMemberCount(),
+                        members.members(), members.complete());
+                }).toList();
             return new BotScopeDiscoveryResult(true, null, scopes);
         } catch (RuntimeException exception) {
-            throw new BusinessException(
-                    BotChannelErrorCode.SCOPE_DISCOVERY_FAILED,
-                    "OneBot 群组查询失败: " + safeMessage(exception),
-                    exception);
+            throw new BusinessException(BotChannelErrorCode.SCOPE_DISCOVERY_FAILED,
+                "OneBot 群组查询失败: " + safeMessage(exception), exception);
         }
     }
 
     @Override
-    public BotMemberQueryResult query(
-            BotChannelInstanceRecord instance, String scopeKey) {
+    public BotMemberQueryResult query(BotChannelInstanceRecord instance, String scopeKey) {
         try {
             Bot bot = botContainer.robots.get(Long.parseLong(instance.botAccountId()));
-            if (bot == null) return new BotMemberQueryResult(List.of(), false);
+            if (bot == null)
+                return new BotMemberQueryResult(List.of(), false);
             MemberDiscovery result = loadMembers(bot, Long.parseLong(scopeKey));
             return new BotMemberQueryResult(result.members(), result.complete());
         } catch (RuntimeException exception) {
@@ -108,20 +97,17 @@ public class OneBotScopeDiscoveryProvider
     private MemberDiscovery loadMembers(Bot bot, Long groupId) {
         try {
             ActionList<GroupMemberInfoResp> response = bot.getGroupMemberList(groupId);
-            if (ObjectUtil.isNull(response)
-                    || ObjectUtil.isNull(response.getData())
-                    || (StrUtil.isNotBlank(response.getStatus())
-                    && !"ok".equalsIgnoreCase(response.getStatus()))) {
+            if (ObjectUtil.isNull(response) || ObjectUtil.isNull(response.getData())
+                || (StrUtil.isNotBlank(response.getStatus()) && !"ok".equalsIgnoreCase(response.getStatus()))) {
                 // 空列表是有效的空群；data=null 则表示平台没有给出可用于清理的全量结果。
                 return new MemberDiscovery(List.of(), false);
             }
-            List<BotDiscoveredMember> members = response.getData().stream()
-                    .filter(member -> ObjectUtil.isNotNull(member.getUserId()))
-                    .map(member -> new BotDiscoveredMember(
-                            String.valueOf(member.getUserId()),
-                            firstText(member.getCard(), member.getNickname()),
-                            normalizeRole(member.getRole())))
-                    .toList();
+            List<
+                BotDiscoveredMember> members =
+                    response.getData().stream().filter(member -> ObjectUtil.isNotNull(member.getUserId()))
+                        .map(member -> new BotDiscoveredMember(String.valueOf(member.getUserId()),
+                            firstText(member.getCard(), member.getNickname()), normalizeRole(member.getRole())))
+                        .toList();
             return new MemberDiscovery(members, true);
         } catch (RuntimeException exception) {
             // 群列表仍可展示；成员查询失败时禁止按空列表清理已有成员。
@@ -139,14 +125,11 @@ public class OneBotScopeDiscoveryProvider
     }
 
     private String firstText(String first, String second) {
-        return StrUtil.isNotBlank(first)
-                ? first
-                : StrUtil.isBlank(second) ? null : second;
+        return StrUtil.isNotBlank(first) ? first : StrUtil.isBlank(second) ? null : second;
     }
 
     private String safeMessage(RuntimeException exception) {
-        return StrUtil.isBlank(exception.getMessage()) ? exception.getClass().getSimpleName()
-                : exception.getMessage();
+        return StrUtil.isBlank(exception.getMessage()) ? exception.getClass().getSimpleName() : exception.getMessage();
     }
 
     private record MemberDiscovery(List<BotDiscoveredMember> members, boolean complete) {

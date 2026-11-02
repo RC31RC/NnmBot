@@ -52,5 +52,7 @@ public class OfficialDojoRecipeIngredientsItems extends OfficialChildRow {
     private OfficialDojoRecipeRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialDojoRecipeIngredientsItemsItemReferencesItems> officialDojoRecipeIngredientsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialDojoRecipeIngredientsItemsItemReferencesItems> officialDojoRecipeIngredientsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

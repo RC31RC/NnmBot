@@ -46,7 +46,7 @@ public class CommandRegistry {
     private final ReentrantLock refreshLock = new ReentrantLock();
 
     @Resource
-    private List<BotPlugin> botPlugins;
+    private List<BotPlugin<?>> botPlugins;
     @Resource
     private ObjectProvider<CommandConfigurationProvider> configurationProvider;
 
@@ -68,11 +68,8 @@ public class CommandRegistry {
         try {
             Snapshot replacement = buildSnapshot();
             snapshot = replacement;
-            log.info("Registered {} bot commands: {}",
-                    replacement.commands().size(),
-                    replacement.commands().stream()
-                            .map(command -> command.descriptor().code())
-                            .toList());
+            log.info("Registered {} bot commands: {}", replacement.commands().size(),
+                replacement.commands().stream().map(command -> command.descriptor().code()).toList());
         } finally {
             refreshLock.unlock();
         }
@@ -86,20 +83,20 @@ public class CommandRegistry {
             refreshSafely();
             return;
         }
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        refreshSafely();
-                    }
-                });
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                refreshSafely();
+            }
+        });
     }
 
     /**
      * 先执行完整文本的精确索引查找，再按别名长度匹配前缀命令。
      *
-     * <p>参数边界由每个触发词的 {@link CommandBoundaryPolicy} 决定，因此英文命令
-     * 不会误匹配普通单词，允许中文紧邻参数的命令也无需在插件中重复切字符串。</p>
+     * <p>
+     * 参数边界由每个触发词的 {@link CommandBoundaryPolicy} 决定，因此英文命令 不会误匹配普通单词，允许中文紧邻参数的命令也无需在插件中重复切字符串。
+     * </p>
      */
     public Optional<CommandMatch> match(BotMessageContext context) {
         Objects.requireNonNull(context, "context must not be null");
@@ -114,8 +111,7 @@ public class CommandRegistry {
             return Optional.of(toMatch(context, exact, ""));
         }
         for (Lookup lookup : current.prefixCommands()) {
-            String arguments = prefixArguments(
-                    message, lookup.normalizedAlias(), lookup.boundaryPolicy());
+            String arguments = prefixArguments(message, lookup.normalizedAlias(), lookup.boundaryPolicy());
             if (ObjectUtil.isNotNull(arguments)) {
                 return Optional.of(toMatch(context, lookup, arguments));
             }
@@ -127,43 +123,38 @@ public class CommandRegistry {
         return snapshot.commands();
     }
 
-    public List<BotPlugin> plugins() {
+    public List<BotPlugin<?>> plugins() {
         return snapshot.commands().stream().map(RuntimeCommand::plugin).toList();
     }
 
     /**
      * 返回所有静态插件实现，管理端可用它检查数据库命令配置是否完整。
      */
-    public List<BotPlugin> allPlugins() {
-        return botPlugins.stream()
-                .filter(Objects::nonNull)
-                .sorted(Comparator.comparingInt(
-                                (BotPlugin plugin) -> metadata(plugin).order())
-                        .thenComparing(plugin -> normalize(metadata(plugin).code())))
-                .toList();
+    public List<BotPlugin<?>> allPlugins() {
+        return botPlugins.stream().filter(Objects::nonNull)
+            .sorted(Comparator.comparingInt((BotPlugin<?> plugin) -> metadata(plugin).order())
+                .thenComparing(plugin -> normalize(metadata(plugin).code())))
+            .toList();
     }
 
-    public Optional<BotPlugin> plugin(String code) {
+    public Optional<BotPlugin<?>> plugin(String code) {
         if (ObjectUtil.isNull(code)) {
             return Optional.empty();
         }
         String normalized = normalize(code);
-        return allPlugins().stream()
-                .filter(plugin -> normalize(metadata(plugin).code()).equals(normalized))
-                .findFirst();
+        return allPlugins().stream().filter(plugin -> normalize(metadata(plugin).code()).equals(normalized))
+            .findFirst();
     }
 
     /**
      * 返回插件声明的稳定元数据，供管理端展示和运行时注册使用。
      */
-    public BotPluginCommand metadata(BotPlugin plugin) {
+    public BotPluginCommand metadata(BotPlugin<?> plugin) {
         Objects.requireNonNull(plugin, "plugin must not be null");
-        BotPluginCommand metadata = AnnotationUtils.findAnnotation(
-                plugin.getClass(), BotPluginCommand.class);
+        BotPluginCommand metadata = AnnotationUtils.findAnnotation(plugin.getClass(), BotPluginCommand.class);
         if (ObjectUtil.isNull(metadata)) {
             throw new IllegalStateException(
-                    "BotPlugin must be annotated with @BotPluginCommand: "
-                            + plugin.getClass().getName());
+                "BotPlugin<?> must be annotated with @BotPluginCommand: " + plugin.getClass().getName());
         }
         return metadata;
     }
@@ -185,28 +176,22 @@ public class CommandRegistry {
 
     private Snapshot buildSnapshot() {
         Objects.requireNonNull(this.botPlugins, "botPlugins must not be null");
-        Map<String, BotPlugin> pluginsByCode = new LinkedHashMap<>();
-        this.botPlugins.stream()
-                .filter(Objects::nonNull)
-                .sorted(Comparator.comparingInt(
-                                (BotPlugin plugin) -> metadata(plugin).order())
-                        .thenComparing(plugin -> normalize(metadata(plugin).code())))
-                .forEach(plugin -> registerPlugin(pluginsByCode, plugin));
-        log.info("Discovered {} BotPlugin implementations: {}",
-                pluginsByCode.size(), pluginsByCode.keySet());
+        Map<String, BotPlugin<?>> pluginsByCode = new LinkedHashMap<>();
+        this.botPlugins.stream().filter(Objects::nonNull)
+            .sorted(Comparator.comparingInt((BotPlugin<?> plugin) -> metadata(plugin).order())
+                .thenComparing(plugin -> normalize(metadata(plugin).code())))
+            .forEach(plugin -> registerPlugin(pluginsByCode, plugin));
+        log.info("Discovered {} BotPlugin<?> implementations: {}", pluginsByCode.size(), pluginsByCode.keySet());
 
         CommandConfigurationProvider provider = this.configurationProvider.getIfAvailable();
-        Map<String, CommandDefinition> definitions = ObjectUtil.isNull(provider)
-                ? Map.of()
-                : Objects.requireNonNullElse(provider.loadAll(), Map.of());
+        Map<String, CommandDefinition> definitions =
+            ObjectUtil.isNull(provider) ? Map.of() : Objects.requireNonNullElse(provider.loadAll(), Map.of());
         Map<String, CommandDefinition> definitionsByCode = new HashMap<>();
         definitions.forEach((key, definition) -> {
             if (ObjectUtil.isNotNull(definition)) {
-                CommandDefinition previous = definitionsByCode.put(
-                        normalize(definition.code()), definition);
+                CommandDefinition previous = definitionsByCode.put(normalize(definition.code()), definition);
                 if (ObjectUtil.isNotNull(previous)) {
-                    throw new IllegalStateException(
-                            "Duplicate database command code: " + definition.code());
+                    throw new IllegalStateException("Duplicate database command code: " + definition.code());
                 }
             }
         });
@@ -218,34 +203,25 @@ public class CommandRegistry {
         Map<String, Lookup> exactCommands = new HashMap<>();
         List<Lookup> prefixCommands = new ArrayList<>();
 
-        for (Entry<String,BotPlugin> entry : pluginsByCode.entrySet()) {
-            BotPlugin plugin = entry.getValue();
+        for (Entry<String, BotPlugin<?>> entry : pluginsByCode.entrySet()) {
+            BotPlugin<?> plugin = entry.getValue();
             CommandDefinition definition = definitionsByCode.remove(entry.getKey());
             if (ObjectUtil.isNull(definition)) {
                 // 插件是稳定实现，数据库只负责覆盖可变配置；未配置时使用安全默认值。
                 definition = defaultDefinition(plugin);
                 log.debug("Bot plugin [{}] has no database command definition; using defaults",
-                        metadata(plugin).code());
+                    metadata(plugin).code());
             }
             CommandExecutionConfiguration configuration = definition.configuration();
-            CommandDescriptor descriptor = new CommandDescriptor(
-                    definition.code(),
-                    definition.name(),
-                    configuration.triggers(),
-                    definition.description(),
-                    configuration.permissionOverride(),
-                    metadata(plugin).matchType(),
-                    metadata(plugin).order());
-            RuntimeCommand runtimeCommand =
-                    new RuntimeCommand(plugin, descriptor, configuration);
+            CommandDescriptor descriptor = new CommandDescriptor(definition.code(), definition.name(),
+                configuration.triggers(), definition.description(), configuration.permissionOverride(),
+                metadata(plugin).matchType(), metadata(plugin).order());
+            RuntimeCommand runtimeCommand = new RuntimeCommand(plugin, descriptor, configuration);
             commands.add(runtimeCommand);
             commandsByCode.put(entry.getKey(), runtimeCommand);
             for (CommandTrigger trigger : descriptor.lookupTriggers()) {
-                Lookup lookup = new Lookup(
-                        runtimeCommand,
-                        trigger.name(),
-                        normalize(trigger.name()),
-                        trigger.boundaryPolicy());
+                Lookup lookup =
+                    new Lookup(runtimeCommand, trigger.name(), normalize(trigger.name()), trigger.boundaryPolicy());
                 registerLookup(allLookupNames, lookup);
                 if (descriptor.matchType() == MatchType.EXACT) {
                     exactCommands.put(lookup.normalizedAlias(), lookup);
@@ -255,73 +231,48 @@ public class CommandRegistry {
             }
         }
 
-        definitionsByCode.values().forEach(definition ->
-                log.warn("Database command [{}] has no BotPluginCommand implementation",
-                        definition.code()));
-        prefixCommands.sort(Comparator
-                .comparingInt((Lookup lookup) -> lookup.normalizedAlias().length())
-                .reversed()
-                .thenComparingInt(lookup -> lookup.command().descriptor().order())
-                .thenComparing(Lookup::normalizedAlias));
+        definitionsByCode.values().forEach(
+            definition -> log.warn("Database command [{}] has no BotPluginCommand implementation", definition.code()));
+        prefixCommands.sort(Comparator.comparingInt((Lookup lookup) -> lookup.normalizedAlias().length()).reversed()
+            .thenComparingInt(lookup -> lookup.command().descriptor().order()).thenComparing(Lookup::normalizedAlias));
 
-        return new Snapshot(
-                List.copyOf(commands),
-                Map.copyOf(commandsByCode),
-                Map.copyOf(exactCommands),
-                List.copyOf(prefixCommands));
+        return new Snapshot(List.copyOf(commands), Map.copyOf(commandsByCode), Map.copyOf(exactCommands),
+            List.copyOf(prefixCommands));
     }
 
-    private CommandDefinition defaultDefinition(BotPlugin plugin) {
+    private CommandDefinition defaultDefinition(BotPlugin<?> plugin) {
         BotPluginCommand metadata = metadata(plugin);
         String code = requireText(metadata.code(), "plugin code");
         String name = requireText(metadata.name(), "plugin name");
         String gameCode = requireText(metadata.gameCode(), "plugin gameCode");
-        return new CommandDefinition(
-                code,
-                name,
-                gameCode,
-                "",
-                CommandExecutionConfiguration.disabledDefaults());
+        return new CommandDefinition(code, name, gameCode, "", CommandExecutionConfiguration.disabledDefaults());
     }
 
-    private void registerPlugin(Map<String, BotPlugin> plugins, BotPlugin plugin) {
+    private void registerPlugin(Map<String, BotPlugin<?>> plugins, BotPlugin<?> plugin) {
         BotPluginCommand metadata = metadata(plugin);
         String code = requireText(metadata.code(), "plugin code");
-        BotPlugin previous = plugins.put(normalize(code), plugin);
+        BotPlugin<?> previous = plugins.put(normalize(code), plugin);
         if (ObjectUtil.isNotNull(previous)) {
-            throw new IllegalStateException(
-                    "Duplicate bot command code [%s]: %s / %s".formatted(
-                            code,
-                            previous.getClass().getName(),
-                            plugin.getClass().getName()));
+            throw new IllegalStateException("Duplicate bot command code [%s]: %s / %s".formatted(code,
+                previous.getClass().getName(), plugin.getClass().getName()));
         }
     }
 
     private static void registerLookup(Map<String, Lookup> lookups, Lookup lookup) {
         Lookup previous = lookups.put(lookup.normalizedAlias(), lookup);
         if (ObjectUtil.isNotNull(previous) && previous.command() != lookup.command()) {
-            throw new IllegalStateException(
-                    "Duplicate bot command lookup name [%s]: %s / %s".formatted(
-                            lookup.alias(),
-                            previous.command().plugin().getClass().getName(),
-                            lookup.command().plugin().getClass().getName()));
+            throw new IllegalStateException("Duplicate bot command lookup name [%s]: %s / %s".formatted(lookup.alias(),
+                previous.command().plugin().getClass().getName(), lookup.command().plugin().getClass().getName()));
         }
     }
 
-    private static CommandMatch toMatch(
-            BotMessageContext context, Lookup lookup, String arguments) {
+    private static CommandMatch toMatch(BotMessageContext context, Lookup lookup, String arguments) {
         RuntimeCommand command = lookup.command();
-        return new CommandMatch(
-                command,
-                new CommandInvocation(
-                        context,
-                        command.descriptor().code(),
-                        lookup.alias(),
-                        arguments));
+        return new CommandMatch(command,
+            new CommandInvocation(context, command.descriptor().code(), lookup.alias(), arguments));
     }
 
-    private static String prefixArguments(
-            String message, String alias, CommandBoundaryPolicy boundaryPolicy) {
+    private static String prefixArguments(String message, String alias, CommandBoundaryPolicy boundaryPolicy) {
         if (!message.startsWith(alias)) {
             return null;
         }
@@ -345,10 +296,8 @@ public class CommandRegistry {
 
     private static boolean isCjk(int codePoint) {
         UnicodeScript script = Character.UnicodeScript.of(codePoint);
-        return script == Character.UnicodeScript.HAN
-                || script == Character.UnicodeScript.HIRAGANA
-                || script == Character.UnicodeScript.KATAKANA
-                || script == Character.UnicodeScript.HANGUL;
+        return script == Character.UnicodeScript.HAN || script == Character.UnicodeScript.HIRAGANA
+            || script == Character.UnicodeScript.KATAKANA || script == Character.UnicodeScript.HANGUL;
     }
 
     private void refreshSafely() {
@@ -360,8 +309,7 @@ public class CommandRegistry {
     }
 
     private static String requireText(String value, String field) {
-        String normalized = Objects.requireNonNull(
-                value, field + " must not be null").trim();
+        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
         if (normalized.isEmpty()) {
             throw new IllegalStateException(field + " must not be blank");
         }
@@ -372,20 +320,12 @@ public class CommandRegistry {
         return ObjectUtil.isNull(value) ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
-    private record Lookup(
-            RuntimeCommand command,
-            String alias,
-            String normalizedAlias,
-            CommandBoundaryPolicy boundaryPolicy
-    ) {
+    private record Lookup(RuntimeCommand command, String alias, String normalizedAlias,
+        CommandBoundaryPolicy boundaryPolicy) {
     }
 
-    private record Snapshot(
-            List<RuntimeCommand> commands,
-            Map<String, RuntimeCommand> commandsByCode,
-            Map<String, Lookup> exactCommands,
-            List<Lookup> prefixCommands
-    ) {
+    private record Snapshot(List<RuntimeCommand> commands, Map<String, RuntimeCommand> commandsByCode,
+        Map<String, Lookup> exactCommands, List<Lookup> prefixCommands) {
 
         private static Snapshot empty() {
             return new Snapshot(List.of(), Map.of(), Map.of(), List.of());

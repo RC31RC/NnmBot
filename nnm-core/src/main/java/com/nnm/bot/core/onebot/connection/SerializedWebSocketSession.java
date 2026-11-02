@@ -11,8 +11,9 @@ import java.util.function.BooleanSupplier;
 /**
  * 对底层 WebSocket 的发送入口再做一次同步保护。
  *
- * <p>Shiro 的 action 锁按 session id 工作，但连接层可能同时存在多个
- * session 包装对象。这里保证所有经过当前 Bot 的发送最终串行进入底层 session。</p>
+ * <p>
+ * Shiro 的 action 锁按 session id 工作，但连接层可能同时存在多个 session 包装对象。这里保证所有经过当前 Bot 的发送最终串行进入底层 session。
+ * </p>
  */
 final class SerializedWebSocketSession extends WebSocketSessionDecorator {
 

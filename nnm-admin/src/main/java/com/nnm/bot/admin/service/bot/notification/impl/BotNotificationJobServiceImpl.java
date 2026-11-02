@@ -34,7 +34,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class BotNotificationJobServiceImpl implements BotNotificationJobService {
-    private static final List<JobStatus> ACTIVE = List.of(JobStatus.SCHEDULED, JobStatus.SUBMITTING, JobStatus.RUNNING, JobStatus.CANCEL_REQUESTED);
+    private static final List<JobStatus> ACTIVE =
+        List.of(JobStatus.SCHEDULED, JobStatus.SUBMITTING, JobStatus.RUNNING, JobStatus.CANCEL_REQUESTED);
     @Resource
     private BotNotificationJobRepository jobs;
     @Resource
@@ -66,19 +67,20 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
             BotNotificationJob existing = jobs.findById(id).orElse(null);
             if (existing != null) {
                 BusinessAssert.isTrue(existing.getOwnerId() == ownerId && existing.getRequest().equals(request),
-                        CommonErrorCode.PARAM_INVALID, "同一提交标识不能用于不同通知内容");
+                    CommonErrorCode.PARAM_INVALID, "同一提交标识不能用于不同通知内容");
                 return existing;
             }
             Instant now = Instant.now();
             Instant due = request.scheduledAt() == null ? now : request.scheduledAt();
             BusinessAssert.isTrue(request.scheduledAt() == null || due.isAfter(now), CommonErrorCode.PARAM_INVALID,
-                    "定时发送时间必须晚于当前时间");
+                "定时发送时间必须晚于当前时间");
             BusinessAssert.isTrue(!due.isAfter(now.plus(notificationProperties.maxScheduleDelay())),
-                    CommonErrorCode.PARAM_INVALID, "定时发送时间超出允许范围");
+                CommonErrorCode.PARAM_INVALID, "定时发送时间超出允许范围");
             BusinessAssert.isTrue(jobs.countByOwnerIdAndStatusIn(ownerId, ACTIVE) < properties.getMaxPendingPerUser(),
-                    CommonErrorCode.PARAM_INVALID, "待发送通知任务数量已达上限");
+                CommonErrorCode.PARAM_INVALID, "待发送通知任务数量已达上限");
             notifications.preview(ownerId, request);
-            NotificationResourceManifest manifest = resources.retain(ownerId, id, request.content().resourceIds(), due.plus(notificationProperties.resourceRetention()));
+            NotificationResourceManifest manifest = resources.retain(ownerId, id, request.content().resourceIds(),
+                due.plus(notificationProperties.resourceRetention()));
             BotNotificationJob created = new BotNotificationJob();
             created.setId(id);
             created.setOwnerId(ownerId);
@@ -97,11 +99,11 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
             }
         });
         auditSafely(ownerId, "BOT_NOTIFICATION_SUBMIT", job.getId(),
-                "提交通知任务 status=" + job.getStatus() + " scheduledAt=" + job.getScheduledAt()
-                        + " groups=" + request.groupIds() + " " + contentSummary(request)
-                        + " composition=" + request.content().composition()
-                        + " interaction=" + request.content().interaction());
-        if (request.scheduledAt() == null && job.getStatus() == JobStatus.SCHEDULED) dispatch(job.getId());
+            "提交通知任务 status=" + job.getStatus() + " scheduledAt=" + job.getScheduledAt() + " groups="
+                + request.groupIds() + " " + contentSummary(request) + " composition=" + request.content().composition()
+                + " interaction=" + request.content().interaction());
+        if (request.scheduledAt() == null && job.getStatus() == JobStatus.SCHEDULED)
+            dispatch(job.getId());
         return item(jobs.findById(id).orElseThrow());
     }
 
@@ -114,20 +116,22 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
     public BotNotificationJobDTO cancel(long ownerId, UUID id) {
         BotNotificationJob result = store.update(id, job -> {
             BusinessAssert.isTrue(job.getOwnerId() == ownerId, CommonErrorCode.PARAM_INVALID, "无权操作该通知任务");
-            if (job.getStatus().terminal()) return;
+            if (job.getStatus().terminal())
+                return;
             // 先发布取消，再提交 DB；任一节点读取失败会阻止新的平台发送。
             cancellations.cancel(job.getId(), job.getResources().expiresAt());
             job.setStatus(job.getStatus() == JobStatus.SCHEDULED ? JobStatus.CANCELLED : JobStatus.CANCEL_REQUESTED);
         });
         auditSafely(ownerId, "BOT_NOTIFICATION_CANCEL", result.getId(),
-                "取消通知任务 status=" + result.getStatus() + " groups=" + result.getRequest().groupIds());
+            "取消通知任务 status=" + result.getStatus() + " groups=" + result.getRequest().groupIds());
         return item(result);
     }
 
     @Override
     public void dispatchDue() {
         Instant now = Instant.now();
-        for (BotNotificationJob job : jobs.findTop50ByStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(JobStatus.SCHEDULED, now)) {
+        for (BotNotificationJob job : jobs
+            .findTop50ByStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(JobStatus.SCHEDULED, now)) {
             try {
                 dispatch(job.getId());
             } catch (RuntimeException failure) {
@@ -135,10 +139,13 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
             }
         }
         for (BotNotificationJob job : jobs.findTop50ByStatusInAndUpdatedAtBefore(
-                List.of(JobStatus.SUBMITTING, JobStatus.RUNNING, JobStatus.CANCEL_REQUESTED), now.minus(properties.getStaleTimeout()))) {
+            List.of(JobStatus.SUBMITTING, JobStatus.RUNNING, JobStatus.CANCEL_REQUESTED),
+            now.minus(properties.getStaleTimeout()))) {
             try {
                 store.update(job.getId(), current -> {
-                    if (current.getStatus().terminal() || !current.getUpdatedAt().isBefore(now.minus(properties.getStaleTimeout()))) return;
+                    if (current.getStatus().terminal()
+                        || !current.getUpdatedAt().isBefore(now.minus(properties.getStaleTimeout())))
+                        return;
                     current.setStatus(JobStatus.UNKNOWN);
                     current.setError("未取得任务最终结果，不自动重新提交；请核实群消息及逐目标回执");
                 });
@@ -147,9 +154,11 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
             }
         }
         for (BotNotificationJob job : jobs.findTop50ByStatusInAndUpdatedAtBefore(
-                List.of(JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED, JobStatus.UNKNOWN), now.minus(properties.getHistoryRetention()))) {
+            List.of(JobStatus.COMPLETED, JobStatus.CANCELLED, JobStatus.FAILED, JobStatus.UNKNOWN),
+            now.minus(properties.getHistoryRetention()))) {
             try {
-                if (job.getResources().expiresAt().isBefore(now)) jobs.deleteById(job.getId());
+                if (job.getResources().expiresAt().isBefore(now))
+                    jobs.deleteById(job.getId());
             } catch (RuntimeException failure) {
                 log.error("Notification history cleanup failed id={}", job.getId(), failure);
             }
@@ -160,14 +169,15 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
         // DB 行锁原子认领；提交前落 SUBMITTING，进程崩溃后只标未知，不重放外部副作用。
         boolean[] claimed = {false};
         BotNotificationJob job = store.update(id, current -> {
-            if (current.getStatus() != JobStatus.SCHEDULED || current.getScheduledAt().isAfter(Instant.now())) return;
+            if (current.getStatus() != JobStatus.SCHEDULED || current.getScheduledAt().isAfter(Instant.now()))
+                return;
             if (current.getScheduledAt().plus(properties.getDispatchGrace()).isBefore(Instant.now())) {
                 current.setStatus(JobStatus.FAILED);
                 current.setError("已超过定时发送允许的补发窗口，未自动补发");
                 return;
             }
             if (!users.existsByIdAndEnabledTrue(current.getOwnerId())
-                    || !StpUtil.hasPermission(current.getOwnerId(), "bot:notification:send")) {
+                || !StpUtil.hasPermission(current.getOwnerId(), "bot:notification:send")) {
                 current.setStatus(JobStatus.FAILED);
                 current.setError("发起人已停用或发送权限已撤销");
                 return;
@@ -175,35 +185,44 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
             current.setStatus(JobStatus.SUBMITTING);
             claimed[0] = true;
         });
-        if (!claimed[0]) return;
+        if (!claimed[0])
+            return;
         try {
-            AdminTaskSubmission task = tasks.submit("BOT_GROUP_NOTIFICATION:" + id, "bot:notification:send", reporter -> {
-                try {
-                    BotGroupNotificationReportDTO report = notifications.send(job.getRequest(), job.getResources(), reporter);
-                    store.update(id, current -> {
-                        current.setReport(report);
-                        boolean unknown = report.deliveries().stream().anyMatch(delivery -> "UNKNOWN".equals(delivery.status())
-                                || delivery.report() != null && delivery.report().items().stream().anyMatch(item -> item.status() == DeliveryStatus.UNKNOWN));
-                        current.setStatus(unknown ? JobStatus.UNKNOWN : current.getStatus() == JobStatus.CANCEL_REQUESTED ? JobStatus.CANCELLED : JobStatus.COMPLETED);
-                        if (unknown) current.setError("部分平台发送结果未知，请核对逐目标回执；不会自动重发");
-                    });
+            AdminTaskSubmission task =
+                tasks.submit("BOT_GROUP_NOTIFICATION:" + id, "bot:notification:send", reporter -> {
                     try {
-                        jobs.findById(id).ifPresent(current -> auditSafely(current.getOwnerId(),
-                                "BOT_NOTIFICATION_RESULT", id,
-                                "status=" + current.getStatus() + " groups=" + current.getRequest().groupIds()
+                        BotGroupNotificationReportDTO report =
+                            notifications.send(job.getRequest(), job.getResources(), reporter);
+                        store.update(id, current -> {
+                            current.setReport(report);
+                            boolean unknown = report.deliveries().stream()
+                                .anyMatch(delivery -> "UNKNOWN".equals(delivery.status())
+                                    || delivery.report() != null && delivery.report().items().stream()
+                                        .anyMatch(item -> item.status() == DeliveryStatus.UNKNOWN));
+                            current.setStatus(
+                                unknown ? JobStatus.UNKNOWN : current.getStatus() == JobStatus.CANCEL_REQUESTED
+                                    ? JobStatus.CANCELLED : JobStatus.COMPLETED);
+                            if (unknown)
+                                current.setError("部分平台发送结果未知，请核对逐目标回执；不会自动重发");
+                        });
+                        try {
+                            jobs.findById(id)
+                                .ifPresent(current -> auditSafely(current.getOwnerId(), "BOT_NOTIFICATION_RESULT", id,
+                                    "status=" + current.getStatus() + " groups=" + current.getRequest().groupIds()
                                         + " deliveries=" + (report == null ? 0 : report.deliveries().size())));
-                    } catch (RuntimeException auditLookupFailure) {
-                        log.warn("Notification result audit lookup failed id={}", id, auditLookupFailure);
+                        } catch (RuntimeException auditLookupFailure) {
+                            log.warn("Notification result audit lookup failed id={}", id, auditLookupFailure);
+                        }
+                        return report;
+                    } catch (Exception failure) {
+                        recordUnknown(id, "执行未取得完整结果，不自动重发", failure);
+                        throw failure;
                     }
-                    return report;
-                } catch (Exception failure) {
-                    recordUnknown(id, "执行未取得完整结果，不自动重发", failure);
-                    throw failure;
-                }
-            });
+                });
             store.update(id, current -> {
                 current.setTaskId(task.taskId());
-                if (current.getStatus() == JobStatus.SUBMITTING) current.setStatus(JobStatus.RUNNING);
+                if (current.getStatus() == JobStatus.SUBMITTING)
+                    current.setStatus(JobStatus.RUNNING);
             });
         } catch (RuntimeException failure) {
             recordUnknown(id, "提交或记录任务结果失败，不自动重新提交", failure);
@@ -226,7 +245,7 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
 
     private BotNotificationJobDTO item(BotNotificationJob job) {
         return new BotNotificationJobDTO(job.getId(), job.getStatus(), job.getScheduledAt(), job.getTaskId(),
-                job.getRequest().groupIds(), job.getReport(), job.getError());
+            job.getRequest().groupIds(), job.getReport(), job.getError());
     }
 
     private String contentSummary(BotGroupNotificationDTO request) {

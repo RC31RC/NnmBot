@@ -17,13 +17,8 @@ import java.time.Instant;
  * @param rawEvent 平台返回的原始事件 JSON
  * @param messageCreatedAt 平台消息创建时间；主动发送或协议未提供时为空
  */
-public record QqOfficialMessageSource(String eventType,
-                                      QqOfficialChatType chatType,
-                                      String targetId,
-                                      String messageId,
-                                      String appId,
-                                      String rawEvent,
-                                      Instant messageCreatedAt) {
+public record QqOfficialMessageSource(String eventType, QqOfficialChatType chatType, String targetId, String messageId,
+    String appId, String rawEvent, Instant messageCreatedAt) {
 
     public String messagePath() {
         return switch (chatType) {
@@ -38,9 +33,8 @@ public record QqOfficialMessageSource(String eventType,
         return switch (chatType) {
             case C2C -> "/v2/users/" + targetId + "/files";
             case GROUP -> "/v2/groups/" + targetId + "/files";
-            case CHANNEL, DIRECT -> throw new BotChannelCapabilityException(
-                    BotPlatform.QQ_OFFICIAL, BotChannelCapability.FILE_MESSAGE,
-                    "会话类型 " + chatType);
+            case CHANNEL, DIRECT -> throw new BotChannelCapabilityException(BotPlatform.QQ_OFFICIAL,
+                BotChannelCapability.FILE_MESSAGE, "会话类型 " + chatType);
         };
     }
 
@@ -48,9 +42,8 @@ public record QqOfficialMessageSource(String eventType,
         return switch (chatType) {
             case C2C -> "/v2/users/" + targetId + "/upload_prepare";
             case GROUP -> "/v2/groups/" + targetId + "/upload_prepare";
-            case CHANNEL, DIRECT -> throw new BotChannelCapabilityException(
-                    BotPlatform.QQ_OFFICIAL, BotChannelCapability.FILE_MESSAGE,
-                    "会话类型 " + chatType);
+            case CHANNEL, DIRECT -> throw new BotChannelCapabilityException(BotPlatform.QQ_OFFICIAL,
+                BotChannelCapability.FILE_MESSAGE, "会话类型 " + chatType);
         };
     }
 
@@ -58,9 +51,8 @@ public record QqOfficialMessageSource(String eventType,
         return switch (chatType) {
             case C2C -> "/v2/users/" + targetId + "/upload_part_finish";
             case GROUP -> "/v2/groups/" + targetId + "/upload_part_finish";
-            case CHANNEL, DIRECT -> throw new BotChannelCapabilityException(
-                    BotPlatform.QQ_OFFICIAL, BotChannelCapability.FILE_MESSAGE,
-                    "会话类型 " + chatType);
+            case CHANNEL, DIRECT -> throw new BotChannelCapabilityException(BotPlatform.QQ_OFFICIAL,
+                BotChannelCapability.FILE_MESSAGE, "会话类型 " + chatType);
         };
     }
 

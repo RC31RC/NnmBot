@@ -66,16 +66,9 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Transactional
     public long createUser(long operatorId, UserSaveDTO request) {
         String username = request.userName().trim();
-        BusinessAssert.isFalse(
-                userRepository.existsByUsernameIgnoreCase(username),
-                CommonErrorCode.DATA_CONFLICT,
-                "用户名已存在"
-        );
-        BusinessAssert.notBlank(
-                request.password(),
-                CommonErrorCode.PARAM_INVALID,
-                "新增用户必须设置密码"
-        );
+        BusinessAssert.isFalse(userRepository.existsByUsernameIgnoreCase(username), CommonErrorCode.DATA_CONFLICT,
+            "用户名已存在");
+        BusinessAssert.notBlank(request.password(), CommonErrorCode.PARAM_INVALID, "新增用户必须设置密码");
 
         SysUser operator = hierarchyService.operator(operatorId);
         Set<SysRole> roles = resolveRoles(request.roleCodes());
@@ -98,11 +91,10 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         SysUser user = user(userId);
         hierarchyService.checkCanManageUser(operator, user);
         String username = request.userName().trim();
-        userRepository.findByUsernameIgnoreCase(username)
-                .filter(existing -> !existing.getId().equals(userId))
-                .ifPresent(existing -> {
-                    throw new BusinessException(409, "用户名已存在");
-                });
+        userRepository.findByUsernameIgnoreCase(username).filter(existing -> !existing.getId().equals(userId))
+            .ifPresent(existing -> {
+                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "用户名已存在");
+            });
 
         user.setUsername(username);
         if (StrUtil.isNotBlank(request.password())) {
@@ -122,11 +114,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Override
     @Transactional
     public void updateUserStatus(long operatorId, long userId, UserStatusDTO request) {
-        BusinessAssert.isFalse(
-                operatorId == userId && !request.enabled(),
-                CommonErrorCode.PARAM_INVALID,
-                "不能禁用当前登录账号"
-        );
+        BusinessAssert.isFalse(operatorId == userId && !request.enabled(), CommonErrorCode.PARAM_INVALID, "不能禁用当前登录账号");
         SysUser operator = hierarchyService.operator(operatorId);
         SysUser user = user(userId);
         hierarchyService.checkCanManageUser(operator, user);
@@ -135,12 +123,8 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         if (!request.enabled()) {
             StpUtil.getStpLogic().logout(userId);
         }
-        auditService.record(
-                request.enabled() ? "USER_ENABLE" : "USER_DISABLE",
-                "USER",
-                userId,
-                request.enabled() ? "启用用户" : "禁用用户"
-        );
+        auditService.record(request.enabled() ? "USER_ENABLE" : "USER_DISABLE", "USER", userId,
+            request.enabled() ? "启用用户" : "禁用用户");
     }
 
     @Override
@@ -165,7 +149,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         hierarchyService.checkRequestedLevel(operator, authorityLevel);
         String code = request.roleCode().trim();
         if (roleRepository.existsByCodeIgnoreCase(code)) {
-            throw new BusinessException(409, "角色编码已存在");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "角色编码已存在");
         }
         SysRole role = new SysRole();
         applyRole(role, request, authorityLevel);
@@ -183,11 +167,9 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         int authorityLevel = requestedAuthorityLevel(request, role.getAuthorityLevel());
         hierarchyService.checkRequestedLevel(operator, authorityLevel);
         String code = request.roleCode().trim();
-        roleRepository.findByCode(code)
-                .filter(existing -> !existing.getId().equals(roleId))
-                .ifPresent(existing -> {
-                    throw new BusinessException(409, "角色编码已存在");
-                });
+        roleRepository.findByCode(code).filter(existing -> !existing.getId().equals(roleId)).ifPresent(existing -> {
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "角色编码已存在");
+        });
         applyRole(role, request, authorityLevel);
         roleRepository.save(role);
         auditService.record("ROLE_UPDATE", "ROLE", roleId, "修改角色 " + code);
@@ -200,10 +182,10 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         SysRole role = role(roleId);
         hierarchyService.checkCanManageRole(operator, role);
         if ("R_SUPER".equals(role.getCode())) {
-            throw new BusinessException(400, "超级管理员角色不能删除");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "超级管理员角色不能删除");
         }
         if (!userRepository.findAllByRoles_Id(roleId).isEmpty()) {
-            throw new BusinessException(409, "角色仍被用户使用，不能删除");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "角色仍被用户使用，不能删除");
         }
         roleRepository.delete(role);
         auditService.record("ROLE_DELETE", "ROLE", roleId, "删除角色 " + role.getCode());
@@ -212,14 +194,11 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Override
     public RoleGrantDTO roleGrants(long operatorId, long roleId) {
         SysUser operator = hierarchyService.operator(operatorId);
-        SysRole role = roleRepository.findWithGrantsById(roleId)
-                .orElseThrow(() -> new DataNotFoundException("角色不存在"));
+        SysRole role = roleRepository.findWithGrantsById(roleId).orElseThrow(() -> new DataNotFoundException("角色不存在"));
         hierarchyService.checkCanManageRole(operator, role);
-        return new RoleGrantDTO(
-                queryService.allMenus(),
-                role.getMenus().stream().map(SysMenu::getId).collect(Collectors.toSet()),
-                role.getPermissions().stream().map(SysPermission::getId).collect(Collectors.toSet())
-        );
+        return new RoleGrantDTO(queryService.allMenus(),
+            role.getMenus().stream().map(SysMenu::getId).collect(Collectors.toSet()),
+            role.getPermissions().stream().map(SysPermission::getId).collect(Collectors.toSet()));
     }
 
     @Override
@@ -229,11 +208,8 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         SysRole role = role(roleId);
         hierarchyService.checkCanManageRole(operator, role);
         Set<SysMenu> menus = loadAll(menuRepository.findAllById(request.menuIds()), request.menuIds(), "菜单");
-        Set<SysPermission> permissions = loadAll(
-                permissionRepository.findAllById(request.permissionIds()),
-                request.permissionIds(),
-                "权限"
-        );
+        Set<SysPermission> permissions =
+            loadAll(permissionRepository.findAllById(request.permissionIds()), request.permissionIds(), "权限");
         hierarchyService.checkCanAssignMenus(operator, menus);
         hierarchyService.checkCanAssignPermissions(operator, permissions);
         role.getMenus().clear();
@@ -241,19 +217,15 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         role.getPermissions().clear();
         role.getPermissions().addAll(permissions);
         roleRepository.save(role);
-        auditService.record(
-                "ROLE_GRANT_ASSIGN",
-                "ROLE",
-                roleId,
-                "分配菜单 " + request.menuIds() + "，权限 " + request.permissionIds()
-        );
+        auditService.record("ROLE_GRANT_ASSIGN", "ROLE", roleId,
+            "分配菜单 " + request.menuIds() + "，权限 " + request.permissionIds());
     }
 
     @Override
     @Transactional
     public long createMenu(MenuSaveDTO request) {
         if (menuRepository.existsByNameIgnoreCase(request.name().trim())) {
-            throw new BusinessException(409, "菜单标识已存在");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "菜单标识已存在");
         }
         validateParent(request.parentId(), null);
         SysMenu menu = new SysMenu();
@@ -267,11 +239,10 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Transactional
     public void updateMenu(long menuId, MenuSaveDTO request) {
         SysMenu menu = menu(menuId);
-        menuRepository.findByName(request.name().trim())
-                .filter(existing -> !existing.getId().equals(menuId))
-                .ifPresent(existing -> {
-                    throw new BusinessException(409, "菜单标识已存在");
-                });
+        menuRepository.findByName(request.name().trim()).filter(existing -> !existing.getId().equals(menuId))
+            .ifPresent(existing -> {
+                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "菜单标识已存在");
+            });
         validateParent(request.parentId(), menuId);
         applyMenu(menu, request);
         menuRepository.save(menu);
@@ -283,10 +254,10 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     public void deleteMenu(long menuId) {
         SysMenu menu = menu(menuId);
         if (menuRepository.existsByParentId(menuId)) {
-            throw new BusinessException(409, "请先删除子菜单");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "请先删除子菜单");
         }
         if (permissionRepository.existsByMenuId(menuId)) {
-            throw new BusinessException(409, "请先删除菜单下的按钮权限");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "请先删除菜单下的按钮权限");
         }
         List<SysRole> roles = roleRepository.findAll();
         roles.forEach(role -> role.getMenus().removeIf(item -> item.getId().equals(menuId)));
@@ -299,18 +270,13 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Transactional
     public long createPermission(PermissionSaveDTO request) {
         if (permissionRepository.existsByCodeIgnoreCase(request.code().trim())) {
-            throw new BusinessException(409, "权限标识已存在");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "权限标识已存在");
         }
         menu(request.menuId());
         SysPermission permission = new SysPermission();
         applyPermission(permission, request);
         permissionRepository.save(permission);
-        auditService.record(
-                "PERMISSION_CREATE",
-                "PERMISSION",
-                permission.getId(),
-                "创建权限 " + permission.getCode()
-        );
+        auditService.record("PERMISSION_CREATE", "PERMISSION", permission.getId(), "创建权限 " + permission.getCode());
         return permission.getId();
     }
 
@@ -319,19 +285,13 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     public void updatePermission(long permissionId, PermissionSaveDTO request) {
         SysPermission permission = permission(permissionId);
         permissionRepository.findByCode(request.code().trim())
-                .filter(existing -> !existing.getId().equals(permissionId))
-                .ifPresent(existing -> {
-                    throw new BusinessException(409, "权限标识已存在");
-                });
+            .filter(existing -> !existing.getId().equals(permissionId)).ifPresent(existing -> {
+                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "权限标识已存在");
+            });
         menu(request.menuId());
         applyPermission(permission, request);
         permissionRepository.save(permission);
-        auditService.record(
-                "PERMISSION_UPDATE",
-                "PERMISSION",
-                permissionId,
-                "修改权限 " + permission.getCode()
-        );
+        auditService.record("PERMISSION_UPDATE", "PERMISSION", permissionId, "修改权限 " + permission.getCode());
     }
 
     @Override
@@ -342,12 +302,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         roles.forEach(role -> role.getPermissions().removeIf(item -> item.getId().equals(permissionId)));
         roleRepository.saveAll(roles);
         permissionRepository.delete(permission);
-        auditService.record(
-                "PERMISSION_DELETE",
-                "PERMISSION",
-                permissionId,
-                "删除权限 " + permission.getCode()
-        );
+        auditService.record("PERMISSION_DELETE", "PERMISSION", permissionId, "删除权限 " + permission.getCode());
     }
 
     private void applyUser(SysUser user, UserSaveDTO request) {
@@ -399,23 +354,19 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         if (CollUtil.isEmpty(roleCodes)) {
             return new LinkedHashSet<>();
         }
-        Set<String> codes = roleCodes.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(code -> !code.isEmpty())
-                .collect(Collectors.toSet());
-        Set<SysRole> roles = roleRepository.findAll().stream()
-                .filter(role -> codes.contains(role.getCode()))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<String> codes = roleCodes.stream().filter(Objects::nonNull).map(String::trim)
+            .filter(code -> !code.isEmpty()).collect(Collectors.toSet());
+        Set<SysRole> roles = roleRepository.findAll().stream().filter(role -> codes.contains(role.getCode()))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
         if (roles.size() != codes.size()) {
-            throw new BusinessException(400, "包含不存在的角色编码");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "包含不存在的角色编码");
         }
         return roles;
     }
 
     private <T> Set<T> loadAll(List<T> values, Set<Long> ids, String type) {
         if (values.size() != new HashSet<>(ids).size()) {
-            throw new BusinessException(400, type + "列表包含不存在的数据");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, type + "列表包含不存在的数据");
         }
         return new LinkedHashSet<>(values);
     }
@@ -425,36 +376,32 @@ public class RbacManagementServiceImpl implements RbacManagementService {
             return;
         }
         if (Objects.equals(parentId, menuId)) {
-            throw new BusinessException(400, "菜单不能将自己设为父级");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "菜单不能将自己设为父级");
         }
         SysMenu parent = menu(parentId);
         Set<Long> visited = new HashSet<>();
         while (ObjectUtil.isNotNull(parent.getParentId())) {
             if (!visited.add(parent.getId()) || Objects.equals(parent.getParentId(), menuId)) {
-                throw new BusinessException(400, "菜单父级关系不能形成循环");
+                throw new BusinessException(CommonErrorCode.PARAM_INVALID, "菜单父级关系不能形成循环");
             }
             parent = menu(parent.getParentId());
         }
     }
 
     private SysUser user(long id) {
-        return userRepository.findWithAuthoritiesById(id)
-                .orElseThrow(() -> new DataNotFoundException("用户不存在"));
+        return userRepository.findWithAuthoritiesById(id).orElseThrow(() -> new DataNotFoundException("用户不存在"));
     }
 
     private SysRole role(long id) {
-        return roleRepository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("角色不存在"));
+        return roleRepository.findById(id).orElseThrow(() -> new DataNotFoundException("角色不存在"));
     }
 
     private SysMenu menu(long id) {
-        return menuRepository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("菜单不存在"));
+        return menuRepository.findById(id).orElseThrow(() -> new DataNotFoundException("菜单不存在"));
     }
 
     private SysPermission permission(long id) {
-        return permissionRepository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("权限不存在"));
+        return permissionRepository.findById(id).orElseThrow(() -> new DataNotFoundException("权限不存在"));
     }
 
     private String trimToNull(String value) {

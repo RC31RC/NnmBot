@@ -23,20 +23,8 @@ import java.time.Duration;
  * @param gatewayConnectTimeout QQ 官方机器人连接超时
  * @param reconnectDelay QQ 官方机器人重连延迟
  */
-public record BotChannelInstanceRecord(
-        BotPlatform platform,
-        String instanceId,
-        String botAccountId,
-        boolean enabled,
-        String connectionUrl,
-        String accessToken,
-        String appId,
-        String clientSecret,
-        String tokenUrl,
-        String apiBaseUrl,
-        String gatewayUrl,
-        Duration reconnectInterval,
-        long intents,
-        Duration gatewayConnectTimeout,
-        Duration reconnectDelay) {
+public record BotChannelInstanceRecord(BotPlatform platform, String instanceId, String botAccountId, boolean enabled,
+    String connectionUrl, String accessToken, String appId, String clientSecret, String tokenUrl, String apiBaseUrl,
+    String gatewayUrl, Duration reconnectInterval, long intents, Duration gatewayConnectTimeout,
+    Duration reconnectDelay) {
 }

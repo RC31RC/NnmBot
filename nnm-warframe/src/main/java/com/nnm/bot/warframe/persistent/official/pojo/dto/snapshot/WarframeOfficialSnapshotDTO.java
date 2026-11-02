@@ -8,10 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 
-public record WarframeOfficialSnapshotDTO(
-        WarframeOfficialVersionDTO version,
-        WarframeOfficialManifest manifest,
-        Path directory) implements AutoCloseable {
+public record WarframeOfficialSnapshotDTO(WarframeOfficialVersionDTO version, WarframeOfficialManifest manifest,
+    Path directory) implements AutoCloseable {
 
     /**
      * 释放当前组件持有的资源。

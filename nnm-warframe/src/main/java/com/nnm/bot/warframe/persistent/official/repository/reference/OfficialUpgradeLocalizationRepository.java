@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.reference.OfficialUp
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** reference/upgrade-localizations.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** reference/upgrade-localizations.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialUpgradeLocalizationRepository extends OfficialMainRepository<OfficialUpgradeLocalizationRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

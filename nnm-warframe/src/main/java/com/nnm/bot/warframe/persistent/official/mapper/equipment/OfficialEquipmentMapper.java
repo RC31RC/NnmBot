@@ -39,18 +39,30 @@ public class OfficialEquipmentMapper {
      */
     private WarframeEquipmentVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialWarframeDTO value) {
         List<WarframeEquipmentVO.MetricVO> metrics = new ArrayList<>();
-        if (value.getHealth() != null) metrics.add(new WarframeEquipmentVO.MetricVO("生命", value.getHealth()));
-        if (value.getShield() != null) metrics.add(new WarframeEquipmentVO.MetricVO("护盾", value.getShield()));
-        if (value.getArmor() != null) metrics.add(new WarframeEquipmentVO.MetricVO("护甲", value.getArmor()));
-        if (value.getPower() != null) metrics.add(new WarframeEquipmentVO.MetricVO("能量", value.getPower()));
-        if (value.getSprintSpeed() != null) metrics.add(new WarframeEquipmentVO.MetricVO("冲刺", value.getSprintSpeed()));
-        if (value.getMasteryReq() != null) metrics.add(new WarframeEquipmentVO.MetricVO("段位", value.getMasteryReq()));
+        if (value.getHealth() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("生命", value.getHealth()));
+        if (value.getShield() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("护盾", value.getShield()));
+        if (value.getArmor() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("护甲", value.getArmor()));
+        if (value.getPower() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("能量", value.getPower()));
+        if (value.getSprintSpeed() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("冲刺", value.getSprintSpeed()));
+        if (value.getMasteryReq() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("段位", value.getMasteryReq()));
         List<WarframeEquipmentVO.AbilityVO> abilities = new ArrayList<>();
         int order = 1;
         for (var child : values(value.getAbilities())) {
-            abilities.add(new WarframeEquipmentVO.AbilityVO(order++, first(child.getAbilityUniqueName(), child.getUniqueName(), child.getRecordKey()), first(child.getAbilityNameZh(), child.getNameZh(), child.getNameEn(), child.getAbilityName(), child.getName()), description(child), decimal(child.getEnergyRequiredToActivate()), first(child.getIcon()), first(child.getAbilityIconUrl(), child.getIconUrl()), OFFICIAL_SOURCE_CODE));
+            abilities.add(new WarframeEquipmentVO.AbilityVO(order++,
+                first(child.getAbilityUniqueName(), child.getUniqueName(), child.getRecordKey()),
+                first(child.getAbilityNameZh(), child.getNameZh(), child.getNameEn(), child.getAbilityName(),
+                    child.getName()),
+                description(child), decimal(child.getEnergyRequiredToActivate()), first(child.getIcon()),
+                first(child.getAbilityIconUrl(), child.getIconUrl()), OFFICIAL_SOURCE_CODE));
         }
-        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
+        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()),
+            first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
     }
 
     /**
@@ -62,10 +74,13 @@ public class OfficialEquipmentMapper {
      */
     private WarframeEquipmentVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialWeaponDTO value) {
         List<WarframeEquipmentVO.MetricVO> metrics = new ArrayList<>();
-        if (value.getMasteryReq() != null) metrics.add(new WarframeEquipmentVO.MetricVO("段位", value.getMasteryReq()));
-        if (value.getTotalDamage() != null) metrics.add(new WarframeEquipmentVO.MetricVO("总伤害", value.getTotalDamage()));
+        if (value.getMasteryReq() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("段位", value.getMasteryReq()));
+        if (value.getTotalDamage() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("总伤害", value.getTotalDamage()));
         List<WarframeEquipmentVO.AbilityVO> abilities = new ArrayList<>();
-        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
+        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()),
+            first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
     }
 
     /**
@@ -77,18 +92,30 @@ public class OfficialEquipmentMapper {
      */
     private WarframeEquipmentVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialArchwingDTO value) {
         List<WarframeEquipmentVO.MetricVO> metrics = new ArrayList<>();
-        if (value.getHealth() != null) metrics.add(new WarframeEquipmentVO.MetricVO("生命", value.getHealth()));
-        if (value.getShield() != null) metrics.add(new WarframeEquipmentVO.MetricVO("护盾", value.getShield()));
-        if (value.getArmor() != null) metrics.add(new WarframeEquipmentVO.MetricVO("护甲", value.getArmor()));
-        if (value.getPower() != null) metrics.add(new WarframeEquipmentVO.MetricVO("能量", value.getPower()));
-        if (value.getSprintSpeed() != null) metrics.add(new WarframeEquipmentVO.MetricVO("冲刺", value.getSprintSpeed()));
-        if (value.getMasteryReq() != null) metrics.add(new WarframeEquipmentVO.MetricVO("段位", value.getMasteryReq()));
+        if (value.getHealth() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("生命", value.getHealth()));
+        if (value.getShield() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("护盾", value.getShield()));
+        if (value.getArmor() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("护甲", value.getArmor()));
+        if (value.getPower() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("能量", value.getPower()));
+        if (value.getSprintSpeed() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("冲刺", value.getSprintSpeed()));
+        if (value.getMasteryReq() != null)
+            metrics.add(new WarframeEquipmentVO.MetricVO("段位", value.getMasteryReq()));
         List<WarframeEquipmentVO.AbilityVO> abilities = new ArrayList<>();
         int order = 1;
         for (var child : values(value.getAbilities())) {
-            abilities.add(new WarframeEquipmentVO.AbilityVO(order++, first(child.getAbilityUniqueName(), child.getUniqueName(), child.getRecordKey()), first(child.getAbilityNameZh(), child.getNameZh(), child.getNameEn(), child.getAbilityName(), child.getName()), description(child), decimal(child.getEnergyRequiredToActivate()), first(child.getIcon()), first(child.getAbilityIconUrl(), child.getIconUrl()), OFFICIAL_SOURCE_CODE));
+            abilities.add(new WarframeEquipmentVO.AbilityVO(order++,
+                first(child.getAbilityUniqueName(), child.getUniqueName(), child.getRecordKey()),
+                first(child.getAbilityNameZh(), child.getNameZh(), child.getNameEn(), child.getAbilityName(),
+                    child.getName()),
+                description(child), decimal(child.getEnergyRequiredToActivate()), first(child.getIcon()),
+                first(child.getAbilityIconUrl(), child.getIconUrl()), OFFICIAL_SOURCE_CODE));
         }
-        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
+        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()),
+            first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
     }
 
     /**
@@ -101,6 +128,7 @@ public class OfficialEquipmentMapper {
     private WarframeEquipmentVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialAbilityDTO value) {
         List<WarframeEquipmentVO.MetricVO> metrics = new ArrayList<>();
         List<WarframeEquipmentVO.AbilityVO> abilities = new ArrayList<>();
-        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
+        return new WarframeEquipmentVO.EntryVO(row.bkey(), name(row), description(value), first(value.getIcon()),
+            first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", metrics, abilities);
     }
 }

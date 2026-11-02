@@ -31,13 +31,14 @@ public class WarframeOfficialDetailServiceImpl implements WarframeOfficialDetail
      * 同步当前记录及其所属详情数据。
      *
      * @param records 待批量处理的业务记录。
+     * @param inputs 按主键索引的类型化输入。
      * @param disabledRecordIds 已停用记录标识集合。
      */
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public void synchronize(List<OfficialRecord> records, Collection<Long> disabledRecordIds) {
-        rootRepository.synchronizeTables(records == null ? List.of() : records,
-                disabledRecordIds == null ? List.of() : disabledRecordIds);
+    public void synchronize(List<OfficialRecord> records, Map<Long, OfficialRecordDTO> inputs,
+        Collection<Long> disabledRecordIds) {
+        rootRepository.synchronizeTables(records, inputs, disabledRecordIds);
     }
 
     /**
@@ -48,16 +49,19 @@ public class WarframeOfficialDetailServiceImpl implements WarframeOfficialDetail
      * @return 以本方法约定的业务键组织的数据映射。
      */
     @Override
-    public Map<Long, Map<String, Object>> loadAttributes(WarframeOfficialDataDomain domain, Collection<Long> recordIds) {
-        if (CollUtil.isEmpty(recordIds)) return Map.of();
-        Map<String, List<Long>> groups = domain == null
-                ? rootRepository.findDataByIds(recordIds).stream().collect(Collectors.groupingBy(
-                        WarframeOfficialRecordDTO::getDomainCode, Collectors.mapping(
-                                WarframeOfficialRecordDTO::getId, Collectors.toList())))
+    public Map<Long, Map<String, Object>> loadAttributes(WarframeOfficialDataDomain domain,
+        Collection<Long> recordIds) {
+        if (CollUtil.isEmpty(recordIds))
+            return Map.of();
+        Map<String,
+            List<Long>> groups = domain == null
+                ? rootRepository.findDataByIds(recordIds).stream()
+                    .collect(Collectors.groupingBy(WarframeOfficialRecordDTO::getDomainCode,
+                        Collectors.mapping(WarframeOfficialRecordDTO::getId, Collectors.toList())))
                 : Map.of(domain.domainCode(), List.copyOf(recordIds));
         Map<Long, Map<String, Object>> result = new LinkedHashMap<>();
-        groups.forEach((code, ids) -> rootRepository.loadDetails(code, ids).forEach((id, value) ->
-                result.put(id, attributes(value))));
+        groups.forEach((code, ids) -> rootRepository.loadDetails(code, ids)
+            .forEach((id, value) -> result.put(id, attributes(value))));
         return result;
     }
 
@@ -68,6 +72,6 @@ public class WarframeOfficialDetailServiceImpl implements WarframeOfficialDetail
      * @return 以本方法约定的业务键组织的数据映射。
      */
     private Map<String, Object> attributes(OfficialRecordDTO value) {
-        return objectMapper.convertValue(value, new TypeReference<LinkedHashMap<String, Object>>() { });
+        return objectMapper.convertValue(value, new TypeReference<LinkedHashMap<String, Object>>() {});
     }
 }

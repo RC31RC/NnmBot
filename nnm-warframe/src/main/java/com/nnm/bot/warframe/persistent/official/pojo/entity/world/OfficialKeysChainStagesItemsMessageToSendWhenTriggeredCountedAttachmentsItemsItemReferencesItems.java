@@ -12,12 +12,16 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 KEYS chainStages/items/messageToSendWhenTriggered__countedAttachments/items/itemReferences/items 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 源 KEYS chainStages/items/messageToSendWhenTriggered__countedAttachments/items/itemReferences/items
+ * 的固定业务列；由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity
 @Table(name = "wf_official_keys_chainstages_items_messagetosendwhen_5ec60f729f")
-public class OfficialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsItemReferencesItems extends OfficialChildRow {
+public class OfficialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsItemReferencesItems
+    extends OfficialChildRow {
     /** 本表记录是否缺失、为空或属于特定 JSON 类型。 */
     @Column(name = "root_state")
     private Short rootState;

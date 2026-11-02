@@ -18,10 +18,9 @@ public class OneBotMessageArrivalStore {
 
     @PostConstruct
     public void initialize() {
-        arrivals = new Cache2kBuilder<Key, Long>() { }
-                .name("nnm-onebot-arrivals-" + UUID.randomUUID())
-                .entryCapacity(properties.replayCapacity()).strictEviction(true)
-                .expireAfterWrite(properties.replayRetention()).build();
+        arrivals = new Cache2kBuilder<Key, Long>() {}.name("nnm-onebot-arrivals-" + UUID.randomUUID())
+            .entryCapacity(properties.replayCapacity()).strictEviction(true)
+            .expireAfterWrite(properties.replayRetention()).build();
     }
 
     public void record(String sessionId, String accountId, String messageId, long receivedAt) {
@@ -41,5 +40,6 @@ public class OneBotMessageArrivalStore {
         arrivals.close();
     }
 
-    private record Key(String sessionId, String accountId, String messageId) { }
+    private record Key(String sessionId, String accountId, String messageId) {
+    }
 }

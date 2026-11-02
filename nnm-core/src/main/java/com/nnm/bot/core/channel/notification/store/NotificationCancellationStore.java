@@ -15,7 +15,8 @@ public class NotificationCancellationStore {
 
     public void cancel(UUID submissionId, Instant expiresAt) {
         Duration ttl = Duration.between(Instant.now(), expiresAt).plusMinutes(1);
-        states.put("notification-cancel:" + submissionId, true, ttl.isNegative() || ttl.isZero() ? Duration.ofMinutes(1) : ttl);
+        states.put("notification-cancel:" + submissionId, true,
+            ttl.isNegative() || ttl.isZero() ? Duration.ofMinutes(1) : ttl);
     }
 
     public boolean cancelled(UUID submissionId) {

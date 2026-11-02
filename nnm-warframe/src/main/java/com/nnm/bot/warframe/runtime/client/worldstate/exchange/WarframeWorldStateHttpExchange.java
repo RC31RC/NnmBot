@@ -17,7 +17,5 @@ public interface WarframeWorldStateHttpExchange {
      * @return 响应实体对象。
      */
     @GetExchange
-    ResponseEntity<String> fetch(
-            @RequestHeader("Accept-Language")
-            String language);
+    ResponseEntity<String> fetch(@RequestHeader("Accept-Language") String language);
 }

@@ -18,9 +18,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-@BotPluginCommand(code = WarframeCommandCodes.VENDOR_DEFINITIONS, matchType = MatchType.PREFIX,
-        name = "商人静态定义", gameCode = "warframe", order = 108)
-public final class VendorDefinitionsPlugin extends BotPlugin {
+@BotPluginCommand(code = WarframeCommandCodes.VENDOR_DEFINITIONS, matchType = MatchType.PREFIX, name = "商人静态定义",
+    gameCode = "warframe", order = 108)
+public final class VendorDefinitionsPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -41,10 +41,11 @@ public final class VendorDefinitionsPlugin extends BotPlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         String arguments = invocation.arguments() == null ? "" : invocation.arguments().trim();
         VendorSection section = VendorSection.ITEMS;
         int page = 1;
@@ -55,7 +56,8 @@ public final class VendorDefinitionsPlugin extends BotPlugin {
         while (matcher.find()) {
             keyword.append(arguments, start, matcher.start()).append(' ');
             start = matcher.end();
-            if (!seen.add(matcher.group(1))) return CommandResult.rejected("商人静态定义参数重复");
+            if (!seen.add(matcher.group(1)))
+                return CommandResult.rejected("商人静态定义参数重复");
             if ("section".equals(matcher.group(1))) {
                 try {
                     section = VendorSection.valueOf(matcher.group(2).replace('-', '_').toUpperCase(Locale.ROOT));
@@ -63,18 +65,22 @@ public final class VendorDefinitionsPlugin extends BotPlugin {
                     return CommandResult.rejected("分区必须为 items 或 random-prices");
                 }
             } else {
-                if (!matcher.group(2).matches("[0-9]+")) return CommandResult.rejected("页码必须为正整数");
+                if (!matcher.group(2).matches("[0-9]+"))
+                    return CommandResult.rejected("页码必须为正整数");
                 try {
                     page = Integer.parseInt(matcher.group(2));
                 } catch (NumberFormatException exception) {
                     page = Integer.MAX_VALUE;
                 }
-                if (page < 1) return CommandResult.rejected("页码必须为正整数");
+                if (page < 1)
+                    return CommandResult.rejected("页码必须为正整数");
             }
         }
         String query = keyword.append(arguments.substring(start)).toString().trim().replaceAll("\\s+", " ");
-        if (UNKNOWN.matcher(query).find()) return CommandResult.rejected("商人静态定义参数不合法");
-        if (query.length() > 500) return CommandResult.rejected("查询内容过长，请缩短到 500 字以内");
+        if (UNKNOWN.matcher(query).find())
+            return CommandResult.rejected("商人静态定义参数不合法");
+        if (query.length() > 500)
+            return CommandResult.rejected("查询内容过长，请缩短到 500 字以内");
         WarframeVendorDefinitionVO display = definitionService.query(query, section, page);
         return CommandResult.view("warframe.vendor-definitions", display.text(), display);
     }

@@ -22,8 +22,7 @@ import java.security.cert.X509Certificate;
 /**
  * 全局 {@link RestClient} 配置。
  * <p>
- * 底层基于 Java 21 {@link HttpClient} + {@link JdkClientHttpRequestFactory}，连接/读取超时可配。
- * 默认执行标准 SSL 证书校验。确需排查本地代理证书问题时，可临时启用
+ * 底层基于 Java 21 {@link HttpClient} + {@link JdkClientHttpRequestFactory}，连接/读取超时可配。 默认执行标准 SSL 证书校验。确需排查本地代理证书问题时，可临时启用
  * {@code nnm.http.trust-all-certs}。
  * </p>
  */
@@ -35,21 +34,21 @@ public class RestClientConfig {
     @Resource
     private HttpClientProperties properties;
 
+    /** 提供直读 HTTP 原始响应的共享客户端；其他接口仍使用现有 RestClient 链路。 */
+    @Bean("nnmRawHttpClient")
+    public HttpClient nnmRawHttpClient() {
+        properties.validate();
+        Builder builder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_2)
+            .connectTimeout(properties.getConnectTimeout()).followRedirects(HttpClient.Redirect.NORMAL);
+        if (properties.isTrustAllCerts())
+            builder.sslContext(createTrustAllSslContext());
+        return builder.build();
+    }
+
     @Bean
     @ConditionalOnMissingBean(ClientHttpRequestFactory.class)
     public ClientHttpRequestFactory nnmClientHttpRequestFactory() {
-        properties.validate();
-        Builder httpClientBuilder = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_2)
-                .connectTimeout(properties.getConnectTimeout())
-                .followRedirects(HttpClient.Redirect.NORMAL);
-
-        if (properties.isTrustAllCerts()) {
-            httpClientBuilder.sslContext(createTrustAllSslContext());
-        }
-
-        JdkClientHttpRequestFactory requestFactory =
-                new JdkClientHttpRequestFactory(httpClientBuilder.build());
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(nnmRawHttpClient());
         requestFactory.setReadTimeout(properties.getReadTimeout());
         return requestFactory;
     }
@@ -59,10 +58,8 @@ public class RestClientConfig {
     public RestClient restClient(ClientHttpRequestFactory requestFactory) {
         properties.validate();
 
-        return RestClient.builder()
-                .requestFactory(requestFactory)
-                .requestInterceptor(new ResponseSizeLimitInterceptor(properties))
-                .build();
+        return RestClient.builder().requestFactory(requestFactory)
+            .requestInterceptor(new ResponseSizeLimitInterceptor(properties)).build();
     }
 
     /**
@@ -70,19 +67,15 @@ public class RestClientConfig {
      */
     private SSLContext createTrustAllSslContext() {
         try {
-            TrustManager[] trustAll = new TrustManager[]{
-                    new X509TrustManager() {
-                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
-                        }
+            TrustManager[] trustAll = new TrustManager[] {new X509TrustManager() {
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
 
-                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                        }
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
 
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[0];
-                        }
-                    }
-            };
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+            }};
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, trustAll, new SecureRandom());
             return sslContext;

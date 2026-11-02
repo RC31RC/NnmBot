@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1")
+@RequestMapping("/api/admin")
 public class SystemMonitorController {
 
     @Resource
@@ -33,30 +33,20 @@ public class SystemMonitorController {
 
     @PostMapping("/operation-logs/query")
     @SaCheckPermission("system:audit:view")
-    public ApiResponse<PageResult<OperationLogVO>> operationLogs(
-            @RequestBody
-            OperationLogQuery request
-    ) {
-        return ApiResponse.ok(AdminSystemViewAssembler.toOperationLogVO(auditService.logs(
-                request.operatorName(),
-                request.current() == null ? 1 : request.current(),
-                request.size() == null ? 20 : request.size()
-        )));
+    public ApiResponse<PageResult<OperationLogVO>> operationLogs(@RequestBody OperationLogQuery request) {
+        return ApiResponse.ok(AdminSystemViewAssembler.toOperationLogVO(auditService.logs(request.operatorName(),
+            request.current() == null ? 1 : request.current(), request.size() == null ? 20 : request.size())));
     }
 
     @PostMapping("/sessions/query")
     @SaCheckPermission("system:session:view")
-    public ApiResponse<List<SessionVO>> sessions(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<SessionVO>> sessions(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toSessionVO(onlineSessionService.sessions()));
     }
 
     @DeleteMapping("/sessions/{token}")
     @SaCheckPermission("system:session:kickout")
-    public ApiResponse<Void> kickout(
-            @PathVariable
-            String token) {
+    public ApiResponse<Void> kickout(@PathVariable String token) {
         onlineSessionService.kickout(token);
         return ApiResponse.ok();
     }

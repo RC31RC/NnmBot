@@ -30,8 +30,10 @@ public class WarframeCommunityCatalogServiceImpl implements WarframeCommunityCat
      */
     @Override
     public List<WarframeCommunityRecordDTO<AliasDTO>> aliases() {
-        return aliases.findAllProjectedByOrderByRecordKeyAsc().stream().map(row -> new WarframeCommunityRecordDTO<>(row.getId(),
-                row.getRecordKey(), new AliasDTO(row.getAliasName(), row.getTargetName()))).toList();
+        return aliases.findAllProjectedByOrderByRecordKeyAsc().stream()
+            .map(row -> new WarframeCommunityRecordDTO<>(row.getId(), row.getRecordKey(),
+                new AliasDTO(row.getAliasName(), row.getTargetName())))
+            .toList();
     }
 
     /**
@@ -41,8 +43,10 @@ public class WarframeCommunityCatalogServiceImpl implements WarframeCommunityCat
      */
     @Override
     public List<WarframeCommunityRecordDTO<TermDTO>> terms() {
-        return terms.findAllProjectedByOrderByRecordKeyAsc().stream().map(row -> new WarframeCommunityRecordDTO<>(row.getId(),
-                row.getRecordKey(), new TermDTO(row.getTermGroup(), row.getEnglishText(), row.getChineseText()))).toList();
+        return terms
+            .findAllProjectedByOrderByRecordKeyAsc().stream().map(row -> new WarframeCommunityRecordDTO<>(row.getId(),
+                row.getRecordKey(), new TermDTO(row.getTermGroup(), row.getEnglishText(), row.getChineseText())))
+            .toList();
     }
 
     /**
@@ -52,8 +56,10 @@ public class WarframeCommunityCatalogServiceImpl implements WarframeCommunityCat
      */
     @Override
     public List<WarframeCommunityRecordDTO<EssenceDTO>> arbitrationEssences() {
-        return essence.findAllProjectedByOrderByRecordKeyAsc().stream().map(row -> new WarframeCommunityRecordDTO<>(row.getId(),
-                row.getRecordKey(), new EssenceDTO(row.getNodeName(), row.getEssenceAmount()))).toList();
+        return essence.findAllProjectedByOrderByRecordKeyAsc().stream()
+            .map(row -> new WarframeCommunityRecordDTO<>(row.getId(), row.getRecordKey(),
+                new EssenceDTO(row.getNodeName(), row.getEssenceAmount())))
+            .toList();
     }
 
     /**
@@ -63,7 +69,9 @@ public class WarframeCommunityCatalogServiceImpl implements WarframeCommunityCat
      */
     @Override
     public List<WarframeCommunityRecordDTO<RivenAliasDTO>> rivenAliases() {
-        return rivenAliases.findAllProjectedByOrderByRecordKeyAsc().stream().map(row -> new WarframeCommunityRecordDTO<>(row.getId(),
-                row.getRecordKey(), new RivenAliasDTO(row.getAttributeCode(), row.getAliasName()))).toList();
+        return rivenAliases.findAllProjectedByOrderByRecordKeyAsc().stream()
+            .map(row -> new WarframeCommunityRecordDTO<>(row.getId(), row.getRecordKey(),
+                new RivenAliasDTO(row.getAttributeCode(), row.getAliasName())))
+            .toList();
     }
 }

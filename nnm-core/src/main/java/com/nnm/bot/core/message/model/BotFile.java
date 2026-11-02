@@ -46,8 +46,7 @@ public final class BotFile {
             throw new IllegalArgumentException("exactly one of content or path is required");
         }
         if (hasPath && (!Files.isRegularFile(path) || !Files.isReadable(path))) {
-            throw new IllegalArgumentException(
-                    "file path must be a readable regular file: " + path);
+            throw new IllegalArgumentException("file path must be a readable regular file: " + path);
         }
         this.fileName = fileName.trim();
         this.contentType = contentType.trim().toLowerCase();
@@ -83,15 +82,12 @@ public final class BotFile {
     }
 
     public InputStream openStream() throws IOException {
-        return this.pathBacked()
-                ? Files.newInputStream(this.path)
-                : new ByteArrayInputStream(this.content);
+        return this.pathBacked() ? Files.newInputStream(this.path) : new ByteArrayInputStream(this.content);
     }
 
     public byte[] readAllBytes(long maxBytes) throws IOException {
         if (maxBytes <= 0 || maxBytes >= Integer.MAX_VALUE) {
-            throw new IllegalArgumentException(
-                    "maxBytes must be between 1 and " + (Integer.MAX_VALUE - 1));
+            throw new IllegalArgumentException("maxBytes must be between 1 and " + (Integer.MAX_VALUE - 1));
         }
         long fileSize = this.size();
         if (fileSize > maxBytes) {
@@ -101,7 +97,7 @@ public final class BotFile {
             return Arrays.copyOf(this.content, this.content.length);
         }
         try (InputStream input = this.openStream()) {
-            byte[] bytes = input.readNBytes((int) maxBytes + 1);
+            byte[] bytes = input.readNBytes((int)maxBytes + 1);
             if (bytes.length > maxBytes) {
                 throw new FileSizeLimitExceededException(bytes.length, maxBytes);
             }

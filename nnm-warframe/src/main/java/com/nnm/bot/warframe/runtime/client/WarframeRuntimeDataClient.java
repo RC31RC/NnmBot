@@ -38,6 +38,7 @@ public class WarframeRuntimeDataClient {
 
     /**
      * 按配置顺序尝试同一数据源的候选端点，全部失败时抛出明确的业务异常。
+     *
      * @param sourceCode 来源代码。
      * @param candidates 候选集合。
      * @return 拉取时间文本对象。
@@ -48,29 +49,30 @@ public class WarframeRuntimeDataClient {
             URI url = candidates.get(index);
             long startedAt = System.nanoTime();
             try {
-                TextResult result = getText(url, Map.of(
-                        "Accept", "application/json, text/plain, application/javascript, */*"));
+                TextResult result =
+                    getText(url, Map.of("Accept", "application/json, text/plain, application/javascript, */*"));
                 String contentType = result.headers().getFirst("Content-Type");
-                log.info("Runtime source request completed, source={}, endpoint={}, attempt={}/{}, status={}, "
-                                + "contentType={}, bytes={}, chars={}, elapsedMs={}, error={}",
-                        sourceCode, safeEndpoint(url), index + 1, candidates.size(), result.statusCode(), contentType,
-                        result.bytes(), result.body() == null ? 0 : result.body().length(),
-                        Duration.ofNanos(System.nanoTime() - startedAt).toMillis(), failureMessage(result.error()));
+                log.info(
+                    "Runtime source request completed, source={}, endpoint={}, attempt={}/{}, status={}, "
+                        + "contentType={}, bytes={}, chars={}, elapsedMs={}, error={}",
+                    sourceCode, safeEndpoint(url), index + 1, candidates.size(), result.statusCode(), contentType,
+                    result.bytes(), result.body() == null ? 0 : result.body().length(),
+                    Duration.ofNanos(System.nanoTime() - startedAt).toMillis(), failureMessage(result.error()));
                 if (result.isSuccess() && StrUtil.isNotBlank(result.body())
-                        && (contentType == null || !contentType.toLowerCase(Locale.ROOT).contains("html"))) {
+                    && (contentType == null || !contentType.toLowerCase(Locale.ROOT).contains("html"))) {
                     return new FetchedText(url, result.body());
                 }
                 failures.add(safeEndpoint(url) + " -> HTTP " + result.statusCode()
-                        + (StrUtil.isBlank(contentType) ? "" : " " + contentType)
-                        + (result.error() == null ? "" : " " + failureMessage(result.error())));
+                    + (StrUtil.isBlank(contentType) ? "" : " " + contentType)
+                    + (result.error() == null ? "" : " " + failureMessage(result.error())));
             } catch (RuntimeException exception) {
                 failures.add(safeEndpoint(url) + " -> " + failureMessage(exception));
-                log.warn("Runtime source request failed, source={}, endpoint={}, attempt={}/{}, message={}",
-                        sourceCode, safeEndpoint(url), index + 1, candidates.size(), failureMessage(exception));
+                log.warn("Runtime source request failed, source={}, endpoint={}, attempt={}/{}, message={}", sourceCode,
+                    safeEndpoint(url), index + 1, candidates.size(), failureMessage(exception));
             }
         }
         throw new BusinessException(WarframeManagementErrorCode.EXTERNAL_DATA_SOURCE_UNAVAILABLE,
-                "Warframe 外部数据来源拉取失败：" + sourceCode + "；" + String.join("；", failures));
+            "Warframe 外部数据来源拉取失败：" + sourceCode + "；" + String.join("；", failures));
     }
 
     public record FetchedText(URI endpoint, String body) {
@@ -78,6 +80,7 @@ public class WarframeRuntimeDataClient {
 
     /**
      * 生成日志可用的端点文本，避免泄漏地址中的敏感查询参数。
+     *
      * @param uri 地址。
      * @return 已去除敏感查询参数的端点文本。
      */
@@ -87,17 +90,20 @@ public class WarframeRuntimeDataClient {
 
     /**
      * 提取异常信息用于汇总各候选端点失败原因。
+     *
      * @param exception 需要保留原因和字段定位的原始异常。
      * @return 异常提供的排障信息；没有异常时为空。
      */
     public static String failureMessage(Throwable exception) {
-        if (exception == null) return null;
-        return HttpDiagnostics.safeFailureMessage(StrUtil.blankToDefault(
-                exception.getMessage(), exception.getClass().getSimpleName()), null);
+        if (exception == null)
+            return null;
+        return HttpDiagnostics.safeFailureMessage(
+            StrUtil.blankToDefault(exception.getMessage(), exception.getClass().getSimpleName()), null);
     }
 
     /**
      * 按 UTF-8 恢复客户端返回的响应文本。
+     *
      * @param body 外部接口返回的响应正文。
      * @return 解码字符编码对应的文本。
      */

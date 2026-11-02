@@ -51,24 +51,25 @@ public class WarframeMarketDucatsServiceImpl implements WarframeMarketDucatsServ
      */
     @Override
     public Optional<WarframeDucatRankingVO> ranking(boolean gold, String keyword, int page) {
-        Optional<List<RawPeriod>> raw = cacheReader.get(WarframeCacheNames.MARKET_STATISTICS,
-                "ducats:" + properties.getPlatform(), this::download);
-        if (raw.isEmpty()) return Optional.empty();
+        Optional<List<RawPeriod>> raw =
+            cacheReader.get(WarframeCacheNames.MARKET_STATISTICS, "ducats:" + properties.getPlatform(), this::download);
+        if (raw.isEmpty())
+            return Optional.empty();
         Map<String, CatalogItem> catalog = catalog();
         List<PeriodVO> periods = new ArrayList<>();
         String filter = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         for (RawPeriod period : raw.get()) {
             List<ItemVO> items = period.rows().stream()
-                    .filter(row -> gold ? row.ducats() == 100 : row.ducats() >= 45 && row.ducats() < 100)
-                    .map(row -> localize(row, catalog))
-                    .filter(row -> StrUtil.isBlank(filter) || row.name().toLowerCase(Locale.ROOT).contains(filter)
-                            || row.slug().toLowerCase(Locale.ROOT).contains(filter))
-                    .sorted(Comparator.comparing(ItemVO::ducatsPerPlatinum).reversed().thenComparing(ItemVO::itemId))
-                    .limit(properties.getDucatsLimit()).skip((long) (Math.max(1, page) - 1) * 10).limit(10).toList();
+                .filter(row -> gold ? row.ducats() == 100 : row.ducats() >= 45 && row.ducats() < 100)
+                .map(row -> localize(row, catalog))
+                .filter(row -> StrUtil.isBlank(filter) || row.name().toLowerCase(Locale.ROOT).contains(filter)
+                    || row.slug().toLowerCase(Locale.ROOT).contains(filter))
+                .sorted(Comparator.comparing(ItemVO::ducatsPerPlatinum).reversed().thenComparing(ItemVO::itemId))
+                .limit(properties.getDucatsLimit()).skip((long)(Math.max(1, page) - 1) * 10).limit(10).toList();
             periods.add(new PeriodVO(period.name(), items));
         }
-        return Optional.of(new WarframeDucatRankingVO(periods, page,
-                "来源：Warframe Market 成交统计；按加权金币/铂金比值排序，成交均价不代表当前挂单价格。"));
+        return Optional
+            .of(new WarframeDucatRankingVO(periods, page, "来源：Warframe Market 成交统计；按加权金币/铂金比值排序，成交均价不代表当前挂单价格。"));
     }
 
     /**
@@ -78,16 +79,17 @@ public class WarframeMarketDucatsServiceImpl implements WarframeMarketDucatsServ
      */
     private Optional<List<RawPeriod>> download() {
         HttpResult response = client.fetchDucatsResult();
-        if (response == null || !response.isSuccess() || response.body() == null) return Optional.empty();
+        if (response == null || !response.isSuccess() || response.body() == null)
+            return Optional.empty();
         try {
-            MarketResponseRawData<Void> root = objectMapper.readValue(response.body(), objectMapper.getTypeFactory()
-                    .constructParametricType(MarketResponseRawData.class, Void.class));
+            MarketResponseRawData<Void> root = objectMapper.readValue(response.body(),
+                objectMapper.getTypeFactory().constructParametricType(MarketResponseRawData.class, Void.class));
             var payload = root.getPayload();
             if (payload == null || payload.getPreviousHour() == null || payload.getPreviousDay() == null) {
                 throw new IllegalStateException("杜卡德统计缺少小时或日统计分区");
             }
-            List<RawPeriod> result = List.of(period("上一小时", payload.getPreviousHour()),
-                    period("上一日", payload.getPreviousDay()));
+            List<RawPeriod> result =
+                List.of(period("上一小时", payload.getPreviousHour()), period("上一日", payload.getPreviousDay()));
             return Optional.of(List.copyOf(result));
         } catch (IOException exception) {
             throw new IllegalStateException("Invalid market ducats response", exception);
@@ -104,10 +106,11 @@ public class WarframeMarketDucatsServiceImpl implements WarframeMarketDucatsServ
     private RawPeriod period(String label, List<DucatRawData> values) {
         List<ItemVO> rows = new ArrayList<>();
         for (DucatRawData value : values) {
-            if (value == null || value.getItem() == null || value.getDucats() == null
-                    || value.getRatio() == null || value.getRatio().signum() <= 0) continue;
+            if (value == null || value.getItem() == null || value.getDucats() == null || value.getRatio() == null
+                || value.getRatio().signum() <= 0)
+                continue;
             rows.add(new ItemVO(value.getItem(), "", "", value.getDucats(), value.getWeightedPrice(), value.getRatio(),
-                    value.getVolume() == null ? 0 : value.getVolume(), value.getDatetime()));
+                value.getVolume() == null ? 0 : value.getVolume(), value.getDatetime()));
         }
         return new RawPeriod(label, List.copyOf(rows));
     }
@@ -120,7 +123,7 @@ public class WarframeMarketDucatsServiceImpl implements WarframeMarketDucatsServ
     private Map<String, CatalogItem> catalog() {
         Map<String, CatalogItem> values = new LinkedHashMap<>();
         for (var record : officialCatalog.records(WarframeOfficialDataDomain.MARKET_ITEM)) {
-            OfficialMarketItemDTO item = (OfficialMarketItemDTO) record.data();
+            OfficialMarketItemDTO item = (OfficialMarketItemDTO)record.data();
             String name = record.localizedName() == null ? record.officialName() : record.localizedName();
             values.put(item.getId(), new CatalogItem(name, item.getSlug()));
         }
@@ -137,10 +140,13 @@ public class WarframeMarketDucatsServiceImpl implements WarframeMarketDucatsServ
     private static ItemVO localize(ItemVO item, Map<String, CatalogItem> catalog) {
         CatalogItem entry = catalog.get(item.itemId());
         return new ItemVO(item.itemId(), entry == null || entry.name() == null ? "未收录物品" : entry.name(),
-                entry == null ? "" : entry.slug(), item.ducats(), item.weightedPrice(), item.ducatsPerPlatinum(),
-                item.volume(), item.statisticsAt());
+            entry == null ? "" : entry.slug(), item.ducats(), item.weightedPrice(), item.ducatsPerPlatinum(),
+            item.volume(), item.statisticsAt());
     }
 
-    private record CatalogItem(String name, String slug) {}
-    private record RawPeriod(String name, List<ItemVO> rows) {}
+    private record CatalogItem(String name, String slug) {
+    }
+
+    private record RawPeriod(String name, List<ItemVO> rows) {
+    }
 }

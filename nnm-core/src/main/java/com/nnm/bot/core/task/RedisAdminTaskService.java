@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -27,8 +28,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Autowired;
 
-/** Share snapshots, not Java closures. A crashed worker is reported as failed, never replayed blindly. */
+/** 共享任务快照，不共享 Java 闭包；执行进程崩溃后报告失败，不盲目重放。 */
 @Slf4j
 @Service
 public class RedisAdminTaskService implements AdminTaskService {
@@ -42,6 +45,9 @@ public class RedisAdminTaskService implements AdminTaskService {
     private Executor executor;
     @Resource(name = "taskScheduler")
     private ThreadPoolTaskScheduler scheduler;
+    // 独立模块可订阅终态以持久化通知；不让 core 反向依赖 admin。
+    @Autowired(required = false)
+    private ApplicationEventPublisher events;
     private final AtomicInteger subscribers = new AtomicInteger();
 
     @Override
@@ -49,13 +55,14 @@ public class RedisAdminTaskService implements AdminTaskService {
         if (type == null || type.isBlank() || permission == null || permission.isBlank() || work == null) {
             throw new IllegalArgumentException("Task type, permission and work are required");
         }
-        // Submit outside the distributed lock: the bounded executor can block the submitting thread.
+        // 在分布式锁之外提交，有界执行器可能阻塞提交线程。
         Reservation reservation = coordination.reserve(type, () -> {
             Optional<UUID> active = findActive(type);
-            if (active.isPresent()) return new Reservation(active.get(), false);
+            if (active.isPresent())
+                return new Reservation(active.get(), false);
             UUID id = UUID.randomUUID();
             save(new StoredTask(permission, Instant.now().plus(properties.taskTimeout()),
-                    event(id, type, AdminTaskStatus.QUEUED, "QUEUED", "任务已排队", 0, 0, null, null, null, 1)));
+                event(id, type, AdminTaskStatus.QUEUED, "QUEUED", "任务已排队", 0, 0, null, null, null, 1)));
             stateStore.put("admin-task-active:" + type, id, properties.taskTimeout().plus(properties.taskRetention()));
             log.info("管理端任务已提交, type={}, taskId={}, mode=redis", type, id);
             return new Reservation(id, true);
@@ -64,8 +71,7 @@ public class RedisAdminTaskService implements AdminTaskService {
             try {
                 executor.execute(() -> execute(reservation.id(), work));
             } catch (RuntimeException exception) {
-                log.warn("管理端任务提交失败, type={}, taskId={}, mode=redis",
-                        type, reservation.id(), exception);
+                log.warn("管理端任务提交失败, type={}, taskId={}, mode=redis", type, reservation.id(), exception);
                 fail(reservation.id(), exception);
                 throw exception;
             }
@@ -85,14 +91,35 @@ public class RedisAdminTaskService implements AdminTaskService {
 
     @Override
     public Optional<UUID> findActive(String type) {
-        return stateStore.<UUID>get("admin-task-active:" + type, UUID.class)
-                .flatMap(this::find).filter(RedisAdminTaskService::active).map(AdminTaskEvent::taskId);
+        return stateStore.<UUID>get("admin-task-active:" + type, UUID.class).flatMap(this::find)
+            .filter(RedisAdminTaskService::active).map(AdminTaskEvent::taskId);
+    }
+
+    @Override
+    public void cancel(UUID id) {
+        StoredTask task = load(id).orElseThrow(() -> new DataNotFoundException("任务不存在或已过期"));
+        coordination.reserve(task.event().taskType(), () -> {
+            if (find(id).filter(RedisAdminTaskService::active).isPresent()) {
+                // 不提前改变状态或清除活动索引：正在运行的 worker 必须先停止。
+                stateStore.put("admin-task-cancel:" + id, true,
+                    properties.taskTimeout().plus(properties.taskRetention()));
+            }
+            return null;
+        });
+    }
+
+    private void checkCancelled(UUID id) {
+        if (stateStore.<Boolean>get("admin-task-cancel:" + id, Boolean.class).orElse(false)) {
+            throw new CancellationException("管理员已取消任务");
+        }
     }
 
     @Override
     public TaskSubscription subscribe(UUID id, Consumer<AdminTaskEvent> listener) {
-        if (listener == null) throw new IllegalArgumentException("listener is required");
-        if (find(id).isEmpty()) throw new DataNotFoundException("任务不存在或已过期");
+        if (listener == null)
+            throw new IllegalArgumentException("listener is required");
+        if (find(id).isEmpty())
+            throw new DataNotFoundException("任务不存在或已过期");
         if (subscribers.incrementAndGet() > properties.maxTaskSubscriptions()) {
             subscribers.decrementAndGet();
             throw new BusinessException(CommonErrorCode.TASK_LIMIT_REACHED);
@@ -115,19 +142,23 @@ public class RedisAdminTaskService implements AdminTaskService {
         try {
             boolean completed = executeWork(id, work);
             if (completed) {
-                log.info("管理端任务执行完成, type={}, taskId={}, mode=redis, elapsedMs={}",
-                        taskType, id, elapsedMillis(startedAt));
+                log.info("管理端任务执行完成, type={}, taskId={}, mode=redis, elapsedMs={}", taskType, id,
+                    elapsedMillis(startedAt));
             } else {
-                log.warn("管理端任务未获得执行锁, type={}, taskId={}, mode=redis, elapsedMs={}",
-                        taskType, id, elapsedMillis(startedAt));
+                log.warn("管理端任务未获得执行锁, type={}, taskId={}, mode=redis, elapsedMs={}", taskType, id,
+                    elapsedMillis(startedAt));
             }
+        } catch (CancellationException cancelled) {
+            update(id, AdminTaskStatus.CANCELLED, "CANCELLED", "任务已取消", 0, 0, null, null, null);
+            log.info("管理端任务已取消, type={}, taskId={}", taskType, id);
         } catch (Exception exception) {
-            try { fail(id, exception); }
-            catch (RuntimeException unavailable) {
+            try {
+                fail(id, exception);
+            } catch (RuntimeException unavailable) {
                 log.warn("Cannot persist failure; task will time out: {}", id, unavailable);
             }
-            log.warn("管理端任务执行失败, type={}, taskId={}, mode=redis, elapsedMs={}",
-                    taskType, id, elapsedMillis(startedAt), exception);
+            log.warn("管理端任务执行失败, type={}, taskId={}, mode=redis, elapsedMs={}", taskType, id, elapsedMillis(startedAt),
+                exception);
         }
     }
 
@@ -135,15 +166,21 @@ public class RedisAdminTaskService implements AdminTaskService {
         StoredTask task = load(id).orElseThrow();
         try {
             coordination.execute(task.event().taskType(), () -> {
+                checkCancelled(id);
                 update(id, AdminTaskStatus.RUNNING, "RUNNING", "任务开始执行", 0, 0, null, null, null);
-                Object result = work.execute((stage, message, current, total) ->
-                        update(id, AdminTaskStatus.RUNNING, stage, message, current, total, null, null, null));
+                Object result = work.execute((stage, message, current, total) -> {
+                    checkCancelled(id);
+                    update(id, AdminTaskStatus.RUNNING, stage, message, current, total, null, null, null);
+                });
+                checkCancelled(id);
                 update(id, AdminTaskStatus.COMPLETED, "COMPLETED", "任务执行完成", 1, 1, result, null, null);
+                // 若取消与最终完成竞争，下一次冲突检查将检查任务及已经生成的预览。
                 return null;
             });
             return true;
         } catch (RdtException exception) {
-            if (exception.code() != RdtErrorCode.LOCK_TIMEOUT) throw exception;
+            if (exception.code() != RdtErrorCode.LOCK_TIMEOUT)
+                throw exception;
             fail(id, new BusinessException(CommonErrorCode.TASK_LIMIT_REACHED));
             return false;
         }
@@ -151,10 +188,8 @@ public class RedisAdminTaskService implements AdminTaskService {
 
     private static Throwable unwrap(Throwable failure) {
         Throwable current = failure;
-        while ((current instanceof CompletionException
-                || current instanceof ExecutionException
-                || current instanceof UndeclaredThrowableException)
-                && current.getCause() != null) {
+        while ((current instanceof CompletionException || current instanceof ExecutionException
+            || current instanceof UndeclaredThrowableException) && current.getCause() != null) {
             current = current.getCause();
         }
         return current;
@@ -177,27 +212,34 @@ public class RedisAdminTaskService implements AdminTaskService {
         update(id, AdminTaskStatus.FAILED, "FAILED", message, 0, 0, null, code, type);
     }
 
-    private void update(UUID id, AdminTaskStatus status, String stage, String message,
-                                     long current, long total, Object result, Integer code, String errorType) {
+    private void update(UUID id, AdminTaskStatus status, String stage, String message, long current, long total,
+        Object result, Integer code, String errorType) {
         StoredTask task = load(id).orElseThrow();
-        coordination.reserve(task.event().taskType(), () -> {
+        AdminTaskEvent published = coordination.reserve(task.event().taskType(), () -> {
             StoredTask latest = load(id).orElseThrow();
             StoredTask currentTask = expireIfNecessary(latest);
             if (!active(currentTask.event())) {
                 return null;
             }
             Instant deadline = Instant.now().plus(properties.taskTimeout());
-            AdminTaskEvent nextEvent = event(id, currentTask.event().taskType(), status, stage,
-                    message, current, total, result, code, errorType,
-                    currentTask.event().sequence() + 1);
+            AdminTaskEvent nextEvent = event(id, currentTask.event().taskType(), status, stage, message, current, total,
+                result, code, errorType, currentTask.event().sequence() + 1);
             save(new StoredTask(currentTask.permission(), deadline, nextEvent));
             if (active(status)) {
                 refreshActive(currentTask.event().taskType(), id);
             } else {
                 clearActive(currentTask.event().taskType(), id);
             }
-            return null;
+            return active(status) ? null : nextEvent;
         });
+        if (published != null && events != null) {
+            try {
+                events.publishEvent(new AdminTaskFinishedEvent(published, task.permission()));
+            } catch (RuntimeException exception) {
+                // 任务状态已经落 Redis；通知失败不能将业务成功回滚成任务失败。
+                log.warn("管理任务终态通知发布失败, taskId={}", id, exception);
+            }
+        }
     }
 
     private StoredTask expireIfNecessary(StoredTask task) {
@@ -209,16 +251,14 @@ public class RedisAdminTaskService implements AdminTaskService {
             if (!active(latest.event()) || !Instant.now().isAfter(latest.deadline())) {
                 return latest;
             }
-            AdminTaskEvent timeout = event(latest.event().taskId(), latest.event().taskType(),
-                    AdminTaskStatus.FAILED, "TIMED_OUT",
-                    "执行节点失联或任务超过时限，请核对业务结果后重试", 0, 0, null,
-                    CommonErrorCode.SYSTEM_ERROR.getCode(), "SYSTEM",
-                    latest.event().sequence() + 1);
+            AdminTaskEvent timeout = event(latest.event().taskId(), latest.event().taskType(), AdminTaskStatus.FAILED,
+                "TIMED_OUT", "执行节点失联或任务超过时限，请核对业务结果后重试", 0, 0, null, CommonErrorCode.SYSTEM_ERROR.getCode(), "SYSTEM",
+                latest.event().sequence() + 1);
             StoredTask expired = new StoredTask(latest.permission(), latest.deadline(), timeout);
             save(expired);
             clearActive(latest.event().taskType(), latest.event().taskId());
-            log.warn("管理端任务已超时, type={}, taskId={}, deadline={}",
-                    latest.event().taskType(), latest.event().taskId(), latest.deadline());
+            log.warn("管理端任务已超时, type={}, taskId={}, deadline={}", latest.event().taskType(), latest.event().taskId(),
+                latest.deadline());
             return expired;
         });
     }
@@ -230,8 +270,7 @@ public class RedisAdminTaskService implements AdminTaskService {
     }
 
     private void refreshActive(String type, UUID taskId) {
-        stateStore.put("admin-task-active:" + type, taskId,
-                properties.taskTimeout().plus(properties.taskRetention()));
+        stateStore.put("admin-task-active:" + type, taskId, properties.taskTimeout().plus(properties.taskRetention()));
     }
 
     private Optional<StoredTask> load(UUID id) {
@@ -240,7 +279,7 @@ public class RedisAdminTaskService implements AdminTaskService {
 
     private void save(StoredTask task) {
         stateStore.put("admin-task:" + task.event().taskId(), task,
-                properties.taskRetention().plus(properties.taskTimeout()));
+            properties.taskRetention().plus(properties.taskTimeout()));
     }
 
     private static long elapsedMillis(long startedAt) {
@@ -255,16 +294,19 @@ public class RedisAdminTaskService implements AdminTaskService {
         return status == AdminTaskStatus.QUEUED || status == AdminTaskStatus.RUNNING;
     }
 
-    private static AdminTaskEvent event(UUID id, String type, AdminTaskStatus status, String stage,
-            String message, long current, long total, Object result, Integer code, String errorType, long sequence) {
-        int percent = total <= 0 ? 0 : (int) Math.max(0, Math.min(100, 100.0 * current / total));
+    private static AdminTaskEvent event(UUID id, String type, AdminTaskStatus status, String stage, String message,
+        long current, long total, Object result, Integer code, String errorType, long sequence) {
+        int percent = total <= 0 ? 0 : (int)Math.max(0, Math.min(100, 100.0 * current / total));
         return new AdminTaskEvent(id, type, status, stage, message, Math.max(0, current), Math.max(0, total),
-                status == AdminTaskStatus.COMPLETED ? 100 : percent, result,
-                status == AdminTaskStatus.FAILED ? message : null, code, errorType, sequence, Instant.now());
+            status == AdminTaskStatus.COMPLETED ? 100 : percent, result,
+            status == AdminTaskStatus.FAILED ? message : null, code, errorType, sequence, Instant.now());
     }
 
-    public record StoredTask(String permission, Instant deadline, AdminTaskEvent event) { }
-    private record Reservation(UUID id, boolean created) { }
+    public record StoredTask(String permission, Instant deadline, AdminTaskEvent event) {
+    }
+
+    private record Reservation(UUID id, boolean created) {
+    }
 
     private final class ProgressSubscription {
         private final ReentrantLock subscriptionLock = new ReentrantLock();
@@ -274,29 +316,35 @@ public class RedisAdminTaskService implements AdminTaskService {
         private long sequence = -1;
         private boolean closed;
         private ScheduledFuture<?> future;
+
         private ProgressSubscription(UUID id, Consumer<AdminTaskEvent> listener) {
             this.id = id;
             this.listener = listener;
         }
+
         private void start() {
             subscriptionLock.lock();
             try {
-                if (!closed) future = scheduler.scheduleWithFixedDelay(this::poll, properties.taskPollInterval());
+                if (!closed)
+                    future = scheduler.scheduleWithFixedDelay(this::poll, properties.taskPollInterval());
             } finally {
                 subscriptionLock.unlock();
             }
         }
+
         private void poll() {
             subscriptionLock.lock();
             try {
-                if (closed) return;
+                if (closed)
+                    return;
                 try {
                     find(id).ifPresent(event -> {
                         if (event.sequence() > sequence) {
                             sequence = event.sequence();
                             listener.accept(event);
                         }
-                        if (!active(event)) close();
+                        if (!active(event))
+                            close();
                     });
                 } catch (RuntimeException exception) {
                     log.debug("Task progress polling failed: {}", id, exception);
@@ -305,12 +353,15 @@ public class RedisAdminTaskService implements AdminTaskService {
                 subscriptionLock.unlock();
             }
         }
+
         private void close() {
             subscriptionLock.lock();
             try {
-                if (closed) return;
+                if (closed)
+                    return;
                 closed = true;
-                if (future != null) future.cancel(false);
+                if (future != null)
+                    future.cancel(false);
                 subscribers.decrementAndGet();
             } finally {
                 subscriptionLock.unlock();

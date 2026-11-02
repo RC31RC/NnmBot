@@ -91,12 +91,11 @@ public class OcrProperties {
     @PostConstruct
     void validate() {
         if (this.maxInputBytes <= 0 || this.maxImagePixels <= 0 || this.maxSideLength <= 0
-                || this.maxResultCharacters < 1) {
+            || this.maxResultCharacters < 1) {
             throw new IllegalStateException("nnm.ocr image limits must be positive");
         }
-        if (this.boxScoreThreshold <= 0 || this.boxScoreThreshold > 1
-                || this.boxThreshold <= 0 || this.boxThreshold > 1
-                || this.unClipRatio <= 0) {
+        if (this.boxScoreThreshold <= 0 || this.boxScoreThreshold > 1 || this.boxThreshold <= 0 || this.boxThreshold > 1
+            || this.unClipRatio <= 0) {
             throw new IllegalStateException("nnm.ocr recognition thresholds are invalid");
         }
     }

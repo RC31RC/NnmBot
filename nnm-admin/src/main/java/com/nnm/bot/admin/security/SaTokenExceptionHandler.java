@@ -18,12 +18,12 @@ public class SaTokenExceptionHandler {
     @ExceptionHandler(NotLoginException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotLogin(NotLoginException ignored) {
         return ResponseEntity.status(CommonErrorCode.AUTHENTICATION_REQUIRED.getStatus())
-                .body(ApiResponse.error(CommonErrorCode.AUTHENTICATION_REQUIRED));
+            .body(ApiResponse.error(CommonErrorCode.AUTHENTICATION_REQUIRED));
     }
 
     @ExceptionHandler({NotPermissionException.class, NotRoleException.class})
     public ResponseEntity<ApiResponse<Void>> handleForbidden(RuntimeException ignored) {
         return ResponseEntity.status(CommonErrorCode.PERMISSION_DENIED.getStatus())
-                .body(ApiResponse.error(CommonErrorCode.PERMISSION_DENIED));
+            .body(ApiResponse.error(CommonErrorCode.PERMISSION_DENIED));
     }
 }

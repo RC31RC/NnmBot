@@ -2,7 +2,7 @@ package com.nnm.bot.core.channel.port;
 
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 
-/** Executes scope discovery on the node that owns a channel instance. */
+/** 在拥有渠道实例的节点上执行作用域发现。 */
 public interface BotLocalScopeDiscoveryProvider extends BotScopeDiscoveryProvider {
 
     BotScopeDiscoveryResult discoverLocal(String botAccountId);

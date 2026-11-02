@@ -46,8 +46,8 @@ spring:
     username: postgres
     password: root
     hikari:
-      maximum-pool-size: 5
-      minimum-idle: 2
+      maximum-pool-size: ${NNM_DB_MAX_POOL_SIZE:5}
+      minimum-idle: ${NNM_DB_MIN_IDLE:2}
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
@@ -113,11 +113,8 @@ nnm:
       poll-interval: 300ms
       resource-retention: 24h
       max-schedule-delay: 30d
-      resource-cleanup-interval: 1h
       jobs:
         # 数据库保存待发内容；扫描只认领到期任务，不自动重放发送结果未知的任务。
-        cron: "*/5 * * * * *"
-        zone: Asia/Shanghai
         dispatch-grace: 10m
         stale-timeout: 10m
         history-retention: 7d
@@ -137,9 +134,9 @@ nnm:
       # 仅为真实账号已确认获准主动发送的群配置；空映射默认关闭。
       proactive-groups: {}
   executor:
-    # 固定本机 CPU 任务预算，与数据库连接池上限 5、4GB 内存共同评估。
+    # 本地默认预算；部署时按实例数、数据库总连接额度、CPU 和内存分别覆盖。
     # 命令共享应用虚拟线程额度；只有独立派发器可以等待其容量。
-    application-concurrency: 64
+    application-concurrency: ${NNM_APPLICATION_CONCURRENCY:64}
     task:
       core-size: 2
       max-size: 2
@@ -214,7 +211,7 @@ rdt:
     result-ttl: 1d
   queue:
     # 当前 JVM 单模板共享预算；相邻源码与实际 SNAPSHOT JAR 的默认值为 16。
-    # 本项目为 4GB/数据库连接池 5 显式收紧到 8，不叠加另一层可靠消费队列。
+    # 本地消费并发默认收紧到 8；部署时与应用并发和单实例数据库池共同评估。
     max-concurrent-handlers: 8
     local-buffer-capacity: 16
     read-batch-size: 4

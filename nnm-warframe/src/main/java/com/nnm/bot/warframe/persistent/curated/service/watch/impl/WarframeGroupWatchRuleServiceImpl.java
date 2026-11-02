@@ -34,16 +34,14 @@ public class WarframeGroupWatchRuleServiceImpl implements WarframeGroupWatchRule
      */
     @Override
     @Transactional
-    public WarframeGroupWatchRuleDTO create(long groupId, long memberId, String watchType,
-                                         String watchKey, String watchValue) {
+    public WarframeGroupWatchRuleDTO create(long groupId, long memberId, String watchType, String watchKey,
+        String watchValue) {
         String normalizedType = watchType == null ? "" : watchType.trim();
         String normalizedKey = watchKey == null ? "" : watchKey.trim();
         String normalizedValue = watchValue == null ? "" : watchValue.trim();
-        return WarframeGroupWatchRuleDTO.from(repository
-                .findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(
-                        groupId, memberId, normalizedType, normalizedKey, normalizedValue)
-                .map(this::reenable)
-                .orElseGet(() -> {
+        return WarframeGroupWatchRuleDTO
+            .from(repository.findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(groupId, memberId,
+                normalizedType, normalizedKey, normalizedValue).map(this::reenable).orElseGet(() -> {
                     WarframeGroupWatchRule rule = new WarframeGroupWatchRule();
                     rule.setGroupId(groupId);
                     rule.setMemberId(memberId);
@@ -56,15 +54,15 @@ public class WarframeGroupWatchRuleServiceImpl implements WarframeGroupWatchRule
 
     /**
      * 重新启用已有订阅规则，并显式保存当前状态。
+     *
      * @param rule 规则。
      * @return 游戏资料分组订阅监控规则对象。
      */
-    private WarframeGroupWatchRule reenable(
-            WarframeGroupWatchRule rule) {
+    private WarframeGroupWatchRule reenable(WarframeGroupWatchRule rule) {
         if (!rule.isEnabled()) {
             rule.setEnabled(true);
             rule.setNotifyEnabled(true);
-            // A reactivated rule must be eligible for the next matching snapshot.
+            // 重新启用的规则必须能够匹配下一份快照。
             rule.setMatchedEventsJson(null);
             return repository.save(rule);
         }
@@ -83,17 +81,15 @@ public class WarframeGroupWatchRuleServiceImpl implements WarframeGroupWatchRule
      */
     @Override
     @Transactional
-    public boolean disable(long groupId, long memberId, String watchType,
-                           String watchKey, String watchValue) {
+    public boolean disable(long groupId, long memberId, String watchType, String watchKey, String watchValue) {
         String normalizedType = watchType == null ? "" : watchType.trim();
         String normalizedKey = watchKey == null ? "*" : watchKey.trim();
         String normalizedValue = watchValue == null ? "" : watchValue.trim();
         List<WarframeGroupWatchRule> rules = "*".equals(normalizedKey)
-                ? repository.findAllByGroupIdAndMemberIdAndWatchTypeAndWatchValueAndEnabledTrue(
-                        groupId, memberId, normalizedType, normalizedValue)
-                : repository
-                .findAllByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValueAndEnabledTrue(
-                        groupId, memberId, normalizedType, normalizedKey, normalizedValue);
+            ? repository.findAllByGroupIdAndMemberIdAndWatchTypeAndWatchValueAndEnabledTrue(groupId, memberId,
+                normalizedType, normalizedValue)
+            : repository.findAllByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValueAndEnabledTrue(groupId,
+                memberId, normalizedType, normalizedKey, normalizedValue);
         if (CollUtil.isEmpty(rules)) {
             return false;
         }
@@ -140,6 +136,7 @@ public class WarframeGroupWatchRuleServiceImpl implements WarframeGroupWatchRule
 
     /**
      * 在订阅规则锁内认领本轮尚未发送的事件身份，避免重复通知。
+     *
      * @param ruleId 规则标识。
      * @param matches 匹配集合。
      * @return 按当前条件筛选或转换后的数据集合。
@@ -147,11 +144,14 @@ public class WarframeGroupWatchRuleServiceImpl implements WarframeGroupWatchRule
     @Override
     @Transactional
     public Set<String> claimMatches(long ruleId, List<WarframeWatchMatchDTO> matches) {
-        if (CollUtil.isEmpty(matches)) return Set.of();
+        if (CollUtil.isEmpty(matches))
+            return Set.of();
         WarframeGroupWatchRule rule = repository.findFirstById(ruleId).orElse(null);
-        if (rule == null || !rule.isEnabled()) return Set.of();
+        if (rule == null || !rule.isEnabled())
+            return Set.of();
         Claim claim = eventMemory.claim(rule.getMatchedEventsJson(), matches);
-        if (CollUtil.isEmpty(claim.keys())) return Set.of();
+        if (CollUtil.isEmpty(claim.keys()))
+            return Set.of();
         rule.setMatchedEventsJson(claim.json());
         repository.save(rule);
         return claim.keys();

@@ -5,9 +5,8 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 每日特惠命令。 */
-@BotPluginCommand(
-        code = WarframeCommandCodes.DAILY_DEALS, name = "每日特惠", gameCode = "warframe", order = 46,
-        allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.DAILY_DEALS, name = "每日特惠", gameCode = "warframe", order = 46,
+    allowRelatedAction = true)
 // 无 WorldStateDTO 原始表；读取官方快照的 dailyDeals 段，静态引用表用途见 AbstractWorldStateCommandPlugin。
 public class DailyDealsPlugin extends AbstractWorldStateCommandPlugin {
 

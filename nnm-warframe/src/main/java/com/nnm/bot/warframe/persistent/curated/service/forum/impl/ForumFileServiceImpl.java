@@ -69,10 +69,8 @@ public class ForumFileServiceImpl implements ForumFileService {
     @PostConstruct
     void initialize() {
         validateProperties();
-        allowedExtensions = properties.getAllowedExtensions().stream()
-                .filter(StrUtil::isNotBlank)
-                .map(extension -> extension.trim().toLowerCase(Locale.ROOT))
-                .collect(Collectors.toUnmodifiableSet());
+        allowedExtensions = properties.getAllowedExtensions().stream().filter(StrUtil::isNotBlank)
+            .map(extension -> extension.trim().toLowerCase(Locale.ROOT)).collect(Collectors.toUnmodifiableSet());
         temporaryUrlPattern = urlPattern(properties.getTemporaryPublicPath(), false);
         permanentUrlPattern = urlPattern(properties.getPublicPath(), true);
 
@@ -97,18 +95,17 @@ public class ForumFileServiceImpl implements ForumFileService {
         String storedObjectId;
         try {
             try (InputStream input = file.getInputStream()) {
-                storedObjectId = objectStorage.put(
-                        expectedObjectId, input, file.getSize(), resolveContentType(originalName));
+                storedObjectId =
+                    objectStorage.put(expectedObjectId, input, file.getSize(), resolveContentType(originalName));
             }
         } catch (IOException exception) {
             throw storageFailure("论坛附件写入失败: " + originalName, exception);
         }
         BusinessAssert.equals(storedObjectId, expectedObjectId, CommonErrorCode.SYSTEM_ERROR,
-                "VaultS3 返回的对象 ID 与请求对象不一致");
+            "VaultS3 返回的对象 ID 与请求对象不一致");
 
         String url = publicUrl(storedObjectId);
-        return new ForumFileVO(
-                url, originalName, url, originalName, resolveContentType(originalName), file.getSize());
+        return new ForumFileVO(url, originalName, url, originalName, resolveContentType(originalName), file.getSize());
     }
 
     /**
@@ -146,8 +143,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 论坛已准备内容对象。
      */
     @Override
-    public ForumPreparedContentDTO promoteReferencedFiles(
-            String coverUrl, String contentHtml, String contentMarkdown) {
+    public ForumPreparedContentDTO promoteReferencedFiles(String coverUrl, String contentHtml, String contentMarkdown) {
         Set<String> references = new LinkedHashSet<>();
         collectTemporaryUrls(coverUrl, references);
         collectTemporaryUrls(contentHtml, references);
@@ -156,10 +152,8 @@ public class ForumFileServiceImpl implements ForumFileService {
         for (String temporaryUrl : references) {
             replacements.put(temporaryUrl, promote(temporaryUrl));
         }
-        return new ForumPreparedContentDTO(
-                replaceUrls(coverUrl, replacements),
-                replaceUrls(contentHtml, replacements),
-                replaceUrls(contentMarkdown, replacements));
+        return new ForumPreparedContentDTO(replaceUrls(coverUrl, replacements), replaceUrls(contentHtml, replacements),
+            replaceUrls(contentMarkdown, replacements));
     }
 
     /**
@@ -170,10 +164,8 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     @Override
     public ForumPreparedContentDTO toStorageContent(ForumPreparedContentDTO publicContent) {
-        return new ForumPreparedContentDTO(
-                storageReference(publicContent.coverUrl()),
-                storageReferences(publicContent.contentHtml()),
-                storageReferences(publicContent.contentMarkdown()));
+        return new ForumPreparedContentDTO(storageReference(publicContent.coverUrl()),
+            storageReferences(publicContent.contentHtml()), storageReferences(publicContent.contentMarkdown()));
     }
 
     /**
@@ -185,12 +177,9 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 论坛已准备内容对象。
      */
     @Override
-    public ForumPreparedContentDTO toPublicContent(
-            String coverObjectId, String contentHtml, String contentMarkdown) {
-        return new ForumPreparedContentDTO(
-                publicReference(coverObjectId),
-                publicReferences(contentHtml),
-                publicReferences(contentMarkdown));
+    public ForumPreparedContentDTO toPublicContent(String coverObjectId, String contentHtml, String contentMarkdown) {
+        return new ForumPreparedContentDTO(publicReference(coverObjectId), publicReferences(contentHtml),
+            publicReferences(contentMarkdown));
     }
 
     /**
@@ -202,8 +191,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     @Override
-    public Set<String> referencedPermanentFiles(
-            String coverUrl, String contentHtml, String contentMarkdown) {
+    public Set<String> referencedPermanentFiles(String coverUrl, String contentHtml, String contentMarkdown) {
         Set<String> references = new LinkedHashSet<>();
         collectStorageReferences(coverUrl, references);
         collectStorageReferences(contentHtml, references);
@@ -221,10 +209,8 @@ public class ForumFileServiceImpl implements ForumFileService {
         if (CollUtil.isEmpty(objectReferences)) {
             return;
         }
-        Set<String> uniqueObjects = objectReferences.stream()
-                .map(this::objectIdFromReference)
-                .filter(StrUtil::isNotBlank)
-                .collect(Collectors.toUnmodifiableSet());
+        Set<String> uniqueObjects = objectReferences.stream().map(this::objectIdFromReference)
+            .filter(StrUtil::isNotBlank).collect(Collectors.toUnmodifiableSet());
         afterCommitExecutor.execute(() -> deletePermanentFiles(uniqueObjects));
     }
 
@@ -252,8 +238,7 @@ public class ForumFileServiceImpl implements ForumFileService {
         validatePathSegments(year, month, fileName);
         String objectId = prefix + year + "/" + month + "/" + fileName;
         StoredObject metadata = objectStorage.stat(objectId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND,
-                        "论坛附件不存在"));
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛附件不存在"));
         org.springframework.core.io.Resource resource = new AbstractResource() {
             /**
              * 读取说明。
@@ -287,14 +272,12 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private String promote(String temporaryUrl) {
         Matcher matcher = temporaryUrlPattern.matcher(temporaryUrl);
-        BusinessAssert.isTrue(matcher.matches(), ForumErrorCode.INVALID_FILE,
-                "论坛临时附件地址不合法");
+        BusinessAssert.isTrue(matcher.matches(), ForumErrorCode.INVALID_FILE, "论坛临时附件地址不合法");
         String sourceId = temporaryObjectId(matcher.group(1), matcher.group(2), matcher.group(3));
         String targetId = permanentObjectId(matcher.group(1), matcher.group(2), matcher.group(3));
         boolean sourceExists = objectStorage.stat(sourceId).isPresent();
         boolean targetExists = objectStorage.stat(targetId).isPresent();
-        BusinessAssert.isTrue(sourceExists || targetExists, CommonErrorCode.DATA_NOT_FOUND,
-                "论坛临时附件不存在");
+        BusinessAssert.isTrue(sourceExists || targetExists, CommonErrorCode.DATA_NOT_FOUND, "论坛临时附件不存在");
         if (!targetExists) {
             objectStorage.copy(sourceId, targetId);
         }
@@ -311,7 +294,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private void registerPromotion(String temporaryId, String permanentId, boolean targetCreated) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()
-                || !TransactionSynchronizationManager.isSynchronizationActive()) {
+            || !TransactionSynchronizationManager.isSynchronizationActive()) {
             objectStorage.delete(temporaryId);
             return;
         }
@@ -324,8 +307,7 @@ public class ForumFileServiceImpl implements ForumFileService {
                 try {
                     objectStorage.delete(temporaryId);
                 } catch (RuntimeException exception) {
-                    log.warn("Failed to remove temporary forum object after commit: {}", temporaryId,
-                            exception);
+                    log.warn("Failed to remove temporary forum object after commit: {}", temporaryId, exception);
                 }
             }
 
@@ -340,8 +322,7 @@ public class ForumFileServiceImpl implements ForumFileService {
                     try {
                         objectStorage.delete(permanentId);
                     } catch (RuntimeException exception) {
-                        log.error("Failed to remove promoted forum object after rollback: {}",
-                                permanentId, exception);
+                        log.error("Failed to remove promoted forum object after rollback: {}", permanentId, exception);
                     }
                 }
             }
@@ -365,13 +346,11 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @param file 本次上传或读取的文件。
      */
     private void validateFile(MultipartFile file) {
-        BusinessAssert.isTrue(file != null && !file.isEmpty(),
-                ForumErrorCode.INVALID_FILE, "请选择需要上传的论坛附件");
-        BusinessAssert.isTrue(file.getSize() <= properties.getMaxFileBytes(),
-                ForumErrorCode.FILE_TOO_LARGE);
+        BusinessAssert.isTrue(file != null && !file.isEmpty(), ForumErrorCode.INVALID_FILE, "请选择需要上传的论坛附件");
+        BusinessAssert.isTrue(file.getSize() <= properties.getMaxFileBytes(), ForumErrorCode.FILE_TOO_LARGE);
         String extension = extensionOf(normalizedOriginalName(file.getOriginalFilename()));
-        BusinessAssert.isTrue(allowedExtensions.contains(extension),
-                ForumErrorCode.INVALID_FILE, "不支持上传 ." + extension + " 文件");
+        BusinessAssert.isTrue(allowedExtensions.contains(extension), ForumErrorCode.INVALID_FILE,
+            "不支持上传 ." + extension + " 文件");
     }
 
     /**
@@ -408,8 +387,8 @@ public class ForumFileServiceImpl implements ForumFileService {
         while (legacy.find()) {
             references.add(permanentObjectId(legacy.group(1), legacy.group(2), legacy.group(3)));
         }
-        Matcher objectId = Pattern.compile(
-                "(?<![A-Za-z0-9._/-])warframe/forum/\\d{4}/(?:0[1-9]|1[0-2])/[0-9a-f]{32}\\.[a-z0-9]+")
+        Matcher objectId =
+            Pattern.compile("(?<![A-Za-z0-9._/-])warframe/forum/\\d{4}/(?:0[1-9]|1[0-2])/[0-9a-f]{32}\\.[a-z0-9]+")
                 .matcher(content);
         while (objectId.find()) {
             references.add(objectId.group());
@@ -479,14 +458,13 @@ public class ForumFileServiceImpl implements ForumFileService {
             matcher.appendReplacement(result, Matcher.quoteReplacement(publicUrl(matcher.group(1))));
         }
         matcher.appendTail(result);
-        Matcher objectId = Pattern.compile(
-                "(?:https?://[^/\\s\\\"'<>]+)?warframe/forum/"
-                        + "(\\d{4})/(0[1-9]|1[0-2])/([0-9a-f]{32}\\.[a-z0-9]+)")
-                .matcher(result.toString());
+        Matcher objectId = Pattern
+            .compile(
+                "(?:https?://[^/\\s\\\"'<>]+)?warframe/forum/" + "(\\d{4})/(0[1-9]|1[0-2])/([0-9a-f]{32}\\.[a-z0-9]+)")
+            .matcher(result.toString());
         StringBuffer publicContent = new StringBuffer();
         while (objectId.find()) {
-            String url = buildUrl(properties.getPublicPath(), objectId.group(1),
-                    objectId.group(2), objectId.group(3));
+            String url = buildUrl(properties.getPublicPath(), objectId.group(1), objectId.group(2), objectId.group(3));
             objectId.appendReplacement(publicContent, Matcher.quoteReplacement(url));
         }
         objectId.appendTail(publicContent);
@@ -503,17 +481,14 @@ public class ForumFileServiceImpl implements ForumFileService {
         if (StrUtil.isBlank(reference)) {
             return null;
         }
-        if (reference.startsWith("{{object:")
-                && reference.endsWith("}}")) {
-            return reference.substring("{{object:".length(),
-                    reference.length() - "}}".length());
+        if (reference.startsWith("{{object:") && reference.endsWith("}}")) {
+            return reference.substring("{{object:".length(), reference.length() - "}}".length());
         }
         Matcher matcher = permanentUrlPattern.matcher(reference);
         if (matcher.find()) {
             return permanentObjectId(matcher.group(1), matcher.group(2), matcher.group(3));
         }
-        return reference.matches("warframe/forum/\\d{4}/(?:0[1-9]|1[0-2])/[0-9a-f]{32}\\.[a-z0-9]+")
-                ? reference : null;
+        return reference.matches("warframe/forum/\\d{4}/(?:0[1-9]|1[0-2])/[0-9a-f]{32}\\.[a-z0-9]+") ? reference : null;
     }
 
     /**
@@ -523,11 +498,10 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 公开地址对应的文本。
      */
     private String publicUrl(String objectId) {
-        String prefix = objectId.startsWith(TEMP_PREFIX)
-                ? properties.getTemporaryPublicPath() : properties.getPublicPath();
-        String relative = objectId.startsWith(TEMP_PREFIX)
-                ? objectId.substring(TEMP_PREFIX.length())
-                : objectId.substring(PERMANENT_PREFIX.length());
+        String prefix =
+            objectId.startsWith(TEMP_PREFIX) ? properties.getTemporaryPublicPath() : properties.getPublicPath();
+        String relative = objectId.startsWith(TEMP_PREFIX) ? objectId.substring(TEMP_PREFIX.length())
+            : objectId.substring(PERMANENT_PREFIX.length());
         String[] parts = relative.split("/");
         return buildUrl(prefix, parts[0], parts[1], parts[2]);
     }
@@ -560,18 +534,13 @@ public class ForumFileServiceImpl implements ForumFileService {
      * 校验当前配置的必要字段与资源边界。
      */
     private void validateProperties() {
-        BusinessAssert.isTrue(properties.getMaxFileBytes() > 0, CommonErrorCode.PARAM_INVALID,
-                "论坛附件大小限制必须大于 0");
-        BusinessAssert.notBlank(properties.getPublicPath(), CommonErrorCode.PARAM_INVALID,
-                "论坛附件公开路径不能为空");
-        BusinessAssert.notBlank(properties.getTemporaryPublicPath(), CommonErrorCode.PARAM_INVALID,
-                "论坛临时附件公开路径不能为空");
+        BusinessAssert.isTrue(properties.getMaxFileBytes() > 0, CommonErrorCode.PARAM_INVALID, "论坛附件大小限制必须大于 0");
+        BusinessAssert.notBlank(properties.getPublicPath(), CommonErrorCode.PARAM_INVALID, "论坛附件公开路径不能为空");
+        BusinessAssert.notBlank(properties.getTemporaryPublicPath(), CommonErrorCode.PARAM_INVALID, "论坛临时附件公开路径不能为空");
         BusinessAssert.isTrue(properties.getTemporaryRetention() != null
-                        && !properties.getTemporaryRetention().isNegative()
-                        && !properties.getTemporaryRetention().isZero(), CommonErrorCode.PARAM_INVALID,
-                "论坛临时附件保留时间必须大于 0");
-        BusinessAssert.notEmpty(properties.getAllowedExtensions(), CommonErrorCode.PARAM_INVALID,
-                "论坛附件扩展名白名单不能为空");
+            && !properties.getTemporaryRetention().isNegative() && !properties.getTemporaryRetention().isZero(),
+            CommonErrorCode.PARAM_INVALID, "论坛临时附件保留时间必须大于 0");
+        BusinessAssert.notEmpty(properties.getAllowedExtensions(), CommonErrorCode.PARAM_INVALID, "论坛附件扩展名白名单不能为空");
     }
 
     /**
@@ -584,7 +553,7 @@ public class ForumFileServiceImpl implements ForumFileService {
     private static Pattern urlPattern(String configuredPath, boolean allowOrigin) {
         String origin = allowOrigin ? "(?:https?://[^/\\s\\\"'<>]+)?" : "";
         return Pattern.compile(origin + Pattern.quote(normalizedPublicPath(configuredPath))
-                + "/(\\d{4})/(0[1-9]|1[0-2])/([0-9a-f]{32}\\.[a-z0-9]+)");
+            + "/(\\d{4})/(0[1-9]|1[0-2])/([0-9a-f]{32}\\.[a-z0-9]+)");
     }
 
     /**
@@ -595,13 +564,11 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @param fileName 文件名称。
      */
     private static void validatePathSegments(String year, String month, String fileName) {
-        BusinessAssert.isTrue(year != null && year.matches("\\d{4}"),
-                CommonErrorCode.PARAM_INVALID, "论坛附件年份不合法");
-        BusinessAssert.isTrue(month != null && month.matches("0[1-9]|1[0-2]"),
-                CommonErrorCode.PARAM_INVALID, "论坛附件月份不合法");
-        BusinessAssert.isTrue(StrUtil.isNotBlank(fileName)
-                        && fileName.matches("[0-9a-f]{32}\\.[a-z0-9]+"),
-                CommonErrorCode.PARAM_INVALID, "论坛附件文件名不合法");
+        BusinessAssert.isTrue(year != null && year.matches("\\d{4}"), CommonErrorCode.PARAM_INVALID, "论坛附件年份不合法");
+        BusinessAssert.isTrue(month != null && month.matches("0[1-9]|1[0-2]"), CommonErrorCode.PARAM_INVALID,
+            "论坛附件月份不合法");
+        BusinessAssert.isTrue(StrUtil.isNotBlank(fileName) && fileName.matches("[0-9a-f]{32}\\.[a-z0-9]+"),
+            CommonErrorCode.PARAM_INVALID, "论坛附件文件名不合法");
     }
 
     /**
@@ -612,11 +579,9 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private static String normalizedOriginalName(String fileName) {
         String normalized = StrUtil.trim(fileName);
-        BusinessAssert.isTrue(StrUtil.isNotBlank(normalized),
-                ForumErrorCode.INVALID_FILE, "论坛附件文件名不能为空");
+        BusinessAssert.isTrue(StrUtil.isNotBlank(normalized), ForumErrorCode.INVALID_FILE, "论坛附件文件名不能为空");
         String leafName = Path.of(normalized).getFileName().toString();
-        BusinessAssert.isTrue(leafName.length() <= 255,
-                ForumErrorCode.INVALID_FILE, "论坛附件文件名过长");
+        BusinessAssert.isTrue(leafName.length() <= 255, ForumErrorCode.INVALID_FILE, "论坛附件文件名过长");
         return leafName;
     }
 
@@ -628,8 +593,8 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private static String extensionOf(String fileName) {
         int separator = fileName.lastIndexOf('.');
-        BusinessAssert.isTrue(separator > 0 && separator < fileName.length() - 1,
-                ForumErrorCode.INVALID_FILE, "论坛附件必须包含扩展名");
+        BusinessAssert.isTrue(separator > 0 && separator < fileName.length() - 1, ForumErrorCode.INVALID_FILE,
+            "论坛附件必须包含扩展名");
         return fileName.substring(separator + 1).toLowerCase(Locale.ROOT);
     }
 
@@ -641,7 +606,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private static String resolveContentType(String fileName) {
         return MediaTypeFactory.getMediaType(fileName).map(MediaType::toString)
-                .orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            .orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE);
     }
 
     /**
@@ -656,7 +621,7 @@ public class ForumFileServiceImpl implements ForumFileService {
             return content;
         }
         String result = content;
-        for (Entry<String,String> replacement : replacements.entrySet()) {
+        for (Entry<String, String> replacement : replacements.entrySet()) {
             result = result.replace(replacement.getKey(), replacement.getValue());
         }
         return result;
@@ -671,10 +636,9 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @param fileName 文件名称。
      * @return 构造地址对应的文本。
      */
-    private static String buildUrl(String configuredPublicPath, String year, String month,
-                                   String fileName) {
+    private static String buildUrl(String configuredPublicPath, String year, String month, String fileName) {
         return UriComponentsBuilder.fromPath(normalizedPublicPath(configuredPublicPath))
-                .pathSegment(year, month, fileName).build().encode().toUriString();
+            .pathSegment(year, month, fileName).build().encode().toUriString();
     }
 
     /**
@@ -696,7 +660,6 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 保留失败原因的业务异常。
      */
     private static SystemException storageFailure(String message, IOException exception) {
-        return new SystemException(ForumErrorCode.FILE_STORAGE_FAILED,
-                message, exception);
+        return new SystemException(ForumErrorCode.FILE_STORAGE_FAILED, message, exception);
     }
 }

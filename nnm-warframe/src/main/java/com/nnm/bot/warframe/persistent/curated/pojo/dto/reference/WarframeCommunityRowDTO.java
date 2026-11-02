@@ -9,18 +9,21 @@ public interface WarframeCommunityRowDTO {
      * @return 本地记录主键。
      */
     Long getId();
+
     /**
      * 读取记录键。
      *
      * @return 记录键对应的文本。
      */
     String getRecordKey();
+
     /**
      * 读取更新时间时刻。
      *
      * @return 时间点对象。
      */
     Instant getUpdatedAt();
+
     /**
      * 读取版本。
      *

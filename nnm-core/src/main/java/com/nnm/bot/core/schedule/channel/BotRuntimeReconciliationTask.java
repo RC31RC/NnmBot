@@ -11,7 +11,7 @@ public class BotRuntimeReconciliationTask {
     @Resource
     private ClusterBotRuntime runtime;
 
-    @Scheduled(fixedDelayString = "${nnm.cluster.reconcile-interval:10s}")
+    @Scheduled(fixedDelayString = "10s")
     public void execute() {
         runtime.reconcile();
     }

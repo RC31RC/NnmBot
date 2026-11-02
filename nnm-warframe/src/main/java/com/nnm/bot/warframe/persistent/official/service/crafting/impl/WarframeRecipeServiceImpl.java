@@ -21,6 +21,7 @@ public class WarframeRecipeServiceImpl implements WarframeRecipeService {
     private OfficialRecipeMapper mapper;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 读取本业务直接使用的已采纳制作配方。
      *
@@ -42,8 +43,9 @@ public class WarframeRecipeServiceImpl implements WarframeRecipeService {
     public List<WarframeRecipeVO.EntryVO> find(String keyword, String kind) {
         String query = keyword == null ? "" : keyword.toLowerCase(Locale.ROOT);
         return data.records(Category.RECIPE).stream().map(mapper::map).filter(Objects::nonNull)
-                .filter(row -> StrUtil.isBlank(query) || (row.name() + " " + row.productName()).toLowerCase(Locale.ROOT).contains(query))
-                .filter(row -> StrUtil.isBlank(kind) || kind.equalsIgnoreCase(row.recipeKind())).toList();
+            .filter(row -> StrUtil.isBlank(query)
+                || (row.name() + " " + row.productName()).toLowerCase(Locale.ROOT).contains(query))
+            .filter(row -> StrUtil.isBlank(kind) || kind.equalsIgnoreCase(row.recipeKind())).toList();
     }
 
     /**

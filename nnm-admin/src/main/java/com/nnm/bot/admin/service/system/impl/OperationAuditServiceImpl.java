@@ -39,9 +39,7 @@ public class OperationAuditServiceImpl implements OperationAuditService {
     @Override
     @Transactional
     public void recordForOperator(long operatorId, String action, String targetType, Object targetId, String detail) {
-        String operatorName = userRepository.findById(operatorId)
-                .map(SysUser::getUsername)
-                .orElse("unknown");
+        String operatorName = userRepository.findById(operatorId).map(SysUser::getUsername).orElse("unknown");
 
         SysOperationLog log = new SysOperationLog();
         log.setOperatorId(operatorId);
@@ -56,37 +54,20 @@ public class OperationAuditServiceImpl implements OperationAuditService {
 
     @Override
     public PageResult<OperationLogDTO> logs(String operatorName, int current, int size) {
-        PageRequest pageable = PageRequest.of(
-                Math.max(current, 1) - 1,
-                Math.min(Math.max(size, 1), 100),
-                Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-        Page<SysOperationLog> page = StrUtil.isBlank(operatorName)
-                ? logRepository.findAll(pageable)
-                : logRepository.findByOperatorNameContainingIgnoreCase(operatorName.trim(), pageable);
+        PageRequest pageable = PageRequest.of(Math.max(current, 1) - 1, Math.min(Math.max(size, 1), 100),
+            Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<SysOperationLog> page = StrUtil.isBlank(operatorName) ? logRepository.findAll(pageable)
+            : logRepository.findByOperatorNameContainingIgnoreCase(operatorName.trim(), pageable);
         List<OperationLogDTO> records = page.getContent().stream()
-                .map(log -> new OperationLogDTO(
-                        log.getId(),
-                        log.getOperatorId(),
-                        log.getOperatorName(),
-                        log.getAction(),
-                        log.getTargetType(),
-                        log.getTargetId(),
-                        log.getDetail(),
-                        log.getIpAddress(),
-                        log.getCreatedAt()
-                ))
-                .toList();
-        return PageResult.of(
-                records,
-                page.getNumber() + 1,
-                page.getSize(),
-                page.getTotalElements()
-        );
+            .map(log -> new OperationLogDTO(log.getId(), log.getOperatorId(), log.getOperatorName(), log.getAction(),
+                log.getTargetType(), log.getTargetId(), log.getDetail(), log.getIpAddress(), log.getCreatedAt()))
+            .toList();
+        return PageResult.of(records, page.getNumber() + 1, page.getSize(), page.getTotalElements());
     }
 
     private String clientIp() {
-        if (SaHolder.getRequest() == null) return null;
+        if (SaHolder.getRequest() == null)
+            return null;
         Object source = SaHolder.getRequest().getSource();
         if (!(source instanceof HttpServletRequest request)) {
             return null;

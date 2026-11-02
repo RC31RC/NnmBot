@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** RIVEN_ATTRIBUTE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialRivenAttributeDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 定义解析状态；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("definitionResolution")
@@ -458,7 +458,8 @@ public class OfficialRivenAttributeDTO extends OfficialObjectDTO implements Offi
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(zhName), null, null, null);
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(zhName), null,
+            null, null);
     }
 
     /**
@@ -474,7 +475,7 @@ public class OfficialRivenAttributeDTO extends OfficialObjectDTO implements Offi
     /** 官方嵌套对象 OfficialEntriesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class OfficialEntriesItemReferencesDTO extends OfficialObjectDTO {
         /** 官方强化定义条目列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -616,7 +617,7 @@ public class OfficialRivenAttributeDTO extends OfficialObjectDTO implements Offi
     /** 官方嵌套对象 OfficialEntriesUpgradeValuesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class OfficialEntriesUpgradeValuesDTO extends OfficialObjectDTO {
         /** 官方强化定义条目列表的强化数值列表的本地化文本标签；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("locTag")
@@ -683,7 +684,7 @@ public class OfficialRivenAttributeDTO extends OfficialObjectDTO implements Offi
     /** 官方嵌套对象 OfficialEntriesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class OfficialEntriesDTO extends OfficialObjectDTO {
         /** 官方强化定义条目列表的物品引用；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("itemReferences")

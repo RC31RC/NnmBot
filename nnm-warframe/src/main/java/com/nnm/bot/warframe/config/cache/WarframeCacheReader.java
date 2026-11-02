@@ -30,8 +30,7 @@ public class WarframeCacheReader {
         }
         Cache cache = Objects.requireNonNull(cacheManager.getCache(regionName), regionName);
         try {
-            return Optional.ofNullable(cache.get(key,
-                    () -> loader.get().orElseThrow(UnavailableResult::new)));
+            return Optional.ofNullable(cache.get(key, () -> loader.get().orElseThrow(UnavailableResult::new)));
         } catch (ValueRetrievalException exception) {
             Throwable cause = exception.getCause();
             if (cause instanceof UnavailableResult) {

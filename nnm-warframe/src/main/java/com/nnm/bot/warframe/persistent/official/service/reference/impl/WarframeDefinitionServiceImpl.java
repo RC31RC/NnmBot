@@ -20,6 +20,7 @@ public class WarframeDefinitionServiceImpl implements WarframeDefinitionService 
     private WarframeOfficialRecordReadService catalog;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 按查询条件筛选官方基础定义并返回分页结果。
      *
@@ -34,7 +35,7 @@ public class WarframeDefinitionServiceImpl implements WarframeDefinitionService 
         for (var root : data.find(dataset, keyword)) {
             List<FactVO> facts = OfficialFactMapper.facts(root.data(), root.bkey());
             result.add(new EntryVO(root.bkey(), name(root), description(root.data()), icon(root.data()),
-                    iconUrl(root.data()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", root.data(), facts));
+                iconUrl(root.data()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", root.data(), facts));
         }
         return WarframeDefinitionVO.page(dataset.code(), dataset.label(), keyword, result, page);
     }

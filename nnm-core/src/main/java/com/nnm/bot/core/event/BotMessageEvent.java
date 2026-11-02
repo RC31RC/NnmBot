@@ -8,8 +8,9 @@ import org.springframework.context.ApplicationEvent;
 /**
  * 遗留的 Spring 消息事件模型。
  *
- * <p>当前命令主链路使用 {@code BotMessageContext} 直接进入插件分发，
- * 该事件暂时保留用于兼容旧调用方和后续迁移评估，不参与新的命令分发。</p>
+ * <p>
+ * 当前命令主链路使用 {@code BotMessageContext} 直接进入插件分发， 该事件暂时保留用于兼容旧调用方和后续迁移评估，不参与新的命令分发。
+ * </p>
  */
 @Getter
 public class BotMessageEvent extends ApplicationEvent {

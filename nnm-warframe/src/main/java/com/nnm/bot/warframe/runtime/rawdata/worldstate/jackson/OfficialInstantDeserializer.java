@@ -10,8 +10,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 
 /**
- * 将官方协议的秒、毫秒、ISO 时间和 Mongo 扩展日期映射为明确的时间类型。
- * 仅用于官方输入字段，不改变应用全局时间反序列化规则。
+ * 将官方协议的秒、毫秒、ISO 时间和 Mongo 扩展日期映射为明确的时间类型。 仅用于官方输入字段，不改变应用全局时间反序列化规则。
  */
 public class OfficialInstantDeserializer extends JsonDeserializer<Instant> {
 
@@ -31,8 +30,8 @@ public class OfficialInstantDeserializer extends JsonDeserializer<Instant> {
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 String field = parser.currentName();
                 parser.nextToken();
-                if ("$date".equals(field) || "$numberLong".equals(field)
-                        || "epochMillis".equals(field) || "value".equals(field)) {
+                if ("$date".equals(field) || "$numberLong".equals(field) || "epochMillis".equals(field)
+                    || "value".equals(field)) {
                     result = deserialize(parser, context);
                     found = true;
                 } else {
@@ -71,7 +70,7 @@ public class OfficialInstantDeserializer extends JsonDeserializer<Instant> {
      * @return 按上游时间戳单位换算的标准时间点。
      */
     private Instant fromEpoch(long value) {
-        return value > -10_000_000_000L && value < 10_000_000_000L
-                ? Instant.ofEpochSecond(value) : Instant.ofEpochMilli(value);
+        return value > -10_000_000_000L && value < 10_000_000_000L ? Instant.ofEpochSecond(value)
+            : Instant.ofEpochMilli(value);
     }
 }

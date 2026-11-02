@@ -6,14 +6,8 @@ import java.util.List;
 /**
  * 论坛文章分页查询条件。
  */
-public record ForumArticleQuery(
-        Integer current,
-        Integer size,
-        String keyword,
-        String category,
-        List<String> tags,
-        Boolean enabled
-) {
+public record ForumArticleQuery(Integer current, Integer size, String keyword, String category, List<String> tags,
+    Boolean enabled) {
 
     /**
      * 构造论坛文章查询，并保存初始化参数。
@@ -26,12 +20,7 @@ public record ForumArticleQuery(
      * @param enabled 操作后的启用状态。
      */
     public ForumArticleQuery {
-        tags = tags == null
-                ? List.of()
-                : tags.stream()
-                        .filter(value -> StrUtil.isNotBlank(value))
-                        .map(String::trim)
-                        .distinct()
-                        .toList();
+        tags = tags == null ? List.of()
+            : tags.stream().filter(value -> StrUtil.isNotBlank(value)).map(String::trim).distinct().toList();
     }
 }

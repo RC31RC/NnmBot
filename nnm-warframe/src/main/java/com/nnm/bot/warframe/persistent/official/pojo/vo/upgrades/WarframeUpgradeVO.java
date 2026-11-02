@@ -2,8 +2,8 @@ package com.nnm.bot.warframe.persistent.official.pojo.vo.upgrades;
 
 import java.util.List;
 
-public record WarframeUpgradeVO(
-        String query, String category, List<EntryVO> items, int page, int totalPages, int totalCount) {
+public record WarframeUpgradeVO(String query, String category, List<EntryVO> items, int page, int totalPages,
+    int totalCount) {
     /**
      * 构造升级展示对象，并保存初始化参数。
      *
@@ -28,11 +28,12 @@ public record WarframeUpgradeVO(
      * @return 振幅晶体及升级定义的分页视图。
      */
     public static WarframeUpgradeVO page(String query, String category, List<EntryVO> entries, int page) {
-        if (page < 1) throw new IllegalArgumentException("Page must be positive");
-        int pages = Math.max(1, (int) ((entries.size() + 3L) / 4));
-        int from = (int) Math.min((long) (page - 1) * 4, entries.size());
-        return new WarframeUpgradeVO(query, category, entries.subList(from, Math.min(from + 4, entries.size())),
-                page, pages, entries.size());
+        if (page < 1)
+            throw new IllegalArgumentException("Page must be positive");
+        int pages = Math.max(1, (int)((entries.size() + 3L) / 4));
+        int from = (int)Math.min((long)(page - 1) * 4, entries.size());
+        return new WarframeUpgradeVO(query, category, entries.subList(from, Math.min(from + 4, entries.size())), page,
+            pages, entries.size());
     }
 
     /**
@@ -44,11 +45,9 @@ public record WarframeUpgradeVO(
         return page + "/" + totalPages + " 页，共 " + totalCount + " 条";
     }
 
-    public record EntryVO(
-            String uniqueName, String name, String description, String upgradeType, String rarity,
-            Integer baseDrain, String polarity, String compatibility, Integer fusionLimit,
-            Integer rank, String rankUnit, List<String> effects, String imageReference, String iconUrl,
-            String sourceCode, String resolutionMode) {
+    public record EntryVO(String uniqueName, String name, String description, String upgradeType, String rarity,
+        Integer baseDrain, String polarity, String compatibility, Integer fusionLimit, Integer rank, String rankUnit,
+        List<String> effects, String imageReference, String iconUrl, String sourceCode, String resolutionMode) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *

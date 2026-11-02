@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** MISC 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialMiscDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 是否为资料库隐藏条目；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("codexSecret")
@@ -503,7 +503,9 @@ public class OfficialMiscDTO extends OfficialObjectDTO implements OfficialRecord
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), OfficialInputText.first(parentName), OfficialInputText.first(productCategory), OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh),
+            OfficialInputText.first(parentName), OfficialInputText.first(productCategory),
+            OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -519,7 +521,7 @@ public class OfficialMiscDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 DissectionPartsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class DissectionPartsItemReferencesDTO extends OfficialObjectDTO {
         /** 可分解部件列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -661,7 +663,7 @@ public class OfficialMiscDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 DissectionPartsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class DissectionPartsDTO extends OfficialObjectDTO {
         /** 可分解部件列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -713,7 +715,7 @@ public class OfficialMiscDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 HelminthSnackItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class HelminthSnackItemReferencesDTO extends OfficialObjectDTO {
         /** 蠕虫喂食配置的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -855,7 +857,7 @@ public class OfficialMiscDTO extends OfficialObjectDTO implements OfficialRecord
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")

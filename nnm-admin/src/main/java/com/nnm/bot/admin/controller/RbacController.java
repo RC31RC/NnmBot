@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1")
+@RequestMapping("/api/admin")
 public class RbacController {
 
     @Resource
@@ -41,61 +41,40 @@ public class RbacController {
     private RbacQueryService rbacQueryService;
 
     @PostMapping("/me")
-    public ApiResponse<UserInfoVO> me(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<UserInfoVO> me(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminAuthViewAssembler.toUserInfoVO(authService.currentUser(StpUtil.getLoginIdAsLong())));
     }
 
     @PostMapping("/users/query")
     @SaCheckPermission("system:user:view")
-    public ApiResponse<PageResult<UserListVO>> users(
-            @RequestBody
-            UserQuery request
-    ) {
-        return ApiResponse.ok(AdminSystemViewAssembler.toUserListVO(rbacQueryService.users(
-                StpUtil.getLoginIdAsLong(),
-                request.userName(),
-                request.current() == null ? 1 : request.current(),
-                request.size() == null ? 20 : request.size()
-        )));
+    public ApiResponse<PageResult<UserListVO>> users(@RequestBody UserQuery request) {
+        return ApiResponse.ok(
+            AdminSystemViewAssembler.toUserListVO(rbacQueryService.users(StpUtil.getLoginIdAsLong(), request.userName(),
+                request.current() == null ? 1 : request.current(), request.size() == null ? 20 : request.size())));
     }
 
     @PostMapping("/roles/query")
     @SaCheckPermission("system:role:view")
-    public ApiResponse<PageResult<RoleListVO>> roles(
-            @RequestBody
-            RoleQuery request
-    ) {
+    public ApiResponse<PageResult<RoleListVO>> roles(@RequestBody RoleQuery request) {
         String keyword = StrUtil.isBlank(request.roleName()) ? request.roleCode() : request.roleName();
-        return ApiResponse.ok(AdminSystemViewAssembler.toRoleListVO(rbacQueryService.roles(
-                StpUtil.getLoginIdAsLong(),
-                keyword,
-                request.current() == null ? 1 : request.current(),
-                request.size() == null ? 20 : request.size()
-        )));
+        return ApiResponse.ok(AdminSystemViewAssembler.toRoleListVO(rbacQueryService.roles(StpUtil.getLoginIdAsLong(),
+            keyword, request.current() == null ? 1 : request.current(), request.size() == null ? 20 : request.size())));
     }
 
     @PostMapping("/permissions/query")
     @SaCheckPermission("system:role:assign")
-    public ApiResponse<List<PermissionVO>> permissions(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<PermissionVO>> permissions(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toPermissionVO(rbacQueryService.permissions()));
     }
 
     @PostMapping("/menus/query")
-    public ApiResponse<List<MenuVO>> menus(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<MenuVO>> menus(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toMenuVO(rbacQueryService.menus(StpUtil.getLoginIdAsLong())));
     }
 
     @PostMapping("/menus/all/query")
     @SaCheckPermission("system:menu:view")
-    public ApiResponse<List<MenuVO>> allMenus(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<MenuVO>> allMenus(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toMenuVO(rbacQueryService.allMenus()));
     }
 }

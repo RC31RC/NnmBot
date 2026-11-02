@@ -12,8 +12,9 @@ import java.lang.annotation.Target;
 /**
  * 声明机器人命令插件的稳定元数据。
  *
- * <p>该注解组合了 Spring {@link Component}，具体插件无需重复标注
- * {@code @Component}。可运行时修改的配置仍由管理端数据库维护。</p>
+ * <p>
+ * 该注解组合了 Spring {@link Component}，具体插件无需重复标注 {@code @Component}。可运行时修改的配置仍由管理端数据库维护。
+ * </p>
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -39,8 +40,9 @@ public @interface BotPluginCommand {
     /**
      * 是否允许管理端把该命令作为关联导航的无参入口展示。
      *
-     * <p>命令能精确匹配不等于它适合作为导航入口；例如状态修改命令可能同样使用
-     * {@link MatchType#EXACT}，但不应被结果页附加为可填入动作。</p>
+     * <p>
+     * 命令能精确匹配不等于它适合作为导航入口；例如状态修改命令可能同样使用 {@link MatchType#EXACT}，但不应被结果页附加为可填入动作。
+     * </p>
      */
     boolean allowRelatedAction() default false;
 }

@@ -30,36 +30,22 @@ import java.util.function.Predicate;
  * 管理端和机器人共用同一套 WorldStateDTO 业务投影，避免后台重新解释原始上游 JSON。
  */
 @Service
-public class WarframeWorldStateManagementServiceImpl
-        implements WarframeWorldStateManagementService {
+public class WarframeWorldStateManagementServiceImpl implements WarframeWorldStateManagementService {
 
-    private static final Map<String, String> RAW_SECTION_TITLES = Map.ofEntries(
-            Map.entry("conquests", "征服任务"),
-            Map.entry("constructionprojects", "建造项目"),
-            Map.entry("descents", "恶魔降临"),
-            Map.entry("endlessxpschedule", "无尽经验计划"),
-            Map.entry("experimentrecommended", "推荐实验"),
-            Map.entry("featuredguilds", "精选氏族"),
-            Map.entry("flashsales", "限时闪购"),
-            Map.entry("globalupgrades", "全局增益"),
-            Map.entry("hubevents", "中继站活动"),
-            Map.entry("ingamemarket", "游戏内市场"),
-            Map.entry("knowncalendarseasons", "已知日历季节"),
-            Map.entry("libraryinfo", "图鉴信息"),
-            Map.entry("nodeoverrides", "节点覆盖"),
-            Map.entry("pvpactivetournaments", "PVP 进行中赛事"),
-            Map.entry("pvpalternativemodes", "PVP 另类模式"),
-            Map.entry("pvpchallengeinstances", "PVP 挑战"),
-            Map.entry("persistentenemies", "持续敌人"),
-            Map.entry("primeaccessavailability", "Prime Access"),
+    private static final Map<String,
+        String> RAW_SECTION_TITLES = Map.ofEntries(Map.entry("conquests", "征服任务"),
+            Map.entry("constructionprojects", "建造项目"), Map.entry("descents", "恶魔降临"),
+            Map.entry("endlessxpschedule", "无尽经验计划"), Map.entry("experimentrecommended", "推荐实验"),
+            Map.entry("featuredguilds", "精选氏族"), Map.entry("flashsales", "限时闪购"), Map.entry("globalupgrades", "全局增益"),
+            Map.entry("hubevents", "中继站活动"), Map.entry("ingamemarket", "游戏内市场"),
+            Map.entry("knowncalendarseasons", "已知日历季节"), Map.entry("libraryinfo", "图鉴信息"),
+            Map.entry("nodeoverrides", "节点覆盖"), Map.entry("pvpactivetournaments", "PVP 进行中赛事"),
+            Map.entry("pvpalternativemodes", "PVP 另类模式"), Map.entry("pvpchallengeinstances", "PVP 挑战"),
+            Map.entry("persistentenemies", "持续敌人"), Map.entry("primeaccessavailability", "Prime Access"),
             Map.entry("primetokenavailability", "Prime Token"),
-            Map.entry("primevaultavailabilities", "Prime Vault 可用性"),
-            Map.entry("primevaulttraders", "Prime Vault 商人"),
-            Map.entry("projectpct", "项目进度"),
-            Map.entry("pvpsales", "PVP 销售"),
-            Map.entry("skusales", "SKU 销售"),
-            Map.entry("twitchpromos", "Twitch 促销"),
-            Map.entry("weeklyvaultbonusrewards", "每周 Vault 奖励"));
+            Map.entry("primevaultavailabilities", "Prime Vault 可用性"), Map.entry("primevaulttraders", "Prime Vault 商人"),
+            Map.entry("projectpct", "项目进度"), Map.entry("pvpsales", "PVP 销售"), Map.entry("skusales", "SKU 销售"),
+            Map.entry("twitchpromos", "Twitch 促销"), Map.entry("weeklyvaultbonusrewards", "每周 Vault 奖励"));
 
     @Resource
     private WarframeWorldStateService worldStateService;
@@ -81,8 +67,8 @@ public class WarframeWorldStateManagementServiceImpl
         }
 
         List<SectionProjection> projections = projections(state);
-        List<WarframeWorldStateCommandVO> outputs = projectionEnricher.enrichAll(
-                projections.stream().map(SectionProjection::output).toList());
+        List<WarframeWorldStateCommandVO> outputs =
+            projectionEnricher.enrichAll(projections.stream().map(SectionProjection::output).toList());
         List<WarframeWorldStateSectionVO> sections = new ArrayList<>(outputs.size());
         for (int index = 0; index < outputs.size(); index++) {
             add(sections, projections.get(index).key(), outputs.get(index));
@@ -91,20 +77,13 @@ public class WarframeWorldStateManagementServiceImpl
 
         WarframeWorldStateCommandVO metadata = WarframeWorldStateProjector.alerts(state);
         Map<String, Object> data = metadata.data();
-        return new WarframeWorldStateManagementVO(
-                true,
-                stringValue(data, "source"),
-                stringValue(data, "fetchedAt"),
-                stringValue(data, "providerTimestamp"),
-                Boolean.TRUE.equals(data.get("stale")),
-                stringValue(data, "updatedAt"),
-                List.copyOf(sections));
+        return new WarframeWorldStateManagementVO(true, stringValue(data, "source"), stringValue(data, "fetchedAt"),
+            stringValue(data, "providerTimestamp"), Boolean.TRUE.equals(data.get("stale")),
+            stringValue(data, "updatedAt"), List.copyOf(sections));
     }
 
     /**
-     * WorldStateDTO 的顶层字段会随官方版本增加。已建模字段走稳定业务投影，
-     *   同时保留原始响应中的每个顶层字段，确保新增字段、技术字段和解析失败
-     *   的字段仍可在管理端查看。动态世界数据只存在当前 JVM 快照中。
+     * WorldStateDTO 的顶层字段会随官方版本增加。已建模字段走稳定业务投影， 同时保留原始响应中的每个顶层字段，确保新增字段、技术字段和解析失败 的字段仍可在管理端查看。动态世界数据只存在当前 JVM 快照中。
      *
      * @param snapshot 快照。
      * @return 按当前条件筛选或转换后的数据集合。
@@ -116,15 +95,15 @@ public class WarframeWorldStateManagementServiceImpl
         try {
             // 原文检查面板保留未建模的顶层字段；这些数据不参与业务解析或任务补全。
             Map<String, Object> root = objectMapper.readValue(snapshot.rawJson(), new TypeReference<>() {});
-            if (root == null) return List.of();
+            if (root == null)
+                return List.of();
             List<WarframeWorldStateSectionVO> sections = new ArrayList<>();
             root.forEach((key, value) -> {
                 String normalized = key.toLowerCase(Locale.ROOT);
                 List<Map<String, Object>> items = rawItems(value);
-                sections.add(new WarframeWorldStateSectionVO(
-                        "raw-" + normalized,
-                        RAW_SECTION_TITLES.getOrDefault(normalized, "原始：" + key),
-                        value != null && CollUtil.isNotEmpty(items), items.size(), items));
+                sections.add(new WarframeWorldStateSectionVO("raw-" + normalized,
+                    RAW_SECTION_TITLES.getOrDefault(normalized, "原始：" + key),
+                    value != null && CollUtil.isNotEmpty(items), items.size(), items));
             });
             return List.copyOf(sections);
         } catch (JsonProcessingException exception) {
@@ -178,16 +157,11 @@ public class WarframeWorldStateManagementServiceImpl
     public WarframeWorldStateRawVO raw() {
         WorldStateRuntimeSnapshot snapshot = worldStateService.getCurrentSnapshot();
         if (snapshot == null) {
-            return new WarframeWorldStateRawVO(
-                    false, null, null, null, List.of(), null);
+            return new WarframeWorldStateRawVO(false, null, null, null, List.of(), null);
         }
-        return new WarframeWorldStateRawVO(
-                snapshot.rawJson() != null,
-                snapshot.source(),
-                snapshot.fetchedAt() == null ? null : snapshot.fetchedAt().toString(),
-                snapshot.contentHash(),
-                snapshot.topLevelFields(),
-                snapshot.rawJson());
+        return new WarframeWorldStateRawVO(snapshot.rawJson() != null, snapshot.source(),
+            snapshot.fetchedAt() == null ? null : snapshot.fetchedAt().toString(), snapshot.contentHash(),
+            snapshot.topLevelFields(), snapshot.rawJson());
     }
 
     /**
@@ -197,17 +171,11 @@ public class WarframeWorldStateManagementServiceImpl
      * @param key 当前记录或字段的查找键。
      * @param output 需要补全或转换的输出数据。
      */
-    private static void add(
-            List<WarframeWorldStateSectionVO> sections,
-            String key,
-            WarframeWorldStateCommandVO output) {
+    private static void add(List<WarframeWorldStateSectionVO> sections, String key,
+        WarframeWorldStateCommandVO output) {
         List<Map<String, Object>> items = items(output.data().get("items"));
-        sections.add(new WarframeWorldStateSectionVO(
-                key,
-                stringValue(output.data(), "title"),
-                CollUtil.isNotEmpty(items),
-                items.size(),
-                items));
+        sections.add(new WarframeWorldStateSectionVO(key, stringValue(output.data(), "title"),
+            CollUtil.isNotEmpty(items), items.size(), items));
     }
 
     /**
@@ -217,53 +185,52 @@ public class WarframeWorldStateManagementServiceImpl
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<SectionProjection> projections(WorldStateDTO state) {
-        return List.of(
-                new SectionProjection("alerts", WarframeWorldStateProjector.alerts(state)),
-                new SectionProjection("sorties", WarframeWorldStateProjector.sorties(state, false)),
-                new SectionProjection("archon-hunts", WarframeWorldStateProjector.sorties(state, true)),
-                new SectionProjection("void-trader", WarframeWorldStateProjector.voidTrader(state)),
-                new SectionProjection("arbitration", WarframeWorldStateProjector.arbitration(state, false)),
-                new SectionProjection("daily-deals", WarframeWorldStateProjector.dailyDeals(state)),
-                new SectionProjection("invasions", WarframeWorldStateProjector.invasions(state)),
-                new SectionProjection("fissures", WarframeWorldStateProjector.fissures(
-                        state, mission -> !mission.hard() && !mission.voidStorm(), "裂隙")),
-                new SectionProjection("steel-fissures", WarframeWorldStateProjector.fissures(
-                        state, mission -> mission.hard() && !mission.voidStorm(), "钢铁裂隙")),
-                new SectionProjection("void-storms", WarframeWorldStateProjector.fissures(
-                        state, WorldStateDTO.ActiveMissionDTO::voidStorm, "九重天裂隙")),
-                new SectionProjection("steel-path", WarframeWorldStateProjector.steelPath(state)),
-                new SectionProjection("cycles", WarframeWorldStateProjector.cycles(state)),
-                new SectionProjection("nightwave", WarframeWorldStateProjector.nightwave(state)),
-                // 官方快照 Conquests；科研条件保留原始值，术语由代码簿/补充数据解析。
-                new SectionProjection("archimedeas", WarframeWorldStateProjector.archimedeas(
-                        state, "科研", conquest -> true)),
-                new SectionProjection("deep-archimedeas", WarframeWorldStateProjector.archimedeas(
-                        state, "深层科研",
-                        conquest -> "CTLAB".equals(normalize(conquest.typeKey())))),
-                new SectionProjection("hex-archimedeas", WarframeWorldStateProjector.archimedeas(
-                        state, "时光科研",
-                        conquest -> "CTHEX".equals(normalize(conquest.typeKey())))),
-                new SectionProjection("descents", WarframeWorldStateProjector.descents(state)),
-                new SectionProjection("events", WarframeWorldStateProjector.events(state)),
-                new SectionProjection("news", WarframeWorldStateProjector.news(state)),
-                new SectionProjection("conclave", WarframeWorldStateProjector.conclave(state)),
-                new SectionProjection("construction-progress", WarframeWorldStateProjector.constructionProgress(state)),
-                new SectionProjection("simaris", WarframeWorldStateProjector.simaris(state)),
-                new SectionProjection("sentient-outposts", WarframeWorldStateProjector.sentientOutposts(state)),
-                new SectionProjection("clan-initiative", WarframeWorldStateProjector.clanInitiatives(state)),
-                new SectionProjection("circuit-normal", WarframeWorldStateProjector.circuit(state, false)),
-                new SectionProjection("circuit-hard", WarframeWorldStateProjector.circuit(state, true)),
-                new SectionProjection("calendar", WarframeWorldStateProjector.calendar(state)),
-                new SectionProjection("vault-trader", WarframeWorldStateProjector.vaultTrader(state)),
-                new SectionProjection("timestamp", WarframeWorldStateProjector.timestamp(state)),
-                new SectionProjection("syndicate-missions", WarframeWorldStateProjector.syndicate(
-                        state, "集团任务", value -> true)),
-                new SectionProjection("ostrons", WarframeWorldStateProjector.syndicate(
-                        state, "希图斯", contains("ostrons", "cetus", "希图斯"))),
-                new SectionProjection("solaris", WarframeWorldStateProjector.syndicate(
-                        state, "索拉里斯", contains("solaris", "vallis", "索拉里斯"))),
-                new SectionProjection("entrati", WarframeWorldStateProjector.syndicate(
-                        state, "英择谛", contains("entrati", "deimos", "英择谛"))));
+        return List.of(new SectionProjection("alerts", WarframeWorldStateProjector.alerts(state)),
+            new SectionProjection("sorties", WarframeWorldStateProjector.sorties(state, false)),
+            new SectionProjection("archon-hunts", WarframeWorldStateProjector.sorties(state, true)),
+            new SectionProjection("void-trader", WarframeWorldStateProjector.voidTrader(state)),
+            new SectionProjection("arbitration", WarframeWorldStateProjector.arbitration(state, false)),
+            new SectionProjection("daily-deals", WarframeWorldStateProjector.dailyDeals(state)),
+            new SectionProjection("invasions", WarframeWorldStateProjector.invasions(state)),
+            new SectionProjection("fissures",
+                WarframeWorldStateProjector.fissures(state, mission -> !mission.hard() && !mission.voidStorm(), "裂隙")),
+            new SectionProjection("steel-fissures",
+                WarframeWorldStateProjector.fissures(state, mission -> mission.hard() && !mission.voidStorm(), "钢铁裂隙")),
+            new SectionProjection("void-storms",
+                WarframeWorldStateProjector.fissures(state, WorldStateDTO.ActiveMissionDTO::voidStorm, "九重天裂隙")),
+            new SectionProjection("steel-path", WarframeWorldStateProjector.steelPath(state)),
+            new SectionProjection("cycles", WarframeWorldStateProjector.cycles(state)),
+            new SectionProjection("nightwave", WarframeWorldStateProjector.nightwave(state)),
+            // 官方快照 Conquests；科研条件保留原始值，术语由代码簿/补充数据解析。
+            new SectionProjection("archimedeas",
+                WarframeWorldStateProjector.archimedeas(state, "科研", conquest -> true)),
+            new SectionProjection("deep-archimedeas",
+                WarframeWorldStateProjector.archimedeas(state, "深层科研",
+                    conquest -> "CTLAB".equals(normalize(conquest.typeKey())))),
+            new SectionProjection("hex-archimedeas",
+                WarframeWorldStateProjector.archimedeas(state, "时光科研",
+                    conquest -> "CTHEX".equals(normalize(conquest.typeKey())))),
+            new SectionProjection("descents", WarframeWorldStateProjector.descents(state)),
+            new SectionProjection("events", WarframeWorldStateProjector.events(state)),
+            new SectionProjection("news", WarframeWorldStateProjector.news(state)),
+            new SectionProjection("conclave", WarframeWorldStateProjector.conclave(state)),
+            new SectionProjection("construction-progress", WarframeWorldStateProjector.constructionProgress(state)),
+            new SectionProjection("simaris", WarframeWorldStateProjector.simaris(state)),
+            new SectionProjection("sentient-outposts", WarframeWorldStateProjector.sentientOutposts(state)),
+            new SectionProjection("clan-initiative", WarframeWorldStateProjector.clanInitiatives(state)),
+            new SectionProjection("circuit-normal", WarframeWorldStateProjector.circuit(state, false)),
+            new SectionProjection("circuit-hard", WarframeWorldStateProjector.circuit(state, true)),
+            new SectionProjection("calendar", WarframeWorldStateProjector.calendar(state)),
+            new SectionProjection("vault-trader", WarframeWorldStateProjector.vaultTrader(state)),
+            new SectionProjection("timestamp", WarframeWorldStateProjector.timestamp(state)),
+            new SectionProjection("syndicate-missions",
+                WarframeWorldStateProjector.syndicate(state, "集团任务", value -> true)),
+            new SectionProjection("ostrons",
+                WarframeWorldStateProjector.syndicate(state, "希图斯", contains("ostrons", "cetus", "希图斯"))),
+            new SectionProjection("solaris",
+                WarframeWorldStateProjector.syndicate(state, "索拉里斯", contains("solaris", "vallis", "索拉里斯"))),
+            new SectionProjection("entrati",
+                WarframeWorldStateProjector.syndicate(state, "英择谛", contains("entrati", "deimos", "英择谛"))));
     }
 
     /**

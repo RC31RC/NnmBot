@@ -16,11 +16,6 @@ import java.util.Set;
  * @param statusChangedAt 状态最后变更时间
  * @param lastError 最近一次错误信息
  */
-public record BotChannelSnapshot(
-        String instanceId,
-        BotChannelKey key,
-        Set<BotChannelCapability> capabilities,
-        BotChannelStatus status,
-        Instant statusChangedAt,
-        String lastError) {
+public record BotChannelSnapshot(String instanceId, BotChannelKey key, Set<BotChannelCapability> capabilities,
+    BotChannelStatus status, Instant statusChangedAt, String lastError) {
 }

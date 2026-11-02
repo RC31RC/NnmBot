@@ -284,7 +284,7 @@ public class MarketResponseRawData<T> {
 
         /** 平台提供的活动状态扩展，仅供展示与审计。 */
         @JsonProperty("activity")
-        private Map<String,Object> activity;
+        private Map<String, Object> activity;
 
     }
 

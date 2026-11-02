@@ -76,5 +76,7 @@ public class OfficialRewardPackComponentsItems extends OfficialChildRow {
     private OfficialRewardPackRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRewardPackComponentsItemsItemReferencesItems> officialRewardPackComponentsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialRewardPackComponentsItemsItemReferencesItems> officialRewardPackComponentsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

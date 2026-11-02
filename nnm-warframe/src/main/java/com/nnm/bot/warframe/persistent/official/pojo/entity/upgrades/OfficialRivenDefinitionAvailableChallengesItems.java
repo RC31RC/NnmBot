@@ -63,8 +63,12 @@ public class OfficialRivenDefinitionAvailableChallengesItems extends OfficialChi
     private OfficialRivenDefinitionRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenDefinitionAvailableChallengesItemsComplicationsItems> officialRivenDefinitionAvailableChallengesItemsComplicationsItemsRows = new ArrayList<>();
+    private List<
+        OfficialRivenDefinitionAvailableChallengesItemsComplicationsItems> officialRivenDefinitionAvailableChallengesItemsComplicationsItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenDefinitionAvailableChallengesItemsItemReferencesItems> officialRivenDefinitionAvailableChallengesItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialRivenDefinitionAvailableChallengesItemsItemReferencesItems> officialRivenDefinitionAvailableChallengesItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

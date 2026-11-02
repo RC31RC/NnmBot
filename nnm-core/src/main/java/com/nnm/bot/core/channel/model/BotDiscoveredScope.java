@@ -14,23 +14,14 @@ import java.util.List;
  * @param members 平台返回的成员列表
  * @param membersComplete 成员列表是否是平台确认完整的全量结果
  */
-public record BotDiscoveredScope(
-        String scopeType,
-        String scopeKey,
-        String displayName,
-        Integer memberCount,
-        List<BotDiscoveredMember> members,
-        boolean membersComplete) {
+public record BotDiscoveredScope(String scopeType, String scopeKey, String displayName, Integer memberCount,
+    List<BotDiscoveredMember> members, boolean membersComplete) {
 
     /**
      * 保留原有构造方式。历史调用方传入成员列表时，默认视为完整列表。
      */
-    public BotDiscoveredScope(
-            String scopeType,
-            String scopeKey,
-            String displayName,
-            Integer memberCount,
-            List<BotDiscoveredMember> members) {
+    public BotDiscoveredScope(String scopeType, String scopeKey, String displayName, Integer memberCount,
+        List<BotDiscoveredMember> members) {
         this(scopeType, scopeKey, displayName, memberCount, members, true);
     }
 

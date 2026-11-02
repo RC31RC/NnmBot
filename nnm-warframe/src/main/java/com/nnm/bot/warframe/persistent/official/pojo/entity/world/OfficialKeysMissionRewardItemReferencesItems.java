@@ -107,5 +107,7 @@ public class OfficialKeysMissionRewardItemReferencesItems extends OfficialChildR
     private OfficialKeysRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysMissionRewardItemReferencesItemsRotationsItems> officialKeysMissionRewardItemReferencesItemsRotationsItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysMissionRewardItemReferencesItemsRotationsItems> officialKeysMissionRewardItemReferencesItemsRotationsItemsRows =
+            new ArrayList<>();
 }

@@ -7,13 +7,14 @@ import java.util.Set;
 
 /** 人工资料白名单；官方资料不通过此入口维护。 */
 public enum WarframeCommunityDataset {
-    ALIAS("alias", "物品别名", Set.of("aliasName", "targetName")),
-    TERM("term", "术语与黑话", Set.of("termGroup", "englishText", "chineseText")),
-    ARBITRATION_ESSENCE("arbitration_essence", "仲裁精华", Set.of("nodeName", "essenceAmount")),
-    RIVEN_ALIAS("riven_alias", "紫卡自定义别名与组合", Set.of("attributeCode", "aliasName"));
+    ALIAS("alias", "物品别名", "社区维护的别名与官方物品名称映射", Set.of("aliasName", "targetName")),
+    TERM("term", "术语与黑话", "游戏术语、黑话及其中英文释义", Set.of("termGroup", "englishText", "chineseText")),
+    ARBITRATION_ESSENCE("arbitration_essence", "仲裁精华", "仲裁任务节点与精华数量映射", Set.of("nodeName", "essenceAmount")),
+    RIVEN_ALIAS("riven_alias", "紫卡自定义别名与组合", "裂罅属性编码的中文别名及组合映射", Set.of("attributeCode", "aliasName"));
 
     private final String code;
     private final String label;
+    private final String description;
     private final Set<String> fields;
 
     /**
@@ -23,9 +24,10 @@ public enum WarframeCommunityDataset {
      * @param label 标签标题。
      * @param fields 字段集合。
      */
-    WarframeCommunityDataset(String code, String label, Set<String> fields) {
+    WarframeCommunityDataset(String code, String label, String description, Set<String> fields) {
         this.code = code;
         this.label = label;
+        this.description = description;
         this.fields = fields;
     }
 
@@ -48,6 +50,15 @@ public enum WarframeCommunityDataset {
     }
 
     /**
+     * 读取当前分类对应的业务说明。
+     *
+     * @return 当前分类对应的业务说明。
+     */
+    public String description() {
+        return description;
+    }
+
+    /**
      * 取得当前合同明确声明的字段。
      *
      * @return 按当前条件筛选或转换后的数据集合。
@@ -64,6 +75,6 @@ public enum WarframeCommunityDataset {
      */
     public static WarframeCommunityDataset parse(String code) {
         return Arrays.stream(values()).filter(dataset -> dataset.code.equals(code)).findFirst()
-                .orElseThrow(() -> new BusinessException(WarframeManagementErrorCode.INVALID_COMMUNITY_DATASET));
+            .orElseThrow(() -> new BusinessException(WarframeManagementErrorCode.INVALID_COMMUNITY_DATASET));
     }
 }

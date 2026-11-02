@@ -17,13 +17,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-@BotPluginCommand(
-        code = WarframeCommandCodes.RIVEN_WEEKLY,
-        matchType = MatchType.PREFIX,
-        name = "紫卡周成交统计",
-        gameCode = "warframe",
-        order = 63)
-public final class RivenWeeklyPlugin extends BotPlugin {
+@BotPluginCommand(code = WarframeCommandCodes.RIVEN_WEEKLY, matchType = MatchType.PREFIX, name = "紫卡周成交统计",
+    gameCode = "warframe", order = 63)
+public final class RivenWeeklyPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -35,7 +31,7 @@ public final class RivenWeeklyPlugin extends BotPlugin {
         return List.of(CommandView.textImageAndMarkdown("warframe.riven-weekly"));
     }
 
-    private static final Pattern OPTION = Pattern.compile("(?:^|\\s)--(platform|rerolled|page)(?:=|\\s+)(\\S+)$");
+    private static final Pattern OPTION = Pattern.compile("(?:^|\\s)--(rerolled|page)(?:=|\\s+)(\\S+)$");
     @Resource
     private WarframeRivenWeeklyService weeklyService;
 
@@ -43,12 +39,12 @@ public final class RivenWeeklyPlugin extends BotPlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
-        String platform = "pc";
         Boolean rerolled = null;
         int page = 1;
         Set<String> seen = new HashSet<>();
@@ -60,12 +56,6 @@ public final class RivenWeeklyPlugin extends BotPlugin {
                 return CommandResult.rejected("参数不能重复：" + option);
             }
             switch (option) {
-                case "platform" -> {
-                    if (!Set.of("pc", "ps4", "xb1", "swi").contains(value)) {
-                        return CommandResult.rejected("平台必须为 pc、ps4、xb1 或 swi");
-                    }
-                    platform = value;
-                }
                 case "rerolled" -> {
                     if (!Set.of("true", "false").contains(value)) {
                         return CommandResult.rejected("已洗条件必须为 true 或 false");
@@ -90,7 +80,7 @@ public final class RivenWeeklyPlugin extends BotPlugin {
         if (query.contains("--") || query.length() > 200) {
             return CommandResult.rejected("查询过长或参数格式无效");
         }
-        WarframeRivenWeeklyVO display = weeklyService.find(platform, query, rerolled, page);
+        WarframeRivenWeeklyVO display = weeklyService.find("pc", query, rerolled, page);
         return CommandResult.view("warframe.riven-weekly", "紫卡周成交统计：" + display.pagination(), display);
     }
 }

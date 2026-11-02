@@ -8,8 +8,7 @@ import org.springframework.data.jpa.repository.Lock;
 import java.util.List;
 import java.util.Optional;
 
-public interface WarframeGroupWatchRuleRepository
-        extends JpaRepository<WarframeGroupWatchRule, Long> {
+public interface WarframeGroupWatchRuleRepository extends JpaRepository<WarframeGroupWatchRule, Long> {
 
     /**
      * 按规则主键、群组和成员定位待维护的订阅规则。
@@ -43,9 +42,7 @@ public interface WarframeGroupWatchRuleRepository
      * @param memberId 订阅所属群成员的本地主键。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    List<WarframeGroupWatchRuleDTO> findAllProjectedByGroupIdAndMemberIdAndEnabledTrue(
-            Long groupId,
-            Long memberId);
+    List<WarframeGroupWatchRuleDTO> findAllProjectedByGroupIdAndMemberIdAndEnabledTrue(Long groupId, Long memberId);
 
     /**
      * 读取指定群组成员的全部待维护订阅规则。
@@ -66,9 +63,8 @@ public interface WarframeGroupWatchRuleRepository
      * @param watchValue 订阅监控值。
      * @return 匹配的业务结果；没有有效数据时为空。
      */
-    Optional<WarframeGroupWatchRule>
-    findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(
-            Long groupId, Long memberId, String watchType, String watchKey, String watchValue);
+    Optional<WarframeGroupWatchRule> findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(Long groupId,
+        Long memberId, String watchType, String watchKey, String watchValue);
 
     /**
      * 读取指定成员在给定订阅类型和匹配值下的已启用规则。
@@ -79,9 +75,8 @@ public interface WarframeGroupWatchRuleRepository
      * @param watchValue 订阅监控值。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    List<WarframeGroupWatchRule>
-    findAllByGroupIdAndMemberIdAndWatchTypeAndWatchValueAndEnabledTrue(
-            Long groupId, Long memberId, String watchType, String watchValue);
+    List<WarframeGroupWatchRule> findAllByGroupIdAndMemberIdAndWatchTypeAndWatchValueAndEnabledTrue(Long groupId,
+        Long memberId, String watchType, String watchValue);
 
     /**
      * 按成员和完整订阅条件读取已启用规则。
@@ -93,9 +88,8 @@ public interface WarframeGroupWatchRuleRepository
      * @param watchValue 订阅监控值。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    List<WarframeGroupWatchRule>
-    findAllByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValueAndEnabledTrue(
-            Long groupId, Long memberId, String watchType, String watchKey, String watchValue);
+    List<WarframeGroupWatchRule> findAllByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValueAndEnabledTrue(
+        Long groupId, Long memberId, String watchType, String watchKey, String watchValue);
 
     /**
      * 查询指定主键对应的首条记录。

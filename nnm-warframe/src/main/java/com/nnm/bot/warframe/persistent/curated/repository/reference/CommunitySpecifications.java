@@ -10,8 +10,7 @@ final class CommunitySpecifications {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private CommunitySpecifications() {
-    }
+    private CommunitySpecifications() {}
 
     /**
      * 将关键词转换为多个明确文本字段的包含筛选，并转义数据库通配符。
@@ -22,10 +21,11 @@ final class CommunitySpecifications {
      */
     static <T> Specification<T> contains(String keyword, List<String> fields) {
         return (root, query, builder) -> {
-            if (StrUtil.isBlank(keyword)) return builder.conjunction();
+            if (StrUtil.isBlank(keyword))
+                return builder.conjunction();
             String pattern = "%" + keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-            return builder.or(fields.stream().map(field -> builder.like(root.get(field), pattern, '\\'))
-                    .toArray(Predicate[]::new));
+            return builder.or(
+                fields.stream().map(field -> builder.like(root.get(field), pattern, '\\')).toArray(Predicate[]::new));
         };
     }
 }

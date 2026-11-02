@@ -14,6 +14,7 @@ public interface WarframeOfficialRecordReadService {
 
     /**
      * 读取当前已采纳的官方数据批次标识，尚无基线时返回空结果。
+     *
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     Optional<String> currentBatchId();
@@ -40,9 +41,7 @@ public interface WarframeOfficialRecordReadService {
      * @param recordIds 已筛选的主记录标识。
      * @return 所选主记录及其同源完整详情树。
      */
-    List<WarframeOfficialRecordReadDTO> recordsByIds(
-            WarframeOfficialDataDomain domain,
-            Collection<Long> recordIds);
+    List<WarframeOfficialRecordReadDTO> recordsByIds(WarframeOfficialDataDomain domain, Collection<Long> recordIds);
 
     /**
      * 读取当前业务身份对应的记录。
@@ -55,6 +54,7 @@ public interface WarframeOfficialRecordReadService {
 
     /**
      * 读取已采纳的星系和节点资料，供引用解析与展示使用。
+     *
      * @return 按当前条件筛选或转换后的数据集合。
      */
     List<WarframeOfficialRegionDTO> regions();

@@ -31,10 +31,10 @@ import java.util.Map;
 import java.util.Set;
 
 /** 拍卖命令公共入口：按拍卖目录识别武器，将武器、词条和页码封装为查询对象。 */
-@BotPluginCommand(code = WarframeCommandCodes.MARKET_RIVEN, matchType = MatchType.PREFIX,
-        name = "紫卡市场", gameCode = "warframe", order = 64)
+@BotPluginCommand(code = WarframeCommandCodes.MARKET_RIVEN, matchType = MatchType.PREFIX, name = "紫卡市场",
+    gameCode = "warframe", order = 64)
 // 拍卖目录来自 Warframe Market API；属性取官方定义，组合别名取人工紫卡别名白名单。
-public final class MarketRivenPlugin extends BotPlugin {
+public final class MarketRivenPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -62,16 +62,18 @@ public final class MarketRivenPlugin extends BotPlugin {
      * 解析武器及词条为查询对象；拍卖请求、价格排序与每页 10 条均由 Service 负责。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         String type = "riven";
         String input = invocation.arguments() == null ? "" : invocation.arguments().trim();
         if (StrUtil.isBlank(input)) {
             return CommandResult.rejected("格式：命令 武器名称 [词条] [负词条]");
         }
-        if (input.length() > 500) return CommandResult.rejected("紫卡查询条件过长");
+        if (input.length() > 500)
+            return CommandResult.rejected("紫卡查询条件过长");
         String[] parts = input.split("\\s+");
         int end = parts.length;
         int page = 1;
@@ -98,19 +100,19 @@ public final class MarketRivenPlugin extends BotPlugin {
                     break;
                 }
             }
-            if (CollUtil.isNotEmpty(candidates)) break;
+            if (CollUtil.isNotEmpty(candidates))
+                break;
         }
         if (CollUtil.isEmpty(candidates)) {
             return CommandResult.rejected("没有找到对应的拍卖武器，请检查武器名称");
         }
         if (candidates.size() > 1) {
             return CommandResult.rejected("武器名称存在多个候选："
-                    + String.join("、", candidates.stream().limit(10)
-                    .map(item -> item.localizedName("zh-hans")).toList()));
+                + String.join("、", candidates.stream().limit(10).map(item -> item.localizedName("zh-hans")).toList()));
         }
         Map<String, Set<List<String>>> attributes = attributeIndex();
-        List<String> keywords = attributes.keySet().stream()
-                .sorted(Comparator.comparingInt(String::length).reversed()).toList();
+        List<String> keywords =
+            attributes.keySet().stream().sorted(Comparator.comparingInt(String::length).reversed()).toList();
         List<String> positive = new ArrayList<>();
         List<String> negative = new ArrayList<>();
         boolean requireNegative = false;
@@ -127,7 +129,8 @@ public final class MarketRivenPlugin extends BotPlugin {
                     return CommandResult.rejected("负面词条不能为空");
                 }
                 remaining = normalize(parts[++index]);
-                if (StrUtil.isEmpty(remaining)) return CommandResult.rejected("负面词条不能为空");
+                if (StrUtil.isEmpty(remaining))
+                    return CommandResult.rejected("负面词条不能为空");
             }
             while (StrUtil.isNotEmpty(remaining)) {
                 // 完整名称可跨空格，但不能吞掉下一个负面标记；同一记录内的多编码仍表示组合。
@@ -154,17 +157,16 @@ public final class MarketRivenPlugin extends BotPlugin {
                 remaining = remaining.substring(consumed);
             }
         }
-        if (new LinkedHashSet<>(positive).size() != positive.size()
-                || positive.size() > 3 || negative.size() > 1
-                || positive.stream().anyMatch(negative::contains)) {
+        if (new LinkedHashSet<>(positive).size() != positive.size() || positive.size() > 3 || negative.size() > 1
+            || positive.stream().anyMatch(negative::contains)) {
             return CommandResult.rejected("紫卡最多指定三个不同正面词条和一个负面词条，正负词条不能重复");
         }
         WarframeMarketItemDTO weapon = candidates.getFirst();
-        WarframeMarketAuctionQuery query = new WarframeMarketAuctionQuery(
-                type, weapon.localizedName("zh-hans"), weapon.slug(),
-                positive, negative, page, requireNegative);
+        WarframeMarketAuctionQuery query = new WarframeMarketAuctionQuery(type, weapon.localizedName("zh-hans"),
+            weapon.slug(), positive, negative, page, requireNegative);
         Optional<WarframeMarketAuctionPageDTO> result = marketService.queryAuctions(query);
-        if (result.isEmpty()) return CommandResult.text("暂时无法获取市场拍卖数据，请稍后再试");
+        if (result.isEmpty())
+            return CommandResult.text("暂时无法获取市场拍卖数据，请稍后再试");
         // Service 保留完整分页结果；命令出口选择交易字段，词条名称优先使用社区中文。
         Map<String, String> attributeNames = new LinkedHashMap<>();
         officialAttributes.definitions().forEach(record -> {
@@ -173,8 +175,8 @@ public final class MarketRivenPlugin extends BotPlugin {
                 attributeNames.putIfAbsent(details.code(), details.effect());
             }
         });
-        return CommandResult.view("warframe.market.auctions", "市场拍卖", WarframeMarketAuctionVO.from(result.get(),
-                code -> attributeNames.getOrDefault(code, code)));
+        return CommandResult.view("warframe.market.auctions", "市场拍卖",
+            WarframeMarketAuctionVO.from(result.get(), code -> attributeNames.getOrDefault(code, code)));
     }
 
     /**
@@ -185,14 +187,15 @@ public final class MarketRivenPlugin extends BotPlugin {
      * @param exactOnly 精确仅限。
      * @return 市场物品的非受管详情组成的列表。
      */
-    private List<WarframeMarketItemDTO> matchWeapons(
-            String input, List<WarframeMarketItemDTO> weapons, boolean exactOnly) {
+    private List<WarframeMarketItemDTO> matchWeapons(String input, List<WarframeMarketItemDTO> weapons,
+        boolean exactOnly) {
         Set<String> terms = new LinkedHashSet<>();
         terms.add(normalize(input));
         List<WarframeMarketItemDTO> exact = matching(weapons, terms, true);
-        if (CollUtil.isNotEmpty(exact)) return exact;
+        if (CollUtil.isNotEmpty(exact))
+            return exact;
         itemResolver.auctionWeaponSearchTerms(input).stream().map(MarketRivenPlugin::normalize)
-                .filter(value -> StrUtil.isNotBlank(value)).forEach(terms::add);
+            .filter(value -> StrUtil.isNotBlank(value)).forEach(terms::add);
         exact = matching(weapons, terms, true);
         return exactOnly || CollUtil.isNotEmpty(exact) ? exact : matching(weapons, terms, false);
     }
@@ -205,14 +208,15 @@ public final class MarketRivenPlugin extends BotPlugin {
      * @param exact 精确。
      * @return 市场物品的非受管详情组成的列表。
      */
-    private static List<WarframeMarketItemDTO> matching(
-            List<WarframeMarketItemDTO> weapons, Set<String> terms, boolean exact) {
+    private static List<WarframeMarketItemDTO> matching(List<WarframeMarketItemDTO> weapons, Set<String> terms,
+        boolean exact) {
         return weapons.stream().filter(item -> StrUtil.isNotBlank(item.slug()))
-                .filter(item -> List.of(item.slug(), item.localizedName("en"), item.localizedName("zh-hans"))
-                        .stream().map(MarketRivenPlugin::normalize)
-                        .anyMatch(name -> terms.stream().anyMatch(term ->
-                                exact ? name.equals(term) : term.length() >= 2 && name.contains(term))))
-                .toList();
+            .filter(
+                item -> List.of(item.slug(), item.localizedName("en"), item.localizedName("zh-hans")).stream()
+                    .map(MarketRivenPlugin::normalize)
+                    .anyMatch(name -> terms.stream()
+                        .anyMatch(term -> exact ? name.equals(term) : term.length() >= 2 && name.contains(term))))
+            .toList();
     }
 
     /**
@@ -225,8 +229,9 @@ public final class MarketRivenPlugin extends BotPlugin {
         Set<String> validCodes = new LinkedHashSet<>();
         officialAttributes.definitions().forEach(record -> {
             String code = record.code();
-            if (Boolean.TRUE.equals(record.searchOnly())
-                    || StrUtil.isBlank(code) || Set.of("has", "none").contains(code)) return;
+            if (Boolean.TRUE.equals(record.searchOnly()) || StrUtil.isBlank(code)
+                || Set.of("has", "none").contains(code))
+                return;
             validCodes.add(code);
             addAttribute(index, code, code);
             addAttribute(index, record.effect(), code);
@@ -235,7 +240,8 @@ public final class MarketRivenPlugin extends BotPlugin {
             String code = record.details().attributeCode();
             List<String> codes = attributeCodes(code);
             // 组合必须整条有效，不能将错误编码滤除后变成另一种查询条件。
-            if (CollUtil.isEmpty(codes) || !validCodes.containsAll(codes)) return;
+            if (CollUtil.isEmpty(codes) || !validCodes.containsAll(codes))
+                return;
             addAttribute(index, record.details().aliasName(), record.details().attributeCode());
         });
         return index;
@@ -266,7 +272,7 @@ public final class MarketRivenPlugin extends BotPlugin {
      */
     private static List<String> attributeCodes(String code) {
         return code == null ? List.of() : Arrays.stream(code.split("[,+]")).map(String::trim)
-                .filter(value -> StrUtil.isNotEmpty(value)).sorted().toList();
+            .filter(value -> StrUtil.isNotEmpty(value)).sorted().toList();
     }
 
     /**

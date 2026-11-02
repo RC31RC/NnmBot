@@ -9,9 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Runs an action synchronously after the current transaction commits.
- * Without an actual transaction the action runs immediately. This component
- * does not change threads or suppress failures from the action.
+ * 在当前事务成功提交后同步执行动作。 没有实际事务时立即执行；本组件 不切换线程，也不吞掉动作抛出的异常。
  */
 @Component
 public class AfterCommitExecutor {
@@ -25,7 +23,7 @@ public class AfterCommitExecutor {
         }
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             throw new IllegalStateException(
-                    "An active transaction requires transaction synchronization for after-commit work");
+                "An active transaction requires transaction synchronization for after-commit work");
         }
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -37,9 +35,7 @@ public class AfterCommitExecutor {
     }
 
     /**
-     * Registers one action for a transaction key. Repeated calls with the same key
-     * join the existing callback, while different keys retain their own failure
-     * and execution boundaries.
+     * 按事务内的键登记一次动作；同键重复调用 共用已登记回调，不同键保持各自的异常 与执行边界。
      */
     public void executeOnce(Object key, Runnable action) {
         Object requiredKey = Objects.requireNonNull(key, "key");
@@ -50,12 +46,12 @@ public class AfterCommitExecutor {
         }
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             throw new IllegalStateException(
-                    "An active transaction requires transaction synchronization for after-commit work");
+                "An active transaction requires transaction synchronization for after-commit work");
         }
 
         @SuppressWarnings("unchecked")
-        Map<Object, Runnable> actions = (Map<Object, Runnable>) TransactionSynchronizationManager
-                .getResource(BATCH_RESOURCE_KEY);
+        Map<Object, Runnable> actions =
+            (Map<Object, Runnable>)TransactionSynchronizationManager.getResource(BATCH_RESOURCE_KEY);
         if (actions != null) {
             actions.putIfAbsent(requiredKey, requiredAction);
             return;
@@ -85,11 +81,15 @@ public class AfterCommitExecutor {
             try {
                 action.run();
             } catch (RuntimeException | Error exception) {
-                if (failure == null) failure = exception;
-                else failure.addSuppressed(exception);
+                if (failure == null)
+                    failure = exception;
+                else
+                    failure.addSuppressed(exception);
             }
         }
-        if (failure instanceof RuntimeException exception) throw exception;
-        if (failure instanceof Error error) throw error;
+        if (failure instanceof RuntimeException exception)
+            throw exception;
+        if (failure instanceof Error error)
+            throw error;
     }
 }

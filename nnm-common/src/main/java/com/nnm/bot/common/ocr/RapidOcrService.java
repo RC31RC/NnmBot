@@ -1,5 +1,6 @@
 package com.nnm.bot.common.ocr;
 
+import com.nnm.bot.common.exception.SystemException;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -44,6 +45,12 @@ import java.util.concurrent.locks.ReentrantLock;
 @Service
 public class RapidOcrService implements OcrService {
 
+    /** 模型输入留白，单位为像素。 */
+    private static final int INPUT_PADDING_PIXELS = 50;
+    /** 灰度增强的固定对比度增益与亮度偏置。 */
+    private static final float CONTRAST_GAIN = 1.35F;
+    private static final float BRIGHTNESS_BIAS = -20F;
+
     private final ReentrantLock inferenceLock = new ReentrantLock();
     private volatile InferenceEngine engine;
 
@@ -61,10 +68,8 @@ public class RapidOcrService implements OcrService {
             throw new BusinessException(OcrErrorCode.IMAGE_REQUIRED);
         }
         if (image.length > this.properties.getMaxInputBytes()) {
-            throw new BusinessException(
-                    OcrErrorCode.IMAGE_TOO_LARGE,
-                    "OCR 图片大小为 " + image.length + " 字节，超过限制 "
-                            + this.properties.getMaxInputBytes() + " 字节");
+            throw new BusinessException(OcrErrorCode.IMAGE_TOO_LARGE,
+                "OCR 图片大小为 " + image.length + " 字节，超过限制 " + this.properties.getMaxInputBytes() + " 字节");
         }
 
         return taskExecutor.execute(() -> recognizeImage(image));
@@ -77,16 +82,14 @@ public class RapidOcrService implements OcrService {
             if (this.properties.isEnhancedRecognition()) {
                 BufferedImage enhanced = createContrastVariant(source);
                 try {
-                    best = OcrCandidate.best(
-                            best, this.recognizeVariant(enhanced, temporary.path()));
+                    best = OcrCandidate.best(best, this.recognizeVariant(enhanced, temporary.path()));
                 } finally {
                     enhanced.flush();
                 }
 
                 BufferedImage sharpened = createSharpenedVariant(source);
                 try {
-                    best = OcrCandidate.best(
-                            best, this.recognizeVariant(sharpened, temporary.path()));
+                    best = OcrCandidate.best(best, this.recognizeVariant(sharpened, temporary.path()));
                 } finally {
                     sharpened.flush();
                 }
@@ -96,16 +99,7 @@ public class RapidOcrService implements OcrService {
             }
             return best.toTextResult();
         } catch (IOException exception) {
-            throw new BusinessException(
-                    OcrErrorCode.TEMPORARY_FILE_FAILED,
-                    "OCR 临时图片处理失败",
-                    exception);
-        } catch (RuntimeException exception) {
-            if (exception instanceof BusinessException business) throw business;
-            throw new BusinessException(
-                    OcrErrorCode.RECOGNITION_FAILED,
-                    "OCR 引擎执行失败",
-                    exception);
+            throw new SystemException(OcrErrorCode.TEMPORARY_FILE_FAILED, "OCR 临时图片处理失败", exception);
         } finally {
             source.flush();
         }
@@ -113,12 +107,10 @@ public class RapidOcrService implements OcrService {
 
     BufferedImage decodeAndValidate(byte[] image) {
         ImageMetadata metadata = this.readMetadata(image);
-        long pixels = (long) metadata.width() * metadata.height();
+        long pixels = (long)metadata.width() * metadata.height();
         if (pixels > this.properties.getMaxImagePixels()) {
-            throw new BusinessException(
-                    OcrErrorCode.IMAGE_TOO_LARGE,
-                    "OCR 图片像素数为 " + pixels + "，超过限制 "
-                            + this.properties.getMaxImagePixels());
+            throw new BusinessException(OcrErrorCode.IMAGE_TOO_LARGE,
+                "OCR 图片像素数为 " + pixels + "，超过限制 " + this.properties.getMaxImagePixels());
         }
         try {
             BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(image));
@@ -127,14 +119,12 @@ public class RapidOcrService implements OcrService {
             }
             return decoded;
         } catch (IOException exception) {
-            throw new BusinessException(
-                    OcrErrorCode.INVALID_IMAGE, "OCR 图片解码失败", exception);
+            throw new BusinessException(OcrErrorCode.INVALID_IMAGE, "OCR 图片解码失败", exception);
         }
     }
 
     private ImageMetadata readMetadata(byte[] image) {
-        try (ImageInputStream input =
-                     ImageIO.createImageInputStream(new ByteArrayInputStream(image))) {
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(image))) {
             if (ObjectUtil.isNull(input)) {
                 throw new BusinessException(OcrErrorCode.INVALID_IMAGE);
             }
@@ -155,21 +145,21 @@ public class RapidOcrService implements OcrService {
                 reader.dispose();
             }
         } catch (IOException exception) {
-            throw new BusinessException(
-                    OcrErrorCode.INVALID_IMAGE, "无法读取 OCR 图片尺寸", exception);
+            throw new BusinessException(OcrErrorCode.INVALID_IMAGE, "无法读取 OCR 图片尺寸", exception);
         }
     }
 
-    private OcrCandidate recognizeVariant(BufferedImage image, Path temporaryFile)
-            throws IOException {
+    private OcrCandidate recognizeVariant(BufferedImage image, Path temporaryFile) throws IOException {
         if (!ImageIO.write(image, "png", temporaryFile.toFile())) {
-            throw new BusinessException(
-                    OcrErrorCode.INVALID_IMAGE, "无法将 OCR 图片转换为 PNG");
+            throw new SystemException(OcrErrorCode.TEMPORARY_FILE_FAILED, "无法将 OCR 图片转换为 PNG");
         }
         OcrResult result;
         this.inferenceLock.lock();
         try {
             result = this.engine().runOcr(temporaryFile.toString(), this.createConfig());
+        } catch (RuntimeException exception) {
+            // 只在第三方引擎调用边界转换，其他输入失败不经过此处。
+            throw new SystemException(OcrErrorCode.RECOGNITION_FAILED, "OCR 引擎执行失败", exception);
         } finally {
             this.inferenceLock.unlock();
         }
@@ -178,7 +168,7 @@ public class RapidOcrService implements OcrService {
 
     private ParamConfig createConfig() {
         ParamConfig config = ParamConfig.getDefaultConfig();
-        config.setPadding(50);
+        config.setPadding(INPUT_PADDING_PIXELS);
         config.setMaxSideLen(this.properties.getMaxSideLength());
         config.setBoxScoreThresh(this.properties.getBoxScoreThreshold());
         config.setBoxThresh(this.properties.getBoxThreshold());
@@ -188,37 +178,28 @@ public class RapidOcrService implements OcrService {
     }
 
     static BufferedImage createContrastVariant(BufferedImage source) {
-        BufferedImage grayscale = new BufferedImage(
-                source.getWidth(), source.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-        new ColorConvertOp(ColorSpace.getInstance(ColorSpace.CS_GRAY), null)
-                .filter(source, grayscale);
-        BufferedImage contrasted = new BufferedImage(
-                source.getWidth(), source.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-        new RescaleOp(1.35F, -20F, null).filter(grayscale, contrasted);
+        BufferedImage grayscale =
+            new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+        new ColorConvertOp(ColorSpace.getInstance(ColorSpace.CS_GRAY), null).filter(source, grayscale);
+        BufferedImage contrasted =
+            new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+        new RescaleOp(CONTRAST_GAIN, BRIGHTNESS_BIAS, null).filter(grayscale, contrasted);
         grayscale.flush();
         return contrasted;
     }
 
     static BufferedImage createSharpenedVariant(BufferedImage source) {
-        BufferedImage rgb = new BufferedImage(
-                source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
+        BufferedImage rgb = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = rgb.createGraphics();
         try {
-            graphics.setRenderingHint(
-                    RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             graphics.drawImage(source, 0, 0, null);
         } finally {
             graphics.dispose();
         }
-        BufferedImage sharpened = new BufferedImage(
-                source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
-        float[] matrix = {
-                0F, -1F, 0F,
-                -1F, 5F, -1F,
-                0F, -1F, 0F
-        };
-        new ConvolveOp(new Kernel(3, 3, matrix), ConvolveOp.EDGE_NO_OP, null)
-                .filter(rgb, sharpened);
+        BufferedImage sharpened = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
+        float[] matrix = {0F, -1F, 0F, -1F, 5F, -1F, 0F, -1F, 0F};
+        new ConvolveOp(new Kernel(3, 3, matrix), ConvolveOp.EDGE_NO_OP, null).filter(rgb, sharpened);
         rgb.flush();
         return sharpened;
     }
@@ -246,13 +227,9 @@ public class RapidOcrService implements OcrService {
             if (ObjectUtil.isNull(result)) {
                 return new OcrCandidate("", List.of(), 0D);
             }
-            String rawText = StrUtil.nullToEmpty(result.getStrRes())
-                    .replace("\r", "")
-                    .trim();
-            List<String> lines = Arrays.stream(rawText.split("\n"))
-                    .map(String::trim)
-                    .filter(StrUtil::isNotBlank)
-                    .toList();
+            String rawText = StrUtil.nullToEmpty(result.getStrRes()).replace("\r", "").trim();
+            List<String> lines =
+                Arrays.stream(rawText.split("\n")).map(String::trim).filter(StrUtil::isNotBlank).toList();
             String text = String.join("\n", lines);
             return new OcrCandidate(text, lines, confidence(result.getTextBlocks()));
         }
@@ -261,8 +238,7 @@ public class RapidOcrService implements OcrService {
             if (right.confidence > left.confidence) {
                 return right;
             }
-            if (Double.compare(right.confidence, left.confidence) == 0
-                    && right.text.length() > left.text.length()) {
+            if (Double.compare(right.confidence, left.confidence) == 0 && right.text.length() > left.text.length()) {
                 return right;
             }
             return left;
@@ -278,8 +254,7 @@ public class RapidOcrService implements OcrService {
                 if (ObjectUtil.isNull(block) || StrUtil.isBlank(block.getText())) {
                     continue;
                 }
-                score += block.getBoxScore() * 0.45D
-                        + average(block.getCharScores()) * 0.55D;
+                score += block.getBoxScore() * 0.45D + average(block.getCharScores()) * 0.55D;
                 count++;
             }
             return count == 0 ? 0D : score / count;

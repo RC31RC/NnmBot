@@ -8,7 +8,8 @@ import org.springframework.stereotype.Component;
 
 /** 各实例定时刷新自身的仲裁排期快照，数据保存在本实例内存。 */
 @Component
-@ConditionalOnProperty(prefix = "nnm.warframe.pull.arbitration", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "nnm.warframe.pull.arbitration", name = "enabled", havingValue = "true",
+    matchIfMissing = true)
 public class WarframeArbitrationRefreshTask {
     @Resource
     private WarframeArbitrationRefreshService refresh;
@@ -16,9 +17,7 @@ public class WarframeArbitrationRefreshTask {
     /**
      * 执行当前任务入口的业务操作。
      */
-    @Scheduled(
-            cron = "#{@warframeArbitrationPullProperties.cron}",
-            zone = "#{@warframeArbitrationPullProperties.zone}")
+    @Scheduled(fixedRate = 864000000, zone = "Asia/Shanghai")
     public void execute() {
         refresh.refresh();
     }

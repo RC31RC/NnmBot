@@ -15,9 +15,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 // 数据来源：已采纳的 Plus 不可洗属性关系及规范自维护候选；空结果不推断属性合法性。
-@BotPluginCommand(code = WarframeCommandCodes.RIVEN_UNROLLABLES, matchType = MatchType.PREFIX,
-        name = "紫卡不可洗属性", gameCode = "warframe", order = 80)
-public final class RivenUnrollablesPlugin extends BotPlugin {
+@BotPluginCommand(code = WarframeCommandCodes.RIVEN_UNROLLABLES, matchType = MatchType.PREFIX, name = "紫卡不可洗属性",
+    gameCode = "warframe", order = 80)
+public final class RivenUnrollablesPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -38,10 +38,11 @@ public final class RivenUnrollablesPlugin extends BotPlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
         int page = 1;
         Matcher matcher = PAGE.matcher(query);

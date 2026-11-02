@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.runtime.service.arbitration.impl;
 
 import com.nnm.bot.warframe.runtime.cache.arbitration.WarframeArbitrationSnapshotStore;
 import com.nnm.bot.warframe.runtime.client.arbitration.WarframeArbitrationClient;
-import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationPullProperties;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.runtime.parser.arbitration.WarframeArbitrationScheduleParser;
 import com.nnm.bot.warframe.runtime.service.arbitration.WarframeArbitrationRefreshService;
 import jakarta.annotation.Resource;
@@ -24,7 +24,7 @@ public class WarframeArbitrationRefreshServiceImpl implements WarframeArbitratio
     @Resource
     private WarframeArbitrationSnapshotStore snapshots;
     @Resource
-    private WarframeArbitrationPullProperties properties;
+    private WarframeArbitrationSourceProperties properties;
     @Resource
     private Clock warframeClock;
 
@@ -38,7 +38,8 @@ public class WarframeArbitrationRefreshServiceImpl implements WarframeArbitratio
         refreshLock.lock();
         try {
             Instant now = warframeClock.instant();
-            if (now.isBefore(nextAttemptAt)) return;
+            if (now.isBefore(nextAttemptAt))
+                return;
             Instant lastFetchedAt = snapshots.current().fetchedAt();
             if (lastFetchedAt != null && now.isBefore(lastFetchedAt.plus(properties.getRefreshInterval()))) {
                 nextAttemptAt = lastFetchedAt.plus(properties.getRefreshInterval());

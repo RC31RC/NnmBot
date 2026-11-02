@@ -9,7 +9,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.Collection;
 import java.util.List;
 
-public interface WarframeCommunityAliasRepository extends JpaRepository<WarframeCommunityAlias, Long>, JpaSpecificationExecutor<WarframeCommunityAlias> {
+public interface WarframeCommunityAliasRepository
+    extends JpaRepository<WarframeCommunityAlias, Long>, JpaSpecificationExecutor<WarframeCommunityAlias> {
     /**
      * 按给定记录键集合批量查询记录。
      *
@@ -17,6 +18,7 @@ public interface WarframeCommunityAliasRepository extends JpaRepository<Warframe
      * @return 按当前条件筛选或转换后的数据集合。
      */
     List<WarframeCommunityAlias> findAllByRecordKeyIn(Collection<String> keys);
+
     /**
      * 按记录键升序读取全部非受管投影。
      *
@@ -40,6 +42,7 @@ public interface WarframeCommunityAliasRepository extends JpaRepository<Warframe
      * @return 包含当前页记录及总数的分页结果。
      */
     default Page<WarframeCommunityAliasDTO> query(String keyword, Pageable pageable) {
-        return findBy(CommunitySpecifications.contains(keyword, List.of("recordKey", "aliasName", "targetName")), query -> query.as(WarframeCommunityAliasDTO.class).page(pageable));
+        return findBy(CommunitySpecifications.contains(keyword, List.of("recordKey", "aliasName", "targetName")),
+            query -> query.as(WarframeCommunityAliasDTO.class).page(pageable));
     }
 }

@@ -35,23 +35,23 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * WorldStateDTO 命令的最终图片缓存。
  *
- * <p>缓存的是渲染后的图片而不是模板中间结果，所有机器人渠道可直接复用。
- * 同一个键的首个请求负责渲染，其余并发请求等待同一结果，避免浏览器渲染被放大。</p>
+ * <p>
+ * 缓存的是渲染后的图片而不是模板中间结果，所有机器人渠道可直接复用。 同一个键的首个请求负责渲染，其余并发请求等待同一结果，避免浏览器渲染被放大。
+ * </p>
  */
 @Service
 public class WorldStateCommandImageCache implements CommandImageCache {
 
     private static final ZoneId CHINA_ZONE = ZoneId.of("Asia/Shanghai");
-    private static final Set<String> DAILY_COMMANDS = Set.of(
-            WarframeCommandCodes.ARBITRATION, WarframeCommandCodes.ARBITRATION_TABLE);
+    private static final Set<String> DAILY_COMMANDS =
+        Set.of(WarframeCommandCodes.ARBITRATION, WarframeCommandCodes.ARBITRATION_TABLE);
 
     @Resource
     private CacheManager cacheManager;
     @Resource
     private ObjectMapper objectMapper;
 
-    private final ConcurrentHashMap<ImageCacheKey, CompletableFuture<byte[]>> inFlight =
-            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<ImageCacheKey, CompletableFuture<byte[]>> inFlight = new ConcurrentHashMap<>();
 
     /**
      * 渲染条件支持。
@@ -63,13 +63,10 @@ public class WorldStateCommandImageCache implements CommandImageCache {
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     @Override
-    public Optional<byte[]> renderIfSupported(RuntimeCommand command,
-                                              String viewKey,
-                                              Map<String, Object> data,
-                                              BotImageRenderer renderer) {
-        if (!WarframeViewKeys.WORLD_STATE.equals(viewKey)
-                || command.plugin().views().stream().noneMatch(view ->
-                        view.key().equals(viewKey) && view.formats().contains(ViewFormat.IMAGE))) {
+    public Optional<byte[]> renderIfSupported(RuntimeCommand command, String viewKey, Map<String, Object> data,
+        BotImageRenderer renderer) {
+        if (!WarframeViewKeys.WORLD_STATE.equals(viewKey) || command.plugin().views().stream()
+            .noneMatch(view -> view.key().equals(viewKey) && view.formats().contains(ViewFormat.IMAGE))) {
             return Optional.empty();
         }
         String templateHtml = command.configuration().templateHtml(viewKey);
@@ -96,9 +93,8 @@ public class WorldStateCommandImageCache implements CommandImageCache {
                 created.complete(copy(rechecked));
                 return Optional.of(copy(rechecked));
             }
-            byte[] rendered = Objects.requireNonNull(
-                    renderer.renderHtml(templateHtml, data),
-                    "world state image renderer returned null");
+            byte[] rendered = Objects.requireNonNull(renderer.renderHtml(templateHtml, data),
+                "world state image renderer returned null");
             byte[] cacheValue = copy(rendered);
             cache.put(key, cacheValue);
             created.complete(copy(cacheValue));
@@ -119,8 +115,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
     private Cache requireCache() {
         Cache cache = cacheManager.getCache(WarframeCacheNames.WORLD_STATE_IMAGES);
         if (cache == null) {
-            throw new IllegalStateException(
-                    "Missing cache region " + WarframeCacheNames.WORLD_STATE_IMAGES);
+            throw new IllegalStateException("Missing cache region " + WarframeCacheNames.WORLD_STATE_IMAGES);
         }
         return cache;
     }
@@ -133,18 +128,10 @@ public class WorldStateCommandImageCache implements CommandImageCache {
      * @param data 当前操作的数据。
      * @return 图片缓存键对象。
      */
-    private ImageCacheKey cacheKey(String commandCode,
-                                   String templateHtml,
-                                   Map<String, Object> data) {
+    private ImageCacheKey cacheKey(String commandCode, String templateHtml, Map<String, Object> data) {
         String normalizedCode = commandCode.trim().toLowerCase(Locale.ROOT);
-        String dayBucket = DAILY_COMMANDS.contains(normalizedCode)
-                ? LocalDate.now(CHINA_ZONE).toString()
-                : "";
-        return new ImageCacheKey(
-                normalizedCode,
-                sha256(templateHtml),
-                sha256(writeStableData(data)),
-                dayBucket);
+        String dayBucket = DAILY_COMMANDS.contains(normalizedCode) ? LocalDate.now(CHINA_ZONE).toString() : "";
+        return new ImageCacheKey(normalizedCode, sha256(templateHtml), sha256(writeStableData(data)), dayBucket);
     }
 
     /**
@@ -216,8 +203,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
      */
     private String sha256(String value) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
@@ -234,11 +220,6 @@ public class WorldStateCommandImageCache implements CommandImageCache {
         return value.clone();
     }
 
-    private record ImageCacheKey(
-            String commandCode,
-            String templateDigest,
-            String dataDigest,
-            String dayBucket
-    ) {
+    private record ImageCacheKey(String commandCode, String templateDigest, String dataDigest, String dayBucket) {
     }
 }

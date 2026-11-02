@@ -51,9 +51,10 @@ public class WarframeItemIndexInvalidator {
      * 清理当前实例的本地 cache2k 物品解析索引。
      */
     public void clearLocal() {
-        for (String name : new String[]{WarframeCacheNames.ITEM_RESOLUTION_INDEX, WarframeCacheNames.IMAGE_INDEX}) {
+        for (String name : new String[] {WarframeCacheNames.ITEM_RESOLUTION_INDEX, WarframeCacheNames.IMAGE_INDEX}) {
             Cache cache = cacheManager.getCache(name);
-            if (cache != null) cache.clear();
+            if (cache != null)
+                cache.clear();
         }
     }
 }

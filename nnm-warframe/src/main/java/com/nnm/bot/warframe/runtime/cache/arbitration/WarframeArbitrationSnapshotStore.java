@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.cache.arbitration;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationPullProperties;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -18,7 +18,7 @@ public class WarframeArbitrationSnapshotStore {
     private final ReentrantLock snapshotLock = new ReentrantLock();
 
     @Resource
-    private WarframeArbitrationPullProperties properties;
+    private WarframeArbitrationSourceProperties properties;
 
     private final AtomicReference<Snapshot> current = new AtomicReference<>(new Snapshot(List.of(), null));
 
@@ -53,10 +53,12 @@ public class WarframeArbitrationSnapshotStore {
                 }
             }
             for (ArbitrationScheduleEntryDTO entry : entries) {
-                if (entry.expiry().isAfter(retainAfter)) retained.put(entry.activation(), entry);
+                if (entry.expiry().isAfter(retainAfter))
+                    retained.put(entry.activation(), entry);
             }
             // 历史和最新响应共用记录数预算，优先淘汰最早历史，不能随运行时间无界增长。
-            while (retained.size() > properties.getMaxRecords()) retained.pollFirstEntry();
+            while (retained.size() > properties.getMaxRecords())
+                retained.pollFirstEntry();
             current.set(new Snapshot(List.copyOf(retained.values()), fetchedAt));
         } finally {
             snapshotLock.unlock();

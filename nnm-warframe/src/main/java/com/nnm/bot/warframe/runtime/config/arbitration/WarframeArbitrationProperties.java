@@ -35,9 +35,9 @@ public class WarframeArbitrationProperties {
     /** 查询日期、保留时长和完整筛选规则必须在启动时有效。 */
     @PostConstruct
     public void validate() {
-        if (zone == null || invalid(refreshInterval) || invalid(historyRetention)
-                || previewDays < 1 || previewDays > 30 || previewLimit < 1 || previewLimit > 100
-                || empty(efficientMissionTypes) || empty(efficientPlanets) || empty(efficientEnemies)) {
+        if (zone == null || invalid(refreshInterval) || invalid(historyRetention) || previewDays < 1 || previewDays > 30
+            || previewLimit < 1 || previewLimit > 100 || empty(efficientMissionTypes) || empty(efficientPlanets)
+            || empty(efficientEnemies)) {
             throw new IllegalArgumentException("Invalid nnm.warframe.query.arbitration configuration");
         }
     }
@@ -59,7 +59,6 @@ public class WarframeArbitrationProperties {
      * @return 满足构造没有有效业务内容的缺省对象时为真，否则为假。
      */
     private boolean empty(List<String> values) {
-        return CollUtil.isEmpty(values)
-                || values.stream().anyMatch(value -> StrUtil.isBlank(value));
+        return CollUtil.isEmpty(values) || values.stream().anyMatch(value -> StrUtil.isBlank(value));
     }
 }

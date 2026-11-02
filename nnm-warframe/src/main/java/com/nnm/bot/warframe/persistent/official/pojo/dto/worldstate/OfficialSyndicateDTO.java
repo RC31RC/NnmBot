@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** SYNDICATE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 集团立场关系；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("alignments")
@@ -413,7 +413,8 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -429,7 +430,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 AlignmentsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class AlignmentsDTO extends OfficialObjectDTO {
         /** 集团立场关系的均衡仲裁者；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ArbitersSyndicate")
@@ -526,7 +527,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 FavoursItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class FavoursItemReferencesDTO extends OfficialObjectDTO {
         /** 集团兑换商品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -683,7 +684,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 FavoursDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class FavoursDTO extends OfficialObjectDTO {
         /** 集团兑换商品列表的现金消耗；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("creditsCost")
@@ -780,7 +781,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 InitiationSacrificeItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class InitiationSacrificeItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 入门献祭要求的物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -922,7 +923,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 InitiationSacrificeItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class InitiationSacrificeItemsDTO extends OfficialObjectDTO {
         /** 入门献祭要求的物品列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -974,7 +975,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1101,7 +1102,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 MedallionsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MedallionsItemReferencesDTO extends OfficialObjectDTO {
         /** 集团奖章列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1243,7 +1244,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 MedallionsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MedallionsDTO extends OfficialObjectDTO {
         /** 集团奖章列表的物品引用；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("itemReferences")
@@ -1295,7 +1296,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 TitlesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class TitlesItemReferencesDTO extends OfficialObjectDTO {
         /** 集团等级称号列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1452,7 +1453,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 TitlesRewardItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class TitlesRewardItemReferencesDTO extends OfficialObjectDTO {
         /** 集团等级称号列表的奖励的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1609,7 +1610,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 TitlesSacrificeItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class TitlesSacrificeItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 集团等级称号列表的献祭的物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1751,7 +1752,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 TitlesSacrificeItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class TitlesSacrificeItemsDTO extends OfficialObjectDTO {
         /** 集团等级称号列表的献祭的物品列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -1803,7 +1804,7 @@ public class OfficialSyndicateDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 TitlesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class TitlesDTO extends OfficialObjectDTO {
         /** 集团等级称号列表的描述；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("description")

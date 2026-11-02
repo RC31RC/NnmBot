@@ -11,7 +11,7 @@ import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.regex.Pattern;
 
-abstract class AbstractMaterialPlugin extends BotPlugin {
+abstract class AbstractMaterialPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -31,6 +31,7 @@ abstract class AbstractMaterialPlugin extends BotPlugin {
 
     /**
      * 解析材料查询参数，调用对应服务并组装命令结果。
+     *
      * @param dataset 本次操作所属的数据文件或社区资料类型。
      * @param title 标题。
      * @param arguments 当前命令或操作的参数。
@@ -51,11 +52,11 @@ abstract class AbstractMaterialPlugin extends BotPlugin {
         if (page < 1 || OPTION.matcher(query).find()) {
             return CommandResult.rejected("仅支持末尾分页参数：--page 2");
         }
-        if (query.length() > 200) return CommandResult.rejected("查询内容过长，请缩短到 200 字以内");
+        if (query.length() > 200)
+            return CommandResult.rejected("查询内容过长，请缩短到 200 字以内");
         WarframeMaterialVO display = WarframeMaterialVO.page(query, title, materialService.find(dataset, query), page);
-        display = new WarframeMaterialVO(display.query(), display.category(), display.page(),
-                display.totalPages(), display.totalCount(),
-                display.items().stream().map(materialService::withImage).toList(), display.notice());
+        display = new WarframeMaterialVO(display.query(), display.category(), display.page(), display.totalPages(),
+            display.totalCount(), display.items().stream().map(materialService::withImage).toList(), display.notice());
         return CommandResult.view("warframe.materials", display.text(), display);
     }
 }

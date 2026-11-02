@@ -20,23 +20,22 @@ public interface WarframeReferenceProjectionEnrichmentService {
      * @param commandCode 命令代码。
      * @return 当前命令的标题、状态及展示条目。
      */
-    WarframeWorldStateCommandVO enrich(
-            WarframeWorldStateCommandVO output, String commandCode);
+    WarframeWorldStateCommandVO enrich(WarframeWorldStateCommandVO output, String commandCode);
 
     /**
      * 批量收集展示引用后统一解析，并将本地化结果补入各个命令投影。
+     *
      * @param outputs 输出集合。
      * @return 当前命令的标题、状态及展示条目组成的列表。
      */
-    List<WarframeWorldStateCommandVO> enrichAll(
-            Collection<WarframeWorldStateCommandVO> outputs);
+    List<WarframeWorldStateCommandVO> enrichAll(Collection<WarframeWorldStateCommandVO> outputs);
 
     /**
      * 批量收集展示引用后统一解析，并将本地化结果补入各个命令投影。
+     *
      * @param outputs 输出集合。
      * @param commandCode 命令代码。
      * @return 当前命令的标题、状态及展示条目组成的列表。
      */
-    List<WarframeWorldStateCommandVO> enrichAll(
-            Collection<WarframeWorldStateCommandVO> outputs, String commandCode);
+    List<WarframeWorldStateCommandVO> enrichAll(Collection<WarframeWorldStateCommandVO> outputs, String commandCode);
 }

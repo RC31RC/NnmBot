@@ -10,8 +10,7 @@ import io.github.rdt.queue.QueueMode;
 public abstract class GroupNotificationMessageDescriptor extends MessageDescriptor<GroupNotificationRequest> {
     public static final String TOPIC = "bot-group-notifications";
 
-    protected GroupNotificationMessageDescriptor() {
-    }
+    protected GroupNotificationMessageDescriptor() {}
 
     protected GroupNotificationMessageDescriptor(GroupNotificationRequest payload) {
         super(payload);

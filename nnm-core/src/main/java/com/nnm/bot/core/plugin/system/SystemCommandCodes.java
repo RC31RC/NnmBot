@@ -15,6 +15,5 @@ public final class SystemCommandCodes {
 
     public static final Set<String> ALL = Set.of(HELP, STATUS, SIGN_IN, BIND, JM);
 
-    private SystemCommandCodes() {
-    }
+    private SystemCommandCodes() {}
 }

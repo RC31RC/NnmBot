@@ -12,8 +12,8 @@ import lombok.Getter;
 
 /** INTRINSIC 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialIntrinsicDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 描述；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("description")
@@ -172,7 +172,8 @@ public class OfficialIntrinsicDTO extends OfficialObjectDTO implements OfficialR
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -188,7 +189,7 @@ public class OfficialIntrinsicDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 RanksDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RanksDTO extends OfficialObjectDTO {
         /** 等级配置列表的描述；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("description")

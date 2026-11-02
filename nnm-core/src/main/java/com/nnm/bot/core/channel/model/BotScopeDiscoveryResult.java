@@ -11,10 +11,7 @@ import java.util.List;
  * @param message 发现结果说明或失败原因
  * @param scopes 发现到的作用域列表
  */
-public record BotScopeDiscoveryResult(
-        boolean supported,
-        String message,
-        List<BotDiscoveredScope> scopes) {
+public record BotScopeDiscoveryResult(boolean supported, String message, List<BotDiscoveredScope> scopes) {
 
     public BotScopeDiscoveryResult {
         scopes = CollUtil.isEmpty(scopes) ? List.of() : List.copyOf(scopes);

@@ -7,15 +7,12 @@ import java.util.List;
 /**
  * Warframe Market 套装接口的结构化快照。
  *
- * <p>套装接口会同时返回根物品和所有部件；保留完整响应便于后续命令使用
- * 尚未建模的上游字段。</p>
+ * <p>
+ * 套装接口会同时返回根物品和所有部件；保留完整响应便于后续命令使用 尚未建模的上游字段。
+ * </p>
  */
-public record WarframeMarketItemSetDTO(
-        String id,
-        List<WarframeMarketItemDTO> items,
-        String apiVersion,
-        String error,
-        String rawJson) {
+public record WarframeMarketItemSetDTO(String id, List<WarframeMarketItemDTO> items, String apiVersion, String error,
+    String rawJson) {
 
     /**
      * 构造市场物品集合传输对象，并保存初始化参数。

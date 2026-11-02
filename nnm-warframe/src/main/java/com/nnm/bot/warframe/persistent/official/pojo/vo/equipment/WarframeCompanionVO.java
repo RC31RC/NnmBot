@@ -6,8 +6,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record WarframeCompanionVO(String query, int page, int totalPages, int totalCount,
-        List<EntryVO> items, String notice) {
+public record WarframeCompanionVO(String query, int page, int totalPages, int totalCount, List<EntryVO> items,
+    String notice) {
     /**
      * 构造同伴展示对象，并保存初始化参数。
      *
@@ -35,8 +35,8 @@ public record WarframeCompanionVO(String query, int page, int totalPages, int to
         int page = Math.max(1, Math.min(requestedPage, pages));
         int start = (page - 1) * 6;
         return new WarframeCompanionVO(query, page, pages, matches.size(),
-                matches.subList(start, Math.min(start + 6, matches.size())),
-                CollUtil.isEmpty(matches) ? "没有找到匹配的同伴资料" : null);
+            matches.subList(start, Math.min(start + 6, matches.size())),
+            CollUtil.isEmpty(matches) ? "没有找到匹配的同伴资料" : null);
     }
 
     /**
@@ -46,23 +46,28 @@ public record WarframeCompanionVO(String query, int page, int totalPages, int to
      */
     public String text() {
         String header = "同伴资料：" + page + "/" + totalPages + " 页，共 " + totalCount + " 条";
-        if (CollUtil.isEmpty(items)) return header + "\n" + notice;
+        if (CollUtil.isEmpty(items))
+            return header + "\n" + notice;
         return header + "\n" + items.stream().map(entry -> {
             StringBuilder text = new StringBuilder(entry.name());
-            if (entry.companionType() != null) text.append(" · ").append(entry.companionType());
-            if (entry.masteryReq() != null) text.append(" · 段位 ").append(entry.masteryReq());
+            if (entry.companionType() != null)
+                text.append(" · ").append(entry.companionType());
+            if (entry.masteryReq() != null)
+                text.append(" · 段位 ").append(entry.masteryReq());
             stat(text, "生命", entry.health());
             stat(text, "护盾", entry.shield());
             stat(text, "护甲", entry.armor());
             stat(text, "能量", entry.energy());
             stat(text, "耐力", entry.stamina());
-            if (entry.defaultWeapon() != null) text.append("\n默认武器：").append(entry.defaultWeapon().name());
+            if (entry.defaultWeapon() != null)
+                text.append("\n默认武器：").append(entry.defaultWeapon().name());
             if (CollUtil.isNotEmpty(entry.exalted())) {
-                text.append("\n外显武器：").append(entry.exalted().stream()
-                        .map(ReferenceVO::name).collect(Collectors.joining("、")));
+                text.append("\n外显武器：")
+                    .append(entry.exalted().stream().map(ReferenceVO::name).collect(Collectors.joining("、")));
             }
             if (CollUtil.isNotEmpty(entry.defaultUpgrades())) {
-                text.append("\n预装升级：").append(entry.defaultUpgrades().stream()
+                text.append("\n预装升级：")
+                    .append(entry.defaultUpgrades().stream()
                         .map(upgrade -> upgrade.item().name() + "（槽位 " + upgrade.slot() + "）")
                         .collect(Collectors.joining("、")));
             }
@@ -78,12 +83,14 @@ public record WarframeCompanionVO(String query, int page, int totalPages, int to
 
     /**
      * 将有效的同伴属性值追加到展示文本。
+     *
      * @param text 待处理的文本。
      * @param label 标签标题。
      * @param value 待校验的精确数值；缺失值保持为空。
      */
     private static void stat(StringBuilder text, String label, BigDecimal value) {
-        if (value != null) text.append("\n").append(label).append("：").append(value.stripTrailingZeros().toPlainString());
+        if (value != null)
+            text.append("\n").append(label).append("：").append(value.stripTrailingZeros().toPlainString());
     }
 
     public record ReferenceVO(String itemKey, String name) {
@@ -93,11 +100,10 @@ public record WarframeCompanionVO(String query, int page, int totalPages, int to
     }
 
     public record EntryVO(String uniqueName, String name, String description, String companionType,
-            String productCategory, Integer masteryReq, Boolean tradable,
-            BigDecimal health, BigDecimal shield, BigDecimal armor, BigDecimal energy, BigDecimal stamina,
-            ReferenceVO defaultWeapon, List<ReferenceVO> exalted, List<UpgradeVO> defaultUpgrades,
-            BigDecimal offensiveDamage, String propertiesJson, String imageReference, String iconUrl,
-            String sourceCode, String resolutionMode) {
+        String productCategory, Integer masteryReq, Boolean tradable, BigDecimal health, BigDecimal shield,
+        BigDecimal armor, BigDecimal energy, BigDecimal stamina, ReferenceVO defaultWeapon, List<ReferenceVO> exalted,
+        List<UpgradeVO> defaultUpgrades, BigDecimal offensiveDamage, String propertiesJson, String imageReference,
+        String iconUrl, String sourceCode, String resolutionMode) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *

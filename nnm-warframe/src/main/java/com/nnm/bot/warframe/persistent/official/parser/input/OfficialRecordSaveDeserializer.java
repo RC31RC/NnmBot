@@ -22,26 +22,37 @@ public class OfficialRecordSaveDeserializer extends JsonDeserializer<WarframeOff
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     @Override
-    public WarframeOfficialRecordSaveDTO deserialize(JsonParser parser, DeserializationContext context) throws IOException {
-        String domain = null; String bkey = null; boolean confirmed = false; boolean replace = false;
+    public WarframeOfficialRecordSaveDTO deserialize(JsonParser parser, DeserializationContext context)
+        throws IOException {
+        String domain = null;
+        String bkey = null;
+        boolean confirmed = false;
+        boolean replace = false;
         try (TokenBuffer data = new TokenBuffer(parser)) {
             boolean found = false;
             while (parser.nextToken() != JsonToken.END_OBJECT) {
-                String field = parser.currentName(); parser.nextToken();
+                String field = parser.currentName();
+                parser.nextToken();
                 switch (field) {
                     case "domain" -> domain = parser.getValueAsString();
                     case "bkey" -> bkey = parser.getValueAsString();
                     case "confirmed" -> confirmed = parser.getBooleanValue();
                     case "replaceExisting" -> replace = parser.getBooleanValue();
-                    case "data" -> { data.copyCurrentStructure(parser); found = true; }
-                    default -> { return context.reportInputMismatch(WarframeOfficialRecordSaveDTO.class, "未登记的请求字段：%s", field); }
+                    case "data" -> {
+                        data.copyCurrentStructure(parser);
+                        found = true;
+                    }
+                    default -> {
+                        return context.reportInputMismatch(WarframeOfficialRecordSaveDTO.class, "未登记的请求字段：%s", field);
+                    }
                 }
             }
-            if (!found || domain == null) return context.reportInputMismatch(WarframeOfficialRecordSaveDTO.class, "必须提供 domain 与 data");
+            if (!found || domain == null)
+                return context.reportInputMismatch(WarframeOfficialRecordSaveDTO.class, "必须提供 domain 与 data");
             OfficialRecordDTO value;
             try (JsonParser input = data.asParserOnFirstToken()) {
-                value = WarframeOfficialInputParser.parseCurrentValue(
-                        (ObjectMapper) parser.getCodec(), WarframeOfficialDataDomain.fromCode(domain), input);
+                value = WarframeOfficialInputParser.parseCurrentValue((ObjectMapper)parser.getCodec(),
+                    WarframeOfficialDataDomain.fromCode(domain), input);
             }
             return new WarframeOfficialRecordSaveDTO(domain, bkey, value, confirmed, replace);
         }

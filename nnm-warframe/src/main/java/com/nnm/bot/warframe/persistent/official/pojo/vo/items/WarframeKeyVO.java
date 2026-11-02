@@ -26,11 +26,11 @@ public record WarframeKeyVO(String query, int page, int totalPages, int totalCou
      * @return 钥匙及任务入口定义的分页视图。
      */
     public static WarframeKeyVO page(String query, List<EntryVO> matches, int requested) {
-        int pages = Math.max(1, (int) ((matches.size() + 3L) / 4));
+        int pages = Math.max(1, (int)((matches.size() + 3L) / 4));
         int page = Math.max(1, Math.min(requested, pages));
         int from = (page - 1) * 4;
         return new WarframeKeyVO(query, page, pages, matches.size(),
-                matches.subList(from, Math.min(from + 4, matches.size())));
+            matches.subList(from, Math.min(from + 4, matches.size())));
     }
 
     /**
@@ -39,46 +39,54 @@ public record WarframeKeyVO(String query, int page, int totalPages, int totalCou
      * @return 按当前对象字段组成的文本内容。
      */
     public String text() {
-        StringBuilder text = new StringBuilder("钥匙链：").append(page).append("/").append(totalPages)
-                .append(" 页，共 ").append(totalCount).append(" 条");
+        StringBuilder text = new StringBuilder("钥匙链：").append(page).append("/").append(totalPages).append(" 页，共 ")
+            .append(totalCount).append(" 条");
         for (EntryVO entry : items) {
             text.append("\n\n").append(entry.name());
-            if (entry.description() != null) text.append("\n").append(entry.description());
-            if (entry.replayable() != null) text.append("\n可重玩：").append(entry.replayable() ? "是" : "否");
+            if (entry.description() != null)
+                text.append("\n").append(entry.description());
+            if (entry.replayable() != null)
+                text.append("\n可重玩：").append(entry.replayable() ? "是" : "否");
             if (entry.minEnemyLevel() != null || entry.maxEnemyLevel() != null) {
-                text.append("\n敌人等级：").append(entry.minEnemyLevel() == null ? "?" : entry.minEnemyLevel())
-                        .append(" - ").append(entry.maxEnemyLevel() == null ? "?" : entry.maxEnemyLevel());
+                text.append("\n敌人等级：").append(entry.minEnemyLevel() == null ? "?" : entry.minEnemyLevel()).append(" - ")
+                    .append(entry.maxEnemyLevel() == null ? "?" : entry.maxEnemyLevel());
             }
-            if (CollUtil.isEmpty(entry.stages())) text.append("\n阶段未提供或未采纳");
+            if (CollUtil.isEmpty(entry.stages()))
+                text.append("\n阶段未提供或未采纳");
             for (StageVO stage : entry.stages()) {
                 text.append("\n阶段 ").append(stage.order() + 1);
-                if (stage.name() != null) text.append("：").append(stage.name());
+                if (stage.name() != null)
+                    text.append("：").append(stage.name());
                 stage.items().forEach(item -> text.append("\n发放：").append(item.name()));
-                if (stage.message() != null) text.append("\n").append(stage.message().text());
+                if (stage.message() != null)
+                    text.append("\n").append(stage.message().text());
             }
-            if (CollUtil.isEmpty(entry.rewards())) text.append("\n奖励未提供或未采纳");
+            if (CollUtil.isEmpty(entry.rewards()))
+                text.append("\n奖励未提供或未采纳");
             for (RewardVO reward : entry.rewards()) {
                 text.append("\n").append(switch (reward.kind()) {
                     case "mission_credits" -> "任务信用点";
                     case "mission_item", "mission_store_item", "mission_counted_item" -> "任务奖励";
                     default -> "钥匙奖励";
                 });
-                if (reward.name() != null) text.append("：").append(reward.name());
+                if (reward.name() != null)
+                    text.append("：").append(reward.name());
                 text.append(reward.amount() == null ? " · 数量未提供" : " × " + reward.amount());
             }
             if (entry.missionRewardDroptable() != null) {
                 text.append("\n任务奖励池：").append(entry.missionRewardDroptable());
             }
-            if (entry.cacheRewardManifest() != null) text.append("\n储藏奖励池：").append(entry.cacheRewardManifest());
+            if (entry.cacheRewardManifest() != null)
+                text.append("\n储藏奖励池：").append(entry.cacheRewardManifest());
         }
-        if (CollUtil.isEmpty(items)) text.append("\n没有找到匹配的钥匙链");
+        if (CollUtil.isEmpty(items))
+            text.append("\n没有找到匹配的钥匙链");
         return text.toString();
     }
 
     public record EntryVO(String key, String name, String description, String imageReference, String iconUrl,
-            String sourceCode, String resolutionMode, Boolean replayable, Integer minEnemyLevel,
-            Integer maxEnemyLevel, String missionRewardDroptable, String cacheRewardManifest,
-            List<StageVO> stages, List<RewardVO> rewards) {
+        String sourceCode, String resolutionMode, Boolean replayable, Integer minEnemyLevel, Integer maxEnemyLevel,
+        String missionRewardDroptable, String cacheRewardManifest, List<StageVO> stages, List<RewardVO> rewards) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *
@@ -104,7 +112,7 @@ public record WarframeKeyVO(String query, int page, int totalPages, int totalCou
     }
 
     public record StageVO(String recordKey, int order, String stageKey, String name,
-            List<WarframeMailVO.AttachmentVO> items, WarframeMailVO message) {
+        List<WarframeMailVO.AttachmentVO> items, WarframeMailVO message) {
         /**
          * 构造阶段展示对象，并保存初始化参数。
          *

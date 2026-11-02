@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.market.OfficialMarke
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** market/trade-items.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** market/trade-items.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialMarketItemRepository extends OfficialMainRepository<OfficialMarketItemRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

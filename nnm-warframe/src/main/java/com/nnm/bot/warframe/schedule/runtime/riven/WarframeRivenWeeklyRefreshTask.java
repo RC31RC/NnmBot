@@ -18,9 +18,7 @@ public class WarframeRivenWeeklyRefreshTask {
     /**
      * 按配置拉取最新的紫卡周统计数据。
      */
-    @Scheduled(
-            initialDelayString = "#{@warframeRivenWeeklyProperties.initialDelay.toString()}",
-            fixedDelayString = "#{@warframeRivenWeeklyProperties.refreshCheckInterval.toString()}")
+    @Scheduled(initialDelayString = "2m", fixedDelayString = "15m")
     public void refresh() {
         if (properties.isEnabled()) {
             weeklyService.refresh();

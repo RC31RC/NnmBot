@@ -48,8 +48,8 @@ public class OneBotAccountProbe {
         StandardWebSocketClient client = new StandardWebSocketClient();
         client.setTaskExecutor(this.taskExecutor);
         WebSocketHttpHeaders headers = headers(accessToken);
-        CompletableFuture<WebSocketSession> connection = client.execute(
-                new ProbeHandler(echo, result, sessionRef), headers, uri);
+        CompletableFuture<WebSocketSession> connection =
+            client.execute(new ProbeHandler(echo, result, sessionRef), headers, uri);
         connection.whenComplete((session, error) -> {
             if (ObjectUtil.isNotNull(session)) {
                 sessionRef.set(session);
@@ -63,15 +63,13 @@ public class OneBotAccountProbe {
             return result.get(this.properties.getProbeTimeout().toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException exception) {
             connection.cancel(true);
-            throw new OneBotAccountProbeException(
-                    "连接 OneBot 成功后未在限定时间内返回登录账号", exception);
+            throw new OneBotAccountProbeException("连接 OneBot 成功后未在限定时间内返回登录账号", exception);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new OneBotAccountProbeException("OneBot 账号探测被中断", exception);
         } catch (ExecutionException exception) {
             Throwable cause = ObjectUtil.isNull(exception.getCause()) ? exception : exception.getCause();
-            throw new OneBotAccountProbeException(
-                    "无法从 OneBot WebSocket 获取登录账号: " + safeMessage(cause), cause);
+            throw new OneBotAccountProbeException("无法从 OneBot WebSocket 获取登录账号: " + safeMessage(cause), cause);
         } finally {
             close(sessionRef.get());
         }
@@ -82,22 +80,19 @@ public class OneBotAccountProbe {
         if (!expectedEcho.equals(response.path("echo").asText())) {
             return null;
         }
-        if (!OneBotProtocolConstants.STATUS_OK.equalsIgnoreCase(
-                response.path(OneBotProtocolConstants.FIELD_STATUS).asText())) {
-            throw new OneBotAccountProbeException(
-                    "OneBot " + OneBotProtocolConstants.ACTION_GET_LOGIN_INFO
-                            + " 调用失败，retcode="
-                            + response.path(OneBotProtocolConstants.FIELD_RETCODE).asText());
+        if (!OneBotProtocolConstants.STATUS_OK
+            .equalsIgnoreCase(response.path(OneBotProtocolConstants.FIELD_STATUS).asText())) {
+            throw new OneBotAccountProbeException("OneBot " + OneBotProtocolConstants.ACTION_GET_LOGIN_INFO
+                + " 调用失败，retcode=" + response.path(OneBotProtocolConstants.FIELD_RETCODE).asText());
         }
-        String accountId = response.path(OneBotProtocolConstants.FIELD_DATA)
-                .path(OneBotProtocolConstants.FIELD_USER_ID).asText().trim();
+        String accountId = response.path(OneBotProtocolConstants.FIELD_DATA).path(OneBotProtocolConstants.FIELD_USER_ID)
+            .asText().trim();
         try {
             if (Long.parseLong(accountId) <= 0L) {
                 throw new NumberFormatException("account id must be positive");
             }
         } catch (NumberFormatException exception) {
-            throw new OneBotAccountProbeException(
-                    "OneBot get_login_info 响应中缺少有效的 user_id", exception);
+            throw new OneBotAccountProbeException("OneBot get_login_info 响应中缺少有效的 user_id", exception);
         }
         return accountId;
     }
@@ -108,9 +103,8 @@ public class OneBotAccountProbe {
         private final CompletableFuture<String> result;
         private final AtomicReference<WebSocketSession> sessionRef;
 
-        private ProbeHandler(String echo,
-                             CompletableFuture<String> result,
-                             AtomicReference<WebSocketSession> sessionRef) {
+        private ProbeHandler(String echo, CompletableFuture<String> result,
+            AtomicReference<WebSocketSession> sessionRef) {
             this.echo = echo;
             this.result = result;
             this.sessionRef = sessionRef;
@@ -120,13 +114,10 @@ public class OneBotAccountProbe {
         public void afterConnectionEstablished(WebSocketSession session) throws Exception {
             sessionRef.set(session);
             ObjectNode request = OneBotAccountProbe.this.objectMapper.createObjectNode()
-                    .put(OneBotProtocolConstants.FIELD_ACTION,
-                            OneBotProtocolConstants.ACTION_GET_LOGIN_INFO)
-                    .put(OneBotProtocolConstants.FIELD_ECHO, echo);
-            request.set(OneBotProtocolConstants.FIELD_PARAMS,
-                    OneBotAccountProbe.this.objectMapper.createObjectNode());
-            session.sendMessage(new TextMessage(
-                    OneBotAccountProbe.this.objectMapper.writeValueAsString(request)));
+                .put(OneBotProtocolConstants.FIELD_ACTION, OneBotProtocolConstants.ACTION_GET_LOGIN_INFO)
+                .put(OneBotProtocolConstants.FIELD_ECHO, echo);
+            request.set(OneBotProtocolConstants.FIELD_PARAMS, OneBotAccountProbe.this.objectMapper.createObjectNode());
+            session.sendMessage(new TextMessage(OneBotAccountProbe.this.objectMapper.writeValueAsString(request)));
         }
 
         @Override
@@ -149,8 +140,7 @@ public class OneBotAccountProbe {
         @Override
         public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
             if (!result.isDone()) {
-                result.completeExceptionally(new IllegalStateException(
-                        "OneBot WebSocket 已关闭: " + status));
+                result.completeExceptionally(new IllegalStateException("OneBot WebSocket 已关闭: " + status));
             }
         }
     }
@@ -161,7 +151,7 @@ public class OneBotAccountProbe {
         }
         URI uri = URI.create(connectionUrl.trim());
         if (!OneBotProtocolConstants.WS_SCHEME.equalsIgnoreCase(uri.getScheme())
-                && !OneBotProtocolConstants.WSS_SCHEME.equalsIgnoreCase(uri.getScheme())) {
+            && !OneBotProtocolConstants.WSS_SCHEME.equalsIgnoreCase(uri.getScheme())) {
             throw new IllegalArgumentException("OneBot WebSocket 地址必须使用 ws 或 wss 协议");
         }
         if (ObjectUtil.isNull(uri.getHost())) {
@@ -173,10 +163,8 @@ public class OneBotAccountProbe {
     private static WebSocketHttpHeaders headers(String accessToken) {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         if (StrUtil.isNotBlank(accessToken)) {
-            headers.set(HttpHeaders.AUTHORIZATION,
-                    accessToken.startsWith(OneBotProtocolConstants.BEARER_PREFIX)
-                            ? accessToken
-                            : OneBotProtocolConstants.BEARER_PREFIX + accessToken);
+            headers.set(HttpHeaders.AUTHORIZATION, accessToken.startsWith(OneBotProtocolConstants.BEARER_PREFIX)
+                ? accessToken : OneBotProtocolConstants.BEARER_PREFIX + accessToken);
         }
         return headers;
     }
@@ -188,13 +176,11 @@ public class OneBotAccountProbe {
         try {
             session.close(CloseStatus.NORMAL);
         } catch (IOException ignored) {
-            // Probe is already complete; closing failures do not change its result.
+            // 探测已经完成，连接关闭失败不改变探测结果。
         }
     }
 
     private static String safeMessage(Throwable error) {
-        return StrUtil.isBlank(error.getMessage())
-                ? error.getClass().getSimpleName()
-                : error.getMessage();
+        return StrUtil.isBlank(error.getMessage()) ? error.getClass().getSimpleName() : error.getMessage();
     }
 }

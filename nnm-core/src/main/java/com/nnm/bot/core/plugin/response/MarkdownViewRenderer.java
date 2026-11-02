@@ -16,7 +16,8 @@ public class MarkdownViewRenderer {
     private ReplyProperties limits;
 
     public String render(String template, Map<String, Object> data, boolean markdown) {
-        if (template == null || template.isBlank()) throw new IllegalArgumentException("Missing view template");
+        if (template == null || template.isBlank())
+            throw new IllegalArgumentException("Missing view template");
         checkSize(template.length());
         Matcher loops = LOOP.matcher(template);
         StringBuilder expanded = new StringBuilder();
@@ -24,11 +25,14 @@ public class MarkdownViewRenderer {
         while (loops.find()) {
             expanded.append(fields(template.substring(end, loops.start()), data, markdown));
             Object value = field(data, loops.group(1));
-            if (!(value instanceof Iterable<?> items)) throw new IllegalArgumentException("Template loop requires a list");
+            if (!(value instanceof Iterable<?> items))
+                throw new IllegalArgumentException("Template loop requires a list");
             int count = 0;
             for (Object item : items) {
-                if (++count > limits.getMaxTextCharacters()) throw new IllegalArgumentException("Template loop limit exceeded");
-                expanded.append(fields(loops.group(2), item instanceof Map<?, ?> map ? map : Map.of("item", item), markdown));
+                if (++count > limits.getMaxTextCharacters())
+                    throw new IllegalArgumentException("Template loop limit exceeded");
+                expanded.append(
+                    fields(loops.group(2), item instanceof Map<?, ?> map ? map : Map.of("item", item), markdown));
                 checkSize(expanded.length());
             }
             end = loops.end();
@@ -36,7 +40,8 @@ public class MarkdownViewRenderer {
         expanded.append(fields(template.substring(end), data, markdown));
         String result = expanded.toString();
         checkSize(result.length());
-        if (result.isBlank()) throw new IllegalArgumentException("View template produced empty content");
+        if (result.isBlank())
+            throw new IllegalArgumentException("View template produced empty content");
         return result;
     }
 
@@ -52,7 +57,8 @@ public class MarkdownViewRenderer {
                 throw new IllegalArgumentException("Template field must be a scalar: " + matcher.group(1));
             }
             String text = value.toString();
-            if (markdown) text = text.replaceAll("([\\\\`*_{}\\[\\]()<>#!|])", "\\\\$1");
+            if (markdown)
+                text = text.replaceAll("([\\\\`*_{}\\[\\]()<>#!|])", "\\\\$1");
             matcher.appendReplacement(result, Matcher.quoteReplacement(text));
             checkSize(result.length());
         }
@@ -62,12 +68,15 @@ public class MarkdownViewRenderer {
 
     private Object field(Map<?, ?> data, String path) {
         Object value = data;
-        for (String key : path.split("\\.")) value = value instanceof Map<?, ?> map ? map.get(key) : null;
-        if (value == null) throw new IllegalArgumentException("Missing template field: " + path);
+        for (String key : path.split("\\."))
+            value = value instanceof Map<?, ?> map ? map.get(key) : null;
+        if (value == null)
+            throw new IllegalArgumentException("Missing template field: " + path);
         return value;
     }
 
     private void checkSize(int size) {
-        if (size > limits.getMaxTextCharacters()) throw new IllegalArgumentException("Rendered view text limit exceeded");
+        if (size > limits.getMaxTextCharacters())
+            throw new IllegalArgumentException("Rendered view text limit exceeded");
     }
 }

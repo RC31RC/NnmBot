@@ -7,8 +7,9 @@ import java.util.Optional;
 /**
  * 提供 WorldStateDTO 专用代码簿查询能力。
  *
- * <p>WorldStateDTO 中的任务类型、裂隙时代和突击变体不是物品别名，
- * 因此必须通过业务类型查询，避免被通用物品解析误判。</p>
+ * <p>
+ * WorldStateDTO 中的任务类型、裂隙时代和突击变体不是物品别名， 因此必须通过业务类型查询，避免被通用物品解析误判。
+ * </p>
  */
 public interface WarframeWorldStateCodebookService {
 
@@ -19,8 +20,7 @@ public interface WarframeWorldStateCodebookService {
      * @param reference 引用。
      * @return 匹配的业务结果；没有有效数据时为空。
      */
-    Optional<WarframeWorldStateCodebookEntryDTO> find(
-            WarframeReferenceType type, String reference);
+    Optional<WarframeWorldStateCodebookEntryDTO> find(WarframeReferenceType type, String reference);
 
     /**
      * 查询 WorldStateDTO 语言键，简体中文优先、英文兜底。

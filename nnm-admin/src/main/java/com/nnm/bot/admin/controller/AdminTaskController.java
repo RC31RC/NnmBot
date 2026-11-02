@@ -32,11 +32,12 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * 管理端长任务的状态查询与 SSE 订阅入口。
  *
- * <p>任务创建由各业务 Controller 完成；这里统一校验任务权限、转发状态事件并管理
- * SSE 连接生命周期，不执行具体刷新业务。</p>
+ * <p>
+ * 任务创建由各业务 Controller 完成；这里统一校验任务权限、转发状态事件并管理 SSE 连接生命周期，不执行具体刷新业务。
+ * </p>
  */
 @RestController
-@RequestMapping("/api/admin/v1/tasks")
+@RequestMapping("/api/admin/tasks")
 @Slf4j
 public class AdminTaskController {
 
@@ -46,26 +47,26 @@ public class AdminTaskController {
     private ThreadPoolTaskScheduler taskScheduler;
 
     @PostMapping("/{taskId}")
-    public ApiResponse<AdminTaskEvent> get(
-            @PathVariable
-            UUID taskId,
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<AdminTaskEvent> get(@PathVariable UUID taskId,
+        @RequestBody(required = false) EmptyRequest ignored) {
         AdminTaskEvent event = findAuthorized(taskId);
         return ApiResponse.ok(event);
     }
 
-    @GetMapping(
-            value = "/{taskId}/events",
-            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter events(
-            @PathVariable
-            UUID taskId) {
+    /** 提交取消请求；实际任务退出前仍视为运行中。 */
+    @PostMapping("/{taskId}/cancel")
+    public ApiResponse<Void> cancel(@PathVariable UUID taskId) {
+        findAuthorized(taskId);
+        taskService.cancel(taskId);
+        return ApiResponse.ok();
+    }
+
+    @GetMapping(value = "/{taskId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter events(@PathVariable UUID taskId) {
         findAuthorized(taskId);
         SseEmitter emitter = new SseEmitter(0L);
         log.info("管理端 SSE 建立, taskId={}", taskId);
-        AtomicReference<TaskSubscription> subscription =
-                new AtomicReference<>();
+        AtomicReference<TaskSubscription> subscription = new AtomicReference<>();
         AtomicReference<ScheduledFuture<?>> keepAlive = new AtomicReference<>();
         ReentrantLock sendLock = new ReentrantLock();
         AtomicBoolean closed = new AtomicBoolean();
@@ -80,29 +81,22 @@ public class AdminTaskController {
         emitter.onError(ignored -> cleanup.run());
 
         try {
-            ScheduledFuture<?> keepAliveTask = taskScheduler.scheduleAtFixedRate(
-                    () -> sendKeepAlive(emitter, taskId, sendLock, cleanup),
-                    Duration.ofSeconds(25));
+            ScheduledFuture<?> keepAliveTask = taskScheduler
+                .scheduleAtFixedRate(() -> sendKeepAlive(emitter, taskId, sendLock, cleanup), Duration.ofSeconds(25));
             keepAlive.set(keepAliveTask);
-            if (closed.get()) cleanup.run();
+            if (closed.get())
+                cleanup.run();
 
             TaskSubscription registered = taskService.subscribe(taskId, event -> {
-                boolean sent = send(
-                        emitter,
-                        taskId,
-                        sendLock,
-                        SseEmitter.event()
-                                .id(String.valueOf(event.sequence()))
-                                .name(event.status().name().toLowerCase())
-                                .data(event),
-                        cleanup,
-                        "事件发送失败");
+                boolean sent = send(emitter, taskId, sendLock, SseEmitter.event().id(String.valueOf(event.sequence()))
+                    .name(event.status().name().toLowerCase()).data(event), cleanup, "事件发送失败");
                 if (sent && isTerminal(event)) {
                     emitter.complete();
                 }
             });
             subscription.set(registered);
-            if (closed.get()) cleanup.run();
+            if (closed.get())
+                cleanup.run();
             AdminTaskEvent current = taskService.find(taskId).orElse(null);
             if (current != null && isTerminal(current)) {
                 cleanup.run();
@@ -115,20 +109,8 @@ public class AdminTaskController {
         return emitter;
     }
 
-    private void sendKeepAlive(
-            SseEmitter emitter,
-            UUID taskId,
-            ReentrantLock sendLock,
-            Runnable cleanup) {
-        send(
-                emitter,
-                taskId,
-                sendLock,
-                SseEmitter.event()
-                        .name("keepalive")
-                        .data("ping"),
-                cleanup,
-                "保活发送失败");
+    private void sendKeepAlive(SseEmitter emitter, UUID taskId, ReentrantLock sendLock, Runnable cleanup) {
+        send(emitter, taskId, sendLock, SseEmitter.event().name("keepalive").data("ping"), cleanup, "保活发送失败");
     }
 
     /**
@@ -136,13 +118,8 @@ public class AdminTaskController {
      *
      * @return {@code true} 表示事件已写入，{@code false} 表示连接已清理
      */
-    private static boolean send(
-            SseEmitter emitter,
-            UUID taskId,
-            ReentrantLock sendLock,
-            SseEventBuilder event,
-            Runnable cleanup,
-            String operation) {
+    private static boolean send(SseEmitter emitter, UUID taskId, ReentrantLock sendLock, SseEventBuilder event,
+        Runnable cleanup, String operation) {
         try {
             sendLock.lock();
             try {
@@ -158,36 +135,29 @@ public class AdminTaskController {
     }
 
     private AdminTaskEvent findAuthorized(UUID taskId) {
-        AdminTaskEvent event = taskService.find(taskId)
-                .orElseThrow(() -> new DataNotFoundException("管理端任务不存在"));
-        StpUtil.checkPermission(taskService.requiredPermission(taskId)
-                .orElseThrow(() -> new DataNotFoundException("管理端任务不存在")));
+        AdminTaskEvent event = taskService.find(taskId).orElseThrow(() -> new DataNotFoundException("管理端任务不存在"));
+        StpUtil.checkPermission(
+            taskService.requiredPermission(taskId).orElseThrow(() -> new DataNotFoundException("管理端任务不存在")));
         return event;
     }
 
     private static boolean isTerminal(AdminTaskEvent event) {
-        return event.status() == AdminTaskStatus.COMPLETED
-                || event.status() == AdminTaskStatus.FAILED;
+        return event.status() == AdminTaskStatus.COMPLETED || event.status() == AdminTaskStatus.FAILED
+            || event.status() == AdminTaskStatus.CANCELLED;
     }
 
-    private static void disconnect(
-            SseEmitter emitter,
-            UUID taskId,
-            Runnable cleanup,
-            String operation,
-            Exception exception) {
+    private static void disconnect(SseEmitter emitter, UUID taskId, Runnable cleanup, String operation,
+        Exception exception) {
         log.debug("管理端 SSE {}, taskId={}", operation, taskId, exception);
         cleanup.run();
         emitter.complete();
     }
 
     /**
-     * 连接结束时同时取消保活任务和状态订阅。该方法必须幂等，因为完成、超时、
-     * 发送异常可能并发触发。
+     * 连接结束时同时取消保活任务和状态订阅。该方法必须幂等，因为完成、超时、 发送异常可能并发触发。
      */
-    private static void close(
-            AtomicReference<TaskSubscription> subscription,
-            AtomicReference<ScheduledFuture<?>> keepAlive) {
+    private static void close(AtomicReference<TaskSubscription> subscription,
+        AtomicReference<ScheduledFuture<?>> keepAlive) {
         ScheduledFuture<?> keepAliveTask = keepAlive.getAndSet(null);
         if (keepAliveTask != null) {
             keepAliveTask.cancel(false);

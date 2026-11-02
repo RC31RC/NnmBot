@@ -19,6 +19,7 @@ public class WarframeRewardPoolServiceImpl implements WarframeRewardPoolService 
     private WarframeOfficialRecordReadService catalog;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 按给定业务条件查询奖励池。
      *
@@ -30,8 +31,9 @@ public class WarframeRewardPoolServiceImpl implements WarframeRewardPoolService 
     public List<EntryVO> find(String keyword, Integer stage) {
         List<EntryVO> result = new ArrayList<>();
         for (var root : catalog.records(WarframeOfficialDataDomain.REWARD_POOL)) {
-            if (!data.matches(root, keyword)) continue;
-            collect(root.bkey(), name(root), (OfficialRewardPoolDTO) root.data(), stage, result);
+            if (!data.matches(root, keyword))
+                continue;
+            collect(root.bkey(), name(root), (OfficialRewardPoolDTO)root.data(), stage, result);
         }
         return result;
     }
@@ -48,13 +50,14 @@ public class WarframeRewardPoolServiceImpl implements WarframeRewardPoolService 
     private void collect(String key, String name, OfficialRewardPoolDTO value, Integer filter, List<EntryVO> rows) {
         int stage = 0;
         for (var members : values(value.getStages())) {
-            if (filter == null || filter.equals(stage)) for (var reward : values(members)) {
-                String itemName = values(reward.getItemReferences()).stream()
+            if (filter == null || filter.equals(stage))
+                for (var reward : values(members)) {
+                    String itemName = values(reward.getItemReferences()).stream()
                         .map(item -> first(item.getNameZh(), item.getNameEn(), item.getName())).findFirst().orElse("");
-                rows.add(new EntryVO(key, name, stage, first(reward.getType()), itemName,
-                        integer(reward.getItemCount()), reward.getProbability(), first(reward.getRarity()),
-                        false, OFFICIAL_SOURCE_CODE, "ROOT_SELECTED"));
-            }
+                    rows.add(new EntryVO(key, name, stage, first(reward.getType()), itemName,
+                        integer(reward.getItemCount()), reward.getProbability(), first(reward.getRarity()), false,
+                        OFFICIAL_SOURCE_CODE, "ROOT_SELECTED"));
+                }
             stage++;
         }
     }

@@ -207,5 +207,6 @@ public class OfficialRelicRoot extends OfficialRecord {
     private List<OfficialRelicUnresolvedDropRowsItems> officialRelicUnresolvedDropRowsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRelicUnresolvedLocationRowsItems> officialRelicUnresolvedLocationRowsItemsRows = new ArrayList<>();
+    private List<OfficialRelicUnresolvedLocationRowsItems> officialRelicUnresolvedLocationRowsItemsRows =
+        new ArrayList<>();
 }

@@ -56,8 +56,8 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
                 PDFRenderer renderer = new PDFRenderer(doc);
                 PDRectangle bounds = doc.getPage(0).getCropBox();
                 double scale = options.getDpi() / 72D;
-                if (Math.ceil(bounds.getWidth() * scale) * Math.ceil(bounds.getHeight() * scale)
-                        > options.getMaxImagePixels()) {
+                if (Math.ceil(bounds.getWidth() * scale) * Math.ceil(bounds.getHeight() * scale) > options
+                    .getMaxImagePixels()) {
                     throw new BusinessException(ComputationErrorCode.RESULT_TOO_LARGE);
                 }
                 BufferedImage image = renderer.renderImageWithDPI(0, options.getDpi());

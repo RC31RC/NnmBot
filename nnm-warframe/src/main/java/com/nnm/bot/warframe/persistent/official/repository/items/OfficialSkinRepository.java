@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.items.OfficialSkinRo
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** items/skins.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** items/skins.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialSkinRepository extends OfficialMainRepository<OfficialSkinRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

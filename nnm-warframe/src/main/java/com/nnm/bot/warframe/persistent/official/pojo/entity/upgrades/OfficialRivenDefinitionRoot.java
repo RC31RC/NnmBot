@@ -127,8 +127,10 @@ public class OfficialRivenDefinitionRoot extends OfficialRecord {
     private Short upgradeEntriesState;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenDefinitionAvailableChallengesItems> officialRivenDefinitionAvailableChallengesItemsRows = new ArrayList<>();
+    private List<OfficialRivenDefinitionAvailableChallengesItems> officialRivenDefinitionAvailableChallengesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenDefinitionUpgradeEntriesItems> officialRivenDefinitionUpgradeEntriesItemsRows = new ArrayList<>();
+    private List<OfficialRivenDefinitionUpgradeEntriesItems> officialRivenDefinitionUpgradeEntriesItemsRows =
+        new ArrayList<>();
 }

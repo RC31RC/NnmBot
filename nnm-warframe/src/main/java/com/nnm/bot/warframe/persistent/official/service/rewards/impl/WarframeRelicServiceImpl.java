@@ -43,24 +43,29 @@ public class WarframeRelicServiceImpl implements WarframeRelicService {
         List<WarframeRelicDetailsDTO> result = new ArrayList<>();
         List<Long> candidateIds = relics.findPreferredRelicIds(query);
         for (var root : catalog.recordsByIds(WarframeOfficialDataDomain.RELIC, candidateIds)) {
-            var source = (OfficialRelicDTO) root.data();
-            if (source.getStates() == null) continue;
+            var source = (OfficialRelicDTO)root.data();
+            if (source.getStates() == null)
+                continue;
             source.getStates().forEach((quality, value) -> {
                 List<RewardDTO> rewards = new ArrayList<>();
                 List<DropDTO> drops = new ArrayList<>();
                 for (var reward : values(value.getRewards())) {
-                    rewards.add(new RewardDTO(first(reward.getItemNameZh(), reward.getItemNameEn(), reward.getItemName(), reward.getRewardName()),
-                            first(reward.getRarity()), probability(reward.getDropChancePercent(), reward.getProbability())));
+                    rewards.add(new RewardDTO(
+                        first(reward.getItemNameZh(), reward.getItemNameEn(), reward.getItemName(),
+                            reward.getRewardName()),
+                        first(reward.getRarity()),
+                        probability(reward.getDropChancePercent(), reward.getProbability())));
                 }
                 for (var drop : values(source.getLocations())) {
                     drops.add(new DropDTO(first(drop.getSourceZh(), drop.getSource()), first(drop.getRarity()),
-                            probability(drop.getDropChancePercent(), drop.getProbability())));
+                        probability(drop.getDropChancePercent(), drop.getProbability())));
                 }
                 String label = name(root);
-                RelicDTO relic = new RelicDTO(root.bkey(), label, value.getVaultedAt() == null ? null : true,
-                        quality, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE);
-                if (selection.matches(root, query) || rewards.stream().anyMatch(row -> StrUtil.containsIgnoreCase(row.rewardName(), query))
-                        || drops.stream().anyMatch(row -> StrUtil.containsIgnoreCase(row.locationText(), query))) {
+                RelicDTO relic = new RelicDTO(root.bkey(), label, value.getVaultedAt() == null ? null : true, quality,
+                    first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE);
+                if (selection.matches(root, query)
+                    || rewards.stream().anyMatch(row -> StrUtil.containsIgnoreCase(row.rewardName(), query))
+                    || drops.stream().anyMatch(row -> StrUtil.containsIgnoreCase(row.locationText(), query))) {
                     result.add(new WarframeRelicDetailsDTO(relic, rewards, drops));
                 }
             });

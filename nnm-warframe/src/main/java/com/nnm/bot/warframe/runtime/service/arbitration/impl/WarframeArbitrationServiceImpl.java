@@ -39,8 +39,7 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
     public ArbitrationScheduleDTO query(QueryType query) {
         Instant now = warframeClock.instant();
         LocalDate today = now.atZone(properties.getZone()).toLocalDate();
-        Instant from = query == QueryType.TODAY
-                ? today.atStartOfDay(properties.getZone()).toInstant() : now;
+        Instant from = query == QueryType.TODAY ? today.atStartOfDay(properties.getZone()).toInstant() : now;
         Instant until = switch (query) {
             case CURRENT -> now.plusNanos(1);
             case TODAY -> today.plusDays(1).atStartOfDay(properties.getZone()).toInstant();
@@ -49,29 +48,28 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
         Snapshot snapshot = snapshots.current();
         Instant fetchedAt = snapshot.fetchedAt();
         List<ArbitrationScheduleEntryDTO> all = snapshot.entries().stream()
-                .filter(entry -> entry.expiry().isAfter(from) && entry.activation().isBefore(until)).toList();
+            .filter(entry -> entry.expiry().isAfter(from) && entry.activation().isBefore(until)).toList();
         List<ArbitrationScheduleEntryDTO> entries = all.stream()
-                .filter(record -> query != QueryType.CURRENT || !record.activation().isAfter(now))
-                .filter(record -> query != QueryType.EFFICIENT
-                        || (record.activation().isAfter(now) && efficient(record)))
-                // 自然日查询展示全部已缓存时段，不受上游解析容量或未来预览上限截断。
-                .limit(query == QueryType.TODAY ? Long.MAX_VALUE
-                        : query == QueryType.CURRENT ? 1 : properties.getPreviewLimit())
-                .toList();
+            .filter(record -> query != QueryType.CURRENT || !record.activation().isAfter(now))
+            .filter(record -> query != QueryType.EFFICIENT || (record.activation().isAfter(now) && efficient(record)))
+            // 自然日查询展示全部已缓存时段，不受上游解析容量或未来预览上限截断。
+            .limit(query == QueryType.TODAY ? Long.MAX_VALUE
+                : query == QueryType.CURRENT ? 1 : properties.getPreviewLimit())
+            .toList();
         String notice = "第三方预测排期；以游戏内实际任务为准。";
-        if (fetchedAt != null
-                && !fetchedAt.plus(properties.getRefreshInterval()).isAfter(now)) {
+        if (fetchedAt != null && !fetchedAt.plus(properties.getRefreshInterval()).isAfter(now)) {
             notice += " 数据已过刷新周期，当前展示最近一次成功获取的本地快照。";
         }
         if (query == QueryType.TODAY) {
             notice += " 日期按 " + properties.getZone() + "；缺失时段不补造。";
         }
         if (query == QueryType.EFFICIENT) {
-            notice += " 筛选：" + String.join("/", properties.getEfficientPlanets())
-                    + "；" + String.join("/", properties.getEfficientMissionTypes())
-                    + "；" + String.join("/", properties.getEfficientEnemies()) + "。";
+            notice += " 筛选：" + String.join("/", properties.getEfficientPlanets()) + "；"
+                + String.join("/", properties.getEfficientMissionTypes()) + "；"
+                + String.join("/", properties.getEfficientEnemies()) + "。";
         }
-        if (CollUtil.isEmpty(entries)) notice += " 所查范围没有已收录的匹配任务，不能据此判断游戏内没有任务。";
+        if (CollUtil.isEmpty(entries))
+            notice += " 所查范围没有已收录的匹配任务，不能据此判断游戏内没有任务。";
         if (query != QueryType.CURRENT && !covers(all, from, until)) {
             notice += " 所查时间范围排期不完整。";
         }
@@ -89,8 +87,10 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
     private boolean covers(List<ArbitrationScheduleEntryDTO> records, Instant from, Instant until) {
         Instant end = from;
         for (ArbitrationScheduleEntryDTO record : records) {
-            if (record.activation().isAfter(end)) return false;
-            if (record.expiry().isAfter(end)) end = record.expiry();
+            if (record.activation().isAfter(end))
+                return false;
+            if (record.expiry().isAfter(end))
+                end = record.expiry();
         }
         return !end.isBefore(until);
     }
@@ -103,8 +103,8 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
      */
     private boolean efficient(ArbitrationScheduleEntryDTO record) {
         return matches(properties.getEfficientMissionTypes(), record.missionType())
-                && matches(properties.getEfficientPlanets(), record.planet())
-                && matches(properties.getEfficientEnemies(), record.enemy());
+            && matches(properties.getEfficientPlanets(), record.planet())
+            && matches(properties.getEfficientEnemies(), record.enemy());
     }
 
     /**

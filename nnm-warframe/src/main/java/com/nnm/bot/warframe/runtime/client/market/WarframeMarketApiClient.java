@@ -21,8 +21,9 @@ import java.util.function.Supplier;
 /**
  * Warframe Market HTTP 客户端。
  *
- * <p>v1 和 v2 是同一站点的两套协议，不应与 Warframe 官方 API 共用客户端。
- * 具体响应 JSON 的解析由应用层 Market Service 负责。</p>
+ * <p>
+ * v1 和 v2 是同一站点的两套协议，不应与 Warframe 官方 API 共用客户端。 具体响应 JSON 的解析由应用层 Market Service 负责。
+ * </p>
  */
 @Slf4j
 @Component
@@ -63,35 +64,18 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchMarketOrdersResult(String itemUrlName, String platform) {
-        String requestPlatform = StrUtil.isBlank(platform)
-                ? properties.getPlatform()
-                : platform.trim().toLowerCase(Locale.ROOT);
+        String requestPlatform =
+            StrUtil.isBlank(platform) ? properties.getPlatform() : platform.trim().toLowerCase(Locale.ROOT);
         boolean v2 = "v2".equalsIgnoreCase(properties.getVersion());
-        String path = v2
-                ? "/orders/item/" + itemUrlName
-                : "/items/" + itemUrlName + "/orders";
+        String path = v2 ? "/orders/item/" + itemUrlName : "/items/" + itemUrlName + "/orders";
         if (v2) {
-            return execute(
-                    buildUrl(properties.getV2BaseUrl(), path),
-                    "v2",
-                    itemUrlName,
-                    () -> v2HttpExchange.fetchOrders(
-                            itemUrlName,
-                            requestPlatform,
-                            properties.getLanguage(),
-                            properties.getUserAgent(),
-                            authorization()));
+            return execute(buildUrl(properties.getV2BaseUrl(), path), "v2", itemUrlName,
+                () -> v2HttpExchange.fetchOrders(itemUrlName, requestPlatform, properties.getLanguage(),
+                    properties.getUserAgent(), authorization()));
         }
-        return execute(
-                buildUrl(properties.getV1BaseUrl(), path),
-                "v1",
-                itemUrlName,
-                () -> v1HttpExchange.fetchOrders(
-                        itemUrlName,
-                        requestPlatform,
-                        properties.getLanguage(),
-                        properties.getUserAgent(),
-                        authorization()));
+        return execute(buildUrl(properties.getV1BaseUrl(), path), "v1", itemUrlName,
+            () -> v1HttpExchange.fetchOrders(itemUrlName, requestPlatform, properties.getLanguage(),
+                properties.getUserAgent(), authorization()));
     }
 
     /**
@@ -101,15 +85,8 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchMarketItemResult(String slug) {
-        return executeV2(
-                "/items/" + slug,
-                "item " + slug,
-                () -> v2HttpExchange.fetchItem(
-                        slug,
-                        properties.getPlatform(),
-                        properties.getLanguage(),
-                        properties.getUserAgent(),
-                        authorization()));
+        return executeV2("/items/" + slug, "item " + slug, () -> v2HttpExchange.fetchItem(slug,
+            properties.getPlatform(), properties.getLanguage(), properties.getUserAgent(), authorization()));
     }
 
     /**
@@ -119,15 +96,8 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchMarketItemSetResult(String slug) {
-        return executeV2(
-                "/items/" + slug + "/set",
-                "item set " + slug,
-                () -> v2HttpExchange.fetchItemSet(
-                        slug,
-                        properties.getPlatform(),
-                        properties.getLanguage(),
-                        properties.getUserAgent(),
-                        authorization()));
+        return executeV2("/items/" + slug + "/set", "item set " + slug, () -> v2HttpExchange.fetchItemSet(slug,
+            properties.getPlatform(), properties.getLanguage(), properties.getUserAgent(), authorization()));
     }
 
     /**
@@ -136,14 +106,8 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchMarketItemsResult() {
-        return executeV2(
-                "/items",
-                "items",
-                () -> v2HttpExchange.fetchItems(
-                        properties.getPlatform(),
-                        properties.getLanguage(),
-                        properties.getUserAgent(),
-                        authorization()));
+        return executeV2("/items", "items", () -> v2HttpExchange.fetchItems(properties.getPlatform(),
+            properties.getLanguage(), properties.getUserAgent(), authorization()));
     }
 
     /**
@@ -156,15 +120,8 @@ public class WarframeMarketApiClient {
         if (!List.of("riven", "lich", "sister").contains(type)) {
             throw new IllegalArgumentException("Unsupported auction type: " + type);
         }
-        return executeV2(
-                "/" + type + "/weapons",
-                type + " weapons",
-                () -> v2HttpExchange.fetchAuctionWeapons(
-                        type,
-                        properties.getPlatform(),
-                        properties.getLanguage(),
-                        properties.getUserAgent(),
-                        authorization()));
+        return executeV2("/" + type + "/weapons", type + " weapons", () -> v2HttpExchange.fetchAuctionWeapons(type,
+            properties.getPlatform(), properties.getLanguage(), properties.getUserAgent(), authorization()));
     }
 
     /**
@@ -173,8 +130,8 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchDucatsResult() {
-        return executeV1("/tools/ducats", "ducats", () -> v1HttpExchange.fetchDucats(
-                properties.getPlatform(), properties.getLanguage(), properties.getUserAgent(), authorization()));
+        return executeV1("/tools/ducats", "ducats", () -> v1HttpExchange.fetchDucats(properties.getPlatform(),
+            properties.getLanguage(), properties.getUserAgent(), authorization()));
     }
 
     /**
@@ -184,15 +141,9 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchMarketStatisticsResult(String slug) {
-        return executeV1(
-                "/items/" + slug + "/statistics",
-                "statistics " + slug,
-                () -> v1HttpExchange.fetchStatistics(
-                        slug,
-                        properties.getPlatform(),
-                        properties.getLanguage(),
-                        properties.getUserAgent(),
-                        authorization()));
+        return executeV1("/items/" + slug + "/statistics", "statistics " + slug,
+            () -> v1HttpExchange.fetchStatistics(slug, properties.getPlatform(), properties.getLanguage(),
+                properties.getUserAgent(), authorization()));
     }
 
     /**
@@ -204,19 +155,13 @@ public class WarframeMarketApiClient {
      * @param negativeStats 负面词条统计集合。
      * @return HTTP结果对象。
      */
-    public HttpClient.HttpResult fetchAuctionSearchResult(
-            String type, String weaponUrlName, List<String> positiveStats,
-            List<String> negativeStats) {
+    public HttpClient.HttpResult fetchAuctionSearchResult(String type, String weaponUrlName, List<String> positiveStats,
+        List<String> negativeStats) {
         String positiveStatsValue = joinStats(positiveStats);
         String negativeStatsValue = joinStats(negativeStats);
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromUri(properties.getV1BaseUrl())
-                .path("/auctions/search")
-                .queryParam("type", type)
-                .queryParam("weapon_url_name", weaponUrlName)
-                .queryParam("polarity", "any")
-                .queryParam("buyout_policy", "direct")
-                .queryParam("sort_by", "price_asc");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUri(properties.getV1BaseUrl()).path("/auctions/search")
+            .queryParam("type", type).queryParam("weapon_url_name", weaponUrlName).queryParam("polarity", "any")
+            .queryParam("buyout_policy", "direct").queryParam("sort_by", "price_asc");
         if (positiveStatsValue != null) {
             builder.queryParam("positive_stats", positiveStatsValue);
         }
@@ -224,26 +169,15 @@ public class WarframeMarketApiClient {
             builder.queryParam("negative_stats", negativeStatsValue);
         }
         String url = builder.build().encode().toUriString();
-        return execute(
-                url,
-                "v1",
-                "auction search " + weaponUrlName,
-                () -> v1HttpExchange.searchAuctions(
-                        type,
-                        weaponUrlName,
-                        "any",
-                        "direct",
-                        "price_asc",
-                        positiveStatsValue,
-                        negativeStatsValue,
-                        properties.getPlatform(),
-                        properties.getLanguage(),
-                        properties.getUserAgent(),
-                        authorization()));
+        return execute(url, "v1", "auction search " + weaponUrlName,
+            () -> v1HttpExchange.searchAuctions(type, weaponUrlName, "any", "direct", "price_asc", positiveStatsValue,
+                negativeStatsValue, properties.getPlatform(), properties.getLanguage(), properties.getUserAgent(),
+                authorization()));
     }
 
     /**
      * 读取并规范化当前配置的市场交易平台。
+     *
      * @return 配置的市场平台对应的文本。
      */
     public String configuredMarketPlatform() {
@@ -258,13 +192,8 @@ public class WarframeMarketApiClient {
      * @param request 负责执行单次外部协议请求的回调。
      * @return HTTP结果对象。
      */
-    private HttpClient.HttpResult executeV2(
-            String path, String description, Supplier<ResponseEntity<String>> request) {
-        return execute(
-                buildUrl(properties.getV2BaseUrl(), path),
-                "v2",
-                description,
-                request);
+    private HttpClient.HttpResult executeV2(String path, String description, Supplier<ResponseEntity<String>> request) {
+        return execute(buildUrl(properties.getV2BaseUrl(), path), "v2", description, request);
     }
 
     /**
@@ -275,13 +204,8 @@ public class WarframeMarketApiClient {
      * @param request 负责执行单次外部协议请求的回调。
      * @return HTTP结果对象。
      */
-    private HttpClient.HttpResult executeV1(
-            String path, String description, Supplier<ResponseEntity<String>> request) {
-        return execute(
-                buildUrl(properties.getV1BaseUrl(), path),
-                "v1",
-                description,
-                request);
+    private HttpClient.HttpResult executeV1(String path, String description, Supplier<ResponseEntity<String>> request) {
+        return execute(buildUrl(properties.getV1BaseUrl(), path), "v1", description, request);
     }
 
     /**
@@ -293,17 +217,13 @@ public class WarframeMarketApiClient {
      * @param request 负责执行单次外部协议请求的回调。
      * @return HTTP结果对象。
      */
-    private HttpClient.HttpResult execute(
-            String url,
-            String version,
-            String description,
-            Supplier<ResponseEntity<String>> request) {
+    private HttpClient.HttpResult execute(String url, String version, String description,
+        Supplier<ResponseEntity<String>> request) {
         HttpResult result = httpClient.executeGet(url, request);
         if (result != null && result.isTooManyRequests()) {
             log.warn("Warframe.market rate limited ({}): {}", version, description);
         } else if (result != null && !result.isSuccess() && result.statusCode() != 404) {
-            log.warn("Failed to fetch Warframe Market {} via {}: {}",
-                    description, version, result.statusCode());
+            log.warn("Failed to fetch Warframe Market {} via {}: {}", description, version, result.statusCode());
         }
         return result;
     }
@@ -314,13 +234,12 @@ public class WarframeMarketApiClient {
      * @return 当前接口需要的授权请求头对应的文本。
      */
     private String authorization() {
-        return StrUtil.isBlank(properties.getApiKey())
-                ? null
-                : "Bearer " + properties.getApiKey().trim();
+        return StrUtil.isBlank(properties.getApiKey()) ? null : "Bearer " + properties.getApiKey().trim();
     }
 
     /**
      * 按市场接口协议拼接紫卡属性筛选参数。
+     *
      * @param stats 词条统计集合。
      * @return 合并词条统计对应的文本。
      */
@@ -330,15 +249,12 @@ public class WarframeMarketApiClient {
 
     /**
      * 将相对接口路径连接到配置的市场基础地址。
+     *
      * @param baseUrl 基础地址。
      * @param path 当前文件或业务资源的路径。
      * @return 构造地址对应的文本。
      */
     private static String buildUrl(URI baseUrl, String path) {
-        return UriComponentsBuilder.fromUri(baseUrl)
-                .path(path)
-                .build()
-                .encode()
-                .toUriString();
+        return UriComponentsBuilder.fromUri(baseUrl).path(path).build().encode().toUriString();
     }
 }

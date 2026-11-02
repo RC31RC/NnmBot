@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/** Desired state is shared; only the lease owner creates sockets. Each node reconciles locally. */
+/** 期望状态由集群共享，只有租约所有者建立连接，各节点独立校准本地状态。 */
 @Slf4j
 @Component
 public class ClusterBotRuntime implements NodeIdentityListener {
@@ -89,13 +89,15 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     public void reconcile() {
         reconciliationLock.lock();
         try {
-            if (stopped) return;
+            if (stopped)
+                return;
             try {
                 if (!identity.isHealthy()) {
                     identityLost();
-                    ReconciliationFailure failure = new ReconciliationFailure("node-identity",
-                            "节点身份租约暂不可用，正在自动恢复，请稍后重试");
-                    if (!failure.equals(reconciliationFailure)) log.warn(failure.message());
+                    ReconciliationFailure failure =
+                        new ReconciliationFailure("node-identity", "节点身份租约暂不可用，正在自动恢复，请稍后重试");
+                    if (!failure.equals(reconciliationFailure))
+                        log.warn(failure.message());
                     reconciliationFailure = failure;
                     return;
                 }
@@ -108,10 +110,9 @@ public class ClusterBotRuntime implements NodeIdentityListener {
                 List<BotChannelInstanceRecord> records = List.copyOf(topologySnapshot.instances().values());
                 Map<String, String> placement = topologySnapshot.connectionGroups();
                 Map<String, BotChannelInstanceRecord> eligible = new HashMap<>();
-                records.stream()
-                        .filter(BotChannelInstanceRecord::enabled)
-                        .filter(record -> "true".equals(desired.get(record.instanceId())))
-                        .forEach(record -> eligible.put(record.instanceId(), record));
+                records.stream().filter(BotChannelInstanceRecord::enabled)
+                    .filter(record -> "true".equals(desired.get(record.instanceId())))
+                    .forEach(record -> eligible.put(record.instanceId(), record));
 
                 startRetryUntil.keySet().retainAll(eligible.keySet());
                 stopRemovedOrDisabled(eligible);
@@ -127,11 +128,12 @@ public class ClusterBotRuntime implements NodeIdentityListener {
                 }
             } catch (RuntimeException exception) {
                 reconciliationFailure = new ReconciliationFailure(exception.getClass().getName(),
-                        exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage());
+                    exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage());
                 try {
                     identityLost();
                 } catch (RuntimeException cleanupFailure) {
-                    if (cleanupFailure != exception) exception.addSuppressed(cleanupFailure);
+                    if (cleanupFailure != exception)
+                        exception.addSuppressed(cleanupFailure);
                 }
                 throw exception;
             }
@@ -141,7 +143,7 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     }
 
     private void renewAffinities() {
-        for (Entry<String,Lease> entry : List.copyOf(affinities.entrySet())) {
+        for (Entry<String, Lease> entry : List.copyOf(affinities.entrySet())) {
             if (!leases.renew(entry.getValue(), properties.ownerLease())) {
                 stopComponent(entry.getKey());
                 affinities.remove(entry.getKey());
@@ -152,7 +154,7 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     }
 
     private void renewOwnedConnections() {
-        for (Entry<String,OwnedConnection> entry : List.copyOf(owned.entrySet())) {
+        for (Entry<String, OwnedConnection> entry : List.copyOf(owned.entrySet())) {
             if (!leases.renew(entry.getValue().lease(), properties.ownerLease())) {
                 stopLocal(entry.getKey());
             }
@@ -160,7 +162,7 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     }
 
     private void stopRemovedOrDisabled(Map<String, BotChannelInstanceRecord> eligible) {
-        for (Entry<String,OwnedConnection> entry : List.copyOf(owned.entrySet())) {
+        for (Entry<String, OwnedConnection> entry : List.copyOf(owned.entrySet())) {
             BotChannelInstanceRecord expected = eligible.get(entry.getKey());
             if (!entry.getValue().active || expected == null || !entry.getValue().record().equals(expected)) {
                 stopLocal(entry.getKey());
@@ -169,23 +171,26 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     }
 
     private Map<String, String> placementTargets(List<BotChannelInstanceRecord> records,
-                                               Map<String, String> placement) {
+        Map<String, String> placement) {
         Map<String, String> targets = new HashMap<>();
-        BotConnectionPlacementCoordinator coordinator = placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
-        Map<String, Lease> currentOwners = leases.findAll(records.stream().map(record -> leaseName(key(record))).toList());
+        BotConnectionPlacementCoordinator coordinator =
+            placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
+        Map<String, Lease> currentOwners =
+            leases.findAll(records.stream().map(record -> leaseName(key(record))).toList());
         for (String component : new HashSet<>(placement.values())) {
             List<String> members = BotConnectionPlacementCoordinator.members(component, placement);
-            Optional<String> approved = coordinator == null ? Optional.empty()
-                    : coordinator.approvedTarget(component, members);
+            Optional<String> approved =
+                coordinator == null ? Optional.empty() : coordinator.approvedTarget(component, members);
             if (approved.isPresent()) {
                 targets.put(component, approved.get());
                 continue;
             }
             Set<String> owners = new HashSet<>();
             records.stream().filter(record -> members.contains(record.instanceId()))
-                    .map(record -> currentOwners.get(leaseName(key(record)))).filter(Objects::nonNull)
-                    .forEach(lease -> owners.add(lease.owner()));
-            if (!owners.isEmpty()) targets.put(component, owners.size() == 1 ? owners.iterator().next() : "");
+                .map(record -> currentOwners.get(leaseName(key(record)))).filter(Objects::nonNull)
+                .forEach(lease -> owners.add(lease.owner()));
+            if (!owners.isEmpty())
+                targets.put(component, owners.size() == 1 ? owners.iterator().next() : "");
         }
         return targets;
     }
@@ -197,22 +202,25 @@ public class ClusterBotRuntime implements NodeIdentityListener {
             String expected = placement.get(id);
             String target = targets.get(expected);
             if (target != null && !target.isEmpty() && !rdt.instanceId().equals(target)) {
-                // Only an approved transfer can select a different owner while both nodes are alive.
+                // 两个节点都存活时，只有已批准的转移才能变更所有者。
                 stopLocal(id);
                 continue;
             }
-            if (Objects.equals(expected, connection.affinityName())) continue;
+            if (Objects.equals(expected, connection.affinityName()))
+                continue;
             if ("".equals(target)) {
                 conflicts.add(id);
                 PlacementConflict conflict = new PlacementConflict(connection.affinityName(), expected);
                 if (!conflict.equals(placementConflicts.put(id, conflict))) {
-                    log.warn("Bot placement requires administrator confirmation: instance={}, component={}", id, expected);
+                    log.warn("Bot placement requires administrator confirmation: instance={}, component={}", id,
+                        expected);
                 }
                 continue;
             }
             Lease affinity = expected == null ? null : acquireAffinity(expected);
-            if (expected != null && affinity == null) continue;
-            // One volatile swap keeps the existing socket and its guard; the account acquisition is unchanged.
+            if (expected != null && affinity == null)
+                continue;
+            // 一次 volatile 替换保留现有连接及守卫，账号认领保持不变。
             connection.placement = new ConnectionPlacement(expected, affinity);
         }
         placementConflicts.keySet().retainAll(conflicts);
@@ -220,7 +228,8 @@ public class ClusterBotRuntime implements NodeIdentityListener {
 
     private Lease acquireAffinity(String name) {
         Lease current = affinities.get(name);
-        if (current != null) return current;
+        if (current != null)
+            return current;
         Optional<Lease> acquired = leases.acquire("bot-affinity:" + name, rdt.instanceId(), properties.ownerLease());
         acquired.ifPresent(lease -> {
             affinities.put(name, lease);
@@ -230,25 +239,22 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     }
 
     private void reconcileComponentHealth(Map<String, BotChannelInstanceRecord> eligible,
-                                          Map<String, String> placement) {
+        Map<String, String> placement) {
         long now = System.currentTimeMillis();
-        Map<String, List<OwnedConnection>> localComponents = owned.values().stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                        connection -> componentName(connection.record(), placement,
-                                connection.affinityName())));
-        for (Entry<String,List<OwnedConnection>> entry : localComponents.entrySet()) {
+        Map<String, List<OwnedConnection>> localComponents = owned.values().stream().collect(java.util.stream.Collectors
+            .groupingBy(connection -> componentName(connection.record(), placement, connection.affinityName())));
+        for (Entry<String, List<OwnedConnection>> entry : localComponents.entrySet()) {
             String component = entry.getKey();
             List<BotChannelInstanceRecord> expected = eligible.values().stream()
-                    .filter(record -> component.equals(componentName(record, placement,
-                            placement.get(record.instanceId()))))
-                    .toList();
-            // A healthy owner from a previous topology must not be pulled into a new component
-            // merely because the database graph changed. The explicit-stop path handles it.
+                .filter(
+                    record -> component.equals(componentName(record, placement, placement.get(record.instanceId()))))
+                .toList();
+            // 不能仅因数据库拓扑变化，就把旧拓扑中的健康所有者
+            // 强行迁入新连通分量；该变更由显式停止流程处理。
             if (expected.size() != entry.getValue().size()) {
                 continue;
             }
-            boolean healthy = entry.getValue().stream().anyMatch(connection ->
-                    isConnected(connection.record()));
+            boolean healthy = entry.getValue().stream().anyMatch(connection -> isConnected(connection.record()));
             if (healthy) {
                 componentUnhealthySince.remove(component);
                 continue;
@@ -257,32 +263,32 @@ public class ClusterBotRuntime implements NodeIdentityListener {
             if (now - started < properties.componentStartupGrace().toMillis()) {
                 continue;
             }
-            long unhealthySince = componentUnhealthySince.computeIfAbsent(component,
-                    ignored -> now);
+            long unhealthySince = componentUnhealthySince.computeIfAbsent(component, ignored -> now);
             if (now - unhealthySince < properties.componentFailureThreshold().toMillis()) {
                 continue;
             }
-            log.warn("All connections in component {} have been unavailable for {} ms; "
-                            + "releasing the whole component",
-                    component, now - unhealthySince);
+            log.warn(
+                "All connections in component {} have been unavailable for {} ms; " + "releasing the whole component",
+                component, now - unhealthySince);
             stopComponent(component);
-            BotConnectionPlacementCoordinator coordinator = placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
-            if (coordinator != null) coordinator.clearApproval(component);
-            componentBackoffUntil.put(component,
-                    now + properties.componentFailoverBackoff().toMillis());
+            BotConnectionPlacementCoordinator coordinator =
+                placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
+            if (coordinator != null)
+                coordinator.clearApproval(component);
+            componentBackoffUntil.put(component, now + properties.componentFailoverBackoff().toMillis());
             componentUnhealthySince.remove(component);
             componentStartedAt.remove(component);
         }
     }
 
-    private void startEligible(Map<String, BotChannelInstanceRecord> eligible,
-                               Map<String, String> placement, Map<String, String> targets) {
+    private void startEligible(Map<String, BotChannelInstanceRecord> eligible, Map<String, String> placement,
+        Map<String, String> targets) {
         long now = System.currentTimeMillis();
         for (BotChannelInstanceRecord record : eligible.values().stream()
-                .sorted(Comparator.comparing(BotChannelInstanceRecord::instanceId)).toList()) {
+            .sorted(Comparator.comparing(BotChannelInstanceRecord::instanceId)).toList()) {
             if (owned.containsKey(record.instanceId())) {
                 if (startRetryUntil.containsKey(record.instanceId())
-                        && now >= startRetryUntil.get(record.instanceId())) {
+                    && now >= startRetryUntil.get(record.instanceId())) {
                     retryStart(record, now);
                 }
                 continue;
@@ -291,18 +297,19 @@ public class ClusterBotRuntime implements NodeIdentityListener {
                 continue;
             }
             String affinityName = placement.get(record.instanceId());
-            if (affinityName != null
-                    && now < componentBackoffUntil.getOrDefault(affinityName, 0L)) {
+            if (affinityName != null && now < componentBackoffUntil.getOrDefault(affinityName, 0L)) {
                 continue;
             }
             String target = targets.get(affinityName);
-            if (target != null && !rdt.instanceId().equals(target)) continue;
+            if (target != null && !rdt.instanceId().equals(target))
+                continue;
             Lease affinity = affinityName == null ? null : acquireAffinity(affinityName);
-            if (affinityName != null && affinity == null) continue;
+            if (affinityName != null && affinity == null)
+                continue;
             Optional<Lease> lease = leases.acquire(leaseName(key(record)), rdt.instanceId(), properties.ownerLease());
-            if (lease.isEmpty()) continue;
-            OwnedConnection connection = new OwnedConnection(record, lease.get(), affinityName,
-                    affinity);
+            if (lease.isEmpty())
+                continue;
+            OwnedConnection connection = new OwnedConnection(record, lease.get(), affinityName, affinity);
             owned.put(record.instanceId(), connection);
             retryStart(record, now);
         }
@@ -318,10 +325,10 @@ public class ClusterBotRuntime implements NodeIdentityListener {
             }
         } catch (RuntimeException exception) {
             OwnedConnection connection = owned.get(record.instanceId());
-            if (connection != null) registry.find(key(record)).ifPresent(snapshot ->
-                    stateStore.startFailed(record.instanceId(), connection.lease(), connection.affinity(), snapshot));
-            startRetryUntil.put(record.instanceId(),
-                    now + properties.componentFailoverBackoff().toMillis());
+            if (connection != null)
+                registry.find(key(record)).ifPresent(snapshot -> stateStore.startFailed(record.instanceId(),
+                    connection.lease(), connection.affinity(), snapshot));
+            startRetryUntil.put(record.instanceId(), now + properties.componentFailoverBackoff().toMillis());
             throw exception;
         }
     }
@@ -333,37 +340,32 @@ public class ClusterBotRuntime implements NodeIdentityListener {
 
     private void publishStatuses() {
         Map<BotChannelKey, SharedStatus> statuses = new HashMap<>();
-        owned.values().forEach(connection -> registry.find(key(connection.record())).ifPresent(snapshot ->
-                statuses.put(key(connection.record()), new SharedStatus(connection.lease(), connection.affinity(), snapshot))));
+        owned.values().forEach(connection -> registry.find(key(connection.record())).ifPresent(snapshot -> statuses
+            .put(key(connection.record()), new SharedStatus(connection.lease(), connection.affinity(), snapshot))));
         stateStore.publish(statuses);
     }
 
     private boolean isConnected(BotChannelInstanceRecord record) {
         return registry.find(key(record))
-                .map(snapshot -> snapshot.status()
-                        == com.nnm.bot.core.constant.BotChannelStatus.CONNECTED)
-                .orElse(false);
+            .map(snapshot -> snapshot.status() == com.nnm.bot.core.constant.BotChannelStatus.CONNECTED).orElse(false);
     }
 
-    private String componentName(BotChannelInstanceRecord record,
-                                 Map<String, String> placement,
-                                 String fallback) {
-        return placement.getOrDefault(record.instanceId(), fallback == null
-                ? record.instanceId() : fallback);
+    private String componentName(BotChannelInstanceRecord record, Map<String, String> placement, String fallback) {
+        return placement.getOrDefault(record.instanceId(), fallback == null ? record.instanceId() : fallback);
     }
 
     public BooleanSupplier guard(BotChannelKey key) {
         reconciliationLock.lock();
         try {
-            OwnedConnection connection = owned.values().stream()
-                    .filter(value -> key(value.record()).equals(key))
-                    .findFirst().orElse(null);
+            OwnedConnection connection =
+                owned.values().stream().filter(value -> key(value.record()).equals(key)).findFirst().orElse(null);
             BooleanSupplier nodeOwnership = identity.guard();
             return () -> {
-                if (connection == null || !connection.active || !nodeOwnership.getAsBoolean()) return false;
+                if (connection == null || !connection.active || !nodeOwnership.getAsBoolean())
+                    return false;
                 ConnectionPlacement placement = connection.placement;
                 return leases.isHeld(connection.lease())
-                        && (placement.lease() == null || leases.isHeld(placement.lease()));
+                    && (placement.lease() == null || leases.isHeld(placement.lease()));
             };
         } finally {
             reconciliationLock.unlock();
@@ -401,8 +403,8 @@ public class ClusterBotRuntime implements NodeIdentityListener {
 
     private void stopComponent(String component) {
         for (OwnedConnection connection : List.copyOf(owned.values())) {
-            String current = connection.affinityName() == null
-                    ? connection.record().instanceId() : connection.affinityName();
+            String current =
+                connection.affinityName() == null ? connection.record().instanceId() : connection.affinityName();
             if (component.equals(current)) {
                 stopLocal(connection.record().instanceId());
             }
@@ -412,9 +414,11 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     private void stopLocal(String id) {
         placementConflicts.remove(id);
         OwnedConnection connection = owned.get(id);
-        if (connection != null) connection.active = false;
+        if (connection != null)
+            connection.active = false;
         runtime.getObject().removeRuntime(id);
-        if (connection != null) leases.release(connection.lease());
+        if (connection != null)
+            leases.release(connection.lease());
         owned.remove(id);
     }
 
@@ -422,9 +426,10 @@ public class ClusterBotRuntime implements NodeIdentityListener {
     public void identityLost() {
         reconciliationLock.lock();
         try {
-            // Revoke every callback first, even if one connector fails during cleanup.
+            // 先撤销所有回调；单个连接器清理失败也不能保留其他有效回调。
             owned.values().forEach(connection -> connection.active = false);
-            for (String id : List.copyOf(owned.keySet())) stopLocal(id);
+            for (String id : List.copyOf(owned.keySet()))
+                stopLocal(id);
             releaseUnusedAffinities();
             componentUnhealthySince.clear();
         } finally {
@@ -439,8 +444,9 @@ public class ClusterBotRuntime implements NodeIdentityListener {
                 activeComponents.add(connection.affinityName());
             }
         });
-        for (Entry<String,Lease> entry : List.copyOf(affinities.entrySet())) {
-            if (activeComponents.contains(entry.getKey())) continue;
+        for (Entry<String, Lease> entry : List.copyOf(affinities.entrySet())) {
+            if (activeComponents.contains(entry.getKey()))
+                continue;
             leases.release(entry.getValue());
             affinities.remove(entry.getKey());
             componentStartedAt.remove(entry.getKey());
@@ -489,17 +495,27 @@ public class ClusterBotRuntime implements NodeIdentityListener {
         private volatile ConnectionPlacement placement;
         private volatile boolean active = true;
 
-        private OwnedConnection(BotChannelInstanceRecord record, Lease lease, String affinityName,
-                                Lease affinity) {
+        private OwnedConnection(BotChannelInstanceRecord record, Lease lease, String affinityName, Lease affinity) {
             this.record = record;
             this.lease = lease;
             this.placement = new ConnectionPlacement(affinityName, affinity);
         }
 
-        private BotChannelInstanceRecord record() { return record; }
-        private Lease lease() { return lease; }
-        private String affinityName() { return placement.name(); }
-        private Lease affinity() { return placement.lease(); }
+        private BotChannelInstanceRecord record() {
+            return record;
+        }
+
+        private Lease lease() {
+            return lease;
+        }
+
+        private String affinityName() {
+            return placement.name();
+        }
+
+        private Lease affinity() {
+            return placement.lease();
+        }
     }
 
     public record SharedStatus(Lease lease, Lease affinity, BotChannelSnapshot snapshot) {

@@ -7,8 +7,7 @@ public final class OfficialInputText {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private OfficialInputText() {
-    }
+    private OfficialInputText() {}
 
     /**
      * 按名称回退顺序取得首个非空白文本，仅接受文本或明确的数值分支。
@@ -18,8 +17,10 @@ public final class OfficialInputText {
      */
     public static String first(Object... values) {
         for (Object value : values) {
-            String text = value instanceof String string ? string : value instanceof Number number ? number.toString() : null;
-            if (StrUtil.isNotBlank(text)) return text;
+            String text =
+                value instanceof String string ? string : value instanceof Number number ? number.toString() : null;
+            if (StrUtil.isNotBlank(text))
+                return text;
         }
         return null;
     }

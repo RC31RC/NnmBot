@@ -16,9 +16,11 @@ import java.util.regex.Pattern;
 /**
  * 遗物查询公共层。
  *
- * <p>从官方遗物根关系树读取奖励和地点；同身份自维护整树优先，不跨来源拼接明细。</p>
+ * <p>
+ * 从官方遗物根关系树读取奖励和地点；同身份自维护整树优先，不跨来源拼接明细。
+ * </p>
  */
-abstract class AbstractRelicPlugin extends BotPlugin {
+abstract class AbstractRelicPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -55,12 +57,13 @@ abstract class AbstractRelicPlugin extends BotPlugin {
         }
         List<WarframeRelicDetailsDTO> details = relicService.findDetails(query.keyword());
         WarframeRelicVO display = WarframeRelicVO.relics(query.keyword(), details, query.page(),
-                relic -> imageResolver.resolve(relic.icon(), relic.sourceCode()));
+            relic -> imageResolver.resolve(relic.icon(), relic.sourceCode()));
         return CommandResult.view("warframe.relics", "遗物：" + display.pagination(), display);
     }
 
     /**
      * 从当前命令调用中提取遗物查询参数文本。
+     *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
      * @return 参数对应的文本。
      */
@@ -90,5 +93,6 @@ abstract class AbstractRelicPlugin extends BotPlugin {
         return page < 1 || INVALID_PAGE_ARGUMENT.matcher(keyword).find() ? null : new Query(keyword, page);
     }
 
-    private record Query(String keyword, int page) {}
+    private record Query(String keyword, int page) {
+    }
 }

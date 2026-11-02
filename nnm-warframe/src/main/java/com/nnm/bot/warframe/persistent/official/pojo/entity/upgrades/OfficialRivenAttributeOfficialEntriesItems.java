@@ -95,8 +95,12 @@ public class OfficialRivenAttributeOfficialEntriesItems extends OfficialChildRow
     private OfficialRivenAttributeRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenAttributeOfficialEntriesItemsItemReferencesItems> officialRivenAttributeOfficialEntriesItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialRivenAttributeOfficialEntriesItemsItemReferencesItems> officialRivenAttributeOfficialEntriesItemsItemReferencesItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenAttributeOfficialEntriesItemsUpgradeValuesItems> officialRivenAttributeOfficialEntriesItemsUpgradeValuesItemsRows = new ArrayList<>();
+    private List<
+        OfficialRivenAttributeOfficialEntriesItemsUpgradeValuesItems> officialRivenAttributeOfficialEntriesItemsUpgradeValuesItemsRows =
+            new ArrayList<>();
 }

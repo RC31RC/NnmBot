@@ -11,7 +11,7 @@ public class BotChannelStatusRefreshTask {
     @Resource
     private BotChannelStatusBroadcaster broadcaster;
 
-    @Scheduled(fixedDelayString = "${nnm.cache.bot.status-refresh:2s}")
+    @Scheduled(fixedDelayString = "2s")
     public void execute() {
         broadcaster.refresh();
     }

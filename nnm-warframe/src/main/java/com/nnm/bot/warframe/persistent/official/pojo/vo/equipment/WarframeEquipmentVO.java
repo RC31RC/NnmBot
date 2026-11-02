@@ -3,8 +3,8 @@ package com.nnm.bot.warframe.persistent.official.pojo.vo.equipment;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record WarframeEquipmentVO(
-        String query, String category, List<EntryVO> items, int page, int totalPages, int totalCount) {
+public record WarframeEquipmentVO(String query, String category, List<EntryVO> items, int page, int totalPages,
+    int totalCount) {
     /**
      * 构造装备展示对象，并保存初始化参数。
      *
@@ -32,10 +32,10 @@ public record WarframeEquipmentVO(
         if (page < 1) {
             throw new IllegalArgumentException("Page must be positive");
         }
-        int pages = Math.max(1, (int) ((entries.size() + 5L) / 6));
-        int from = (int) Math.min((long) (page - 1) * 6, entries.size());
-        return new WarframeEquipmentVO(query, category,
-                entries.subList(from, Math.min(from + 6, entries.size())), page, pages, entries.size());
+        int pages = Math.max(1, (int)((entries.size() + 5L) / 6));
+        int from = (int)Math.min((long)(page - 1) * 6, entries.size());
+        return new WarframeEquipmentVO(query, category, entries.subList(from, Math.min(from + 6, entries.size())), page,
+            pages, entries.size());
     }
 
     /**
@@ -47,9 +47,8 @@ public record WarframeEquipmentVO(
         return page + "/" + totalPages + " 页，共 " + totalCount + " 条";
     }
 
-    public record EntryVO(
-            String uniqueName, String name, String description, String imageReference, String iconUrl,
-            String sourceCode, String resolutionMode, List<MetricVO> metrics, List<AbilityVO> abilities) {
+    public record EntryVO(String uniqueName, String name, String description, String imageReference, String iconUrl,
+        String sourceCode, String resolutionMode, List<MetricVO> metrics, List<AbilityVO> abilities) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *
@@ -69,9 +68,10 @@ public record WarframeEquipmentVO(
         }
     }
 
-    public record MetricVO(String label, BigDecimal value) {}
+    public record MetricVO(String label, BigDecimal value) {
+    }
 
-    public record AbilityVO(
-            int order, String uniqueName, String name, String description, BigDecimal energy,
-            String imageReference, String iconUrl, String sourceCode) {}
+    public record AbilityVO(int order, String uniqueName, String name, String description, BigDecimal energy,
+        String imageReference, String iconUrl, String sourceCode) {
+    }
 }

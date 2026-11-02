@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.worldstate.OfficialF
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** worldstate/fissure-modifiers.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** worldstate/fissure-modifiers.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialFissureModifierRepository extends OfficialMainRepository<OfficialFissureModifierRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

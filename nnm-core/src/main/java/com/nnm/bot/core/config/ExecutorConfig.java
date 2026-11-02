@@ -20,8 +20,7 @@ public class ExecutorConfig {
 
     /** 图片下载与解码独立限流；队列满时由调用方承担工作，避免无界积压图片任务。 */
     @Bean
-    public ThreadPoolTaskExecutor jmDownloadExecutor(
-            JmComicProperties properties) {
+    public ThreadPoolTaskExecutor jmDownloadExecutor(JmComicProperties properties) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(properties.getDownloadThreads());
         executor.setMaxPoolSize(properties.getDownloadThreads());
@@ -50,40 +49,37 @@ public class ExecutorConfig {
         executor.setThreadNamePrefix("nnm-task-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(
-                Math.toIntExact(properties.getAwaitTermination().toSeconds()));
+        executor.setAwaitTerminationSeconds(Math.toIntExact(properties.getAwaitTermination().toSeconds()));
         return executor;
     }
 
     @Bean(destroyMethod = "close")
     public BoundedTaskExecutor imageTaskExecutor(ExecutorProperties properties,
-            @Qualifier("cpuTaskExecutor")
-            AsyncTaskExecutor cpuExecutor) {
+        @Qualifier("cpuTaskExecutor") AsyncTaskExecutor cpuExecutor) {
         properties.validate();
         return computationExecutor(cpuExecutor, properties,
-                properties.getTask().getMaxSize() + properties.getTask().getQueueCapacity());
+            properties.getTask().getMaxSize() + properties.getTask().getQueueCapacity());
     }
 
     @Bean(destroyMethod = "close")
     public BoundedTaskExecutor ocrTaskExecutor(ExecutorProperties properties,
-            @Qualifier("cpuTaskExecutor")
-            AsyncTaskExecutor cpuExecutor) {
+        @Qualifier("cpuTaskExecutor") AsyncTaskExecutor cpuExecutor) {
         properties.validate();
         return computationExecutor(cpuExecutor, properties, properties.getComputation().getOcrInFlight());
     }
 
-    private BoundedTaskExecutor computationExecutor(AsyncTaskExecutor cpuExecutor,
-                                                   ExecutorProperties properties, int maxInFlight) {
-        return new BoundedTaskExecutor(cpuExecutor, maxInFlight,
-                properties.getComputation().getMaxQueueWait(), properties.getComputation().getResultTimeout());
+    private BoundedTaskExecutor computationExecutor(AsyncTaskExecutor cpuExecutor, ExecutorProperties properties,
+        int maxInFlight) {
+        return new BoundedTaskExecutor(cpuExecutor, maxInFlight, properties.getComputation().getMaxQueueWait(),
+            properties.getComputation().getResultTimeout());
     }
 
     /**
      * WebSocket、外部 I/O 和管理长任务使用虚拟线程。
      *
-     * <p>虚拟线程本身创建成本低，但外部服务仍然需要限流，因此通过
-     * {@code application-concurrency} 为执行器设置并发上限。达到上限时调用方
-     * 会阻塞等待许可，而不会无限制地向外部服务发起请求。</p>
+     * <p>
+     * 虚拟线程本身创建成本低，但外部服务仍然需要限流，因此通过 {@code application-concurrency} 为执行器设置并发上限。达到上限时调用方 会阻塞等待许可，而不会无限制地向外部服务发起请求。
+     * </p>
      */
     @Bean(name = {"applicationTaskExecutor", "taskExecutor"}, destroyMethod = "close")
     public AsyncTaskExecutor applicationTaskExecutor(ExecutorProperties properties) {
@@ -99,8 +95,7 @@ public class ExecutorConfig {
         scheduler.setPoolSize(properties.getScheduler().getPoolSize());
         scheduler.setThreadNamePrefix("nnm-scheduler-");
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
-        scheduler.setAwaitTerminationSeconds(
-                Math.toIntExact(properties.getAwaitTermination().toSeconds()));
+        scheduler.setAwaitTerminationSeconds(Math.toIntExact(properties.getAwaitTermination().toSeconds()));
         scheduler.setRemoveOnCancelPolicy(true);
         return scheduler;
     }
@@ -134,8 +129,7 @@ public class ExecutorConfig {
         return executor;
     }
 
-    private SimpleAsyncTaskExecutor virtualExecutor(
-            String prefix, int concurrency, ExecutorProperties properties) {
+    private SimpleAsyncTaskExecutor virtualExecutor(String prefix, int concurrency, ExecutorProperties properties) {
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(prefix);
         executor.setVirtualThreads(true);
         // 在创建虚拟线程前背压，避免已排队的请求各自占用线程和业务对象。

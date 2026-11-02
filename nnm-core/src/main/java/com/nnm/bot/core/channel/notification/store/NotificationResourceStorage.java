@@ -46,8 +46,7 @@ public class NotificationResourceStorage {
     private BotNotificationProperties properties;
 
     public NotificationResource upload(long owner, InputStream input, long size) throws IOException {
-        BusinessAssert.isTrue(size > 0 && size <= limits.getMaxImageBytes(), CommonErrorCode.PARAM_INVALID,
-                "图片大小超过限制");
+        BusinessAssert.isTrue(size > 0 && size <= limits.getMaxImageBytes(), CommonErrorCode.PARAM_INVALID, "图片大小超过限制");
         UUID id = UUID.randomUUID();
         Path root = Files.createTempDirectory("nnm-notification-upload-");
         Path path = root.resolve("image");
@@ -67,11 +66,11 @@ public class NotificationResourceStorage {
                     reader.setInput(image, true, true);
                     String format = reader.getFormatName().toLowerCase(Locale.ROOT);
                     BusinessAssert.isTrue(Set.of("png", "jpeg", "jpg", "gif").contains(format),
-                            CommonErrorCode.PARAM_INVALID, "不支持的图片格式");
+                        CommonErrorCode.PARAM_INVALID, "不支持的图片格式");
                     width = reader.getWidth(0);
                     height = reader.getHeight(0);
-                    BusinessAssert.isTrue(width > 0 && height > 0 && (long) width * height <= limits.getMaxImagePixels(),
-                            CommonErrorCode.PARAM_INVALID, "图片像素超过限制");
+                    BusinessAssert.isTrue(width > 0 && height > 0 && (long)width * height <= limits.getMaxImagePixels(),
+                        CommonErrorCode.PARAM_INVALID, "图片像素超过限制");
                     contentType = "image/" + (format.equals("jpg") ? "jpeg" : format);
                 } finally {
                     reader.dispose();
@@ -80,8 +79,8 @@ public class NotificationResourceStorage {
             try (InputStream file = Files.newInputStream(path)) {
                 objectMayExist = true;
                 storage.put(objectId, file, size, contentType);
-                NotificationResource resource = new NotificationResource(id, owner, objectId, contentType, size, width, height,
-                        Instant.now().plus(properties.resourceRetention()));
+                NotificationResource resource = new NotificationResource(id, owner, objectId, contentType, size, width,
+                    height, Instant.now().plus(properties.resourceRetention()));
                 states.put(key(id), resource, properties.resourceRetention());
                 return resource;
             }
@@ -100,16 +99,20 @@ public class NotificationResourceStorage {
                 Files.deleteIfExists(path);
                 Files.deleteIfExists(root);
             } catch (IOException cleanup) {
-                if (primary != null) primary.addSuppressed(cleanup);
-                else throw cleanup;
+                if (primary != null)
+                    primary.addSuppressed(cleanup);
+                else
+                    throw cleanup;
             }
         }
     }
 
     public NotificationResource owned(long owner, UUID id) {
-        NotificationResource resource = states.<NotificationResource>get(key(id), NotificationResource.class).orElse(null);
-        BusinessAssert.isTrue(resource != null && resource.ownerId() == owner
-                        && Instant.now().isBefore(resource.expiresAt()), CommonErrorCode.PARAM_INVALID, "图片资源不存在、已过期或无权访问");
+        NotificationResource resource =
+            states.<NotificationResource>get(key(id), NotificationResource.class).orElse(null);
+        BusinessAssert.isTrue(
+            resource != null && resource.ownerId() == owner && Instant.now().isBefore(resource.expiresAt()),
+            CommonErrorCode.PARAM_INVALID, "图片资源不存在、已过期或无权访问");
         return resource;
     }
 
@@ -125,21 +128,25 @@ public class NotificationResourceStorage {
 
     public NotificationResourceManifest retain(long owner, UUID submission, Collection<UUID> ids, Instant expiry) {
         BusinessAssert.isTrue(expiry.isAfter(Instant.now())
-                        && !expiry.isAfter(Instant.now().plus(properties.maxScheduleDelay()).plus(properties.resourceRetention())),
-                CommonErrorCode.PARAM_INVALID, "任务资源保留时间超出限制");
-        LinkedHashMap<UUID,NotificationResource> resources = new LinkedHashMap<UUID, NotificationResource>();
+            && !expiry.isAfter(Instant.now().plus(properties.maxScheduleDelay()).plus(properties.resourceRetention())),
+            CommonErrorCode.PARAM_INVALID, "任务资源保留时间超出限制");
+        LinkedHashMap<UUID, NotificationResource> resources = new LinkedHashMap<UUID, NotificationResource>();
         ids.forEach(id -> resources.put(id, owned(owner, id)));
-        LinkedHashMap<UUID,NotificationResource> retained = new LinkedHashMap<UUID, NotificationResource>();
+        LinkedHashMap<UUID, NotificationResource> retained = new LinkedHashMap<UUID, NotificationResource>();
         try {
-        resources.forEach((id, resource) -> {
-            String objectId = JOBS + submission + "/" + id;
-            storage.copy(resource.objectId(), objectId);
-            retained.put(id, new NotificationResource(id, owner, objectId, resource.contentType(), resource.size(),
+            resources.forEach((id, resource) -> {
+                String objectId = JOBS + submission + "/" + id;
+                storage.copy(resource.objectId(), objectId);
+                retained.put(id, new NotificationResource(id, owner, objectId, resource.contentType(), resource.size(),
                     resource.width(), resource.height(), expiry));
-        });
+            });
         } catch (RuntimeException failure) {
             retained.values().forEach(resource -> {
-                try { storage.delete(resource.objectId()); } catch (RuntimeException cleanup) { failure.addSuppressed(cleanup); }
+                try {
+                    storage.delete(resource.objectId());
+                } catch (RuntimeException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
             });
             throw failure;
         }
@@ -149,15 +156,15 @@ public class NotificationResourceStorage {
     public NotificationResourceManifest drafts(long owner, Collection<UUID> ids) {
         Map<UUID, NotificationResource> resources = new LinkedHashMap<>();
         ids.forEach(id -> resources.put(id, owned(owner, id)));
-        Instant expiresAt = resources.values().stream().map(NotificationResource::expiresAt)
-                .min(Instant::compareTo).orElseGet(() -> Instant.now().plus(properties.resourceRetention()));
+        Instant expiresAt = resources.values().stream().map(NotificationResource::expiresAt).min(Instant::compareTo)
+            .orElseGet(() -> Instant.now().plus(properties.resourceRetention()));
         return new NotificationResourceManifest(UUID.randomUUID(), resources, expiresAt);
     }
 
     public CommandAttachment materialize(NotificationResourceManifest manifest, UUID id) {
         NotificationResource resource = manifest.resources().get(id);
         BusinessAssert.isTrue(resource != null && Instant.now().isBefore(manifest.expiresAt()),
-                CommonErrorCode.PARAM_INVALID, "任务资源不存在或已过期");
+            CommonErrorCode.PARAM_INVALID, "任务资源不存在或已过期");
         try {
             Path root = Files.createTempDirectory("nnm-notification-delivery-");
             Path file = root.resolve("image");
@@ -193,19 +200,24 @@ public class NotificationResourceStorage {
     }
 
     private void copyBounded(InputStream input, Path target, long expected) throws IOException {
-        if (expected < 1 || expected > limits.getMaxImageBytes()) throw new IOException("Invalid notification image size");
+        if (expected < 1 || expected > limits.getMaxImageBytes())
+            throw new IOException("Invalid notification image size");
         try (OutputStream output = Files.newOutputStream(target)) {
             byte[] buffer = new byte[8192];
             long copied = 0;
             int count;
             while ((count = input.read(buffer)) != -1) {
                 copied += count;
-                if (copied > expected) throw new IOException("Notification image exceeds its declared size");
+                if (copied > expected)
+                    throw new IOException("Notification image exceeds its declared size");
                 output.write(buffer, 0, count);
             }
-            if (copied != expected) throw new IOException("Incomplete notification image");
+            if (copied != expected)
+                throw new IOException("Incomplete notification image");
         }
     }
 
-    private String key(UUID id) { return "notification-resource:" + id; }
+    private String key(UUID id) {
+        return "notification-resource:" + id;
+    }
 }

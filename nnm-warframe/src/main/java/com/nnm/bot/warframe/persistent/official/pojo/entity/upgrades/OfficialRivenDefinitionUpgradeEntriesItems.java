@@ -59,5 +59,7 @@ public class OfficialRivenDefinitionUpgradeEntriesItems extends OfficialChildRow
     private OfficialRivenDefinitionRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenDefinitionUpgradeEntriesItemsUpgradeValuesItems> officialRivenDefinitionUpgradeEntriesItemsUpgradeValuesItemsRows = new ArrayList<>();
+    private List<
+        OfficialRivenDefinitionUpgradeEntriesItemsUpgradeValuesItems> officialRivenDefinitionUpgradeEntriesItemsUpgradeValuesItemsRows =
+            new ArrayList<>();
 }

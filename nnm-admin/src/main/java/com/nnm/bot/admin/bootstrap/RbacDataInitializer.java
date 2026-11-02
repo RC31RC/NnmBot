@@ -13,8 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 仅在明确启用时创建第一个管理员账户。
- * RBAC 菜单、权限和角色由数据库初始化 SQL 维护。
+ * 仅在明确启用时创建第一个管理员账户。 RBAC 菜单、权限和角色由数据库初始化 SQL 维护。
  */
 @Component
 public class RbacDataInitializer implements ApplicationRunner {
@@ -37,8 +36,7 @@ public class RbacDataInitializer implements ApplicationRunner {
         bootstrapProperties.validateWhenEnabled();
 
         SysRole superAdmin = roleRepository.findByCode("R_SUPER")
-                .orElseThrow(() -> new IllegalStateException(
-                        "RBAC seed data is missing: execute docs/sql/init.sql first"));
+            .orElseThrow(() -> new IllegalStateException("RBAC seed data is missing: execute sql/init.sql first"));
 
         String username = bootstrapProperties.getUsername();
         if (userRepository.findByUsername(username).isPresent()) {

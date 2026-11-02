@@ -6,8 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Collection;
 
-public interface WarframeOfficialRebuildMarkerRepository
-        extends JpaRepository<WarframeOfficialRebuildMarker, Long> {
+public interface WarframeOfficialRebuildMarkerRepository extends JpaRepository<WarframeOfficialRebuildMarker, Long> {
 
     /**
      * 读取指定官方文件的全部待重建标记。
@@ -32,6 +31,6 @@ public interface WarframeOfficialRebuildMarkerRepository
      * @param bkey 记录的稳定业务键；子表中表示直接父记录的主键。
      * @return 可选结果对象。
      */
-    Optional<WarframeOfficialRebuildMarker>
-            findByProductPathAndDomainCodeAndBkey(String productPath, String domainCode, String bkey);
+    Optional<WarframeOfficialRebuildMarker> findByProductPathAndDomainCodeAndBkey(String productPath, String domainCode,
+        String bkey);
 }

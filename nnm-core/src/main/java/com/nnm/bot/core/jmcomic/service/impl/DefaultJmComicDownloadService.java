@@ -41,8 +41,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class DefaultJmComicDownloadService implements JmComicDownloadService {
 
     private static final String ALBUM_ID_PATTERN = "\\d{1,12}";
-    private static final Logger log =
-            LoggerFactory.getLogger(DefaultJmComicDownloadService.class);
+    private static final Logger log = LoggerFactory.getLogger(DefaultJmComicDownloadService.class);
 
     @Resource
     private JmComicProperties properties;
@@ -66,8 +65,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     public JmComicDocument downloadAsPdf(String albumId) {
         BusinessAssert.isTrue(this.properties.isEnabled(), JmComicErrorCode.DISABLED);
         String normalizedAlbumId = StrUtil.trim(albumId);
-        if (StrUtil.isBlank(normalizedAlbumId)
-                || !normalizedAlbumId.matches(ALBUM_ID_PATTERN)) {
+        if (StrUtil.isBlank(normalizedAlbumId) || !normalizedAlbumId.matches(ALBUM_ID_PATTERN)) {
             throw new BusinessException(JmComicErrorCode.INVALID_ALBUM_ID);
         }
         boolean acquired = false;
@@ -78,15 +76,10 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
                 acquired = true;
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
-                throw new BusinessException(
-                        JmComicErrorCode.DOWNLOAD_FAILED,
-                        "JM 下载任务在排队等待时被中断",
-                        exception);
+                throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "JM 下载任务在排队等待时被中断", exception);
             }
-            BusinessAssert.isTrue(
-                    this.properties.isWholeFileEnabled()
-                            || this.properties.isPageDownloadEnabled(),
-                    JmComicErrorCode.DOWNLOAD_METHODS_DISABLED);
+            BusinessAssert.isTrue(this.properties.isWholeFileEnabled() || this.properties.isPageDownloadEnabled(),
+                JmComicErrorCode.DOWNLOAD_METHODS_DISABLED);
             workspace = this.createWorkspace(normalizedAlbumId);
             Path downloadDirectory = workspace.resolve("images");
             Files.createDirectories(downloadDirectory);
@@ -99,36 +92,22 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             JmComicWholeFileException wholeFileFailure = null;
             if (this.properties.isWholeFileEnabled()) {
                 try {
-                    Optional<JmComicDocument> wholeFile = this.wholeFileService.download(
-                            client,
-                            normalizedAlbumId,
-                            album.getTitle(),
-                            workspace);
+                    Optional<JmComicDocument> wholeFile =
+                        this.wholeFileService.download(client, normalizedAlbumId, album.getTitle(), workspace);
                     if (wholeFile.isPresent()) {
                         return wholeFile.get();
                     }
                 } catch (JmComicWholeFileException exception) {
                     wholeFileFailure = exception;
-                    log.warn(
-                            "JM whole-file download unavailable for album {}, page download enabled: {}",
-                            normalizedAlbumId,
-                            this.properties.isPageDownloadEnabled(),
-                            exception);
+                    log.warn("JM whole-file download unavailable for album {}, page download enabled: {}",
+                        normalizedAlbumId, this.properties.isPageDownloadEnabled(), exception);
                 }
             }
             if (!this.properties.isPageDownloadEnabled()) {
-                throw new BusinessException(
-                        JmComicErrorCode.DOWNLOAD_FAILED,
-                        "JM 整本下载不可用，分页下载已关闭",
-                        wholeFileFailure);
+                throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "JM 整本下载不可用，分页下载已关闭", wholeFileFailure);
             }
             try {
-                return this.downloadImagesAsPdf(
-                        client,
-                        album,
-                        normalizedAlbumId,
-                        downloadDirectory,
-                        workspace);
+                return this.downloadImagesAsPdf(client, album, normalizedAlbumId, downloadDirectory, workspace);
             } catch (RuntimeException exception) {
                 if (ObjectUtil.isNotNull(wholeFileFailure)) {
                     exception.addSuppressed(wholeFileFailure);
@@ -140,16 +119,11 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             throw exception;
         } catch (IOException exception) {
             cleanupAfterFailure(workspace, exception);
-            throw new BusinessException(
-                    JmComicErrorCode.TEMPORARY_FILE_FAILED,
-                    "JM 临时目录处理失败",
-                    exception);
+            throw new BusinessException(JmComicErrorCode.TEMPORARY_FILE_FAILED, "JM 临时目录处理失败", exception);
         } catch (RuntimeException exception) {
             cleanupAfterFailure(workspace, exception);
-            throw new BusinessException(
-                    JmComicErrorCode.DOWNLOAD_FAILED,
-                    "下载 JM 漫画 " + normalizedAlbumId + " 失败",
-                    exception);
+            throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "下载 JM 漫画 " + normalizedAlbumId + " 失败",
+                exception);
         } finally {
             if (acquired) {
                 this.taskPermits.release();
@@ -157,32 +131,19 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
         }
     }
 
-    private JmComicDocument downloadImagesAsPdf(
-            AbstractJmClient client,
-            JmAlbum album,
-            String albumId,
-            Path downloadDirectory,
-            Path workspace) {
-        DownloadResult result = client.download(album)
-                .withPath(downloadDirectory)
-                .execute();
+    private JmComicDocument downloadImagesAsPdf(AbstractJmClient client, JmAlbum album, String albumId,
+        Path downloadDirectory, Path workspace) {
+        DownloadResult result = client.download(album).withPath(downloadDirectory).execute();
         List<Path> imageFiles;
         try {
             imageFiles = this.validateDownload(result);
         } catch (IOException exception) {
-            throw new BusinessException(
-                    JmComicErrorCode.DOWNLOAD_INCOMPLETE,
-                    "校验 JM 图片下载结果失败",
-                    exception);
+            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "校验 JM 图片下载结果失败", exception);
         }
         Path pdf = workspace.resolve(this.safeFileName(album.getTitle(), albumId));
         this.pdfService.createCompressedPdf(imageFiles, pdf);
-        return new JmComicDocument(
-                albumId,
-                StrUtil.blankToDefault(album.getTitle(), albumId),
-                imageFiles.size(),
-                pdf,
-                workspace);
+        return new JmComicDocument(albumId, StrUtil.blankToDefault(album.getTitle(), albumId), imageFiles.size(), pdf,
+            workspace);
     }
 
     private void loginIfConfigured(AbstractJmClient client) {
@@ -194,9 +155,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             if (this.loggedIn) {
                 return;
             }
-            client.login(
-                    this.properties.getUsername(),
-                    this.properties.getPassword());
+            client.login(this.properties.getUsername(), this.properties.getPassword());
             this.loggedIn = true;
         } finally {
             this.loginLock.unlock();
@@ -206,9 +165,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     private Path createWorkspace(String albumId) throws IOException {
         Path root = this.properties.getTemporaryDirectory().toAbsolutePath().normalize();
         Files.createDirectories(root);
-        Path workspace = Files.createTempDirectory(root, "album-" + albumId + "-")
-                .toAbsolutePath()
-                .normalize();
+        Path workspace = Files.createTempDirectory(root, "album-" + albumId + "-").toAbsolutePath().normalize();
         if (!workspace.startsWith(root)) {
             throw new IOException("JM task workspace escaped configured root");
         }
@@ -217,63 +174,47 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
 
     private void validateAlbum(JmAlbum album) {
         if (ObjectUtil.isNull(album)) {
-            throw new BusinessException(
-                    JmComicErrorCode.DOWNLOAD_FAILED, "JM 上游未返回漫画信息");
+            throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "JM 上游未返回漫画信息");
         }
         if (album.getPageCount() > this.properties.getMaxPages()) {
-            throw new BusinessException(
-                    JmComicErrorCode.ALBUM_TOO_LARGE,
-                    "漫画共 " + album.getPageCount() + " 页，超过限制 "
-                            + this.properties.getMaxPages() + " 页");
+            throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE,
+                "漫画共 " + album.getPageCount() + " 页，超过限制 " + this.properties.getMaxPages() + " 页");
         }
     }
 
     private List<Path> validateDownload(DownloadResult result) throws IOException {
         if (ObjectUtil.isNull(result) || CollUtil.isEmpty(result.getSuccessfulFiles())) {
-            throw new BusinessException(
-                    JmComicErrorCode.DOWNLOAD_INCOMPLETE, "JM 上游没有下载到图片");
+            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "JM 上游没有下载到图片");
         }
         if (!result.isAllSuccess()) {
-            Throwable firstFailure = result.getFailedTasks().values().stream()
-                    .filter(ObjectUtil::isNotNull)
-                    .findFirst()
-                    .orElse(null);
-            throw new BusinessException(
-                    JmComicErrorCode.DOWNLOAD_INCOMPLETE,
-                    "JM 漫画有 " + result.getFailedTasks().size() + " 张图片下载失败",
-                    firstFailure);
+            Throwable firstFailure =
+                result.getFailedTasks().values().stream().filter(ObjectUtil::isNotNull).findFirst().orElse(null);
+            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE,
+                "JM 漫画有 " + result.getFailedTasks().size() + " 张图片下载失败", firstFailure);
         }
-        List<Path> imageFiles = result.getSuccessfulFiles().stream()
-                .filter(ObjectUtil::isNotNull)
-                .map(path -> path.toAbsolutePath().normalize())
-                .distinct()
-                .sorted((left, right) -> JmPageOrder.compare(left.toString(), right.toString()))
-                .toList();
+        List<Path> imageFiles = result.getSuccessfulFiles().stream().filter(ObjectUtil::isNotNull)
+            .map(path -> path.toAbsolutePath().normalize()).distinct()
+            .sorted((left, right) -> JmPageOrder.compare(left.toString(), right.toString())).toList();
         if (imageFiles.size() > this.properties.getMaxPages()) {
             throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE);
         }
         long totalBytes = 0;
         for (Path imageFile : imageFiles) {
             if (!Files.isRegularFile(imageFile) || !Files.isReadable(imageFile)) {
-                throw new BusinessException(
-                        JmComicErrorCode.DOWNLOAD_INCOMPLETE,
-                        "下载结果包含不可读图片: " + imageFile);
+                throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "下载结果包含不可读图片: " + imageFile);
             }
             totalBytes = Math.addExact(totalBytes, Files.size(imageFile));
             if (totalBytes > this.properties.getMaxDownloadBytes()) {
-                throw new BusinessException(
-                        JmComicErrorCode.DOWNLOAD_TOO_LARGE,
-                        "下载图片总大小超过限制 "
-                                + this.properties.getMaxDownloadBytes() + " 字节");
+                throw new BusinessException(JmComicErrorCode.DOWNLOAD_TOO_LARGE,
+                    "下载图片总大小超过限制 " + this.properties.getMaxDownloadBytes() + " 字节");
             }
         }
         return imageFiles;
     }
 
     private String safeFileName(String title, String albumId) {
-        String safeTitle = StrUtil.blankToDefault(title, "jm-" + albumId)
-                .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_")
-                .trim();
+        String safeTitle =
+            StrUtil.blankToDefault(title, "jm-" + albumId).replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").trim();
         if (safeTitle.length() > 100) {
             safeTitle = safeTitle.substring(0, 100);
         }
@@ -287,15 +228,13 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
         try {
             Files.walkFileTree(workspace, new SimpleFileVisitor<>() {
                 @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes)
-                        throws IOException {
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
                     Files.deleteIfExists(file);
                     return FileVisitResult.CONTINUE;
                 }
 
                 @Override
-                public FileVisitResult postVisitDirectory(Path directory, IOException exception)
-                        throws IOException {
+                public FileVisitResult postVisitDirectory(Path directory, IOException exception) throws IOException {
                     if (ObjectUtil.isNotNull(exception)) {
                         throw exception;
                     }

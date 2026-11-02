@@ -9,7 +9,7 @@ import java.util.Locale;
 
 /** 希图斯赏金命令。 */
 @BotPluginCommand(code = WarframeCommandCodes.OSTRONS, name = "希图斯", gameCode = "warframe", order = 53,
-        allowRelatedAction = true)
+    allowRelatedAction = true)
 public class OstronsPlugin extends AbstractWorldStateCommandPlugin {
 
     /**
@@ -17,7 +17,7 @@ public class OstronsPlugin extends AbstractWorldStateCommandPlugin {
      */
     public OstronsPlugin() {
         super(state -> WarframeWorldStateProjector.syndicate(state, "希图斯",
-                        value -> contains(value, "ostrons", "cetus", "希图斯")));
+            value -> contains(value, "ostrons", "cetus", "希图斯")));
     }
 
     /**
@@ -29,7 +29,6 @@ public class OstronsPlugin extends AbstractWorldStateCommandPlugin {
      */
     private static boolean contains(String value, String... candidates) {
         String normalized = ObjectUtil.isNull(value) ? "" : value.toLowerCase(Locale.ROOT);
-        return Arrays.stream(candidates)
-                .anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
+        return Arrays.stream(candidates).anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
     }
 }

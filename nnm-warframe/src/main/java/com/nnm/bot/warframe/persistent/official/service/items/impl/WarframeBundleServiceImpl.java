@@ -35,11 +35,10 @@ public class WarframeBundleServiceImpl implements WarframeBundleService {
      */
     @Override
     public WarframeBundleVO page(Category dataset, String keyword, int page) {
-        var definitions = materials.find(dataset, keyword).stream().collect(Collectors.toMap(
-                WarframeMaterialVO.EntryVO::uniqueName, Function.identity()));
+        var definitions = materials.find(dataset, keyword).stream()
+            .collect(Collectors.toMap(WarframeMaterialVO.EntryVO::uniqueName, Function.identity()));
         var entries = data.find(dataset, keyword).stream()
-                .map(row -> mapper.map(row, dataset, definitions.get(row.bkey())))
-                .filter(Objects::nonNull).toList();
+            .map(row -> mapper.map(row, dataset, definitions.get(row.bkey()))).filter(Objects::nonNull).toList();
         return WarframeBundleVO.page(keyword, dataset.label(), entries, page);
     }
 }

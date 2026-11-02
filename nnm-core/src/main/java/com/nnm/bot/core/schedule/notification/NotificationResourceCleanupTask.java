@@ -11,7 +11,7 @@ public class NotificationResourceCleanupTask {
     @Resource
     private NotificationResourceStorage resources;
 
-    @Scheduled(fixedDelayString = "#{@'nnm.bot.notifications-com.nnm.bot.core.config.BotNotificationProperties'.resourceCleanupInterval().toMillis()}")
+    @Scheduled(fixedDelayString = "1h")
     public void execute() {
         resources.deleteExpired();
     }

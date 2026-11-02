@@ -3,7 +3,6 @@ package com.nnm.bot.warframe.persistent.official.repository.support;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.FieldState;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
@@ -31,7 +30,6 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialBountyD
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialBountyStageDTO;
 import com.nnm.bot.warframe.persistent.official.parser.input.OfficialInputTypes;
 import com.nnm.bot.warframe.persistent.official.parser.input.OfficialObjectFields;
-import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialInputParser;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -46,8 +44,6 @@ public class OfficialTableRelations {
     private EntityManager entityManager;
     @Resource
     private WarframeOfficialModels models;
-    @Resource
-    private ObjectMapper objectMapper;
 
     private JPAQueryFactory queryFactory() {
         return new JPAQueryFactory(entityManager);
@@ -57,13 +53,16 @@ public class OfficialTableRelations {
      * 先绑定具体 DTO，再按已生成的列合同维护本文件的主子表。
      *
      * @param records 待批量处理的业务记录。
+     * @param inputs 按持久化主键索引的已解析类型化输入。
      */
-    public void replace(List<OfficialRecord> records) {
+    public void replace(List<OfficialRecord> records, Map<Long, OfficialRecordDTO> inputs) {
         List<OfficialRow> persisted = new ArrayList<>();
         for (OfficialRecord record : records) {
             WarframeOfficialDataDomain domain = models.domain(record.getClass());
-            OfficialObjectDTO input = (OfficialObjectDTO) WarframeOfficialInputParser.parseCompleteJson(
-                    objectMapper, domain, record.getRawJson());
+            OfficialObjectDTO input = (OfficialObjectDTO)inputs.get(record.getId());
+            if (input == null || !OfficialInputTypes.type(domain).isInstance(input)) {
+                throw new IllegalArgumentException("Missing typed input for " + domain + "#" + record.getId());
+            }
             RowModel main = models.root(domain.domainCode());
             deleteChildren(domain.domainCode(), List.of(record.getId()));
             encode(main, main.definition().fields(), record, input, true);
@@ -85,7 +84,7 @@ public class OfficialTableRelations {
         RowModel model = models.root(domain);
         Class<? extends OfficialRecordDTO> type = OfficialInputTypes.type(WarframeOfficialDataDomain.fromCode(domain));
         batches(mainIds, batch -> decode(model, select(model, batch), type)
-                .forEach((id, value) -> result.put(id, (OfficialRecordDTO) value)));
+            .forEach((id, value) -> result.put(id, (OfficialRecordDTO)value)));
         return result;
     }
 
@@ -108,10 +107,12 @@ public class OfficialTableRelations {
 
     /**
      * 将当前批次已保存的实体同步到数据库，并释放已写入实体占用的持久化上下文。
+     *
      * @param rows 当前待处理的数据行。
      */
     private void flushRows(List<OfficialRow> rows) {
-        if (CollUtil.isEmpty(rows)) return;
+        if (CollUtil.isEmpty(rows))
+            return;
         entityManager.flush();
         rows.forEach(entityManager::detach);
         rows.clear();
@@ -126,7 +127,8 @@ public class OfficialTableRelations {
     public void deleteChildren(String domain, Collection<Long> mainIds) {
         RowModel main = models.root(domain);
         List<DeleteStep> steps = new ArrayList<>();
-        for (String child : main.definition().children()) collect(models.table(child), mainIds, steps);
+        for (String child : main.definition().children())
+            collect(models.table(child), mainIds, steps);
         for (int index = steps.size() - 1; index >= 0; index--) {
             DeleteStep step = steps.get(index);
             batches(step.ids(), batch -> deleteRows(step.model(), batch));
@@ -153,12 +155,13 @@ public class OfficialTableRelations {
     private void collect(RowModel model, Collection<Long> parentIds, List<DeleteStep> steps) {
         List<Long> ids = new ArrayList<>();
         batches(parentIds, batch -> {
-            ids.addAll(OfficialRelationQueryDsl.selectChildIds(
-                    queryFactory(), model.definition().table(), batch));
+            ids.addAll(OfficialRelationQueryDsl.selectChildIds(queryFactory(), model.definition().table(), batch));
         });
-        if (CollUtil.isEmpty(ids)) return;
+        if (CollUtil.isEmpty(ids))
+            return;
         steps.add(new DeleteStep(model, ids));
-        for (String child : model.definition().children()) collect(models.table(child), ids, steps);
+        for (String child : model.definition().children())
+            collect(models.table(child), ids, steps);
     }
 
     /**
@@ -171,17 +174,20 @@ public class OfficialTableRelations {
      * @param value 待处理的字段值。
      * @param persisted 已持久化集合。
      */
-    private void persist(RowModel model, Long parentId, String memberKey, int order, Object value, List<OfficialRow> persisted) {
-        OfficialChildRow row = (OfficialChildRow) model.create();
+    private void persist(RowModel model, Long parentId, String memberKey, int order, Object value,
+        List<OfficialRow> persisted) {
+        OfficialChildRow row = (OfficialChildRow)model.create();
         row.setBkey(parentId);
-        model.set(row, "parent", entityManager.getReference(models.table(model.definition().parentTable()).type(), parentId));
+        model.set(row, "parent",
+            entityManager.getReference(models.table(model.definition().parentTable()).type(), parentId));
         row.setMemberKey(memberKey);
         row.setSortOrder(order);
         encode(model, model.definition().fields(), row, value, true);
         entityManager.persist(row);
         persisted.add(row);
         persistChildren(model.definition().fields(), row.getId(), value, persisted);
-        if (persisted.size() >= RECORD_BATCH_SIZE) flushRows(persisted);
+        if (persisted.size() >= RECORD_BATCH_SIZE)
+            flushRows(persisted);
     }
 
     /**
@@ -197,12 +203,14 @@ public class OfficialTableRelations {
         value = unwrap(value);
         FieldState state = fieldState(value, present);
         model.set(row, field.state(), state.code());
-        if (state == FieldState.MISSING || state == FieldState.NULL) return;
+        if (state == FieldState.MISSING || state == FieldState.NULL)
+            return;
         String type = state.jsonType();
         BusinessAssert.isTrue(field.types().contains(type), WarframeManagementErrorCode.DATASET_INVALID,
-                "官方字段类型不符合已建模合同：" + model.definition().domain() + field.path());
+            "官方字段类型不符合已建模合同：" + model.definition().domain() + field.path());
         String property = field.values().get(type);
-        if (property != null) model.set(row, property, value);
+        if (property != null)
+            model.set(row, property, value);
         if (value instanceof OfficialObjectDTO object) {
             for (SchemaField child : field.children()) {
                 String key = child.path().getLast();
@@ -221,14 +229,17 @@ public class OfficialTableRelations {
      */
     private void persistChildren(SchemaField field, Long parentId, Object value, List<OfficialRow> persisted) {
         value = unwrap(value);
-        if (value == null) return;
+        if (value == null)
+            return;
         if (field.relation() != null && (value instanceof List<?> || Boolean.TRUE.equals(field.dictionary()))) {
             RowModel child = models.table(field.relation());
             int order = 0;
             if (value instanceof Map<?, ?> dictionary) {
-                for (var entry : dictionary.entrySet()) persist(child, parentId, (String) entry.getKey(), order++, entry.getValue(), persisted);
+                for (var entry : dictionary.entrySet())
+                    persist(child, parentId, (String)entry.getKey(), order++, entry.getValue(), persisted);
             } else if (value instanceof List<?> list) {
-                for (Object entry : list) persist(child, parentId, null, order++, entry, persisted);
+                for (Object entry : list)
+                    persist(child, parentId, null, order++, entry, persisted);
             }
         } else if (value instanceof OfficialObjectDTO object) {
             for (SchemaField nested : field.children()) {
@@ -248,9 +259,9 @@ public class OfficialTableRelations {
     private Map<Long, Object> decode(RowModel model, List<OfficialRelationRowDTO> rows, Type type) {
         Map<Long, Object> result = new LinkedHashMap<>();
         for (OfficialRelationRowDTO row : rows) {
-            result.put((Long) row.get("id"), decodeField(model, model.definition().fields(), row, type));
+            result.put((Long)row.get("id"), decodeField(model, model.definition().fields(), row, type));
         }
-        attach(model.definition().fields(), rows.stream().map(row -> (Long) row.get("id")).toList(), result, type);
+        attach(model.definition().fields(), rows.stream().map(row -> (Long)row.get("id")).toList(), result, type);
         return result;
     }
 
@@ -264,23 +275,28 @@ public class OfficialTableRelations {
      * @return 按当前字段合同转换的值，保留允许的缺省状态。
      */
     private Object decodeField(RowModel model, SchemaField field, OfficialRelationRowDTO row, Type type) {
-        Short stored = (Short) row.get(field.state());
+        Short stored = (Short)row.get(field.state());
         FieldState state = FieldState.fromCode(stored);
-        if (state == FieldState.MISSING || state == FieldState.NULL) return null;
+        if (state == FieldState.MISSING || state == FieldState.NULL)
+            return null;
         if (type == OfficialBountyStageDTO.class) {
-            Object value = decodeField(model, field, row, state == FieldState.ARRAY ? listOf(String.class) : OfficialBountyDTO.RewardPoolDTO.class);
-            return state == FieldState.ARRAY ? new OfficialBountyStageDTO(null, castList(value)) : new OfficialBountyStageDTO((OfficialBountyDTO.RewardPoolDTO) value, null);
+            Object value = decodeField(model, field, row,
+                state == FieldState.ARRAY ? listOf(String.class) : OfficialBountyDTO.RewardPoolDTO.class);
+            return state == FieldState.ARRAY ? new OfficialBountyStageDTO(null, castList(value))
+                : new OfficialBountyStageDTO((OfficialBountyDTO.RewardPoolDTO)value, null);
         }
         return switch (state) {
             case STRING -> row.get(field.values().get("string"));
             case NUMBER -> row.get(field.values().get("number"));
             case BOOLEAN -> row.get(field.values().get("boolean"));
             case OBJECT -> {
-                if (Boolean.TRUE.equals(field.dictionary())) yield new LinkedHashMap<String, Object>();
+                if (Boolean.TRUE.equals(field.dictionary()))
+                    yield new LinkedHashMap<String, Object>();
                 OfficialObjectDTO value = construct(type);
                 for (SchemaField child : field.children()) {
-                    Short childState = (Short) row.get(child.state());
-                    if (FieldState.fromCode(childState) == FieldState.MISSING) continue;
+                    Short childState = (Short)row.get(child.state());
+                    if (FieldState.fromCode(childState) == FieldState.MISSING)
+                        continue;
                     String key = child.path().getLast();
                     Type childType = OfficialObjectFields.field(value.getClass(), key).getGenericType();
                     OfficialObjectFields.set(value, key, decodeField(model, child, row, childType));
@@ -310,14 +326,18 @@ public class OfficialTableRelations {
                 Map<Long, Object> decoded = decode(child, rows, elementType(firstTarget));
                 for (OfficialRelationRowDTO row : rows) {
                     RelationTarget target = relationTarget(parents.get(row.parentId()), parentType, field.path());
-                    Object value = decoded.get((Long) row.get("id"));
-                    if (target.container() instanceof List<?> list) addList(list, value);
-                    else if (target.container() instanceof Map<?, ?> map) putMap(map, (String) row.get("memberKey"), value);
-                    else throw new IllegalStateException("官方子表找不到父集合：" + field.path());
+                    Object value = decoded.get((Long)row.get("id"));
+                    if (target.container() instanceof List<?> list)
+                        addList(list, value);
+                    else if (target.container() instanceof Map<?, ?> map)
+                        putMap(map, (String)row.get("memberKey"), value);
+                    else
+                        throw new IllegalStateException("官方子表找不到父集合：" + field.path());
                 }
             }
         }
-        for (SchemaField child : field.children()) attach(child, parentIds, parents, parentType);
+        for (SchemaField child : field.children())
+            attach(child, parentIds, parents, parentType);
     }
 
     private RelationTarget relationTarget(Object parent, Type parentType, List<String> path) {
@@ -343,7 +363,8 @@ public class OfficialTableRelations {
         return type == OfficialBountyStageDTO.class ? String.class : Object.class;
     }
 
-    private record RelationTarget(Object container, Type fieldType) { }
+    private record RelationTarget(Object container, Type fieldType) {
+    }
 
     /**
      * 仅在底层表映射展开明确声明的赏金联合类型。
@@ -352,7 +373,8 @@ public class OfficialTableRelations {
      * @return 按当前字段合同转换的值，保留允许的缺省状态。
      */
     private static Object unwrap(Object value) {
-        return value instanceof OfficialBountyStageDTO stage ? stage.rewardPool() == null ? stage.references() : stage.rewardPool() : value;
+        return value instanceof OfficialBountyStageDTO stage
+            ? stage.rewardPool() == null ? stage.references() : stage.rewardPool() : value;
     }
 
     /**
@@ -362,8 +384,11 @@ public class OfficialTableRelations {
      * @return 符合当前官方文件固定字段合同的非受管详情。
      */
     private static OfficialObjectDTO construct(Type type) {
-        try { return (OfficialObjectDTO) ((Class<?>) type).getDeclaredConstructor().newInstance(); }
-        catch (ReflectiveOperationException exception) { throw new IllegalStateException("官方 DTO 无法构造：" + type, exception); }
+        try {
+            return (OfficialObjectDTO)((Class<?>)type).getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("官方 DTO 无法构造：" + type, exception);
+        }
     }
 
     /**
@@ -379,29 +404,40 @@ public class OfficialTableRelations {
              *
              * @return 类型对象。
              */
-            public Type[] getActualTypeArguments() { return new Type[]{element}; }
+            public Type[] getActualTypeArguments() {
+                return new Type[] {element};
+            }
+
             /**
              * 读取原始类型。
              *
              * @return 类型对象。
              */
-            public Type getRawType() { return List.class; }
+            public Type getRawType() {
+                return List.class;
+            }
+
             /**
              * 读取所属人类型。
              *
              * @return 类型对象。
              */
-            public Type getOwnerType() { return null; }
+            public Type getOwnerType() {
+                return null;
+            }
         };
     }
 
     /**
      * 按固定字段合同将赏金引用值转换为字符串列表。
+     *
      * @param value 待处理的字段值。
      * @return 按当前条件筛选或转换后的数据集合。
      */
     @SuppressWarnings("unchecked")
-    private static List<String> castList(Object value) { return (List<String>) value; }
+    private static List<String> castList(Object value) {
+        return (List<String>)value;
+    }
 
     /**
      * 添加列表。
@@ -410,7 +446,9 @@ public class OfficialTableRelations {
      * @param value 待处理的字段值。
      */
     @SuppressWarnings("unchecked")
-    private static void addList(List<?> list, Object value) { ((List<Object>) list).add(value); }
+    private static void addList(List<?> list, Object value) {
+        ((List<Object>)list).add(value);
+    }
 
     /**
      * 写入映射。
@@ -420,7 +458,9 @@ public class OfficialTableRelations {
      * @param value 待处理的字段值。
      */
     @SuppressWarnings("unchecked")
-    private static void putMap(Map<?, ?> map, String key, Object value) { ((Map<String, Object>) map).put(key, value); }
+    private static void putMap(Map<?, ?> map, String key, Object value) {
+        ((Map<String, Object>)map).put(key, value);
+    }
 
     /**
      * 按已确定的筛选条件读取持久化数据。
@@ -431,8 +471,8 @@ public class OfficialTableRelations {
      */
     private List<OfficialRelationRowDTO> select(RowModel model, Collection<Long> ids) {
         List<OfficialRelationRowDTO> rows = new ArrayList<>();
-        batches(ids, batch -> rows.addAll(OfficialRelationQueryDsl.select(
-                queryFactory(), model.definition().table(), batch)));
+        batches(ids,
+            batch -> rows.addAll(OfficialRelationQueryDsl.select(queryFactory(), model.definition().table(), batch)));
         return rows;
     }
 
@@ -444,13 +484,20 @@ public class OfficialTableRelations {
      * @return 短文本对象。
      */
     private static FieldState fieldState(Object value, boolean present) {
-        if (!present) return FieldState.MISSING;
-        if (value == null) return FieldState.NULL;
-        if (value instanceof String) return FieldState.STRING;
-        if (value instanceof BigDecimal) return FieldState.NUMBER;
-        if (value instanceof Boolean) return FieldState.BOOLEAN;
-        if (value instanceof OfficialObjectDTO || value instanceof Map<?, ?>) return FieldState.OBJECT;
-        if (value instanceof List<?>) return FieldState.ARRAY;
+        if (!present)
+            return FieldState.MISSING;
+        if (value == null)
+            return FieldState.NULL;
+        if (value instanceof String)
+            return FieldState.STRING;
+        if (value instanceof BigDecimal)
+            return FieldState.NUMBER;
+        if (value instanceof Boolean)
+            return FieldState.BOOLEAN;
+        if (value instanceof OfficialObjectDTO || value instanceof Map<?, ?>)
+            return FieldState.OBJECT;
+        if (value instanceof List<?>)
+            return FieldState.ARRAY;
         throw new IllegalArgumentException("未建模的官方字段类型：" + value.getClass());
     }
 

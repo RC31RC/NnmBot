@@ -26,41 +26,35 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/admin/v1/bot-notification-resources")
+@RequestMapping("/api/admin/bot-notification-resources")
 public class BotNotificationResourceController {
     @Resource
     private NotificationResourceStorage resources;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @SaCheckPermission("bot:notification:upload")
-    public ApiResponse<BotNotificationResourceVO> upload(
-            @RequestPart("file")
-            MultipartFile file) throws IOException {
+    public ApiResponse<BotNotificationResourceVO> upload(@RequestPart("file") MultipartFile file) throws IOException {
         try (InputStream input = file.getInputStream()) {
             NotificationResource resource = resources.upload(StpUtil.getLoginIdAsLong(), input, file.getSize());
-            return ApiResponse.ok(AdminBotNotificationViewAssembler.toBotNotificationResourceVO(new BotNotificationResourceDTO(resource.id(), resource.contentType(),
+            return ApiResponse.ok(AdminBotNotificationViewAssembler
+                .toBotNotificationResourceVO(new BotNotificationResourceDTO(resource.id(), resource.contentType(),
                     resource.size(), resource.width(), resource.height(), resource.expiresAt())));
         }
     }
 
     @GetMapping("/{id}")
     @SaCheckPermission("bot:notification:preview")
-    public ResponseEntity<InputStreamResource> image(
-            @PathVariable
-            UUID id) throws IOException {
+    public ResponseEntity<InputStreamResource> image(@PathVariable UUID id) throws IOException {
         long owner = StpUtil.getLoginIdAsLong();
         NotificationResource resource = resources.owned(owner, id);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(resource.contentType()))
-                .contentLength(resource.size()).cacheControl(CacheControl.noStore())
-                .header("X-Content-Type-Options", "nosniff")
-                .body(new InputStreamResource(resources.openOwned(owner, id)));
+            .contentLength(resource.size()).cacheControl(CacheControl.noStore())
+            .header("X-Content-Type-Options", "nosniff").body(new InputStreamResource(resources.openOwned(owner, id)));
     }
 
     @DeleteMapping("/{id}")
     @SaCheckPermission("bot:notification:upload")
-    public ApiResponse<Void> delete(
-            @PathVariable
-            UUID id) {
+    public ApiResponse<Void> delete(@PathVariable UUID id) {
         resources.deleteOwned(StpUtil.getLoginIdAsLong(), id);
         return ApiResponse.ok();
     }

@@ -5,9 +5,7 @@ import java.util.Locale;
 
 /** Warframe 本地数据的维护来源。 */
 public enum WarframeDataSourceType {
-    OFFICIAL_DATASET,
-    COMMUNITY_SNAPSHOT,
-    MANUAL;
+    OFFICIAL_DATASET, COMMUNITY_SNAPSHOT, MANUAL;
 
     /**
      * 将外部输入解析为明确的业务数据对象。

@@ -1,9 +1,0 @@
-WARN  2026-09-30 00:00:03 [virtual-58] com.nnm.bot.common.http.HttpClient       : [GET] <<< url=https://api.warframe.com/cdn/worldState.php, status=200, elapsedMs=3608
-WARN  2026-09-30 00:04:00 [virtual-58] com.nnm.bot.common.http.HttpClient       : [GET] <<< url=https://api.warframe.com/cdn/worldState.php, status=-1, elapsedMs=532, error=ResourceAccessException, cause=InterruptedException, message=-
-WARN  2026-09-30 00:04:00 [virtual-58] com.nnm.bot.common.http.HttpClient       : [GET] url=https://api.warframe.com/cdn/worldState.php attempt=1/3 failed(status=-1), retrying
-INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
-WARN  2026-09-30 00:04:00 [virtual-58] c.n.b.w.c.WarframeOfficialApiClient      : Failed to fetch Warframe world state: -1
-INFO  2026-09-30 00:04:00 [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
-INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
-INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-INFO  2026-09-30 00:04:00 [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

@@ -10,7 +10,7 @@ import jakarta.annotation.Resource;
 import java.util.List;
 
 /** 四种仲裁排期视图共用命令处理、数据来源与展示合同。 */
-public abstract class AbstractArbitrationCommandPlugin extends BotPlugin {
+public abstract class AbstractArbitrationCommandPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -39,10 +39,11 @@ public abstract class AbstractArbitrationCommandPlugin extends BotPlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         return handler.handle(query);
     }
 }

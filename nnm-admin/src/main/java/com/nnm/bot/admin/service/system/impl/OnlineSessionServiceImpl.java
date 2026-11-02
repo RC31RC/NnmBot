@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.system.impl;
 
+import com.nnm.bot.common.constant.CommonErrorCode;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.dev33.satoken.session.SaSession;
@@ -34,11 +35,9 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
         StpLogic logic = StpUtil.getStpLogic();
         String prefix = logic.splicingKeyTokenValue("");
         return logic.searchTokenValue("", 0, -1, false).stream()
-                .map(key -> key.startsWith(prefix) ? key.substring(prefix.length()) : key)
-                .map(token -> toSession(logic, token))
-                .filter(item -> ObjectUtil.isNotNull(item))
-                .sorted(Comparator.comparing(SessionDTO::loginTime).reversed())
-                .toList();
+            .map(key -> key.startsWith(prefix) ? key.substring(prefix.length()) : key)
+            .map(token -> toSession(logic, token)).filter(item -> ObjectUtil.isNotNull(item))
+            .sorted(Comparator.comparing(SessionDTO::loginTime).reversed()).toList();
     }
 
     @Override
@@ -46,7 +45,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
         StpLogic logic = StpUtil.getStpLogic();
         Object loginId = logic.getLoginIdByToken(token);
         if (ObjectUtil.isNull(loginId)) {
-            throw new BusinessException(404, "在线会话不存在");
+            throw new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "在线会话不存在");
         }
         logic.kickoutByTokenValue(token);
         auditService.record("SESSION_KICKOUT", "SESSION", loginId, "强制下线指定会话");
@@ -69,20 +68,10 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
         }
 
         SaTerminalInfo terminal = terminal(logic, loginId, token);
-        LocalDateTime loginTime = ObjectUtil.isNull(terminal)
-                ? user.getUpdatedAt()
-                : LocalDateTime.ofInstant(
-                        Instant.ofEpochMilli(terminal.getCreateTime()),
-                        ZoneId.systemDefault()
-                );
-        return new SessionDTO(
-                token,
-                userId,
-                user.getUsername(),
-                ObjectUtil.isNull(terminal) ? null : terminal.getDeviceType(),
-                loginTime,
-                logic.getTokenTimeout(token)
-        );
+        LocalDateTime loginTime = ObjectUtil.isNull(terminal) ? user.getUpdatedAt()
+            : LocalDateTime.ofInstant(Instant.ofEpochMilli(terminal.getCreateTime()), ZoneId.systemDefault());
+        return new SessionDTO(token, userId, user.getUsername(),
+            ObjectUtil.isNull(terminal) ? null : terminal.getDeviceType(), loginTime, logic.getTokenTimeout(token));
     }
 
     private SaTerminalInfo terminal(StpLogic logic, Object loginId, String token) {
@@ -90,9 +79,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
         if (ObjectUtil.isNull(session)) {
             return null;
         }
-        return session.getTerminalList().stream()
-                .filter(item -> token.equals(item.getTokenValue()))
-                .findFirst()
-                .orElse(null);
+        return session.getTerminalList().stream().filter(item -> token.equals(item.getTokenValue())).findFirst()
+            .orElse(null);
     }
 }

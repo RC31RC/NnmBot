@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.worldstate.OfficialS
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** worldstate/syndicates.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** worldstate/syndicates.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialSyndicateRepository extends OfficialMainRepository<OfficialSyndicateRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

@@ -8,13 +8,8 @@ import java.util.List;
 /**
  * WorldStateDTO 内部路径或代码的玩家可读解析结果。
  */
-public record WarframeReferenceResolutionDTO(
-        String reference,
-        String displayName,
-        String uniqueName,
-        String domainCode,
-        WarframeReferenceResolutionStatus status,
-        List<String> candidates) {
+public record WarframeReferenceResolutionDTO(String reference, String displayName, String uniqueName, String domainCode,
+    WarframeReferenceResolutionStatus status, List<String> candidates) {
 
     /**
      * 构造引用解析状态传输对象，并保存初始化参数。

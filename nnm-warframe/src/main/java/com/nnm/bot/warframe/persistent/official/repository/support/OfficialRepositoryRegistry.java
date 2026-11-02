@@ -26,7 +26,7 @@ public class OfficialRepositoryRegistry {
     @PostConstruct
     void initialize() {
         Map<WarframeOfficialDataDomain, OfficialMainRepository<?>> indexed =
-                new EnumMap<>(WarframeOfficialDataDomain.class);
+            new EnumMap<>(WarframeOfficialDataDomain.class);
         Map<Class<?>, OfficialMainRepository<?>> entityTypes = new HashMap<>();
         for (OfficialMainRepository<?> repository : repositories) {
             if (indexed.put(repository.domain(), repository) != null) {
@@ -53,7 +53,8 @@ public class OfficialRepositoryRegistry {
      */
     public OfficialMainRepository<?> require(WarframeOfficialDataDomain domain) {
         OfficialMainRepository<?> repository = byDomain.get(domain);
-        if (repository == null) throw new IllegalArgumentException("Unsupported domain: " + domain);
+        if (repository == null)
+            throw new IllegalArgumentException("Unsupported domain: " + domain);
         return repository;
     }
 
@@ -65,7 +66,8 @@ public class OfficialRepositoryRegistry {
      */
     public OfficialMainRepository<?> require(OfficialRecord entity) {
         OfficialMainRepository<?> repository = byEntityType.get(entity.getClass());
-        if (repository == null) throw new IllegalArgumentException("Unsupported official record: " + entity.getClass());
+        if (repository == null)
+            throw new IllegalArgumentException("Unsupported official record: " + entity.getClass());
         return repository;
     }
 

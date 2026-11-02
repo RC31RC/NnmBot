@@ -52,55 +52,72 @@ public class DatabaseCommandRelatedActionProvider implements CommandRelatedActio
 
     @Override
     public List<ReplyAction> actions(BotMessageContext context, RuntimeCommand current, CommandResult result) {
-        if (context == null || !result.successful()) return List.of();
-        BotCommandGroupMember membership = members.findAllByCommandCodeIgnoreCaseOrderBySortOrderAscIdAsc(current.descriptor().code())
-                .stream().findFirst().orElse(null);
-        if (membership == null) return List.of();
+        if (context == null || !result.successful())
+            return List.of();
+        BotCommandGroupMember membership =
+            members.findAllByCommandCodeIgnoreCaseOrderBySortOrderAscIdAsc(current.descriptor().code()).stream()
+                .findFirst().orElse(null);
+        if (membership == null)
+            return List.of();
         BotCommandGroup group = groups.findById(membership.getGroupId()).orElse(null);
-        return group == null ? List.of() : preview(context, group, current, result.actionContext()).stream()
-                .filter(item -> item.reason().isEmpty()).map(item -> (ReplyAction) new ReplyAction.Command(item.title(), item.command(), false)).toList();
+        return group == null ? List.of()
+            : preview(context, group, current, result.actionContext()).stream().filter(item -> item.reason().isEmpty())
+                .map(item -> (ReplyAction)new ReplyAction.Command(item.title(), item.command(), false)).toList();
     }
 
     public List<BotCommandGroupPreviewDTO> preview(BotMessageContext context, BotCommandGroup group,
-                                                   RuntimeCommand current, Map<String, String> actionContext) {
-        Map<String, String> safe = actionContext.entrySet().stream()
+        RuntimeCommand current, Map<String, String> actionContext) {
+        Map<String,
+            String> safe = actionContext.entrySet().stream()
                 .filter(entry -> current.plugin().actionContextKeys().contains(entry.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         List<BotCommandGroupPreviewDTO> rows = new ArrayList<>();
         String scopeReason = "";
         if (context.isGroupMessage()) {
             Optional<BotGroupCommandContext> scope = groupContexts.resolve(context);
-            if (scope.isEmpty()) scopeReason = "当前群组或机器人绑定未启用";
+            if (scope.isEmpty())
+                scopeReason = "当前群组或机器人绑定未启用";
             else if (groupMembers.findByContext(scope.get().group().getId(), context)
-                    .filter(member -> !member.isEnabled()).isPresent()) scopeReason = "当前群组成员已停用";
+                .filter(member -> !member.isEnabled()).isPresent())
+                scopeReason = "当前群组成员已停用";
         }
         int displayed = 0;
         for (BotCommandGroupMember member : members.findAllByGroupIdOrderBySortOrderAscIdAsc(group.getId())) {
             String reason = "";
             String text = "";
             RuntimeCommand target = commands.command(member.getCommandCode()).orElse(null);
-            if (!group.isEnabled()) reason = "关联组已停用";
-            else if (!current.configuration().enabled()) reason = "来源命令已停用";
-            else if (!scopeReason.isEmpty()) reason = scopeReason;
-            else if (member.getCommandCode().equalsIgnoreCase(current.descriptor().code())) reason = "当前来源命令";
-            else if (target == null) reason = "插件未注册";
-            else if (!target.configuration().enabled()) reason = "目标命令已停用";
-            else if (!commands.metadata(target.plugin()).allowRelatedAction()) reason = "目标不允许关联导航";
-            else if (!accessPolicy.allowed(context, target.descriptor(), target.configuration())) reason = "当前用户、群组或机器人无处理资格";
+            if (!group.isEnabled())
+                reason = "关联组已停用";
+            else if (!current.configuration().enabled())
+                reason = "来源命令已停用";
+            else if (!scopeReason.isEmpty())
+                reason = scopeReason;
+            else if (member.getCommandCode().equalsIgnoreCase(current.descriptor().code()))
+                reason = "当前来源命令";
+            else if (target == null)
+                reason = "插件未注册";
+            else if (!target.configuration().enabled())
+                reason = "目标命令已停用";
+            else if (!commands.metadata(target.plugin()).allowRelatedAction())
+                reason = "目标不允许关联导航";
+            else if (!accessPolicy.allowed(context, target.descriptor(), target.configuration()))
+                reason = "当前用户、群组或机器人无处理资格";
             else {
                 try {
                     text = builder.command(target, member.getParameterBindings(), safe);
-                    if (displayed >= limits.getMaxActions()) reason = "超过导航数量限制";
-                    else displayed++;
+                    if (displayed >= limits.getMaxActions())
+                        reason = "超过导航数量限制";
+                    else
+                        displayed++;
                 } catch (IllegalArgumentException invalid) {
                     reason = invalid.getMessage();
                 }
             }
             boolean nativeCandidate = context.platform() == BotPlatform.QQ_OFFICIAL
-                    && qq.keyboardAllowed(context.botAccountId(), context.scope())
-                    && current.configuration().presentation().resolve(context.platform(), context.scope()).interaction() == InteractionPolicy.PREFER_NATIVE;
-            rows.add(new BotCommandGroupPreviewDTO(current.descriptor().code(), member.getCommandCode(), member.getTitle(),
-                    text, reason, nativeCandidate ? "原生键盘候选，须本次正文支持同条组合" : "命令文本", text));
+                && qq.keyboardAllowed(context.botAccountId(), context.scope()) && current.configuration().presentation()
+                    .resolve(context.platform(), context.scope()).interaction() == InteractionPolicy.PREFER_NATIVE;
+            rows.add(new BotCommandGroupPreviewDTO(current.descriptor().code(), member.getCommandCode(),
+                member.getTitle(), text, reason, nativeCandidate ? "原生键盘候选，须本次正文支持同条组合" : "命令文本", text));
         }
         return List.copyOf(rows);
     }

@@ -39,27 +39,23 @@ import java.util.stream.Collectors;
 public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisService {
 
     /** 卡片升级等级，与使用紫卡所需的段位无关。 */
-    private static final Pattern CARD_RANK_PATTERN = Pattern.compile(
-            "(?i)(?<![a-z])(?:card\\s*rank|rank|卡片等级|等级)"
-                    + "\\s*[:#-]?\\s*(\\d{1,2})(?!\\d)");
+    private static final Pattern CARD_RANK_PATTERN =
+        Pattern.compile("(?i)(?<![a-z])(?:card\\s*rank|rank|卡片等级|等级)" + "\\s*[:#-]?\\s*(\\d{1,2})(?!\\d)");
     /** 使用要求；先屏蔽此标记，避免 Mastery Rank 被当成卡片 Rank。 */
-    private static final Pattern MASTERY_RANK_PATTERN = Pattern.compile(
-            "(?i)(?<![a-z])(?:mastery(?:\\s*rank)?|mr|段位(?:需求)?|等级需求)"
-                    + "\\s*[:#-]?\\s*(\\d{1,2})(?!\\d)");
+    private static final Pattern MASTERY_RANK_PATTERN =
+        Pattern.compile("(?i)(?<![a-z])(?:mastery(?:\\s*rank)?|mr|段位(?:需求)?|等级需求)" + "\\s*[:#-]?\\s*(\\d{1,2})(?!\\d)");
     /** OCR 可在符号后插入水平空白；符号、数值及单位仍是同一行内的证据。 */
     private static final Pattern NUMBER_PATTERN = Pattern.compile(
-            "(?i)([x\u00d7]\\s*)?((?:[+-]\\h*)?\\d+(?:[.,]\\d+)?)\\s*"
-                    + "(%|seconds?\\b|secs?\\b|s\\b|秒|[x\u00d7])?");
-    private static final Pattern UNSUPPORTED_RULE_PATTERN = Pattern.compile(
-            "(?i)\\bsplic(?:e|ed|ing)\\b|拼接|融合词条|组合词条|锁定词条");
+        "(?i)([x\u00d7]\\s*)?((?:[+-]\\h*)?\\d+(?:[.,]\\d+)?)\\s*" + "(%|seconds?\\b|secs?\\b|s\\b|秒|[x\u00d7])?");
+    private static final Pattern UNSUPPORTED_RULE_PATTERN =
+        Pattern.compile("(?i)\\bsplic(?:e|ed|ing)\\b|拼接|融合词条|组合词条|锁定词条");
     /** 筛选用的任意负面条件，不代表已识别出某个具体负词条。 */
-    private static final Pattern NEGATIVE_ANY_PATTERN = Pattern.compile(
-            "(?i)负面?任意|\\bnegative\\s*any\\b");
+    private static final Pattern NEGATIVE_ANY_PATTERN = Pattern.compile("(?i)负面?任意|\\bnegative\\s*any\\b");
     /** 语义负面标签与属性数学符号分开处理。 */
     private static final Pattern NEGATIVE_LABEL_PATTERN = Pattern.compile("(?i)(?:negative|负面?)");
     /** 仅紧邻当前词条的标签能表达负面，不能沿用前一个词条的负号。 */
-    private static final Pattern NEGATIVE_PREFIX_PATTERN = Pattern.compile(
-            "(?i)(?:negative|负面?)\\s*(?:(?:[+-]\\h*)?\\d+(?:[.,]\\d+)?\\s*%?)?\\s*$");
+    private static final Pattern NEGATIVE_PREFIX_PATTERN =
+        Pattern.compile("(?i)(?:negative|负面?)\\s*(?:(?:[+-]\\h*)?\\d+(?:[.,]\\d+)?\\s*%?)?\\s*$");
 
     /** 从已生效物品投影识别武器，歧义结果只作为候选。 */
     @Resource
@@ -86,10 +82,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         Integer masteryRank = findNumber(lines, MASTERY_RANK_PATTERN, false);
         ParsedAttributes parsed = parseAttributes(lines, attributes);
         boolean negativeAny = containsAnyNegative(lines);
-        List<TrendVO> trends = findTrends(
-                parsed.attributes(), weapon, attributes);
-        List<ReferenceRangeVO> ranges =
-                referenceRanges(weapon, rank, parsed, attributes, negativeAny, lines);
+        List<TrendVO> trends = findTrends(parsed.attributes(), weapon, attributes);
+        List<ReferenceRangeVO> ranges = referenceRanges(weapon, rank, parsed, attributes, negativeAny, lines);
         List<String> missing = new ArrayList<>();
         if (StrUtil.isBlank(weapon.name())) {
             missing.add("weapon");
@@ -110,21 +104,9 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         if (parsed.ambiguous() && !missing.contains("attributesAmbiguous")) {
             missing.add("attributesAmbiguous");
         }
-        return new WarframeRivenAnalysisVO(
-                rawText.trim(),
-                lines,
-                weapon.name(),
-                weapon.type(),
-                weapon.candidates(),
-                weapon.confirmed(),
-                rank,
-                masteryRank,
-                parsed.attributes(),
-                negativeAny,
-                trends,
-                parsed.lines(),
-                missing,
-                ranges);
+        return new WarframeRivenAnalysisVO(rawText.trim(), lines, weapon.name(), weapon.type(), weapon.candidates(),
+            weapon.confirmed(), rank, masteryRank, parsed.attributes(), negativeAny, trends, parsed.lines(), missing,
+            ranges);
     }
 
     /**
@@ -145,13 +127,11 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
                 WarframeItemResolutionDTO resolution = itemResolver.resolveExact(candidate);
                 if (resolution.found() && isWeapon(resolution.item())) {
                     WarframeItemDTO item = resolution.item();
-                    confirmed.putIfAbsent(StrUtil.blankToDefault(
-                            item.getSourceKey(), item.getOfficialName()), item);
+                    confirmed.putIfAbsent(StrUtil.blankToDefault(item.getSourceKey(), item.getOfficialName()), item);
                     matched = true;
                     break;
                 } else if (resolution.ambiguous()
-                        && resolution.candidates().stream().anyMatch(
-                                WarframeRivenAnalysisServiceImpl::isWeapon)) {
+                    && resolution.candidates().stream().anyMatch(WarframeRivenAnalysisServiceImpl::isWeapon)) {
                     addWeaponCandidates(candidates, resolution.candidates());
                     ambiguous = true;
                     matched = true;
@@ -162,18 +142,16 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
             if (!matched) {
                 for (String candidate : prefixes) {
                     WarframeItemResolutionDTO resolution = itemResolver.resolve(candidate);
-                    addWeaponCandidates(candidates, resolution.found()
-                            ? List.of(resolution.item()) : resolution.candidates());
+                    addWeaponCandidates(candidates,
+                        resolution.found() ? List.of(resolution.item()) : resolution.candidates());
                 }
             }
         }
         if (confirmed.size() == 1 && !ambiguous) {
             WarframeItemDTO best = confirmed.values().iterator().next();
-            String name = StrUtil.blankToDefault(
-                    best.getLocalizedName(), best.getOfficialName());
+            String name = StrUtil.blankToDefault(best.getLocalizedName(), best.getOfficialName());
             String type = best.getProductCategory();
-            return new WeaponMatch(name, StrUtil.nullToEmpty(type), best.getSourceKey(),
-                    List.of(name), true);
+            return new WeaponMatch(name, StrUtil.nullToEmpty(type), best.getSourceKey(), List.of(name), true);
         }
         addWeaponCandidates(candidates, List.copyOf(confirmed.values()));
         return new WeaponMatch("", "", "", List.copyOf(candidates), false);
@@ -187,8 +165,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> weaponPrefixes(String line, AttributeIndex attributes) {
-        String text = stripMetadata(Normalizer.normalize(
-                StrUtil.nullToEmpty(line), Normalizer.Form.NFKC).replace('\u2212', '-'))
+        String text =
+            stripMetadata(Normalizer.normalize(StrUtil.nullToEmpty(line), Normalizer.Form.NFKC).replace('\u2212', '-'))
                 .replaceAll("\\s+", " ").trim();
         LinkedHashSet<String> prefixes = new LinkedHashSet<>();
         addWeaponPrefixes(prefixes, text);
@@ -216,7 +194,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @param text 待处理的文本。
      */
     private static void addWeaponPrefixes(Set<String> prefixes, String text) {
-        if (StrUtil.isBlank(text)) return;
+        if (StrUtil.isBlank(text))
+            return;
         prefixes.add(text);
         String[] words = text.split("\\s+");
         for (int end = 1; end <= Math.min(words.length, 6); end++) {
@@ -231,11 +210,9 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 满足本方法说明的业务条件时返回真，否则返回假。
      */
     private static boolean isWeapon(WarframeItemDTO item) {
-        return Set.of("exportweapons", "exportrailjackweapons")
-                .contains(normalize(item.getDomainCode()))
-                || Set.of("weapon", "primary", "secondary", "sentinelweapons")
-                .contains(normalize(item.getProductCategory()))
-                || StrUtil.isNotBlank(normalizeType(item.getProductCategory()));
+        return Set.of("exportweapons", "exportrailjackweapons").contains(normalize(item.getDomainCode())) || Set
+            .of("weapon", "primary", "secondary", "sentinelweapons").contains(normalize(item.getProductCategory()))
+            || StrUtil.isNotBlank(normalizeType(item.getProductCategory()));
     }
 
     /**
@@ -246,8 +223,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      */
     private static void addWeaponCandidates(Set<String> names, List<WarframeItemDTO> items) {
         items.stream().filter(WarframeRivenAnalysisServiceImpl::isWeapon)
-                .map(item -> StrUtil.blankToDefault(item.getLocalizedName(), item.getOfficialName()))
-                .filter(StrUtil::isNotBlank).forEach(names::add);
+            .map(item -> StrUtil.blankToDefault(item.getLocalizedName(), item.getOfficialName()))
+            .filter(StrUtil::isNotBlank).forEach(names::add);
     }
 
     /**
@@ -266,7 +243,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
                 value = MASTERY_RANK_PATTERN.matcher(value).replaceAll(" ");
             }
             Matcher matcher = pattern.matcher(value);
-            while (matcher.find()) values.add(Integer.valueOf(matcher.group(1)));
+            while (matcher.find())
+                values.add(Integer.valueOf(matcher.group(1)));
         }
         return values.size() == 1 ? values.iterator().next() : null;
     }
@@ -297,11 +275,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @param evidence 依据集合。
      * @return 满足解析属性行时为真，否则为假。
      */
-    private boolean parseAttributeLine(
-            String line,
-            AttributeIndex index,
-            List<AttributeVO> result,
-            List<LineAnalysisVO> evidence) {
+    private boolean parseAttributeLine(String line, AttributeIndex index, List<AttributeVO> result,
+        List<LineAnalysisVO> evidence) {
         String text = stripMetadata(normalize(line));
         List<Occurrence> occurrences = occurrences(text, index);
         List<ValueToken> values = bindValues(text, occurrences);
@@ -319,18 +294,16 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
             Double value = token == null ? null : token.value();
             int previousEnd = position == 0 ? 0 : occurrences.get(position - 1).end();
             String prefix = text.substring(previousEnd, occurrence.start());
-            result.add(new WarframeRivenAnalysisVO.AttributeVO(
-                    String.join(",", mapping.codes()), mapping.displayName(), value,
-                    isNegative(mapping, index, prefix, value), mapping.codes().size() > 1,
-                    line, value == null ? "UNKNOWN" : "OCR_ONLY",
-                    token == null ? "unknown" : token.unit()));
+            result.add(new WarframeRivenAnalysisVO.AttributeVO(String.join(",", mapping.codes()), mapping.displayName(),
+                value, isNegative(mapping, index, prefix, value), mapping.codes().size() > 1, line,
+                value == null ? "UNKNOWN" : "OCR_ONLY", token == null ? "unknown" : token.unit()));
             codes.addAll(mapping.codes());
             partial |= value == null;
         }
         if (CollUtil.isNotEmpty(codes) || ambiguous) {
-            evidence.add(new WarframeRivenAnalysisVO.LineAnalysisVO(
-                    line, ambiguous ? "ATTRIBUTE_AMBIGUOUS" : "ATTRIBUTE", codes,
-                    ambiguous ? "AMBIGUOUS" : partial ? "PARTIAL" : "OCR_ONLY"));
+            evidence
+                .add(new WarframeRivenAnalysisVO.LineAnalysisVO(line, ambiguous ? "ATTRIBUTE_AMBIGUOUS" : "ATTRIBUTE",
+                    codes, ambiguous ? "AMBIGUOUS" : partial ? "PARTIAL" : "OCR_ONLY"));
         }
         return ambiguous;
     }
@@ -347,16 +320,16 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         index.byAlias().forEach((alias, mappings) -> {
             String start = asciiLetter(alias.charAt(0)) ? "(?<![a-z_])" : "";
             String end = asciiLetter(alias.charAt(alias.length() - 1)) ? "(?![a-z_])" : "";
-            String expression = Arrays.stream(alias.split("\\s+"))
-                    .map(Pattern::quote).collect(Collectors.joining("\\s*"));
+            String expression =
+                Arrays.stream(alias.split("\\s+")).map(Pattern::quote).collect(Collectors.joining("\\s*"));
             Matcher matcher = Pattern.compile(start + expression + end).matcher(text);
             while (matcher.find()) {
-                matches.add(new Occurrence(matcher.start(), matcher.end(),
-                        mappings.size() == 1 ? mappings.getFirst() : null));
+                matches.add(
+                    new Occurrence(matcher.start(), matcher.end(), mappings.size() == 1 ? mappings.getFirst() : null));
             }
         });
-        matches.sort(Comparator.comparingInt(Occurrence::start)
-                .thenComparingInt(value -> -(value.end() - value.start())));
+        matches
+            .sort(Comparator.comparingInt(Occurrence::start).thenComparingInt(value -> -(value.end() - value.start())));
         List<Occurrence> accepted = new ArrayList<>();
         int consumedEnd = -1;
         for (Occurrence match : matches) {
@@ -381,35 +354,33 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         while (matcher.find()) {
             double value = Double.parseDouble(matcher.group(2).replaceAll("\\h", "").replace(',', '.'));
             String suffix = normalize(matcher.group(3));
-            String unit = matcher.group(1) != null || Set.of("x", "\u00d7").contains(suffix)
-                    ? "multiplier" : "%".equals(suffix) ? "percent"
-                    : StrUtil.isBlank(suffix) ? "scalar" : "seconds";
+            String unit = matcher.group(1) != null || Set.of("x", "\u00d7").contains(suffix) ? "multiplier"
+                : "%".equals(suffix) ? "percent" : StrUtil.isBlank(suffix) ? "scalar" : "seconds";
             tokens.add(new ValueToken(matcher.start(), matcher.end(), value, unit));
         }
         ValueToken[] assigned = new ValueToken[occurrences.size()];
         int[] counts = new int[occurrences.size()];
-        boolean prefixStyle = tokens.stream().anyMatch(token -> CollUtil.isNotEmpty(occurrences)
-                && token.end() <= occurrences.getFirst().start()
+        boolean prefixStyle = tokens.stream()
+            .anyMatch(token -> CollUtil.isNotEmpty(occurrences) && token.end() <= occurrences.getFirst().start()
                 && bridge(text.substring(token.end(), occurrences.getFirst().start())));
-        boolean suffixStyle = tokens.stream().anyMatch(token -> CollUtil.isNotEmpty(occurrences)
-                && token.start() >= occurrences.getLast().end()
+        boolean suffixStyle = tokens.stream()
+            .anyMatch(token -> CollUtil.isNotEmpty(occurrences) && token.start() >= occurrences.getLast().end()
                 && bridge(text.substring(occurrences.getLast().end(), token.start())));
         for (ValueToken token : tokens) {
             int before = -1;
             int after = -1;
             for (int position = 0; position < occurrences.size(); position++) {
                 Occurrence occurrence = occurrences.get(position);
-                if (occurrence.end() <= token.start()
-                        && bridge(text.substring(occurrence.end(), token.start()))) {
+                if (occurrence.end() <= token.start() && bridge(text.substring(occurrence.end(), token.start()))) {
                     before = position;
                 }
                 if (after < 0 && occurrence.start() >= token.end()
-                        && bridge(text.substring(token.end(), occurrence.start()))) {
+                    && bridge(text.substring(token.end(), occurrence.start()))) {
                     after = position;
                 }
             }
-            int target = before < 0 ? after : after < 0 ? before
-                    : prefixStyle != suffixStyle ? (prefixStyle ? after : before) : -1;
+            int target = before < 0 ? after
+                : after < 0 ? before : prefixStyle != suffixStyle ? (prefixStyle ? after : before) : -1;
             if (target >= 0) {
                 assigned[target] = token;
                 counts[target]++;
@@ -429,8 +400,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 满足本方法说明的业务条件时返回真，否则返回假。
      */
     private static boolean bridge(String value) {
-        return NEGATIVE_LABEL_PATTERN.matcher(value).replaceAll("")
-                .matches("[\\s:=()\\[\\]]*");
+        return NEGATIVE_LABEL_PATTERN.matcher(value).replaceAll("").matches("[\\s:=()\\[\\]]*");
     }
 
     /**
@@ -442,20 +412,18 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @param value 待处理的字段值。
      * @return 满足本方法说明的业务条件时返回真，否则返回假。
      */
-    private static boolean isNegative(
-            AttributeMapping mapping, AttributeIndex index, String prefix, Double value) {
-        List<WarframeRivenAttributeDTO> definitions = mapping.codes().stream()
-                .map(index.byCode()::get).filter(Objects::nonNull).toList();
+    private static boolean isNegative(AttributeMapping mapping, AttributeIndex index, String prefix, Double value) {
+        List<WarframeRivenAttributeDTO> definitions =
+            mapping.codes().stream().map(index.byCode()::get).filter(Objects::nonNull).toList();
         boolean allDefined = definitions.size() == mapping.codes().size();
-        if (allDefined && definitions.stream().allMatch(
-                definition -> Boolean.TRUE.equals(definition.negativeOnly()))) {
+        if (allDefined && definitions.stream().allMatch(definition -> Boolean.TRUE.equals(definition.negativeOnly()))) {
             return true;
         }
         if (NEGATIVE_PREFIX_PATTERN.matcher(prefix).find()) {
             return true;
         }
-        boolean reversed = allDefined && definitions.stream().allMatch(
-                definition -> Boolean.TRUE.equals(definition.positiveIsNegative()));
+        boolean reversed = allDefined
+            && definitions.stream().allMatch(definition -> Boolean.TRUE.equals(definition.positiveIsNegative()));
         if (value != null && value != 0) {
             return (value < 0) != reversed;
         }
@@ -484,10 +452,9 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<TrendVO> findTrends(List<AttributeVO> parsed, WeaponMatch weapon, AttributeIndex index) {
-        return parsed.stream().flatMap(attribute -> codes(attribute.code()).stream())
-                .distinct().map(index.byCode()::get).filter(Objects::nonNull)
-                .map(definition -> new TrendVO(definition.effect(), weapon.type(), definition.parameters()))
-                .toList();
+        return parsed.stream().flatMap(attribute -> codes(attribute.code()).stream()).distinct()
+            .map(index.byCode()::get).filter(Objects::nonNull)
+            .map(definition -> new TrendVO(definition.effect(), weapon.type(), definition.parameters())).toList();
     }
 
     /**
@@ -501,15 +468,14 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @param lines 行集合。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    private List<ReferenceRangeVO> referenceRanges(WeaponMatch weapon, Integer rank,
-            ParsedAttributes parsed, AttributeIndex index, boolean negativeAny, List<String> lines) {
+    private List<ReferenceRangeVO> referenceRanges(WeaponMatch weapon, Integer rank, ParsedAttributes parsed,
+        AttributeIndex index, boolean negativeAny, List<String> lines) {
         return parsed.attributes().stream().map(attribute -> {
             WarframeRivenAttributeDTO definition = index.byCode().get(attribute.code());
             return new ReferenceRangeVO(attribute.code(), attribute.displayName(),
-                    definition == null ? "" : StrUtil.nullToEmpty(definition.units()),
-                    null, null, null, "UNAVAILABLE", "officialParameterConversionUnconfirmed",
-                    "OFFICIAL_PARAMETERS_V1", StrUtil.nullToEmpty(weapon.key()),
-                    weapon.confirmed() ? OFFICIAL_SOURCE_CODE : "", OFFICIAL_SOURCE_CODE);
+                definition == null ? "" : StrUtil.nullToEmpty(definition.units()), null, null, null, "UNAVAILABLE",
+                "officialParameterConversionUnconfirmed", "OFFICIAL_PARAMETERS", StrUtil.nullToEmpty(weapon.key()),
+                weapon.confirmed() ? OFFICIAL_SOURCE_CODE : "", OFFICIAL_SOURCE_CODE);
         }).toList();
     }
 
@@ -523,7 +489,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         Map<String, WarframeRivenAttributeDTO> byCode = new LinkedHashMap<>();
         for (WarframeRivenAttributeDTO details : attributeService.definitions()) {
             if (StrUtil.isBlank(details.code()) || Boolean.TRUE.equals(details.searchOnly())
-                    || Set.of("has", "none").contains(details.code())) {
+                || Set.of("has", "none").contains(details.code())) {
                 continue;
             }
             byCode.putIfAbsent(details.code(), details);
@@ -531,15 +497,14 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
             addMapping(result, details.effect(), details.code(), details.effect());
             addMapping(result, details.effectEn(), details.code(), details.effect());
         }
-        for (WarframeCommunityRecordDTO<WarframeCommunityRecordDTO.RivenAliasDTO> record
-                : safeAliases()) {
+        for (WarframeCommunityRecordDTO<WarframeCommunityRecordDTO.RivenAliasDTO> record : safeAliases()) {
             WarframeCommunityRecordDTO.RivenAliasDTO details = record.details();
             List<String> codes = codes(details.attributeCode());
             if (CollUtil.isEmpty(codes) || !byCode.keySet().containsAll(codes)) {
                 continue;
             }
             String display = codes.size() == 1 && byCode.containsKey(codes.getFirst())
-                    ? byCode.get(codes.getFirst()).effect() : details.aliasName();
+                ? byCode.get(codes.getFirst()).effect() : details.aliasName();
             addMapping(result, details.aliasName(), details.attributeCode(), display);
         }
         return new AttributeIndex(result, byCode);
@@ -553,21 +518,17 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @param code 当前数据集或业务对象的稳定代码。
      * @param displayName 展示名称。
      */
-    private static void addMapping(
-            Map<String, List<AttributeMapping>> result,
-            String alias,
-            String code,
-            String displayName) {
+    private static void addMapping(Map<String, List<AttributeMapping>> result, String alias, String code,
+        String displayName) {
         String normalized = normalize(alias);
         if (StrUtil.isBlank(normalized) || StrUtil.isBlank(code)) {
             return;
         }
         List<String> codes = codes(code);
-        if (CollUtil.isEmpty(codes)) return;
-        AttributeMapping mapping = new AttributeMapping(codes,
-                StrUtil.blankToDefault(displayName, alias));
-        List<AttributeMapping> values = result.computeIfAbsent(normalized,
-                ignored -> new ArrayList<>());
+        if (CollUtil.isEmpty(codes))
+            return;
+        AttributeMapping mapping = new AttributeMapping(codes, StrUtil.blankToDefault(displayName, alias));
+        List<AttributeMapping> values = result.computeIfAbsent(normalized, ignored -> new ArrayList<>());
         if (values.stream().noneMatch(value -> sameCodeSet(value.codes(), mapping.codes()))) {
             values.add(mapping);
         }
@@ -582,7 +543,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      */
     private static boolean sameCodeSet(List<String> left, List<String> right) {
         return left.size() == right.size() && left.stream().allMatch(right::contains)
-                && right.stream().allMatch(left::contains);
+            && right.stream().allMatch(left::contains);
     }
 
     /**
@@ -592,8 +553,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> codes(String value) {
-        return Arrays.stream(StrUtil.nullToEmpty(value).split("[,+]"))
-                .map(String::trim).filter(code -> StrUtil.isNotBlank(code)).toList();
+        return Arrays.stream(StrUtil.nullToEmpty(value).split("[,+]")).map(String::trim)
+            .filter(code -> StrUtil.isNotBlank(code)).toList();
     }
 
     /**
@@ -612,17 +573,12 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 规范化后的文本，供比较或查找使用。
      */
     private static String normalize(String value) {
-        return Normalizer.normalize(StrUtil.nullToEmpty(value), Normalizer.Form.NFKC)
-                .replace('\u2212', '-')
-                .replaceAll("[\\r\\n\\t]+", " ")
-                .replaceAll("\\s+", " ")
-                .trim()
-                .toLowerCase(Locale.ROOT);
+        return Normalizer.normalize(StrUtil.nullToEmpty(value), Normalizer.Form.NFKC).replace('\u2212', '-')
+            .replaceAll("[\\r\\n\\t]+", " ").replaceAll("\\s+", " ").trim().toLowerCase(Locale.ROOT);
     }
 
     /**
-     * 兼容 Items 类型与 Plus 类别；SpaceMelee 仅沿用当前参考规则的 archwing 基准。
-     *    LongGuns、SentinelWeapons 均包含霰弹枪，不能仅凭这两个类别默认使用步枪系数。
+     * 兼容 Items 类型与 Plus 类别；SpaceMelee 仅沿用当前参考规则的 archwing 基准。 LongGuns、SentinelWeapons 均包含霰弹枪，不能仅凭这两个类别默认使用步枪系数。
      *
      * @param value 待校验或规范化的文本。
      * @return 规范化外部类型标识，便于同一业务规则比较对应的文本。
@@ -648,12 +604,13 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
     private static List<String> cleanLines(List<String> lines, String rawText) {
         List<String> result = new ArrayList<>();
         if (lines != null) {
-            lines.stream().filter(Objects::nonNull).map(String::trim)
-                    .filter(value -> StrUtil.isNotBlank(value)).forEach(result::add);
+            lines.stream().filter(Objects::nonNull).map(String::trim).filter(value -> StrUtil.isNotBlank(value))
+                .forEach(result::add);
         }
         if (CollUtil.isEmpty(result)) {
             for (String line : StrUtil.nullToEmpty(rawText).split("\\R")) {
-                if (StrUtil.isNotBlank(line)) result.add(line.trim());
+                if (StrUtil.isNotBlank(line))
+                    result.add(line.trim());
             }
         }
         return List.copyOf(result);
@@ -682,15 +639,11 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
     }
 
     /** 武器识别结果和未确认候选。 */
-    private record WeaponMatch(
-            String name, String type, String key, List<String> candidates, boolean confirmed) {
+    private record WeaponMatch(String name, String type, String key, List<String> candidates, boolean confirmed) {
     }
 
     /** 属性列表及行证据，不包含持久化实体。 */
-    private record ParsedAttributes(
-            List<AttributeVO> attributes,
-            List<LineAnalysisVO> lines,
-            boolean ambiguous) {
+    private record ParsedAttributes(List<AttributeVO> attributes, List<LineAnalysisVO> lines, boolean ambiguous) {
     }
 
     /** 一个名称对应的明确属性编码列表，支持来源定义的组合别名。 */
@@ -698,9 +651,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
     }
 
     /** 别名用于匹配，正式编码用于读取效果方向和显示名称。 */
-    private record AttributeIndex(
-            Map<String, List<AttributeMapping>> byAlias,
-            Map<String, WarframeRivenAttributeDTO> byCode) {
+    private record AttributeIndex(Map<String, List<AttributeMapping>> byAlias,
+        Map<String, WarframeRivenAttributeDTO> byCode) {
     }
 
     /** 行内半开字符范围，用于排除重叠和数值串位。 */

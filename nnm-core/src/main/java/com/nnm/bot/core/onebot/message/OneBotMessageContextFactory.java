@@ -7,11 +7,13 @@ import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.model.ArrayMsg;
 import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.message.model.BotMessageReference;
+import com.nnm.bot.core.constant.BotMessageConstants.ReferenceKind;
 import com.nnm.bot.core.message.model.BotIncomingAttachment;
 import com.nnm.bot.core.constant.BotMessageConstants.BotIncomingAttachmentType;
 import com.nnm.bot.core.constant.BotMessageScope;
 import com.nnm.bot.core.constant.BotPlatform;
-import org.springframework.util.StringUtils;
+import java.util.stream.Collectors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,13 +24,13 @@ import java.util.Objects;
 /**
  * 将 OneBot SDK 事件复制为稳定的核心消息模型。
  *
- * <p>命令层只依赖 {@link BotMessageContext}；原始 SDK 对象仅保存在 native source 中，
- * 供最终发送响应时定位机器人实例和原消息。</p>
+ * <p>
+ * 命令层只依赖 {@link BotMessageContext}；原始 SDK 对象仅保存在 native source 中， 供最终发送响应时定位机器人实例和原消息。
+ * </p>
  */
 public final class OneBotMessageContextFactory {
 
-    private OneBotMessageContextFactory() {
-    }
+    private OneBotMessageContextFactory() {}
 
     /**
      * 归一化会话标识、纯文本和附件，不执行命令匹配或外部 I/O。
@@ -45,23 +47,29 @@ public final class OneBotMessageContextFactory {
         String accountId = String.valueOf(bot.getSelfId());
         String senderId = String.valueOf(Objects.requireNonNullElse(event.getUserId(), 0L));
         String conversationId = scope == BotMessageScope.GROUP
-                ? String.valueOf(Objects.requireNonNullElse(event.getGroupId(), 0L))
-                : senderId;
+            ? String.valueOf(Objects.requireNonNullElse(event.getGroupId(), 0L)) : senderId;
         String rawMessage = Objects.requireNonNullElse(event.getRawMessage(), "");
-        String message = StringUtils.hasText(event.getPlainText()) ? event.getPlainText() : rawMessage;
+        String message = event.getPlainText();
+        if (message == null && event.getArrayMsg() != null) {
+            message = event.getArrayMsg().stream().filter(segment -> "text".equalsIgnoreCase(segment.getRawType()))
+                .map(segment -> Objects.requireNonNullElse(segment.getStringData("text"), ""))
+                .collect(Collectors.joining());
+        }
 
-        return BotMessageContext.of(
-                BotPlatform.ONEBOT,
-                scope,
-                accountId,
-                senderId,
-                conversationId,
-                ObjectUtil.isNull(event.getMessageId()) ? null : String.valueOf(event.getMessageId()),
-                rawMessage,
-                message,
-                new OneBotMessageSource(bot, replyEvent(event)),
-                attachments(event)
-        );
+        return BotMessageContext
+            .of(BotPlatform.ONEBOT, scope, accountId, senderId, conversationId,
+                ObjectUtil.isNull(event.getMessageId()) ? null : String.valueOf(event.getMessageId()), rawMessage,
+                message, new OneBotMessageSource(bot, replyEvent(event)), attachments(event))
+            .withReference(reference(event), null);
+    }
+
+    /** 只解析当前消息的 reply 段，不在渠道回调中查询原消息。 */
+    private static BotMessageReference reference(AnyMessageEvent event) {
+        if (event.getArrayMsg() == null)
+            return null;
+        return event.getArrayMsg().stream().filter(segment -> "reply".equalsIgnoreCase(segment.getRawType()))
+            .map(segment -> segment.getStringData("id")).filter(id -> id != null && !id.isBlank()).findFirst()
+            .map(id -> new BotMessageReference(ReferenceKind.MESSAGE_ID, id, List.of())).orElse(null);
     }
 
     private static AnyMessageEvent replyEvent(AnyMessageEvent source) {
@@ -75,7 +83,11 @@ public final class OneBotMessageContextFactory {
     }
 
     private static List<BotIncomingAttachment> attachments(AnyMessageEvent event) {
-        List<ArrayMsg> messageSegments = event.getArrayMsg();
+        return attachments(event.getArrayMsg());
+    }
+
+    /** 从当前消息或查询结果的消息段提取附件，不递归展开引用。 */
+    static List<BotIncomingAttachment> attachments(List<ArrayMsg> messageSegments) {
         if (messageSegments == null || messageSegments.isEmpty()) {
             return List.of();
         }
@@ -91,29 +103,23 @@ public final class OneBotMessageContextFactory {
         return List.copyOf(attachments);
     }
 
-    private static BotIncomingAttachment toAttachment(
-            ArrayMsg segment, BotIncomingAttachmentType type) {
+    private static BotIncomingAttachment toAttachment(ArrayMsg segment, BotIncomingAttachmentType type) {
         String url = firstText(segment, "url", "file");
-        String fileId = firstText(segment, "file_id", "file_unique");
+        if (url != null && !url.startsWith("https://") && !url.startsWith("http://"))
+            url = null;
+        String fileId = firstText(segment, "file_id", "file_unique", "file");
         String fileName = firstText(segment, "name", "file");
         String contentType = firstText(segment, "content_type", "mime", "mime_type");
         if (StrUtil.isBlank(contentType) && type == BotIncomingAttachmentType.IMAGE) {
             contentType = contentTypeFromName(fileName);
         }
-        Map<String, String> metadata = Map.of(
-                "platformType", Objects.requireNonNullElse(type == BotIncomingAttachmentType.IMAGE
-                        ? "image" : "file", "unknown"),
+        Map<String,
+            String> metadata = Map.of("platformType",
+                Objects.requireNonNullElse(type == BotIncomingAttachmentType.IMAGE ? "image" : "file", "unknown"),
                 "rawType", Objects.requireNonNullElse(segment.getRawType(), "unknown"));
-        return new BotIncomingAttachment(
-                type,
-                fileName,
-                contentType,
-                url,
-                fileId,
-                positiveLong(segment.getLongData("size")),
-                positiveInt(segment.getLongData("width")),
-                positiveInt(segment.getLongData("height")),
-                metadata);
+        return new BotIncomingAttachment(type, fileName, contentType, url, fileId,
+            positiveLong(segment.getLongData("size")), positiveInt(segment.getLongData("width")),
+            positiveInt(segment.getLongData("height")), metadata);
     }
 
     private static String firstText(ArrayMsg segment, String... keys) {
@@ -131,10 +137,14 @@ public final class OneBotMessageContextFactory {
             return null;
         }
         String lower = fileName.toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".png")) return "image/png";
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-        if (lower.endsWith(".webp")) return "image/webp";
-        if (lower.endsWith(".gif")) return "image/gif";
+        if (lower.endsWith(".png"))
+            return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg"))
+            return "image/jpeg";
+        if (lower.endsWith(".webp"))
+            return "image/webp";
+        if (lower.endsWith(".gif"))
+            return "image/gif";
         return null;
     }
 
@@ -143,6 +153,6 @@ public final class OneBotMessageContextFactory {
     }
 
     private static Integer positiveInt(long value) {
-        return value > 0 && value <= Integer.MAX_VALUE ? (int) value : null;
+        return value > 0 && value <= Integer.MAX_VALUE ? (int)value : null;
     }
 }

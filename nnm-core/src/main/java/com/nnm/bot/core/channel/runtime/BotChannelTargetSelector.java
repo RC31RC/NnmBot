@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
-/** Shared pre-delivery selection; callers add command and conversation-specific checks. */
+/** 共用投递前的实例选择，调用方补充命令与会话专用校验。 */
 @Component
 public class BotChannelTargetSelector {
 
@@ -40,57 +40,51 @@ public class BotChannelTargetSelector {
     public List<BotChannelTarget> candidates(long groupId, List<Binding> bindings) {
         BotTopologySnapshot snapshot = topology.snapshot();
         return candidatesInternal(bindings.stream().map(BotTopologySnapshot.Binding::entity)
-                .filter(binding -> binding.getGroupId() == groupId).toList(), snapshot.metadata(), Set.of(), snapshot);
+            .filter(binding -> binding.getGroupId() == groupId).toList(), snapshot.metadata(), Set.of(), snapshot);
     }
 
     public List<BotChannelTarget> candidates(List<BotGroupBot> values, Map<Long, BotChannelInstanceRecord> records) {
         return candidates(values, records, Set.of());
     }
 
-    public List<BotChannelTarget> candidates(
-            List<BotGroupBot> values,
-            Map<Long, BotChannelInstanceRecord> records,
-            Set<BotChannelCapability> requiredCapabilities) {
-        Map<Long, BotChannelInstanceMetadata> metadata = records.entrySet().stream().collect(Collectors.toMap(
-                Map.Entry::getKey, entry -> BotChannelInstanceMetadata.of(entry.getValue())));
+    public List<BotChannelTarget> candidates(List<BotGroupBot> values, Map<Long, BotChannelInstanceRecord> records,
+        Set<BotChannelCapability> requiredCapabilities) {
+        Map<Long, BotChannelInstanceMetadata> metadata = records.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, entry -> BotChannelInstanceMetadata.of(entry.getValue())));
         return candidatesInternal(values, metadata, requiredCapabilities, topology.snapshot());
     }
 
     public Map<Long, List<BotChannelTarget>> candidates(Collection<Long> groupIds) {
-        if (groupIds.isEmpty()) return Map.of();
+        if (groupIds.isEmpty())
+            return Map.of();
         BotTopologySnapshot snapshot = topology.snapshot();
         return candidatesInternal(groupIds.stream().flatMap(id -> snapshot.groupBindings(id).stream()).toList(),
-                snapshot.metadata(), Set.of(), snapshot).stream()
-                .collect(Collectors.groupingBy(target -> target.binding().getGroupId()));
+            snapshot.metadata(), Set.of(), snapshot).stream()
+            .collect(Collectors.groupingBy(target -> target.binding().getGroupId()));
     }
 
     public boolean supports(BotChannelTarget target, Set<BotChannelCapability> capabilities) {
         return capabilities.stream().allMatch(capability -> registry.supports(target.key(), capability));
     }
 
-    private List<BotChannelTarget> candidatesInternal(
-            List<BotGroupBot> values,
-            Map<Long, BotChannelInstanceMetadata> records,
-            Set<BotChannelCapability> requiredCapabilities,
-            BotTopologySnapshot topologySnapshot) {
+    private List<BotChannelTarget> candidatesInternal(List<BotGroupBot> values,
+        Map<Long, BotChannelInstanceMetadata> records, Set<BotChannelCapability> requiredCapabilities,
+        BotTopologySnapshot topologySnapshot) {
         ClusterBotRuntime cluster = clusterProvider.getObject();
-        return values.stream()
-                .filter(BotGroupBot::isEnabled)
-                .filter(binding -> topologySnapshot.enabled(binding.getGroupId()))
-                .filter(binding -> "GROUP".equals(binding.getScopeType()))
-                .filter(binding -> binding.getScopeKey() != null && !binding.getScopeKey().isBlank())
-                .sorted(Comparator.comparingInt(BotGroupBot::getReplyPriority)
-                        .thenComparing(BotGroupBot::getId))
-                .map(binding -> {
-                    BotChannelInstanceMetadata record = records.get(binding.getBotInstanceId());
-                    if (record == null || !record.enabled() || !record.platform().name().equals(binding.getPlatform())) return null;
-                    return new BotChannelTarget(binding, record);
-                })
-                .filter(Objects::nonNull)
-                .filter(target -> registry.find(target.key())
-                        .filter(snapshot -> snapshot.status() == BotChannelStatus.CONNECTED).isPresent())
-                .filter(target -> cluster.isLocalOwner(target.key()))
-                .filter(target -> supports(target, requiredCapabilities))
-                .toList();
+        return values.stream().filter(BotGroupBot::isEnabled)
+            .filter(binding -> topologySnapshot.enabled(binding.getGroupId()))
+            .filter(binding -> "GROUP".equals(binding.getScopeType()))
+            .filter(binding -> binding.getScopeKey() != null && !binding.getScopeKey().isBlank())
+            .sorted(Comparator.comparingInt(BotGroupBot::getReplyPriority).thenComparing(BotGroupBot::getId))
+            .map(binding -> {
+                BotChannelInstanceMetadata record = records.get(binding.getBotInstanceId());
+                if (record == null || !record.enabled() || !record.platform().name().equals(binding.getPlatform()))
+                    return null;
+                return new BotChannelTarget(binding, record);
+            }).filter(Objects::nonNull)
+            .filter(target -> registry.find(target.key())
+                .filter(snapshot -> snapshot.status() == BotChannelStatus.CONNECTED).isPresent())
+            .filter(target -> cluster.isLocalOwner(target.key()))
+            .filter(target -> supports(target, requiredCapabilities)).toList();
     }
 }

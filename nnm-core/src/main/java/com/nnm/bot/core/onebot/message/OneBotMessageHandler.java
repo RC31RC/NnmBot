@@ -14,8 +14,9 @@ import org.springframework.stereotype.Component;
 /**
  * OneBot 入站消息适配器。
  *
- * <p>返回值仅表示命令链是否接管消息。已匹配但满载/停机拒绝仍返回 true，
- * 不让后续 SDK 处理器重复执行；异常不伪装成未匹配。</p>
+ * <p>
+ * 返回值仅表示命令链是否接管消息。已匹配但满载/停机拒绝仍返回 true， 不让后续 SDK 处理器重复执行；异常不伪装成未匹配。
+ * </p>
  */
 @Slf4j
 @Shiro
@@ -27,14 +28,14 @@ public class OneBotMessageHandler {
     @Resource
     private OneBotMessageArrivalStore messageArrivals;
 
-    //    @GuildMessageHandler
-//    @PrivateMessageHandler
-//    @GroupMessageHandler
+    // @GuildMessageHandler
+    // @PrivateMessageHandler
+    // @GroupMessageHandler
     @AnyMessageHandler
     public boolean onMessage(Bot bot, AnyMessageEvent event) {
         WebSocketSession session = bot.getSession();
         long receivedAt = messageArrivals.receivedAt(session.getId(), String.valueOf(bot.getSelfId()),
-                String.valueOf(event.getMessageId()));
+            String.valueOf(event.getMessageId()));
         BotMessageContext context = OneBotMessageContextFactory.from(bot, event).withReceivedAt(receivedAt);
         return commandIngressService.accept(context, session::isOpen).handled();
     }

@@ -9,7 +9,9 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.Collection;
 import java.util.List;
 
-public interface WarframeCommunityArbitrationEssenceRepository extends JpaRepository<WarframeCommunityArbitrationEssence, Long>, JpaSpecificationExecutor<WarframeCommunityArbitrationEssence> {
+public interface WarframeCommunityArbitrationEssenceRepository
+    extends JpaRepository<WarframeCommunityArbitrationEssence, Long>,
+    JpaSpecificationExecutor<WarframeCommunityArbitrationEssence> {
     /**
      * 按给定记录键集合批量查询记录。
      *
@@ -17,6 +19,7 @@ public interface WarframeCommunityArbitrationEssenceRepository extends JpaReposi
      * @return 按当前条件筛选或转换后的数据集合。
      */
     List<WarframeCommunityArbitrationEssence> findAllByRecordKeyIn(Collection<String> keys);
+
     /**
      * 按记录键升序读取全部非受管投影。
      *
@@ -40,6 +43,7 @@ public interface WarframeCommunityArbitrationEssenceRepository extends JpaReposi
      * @return 包含当前页记录及总数的分页结果。
      */
     default Page<WarframeCommunityArbitrationEssenceDTO> query(String keyword, Pageable pageable) {
-        return findBy(CommunitySpecifications.contains(keyword, List.of("recordKey", "nodeName")), query -> query.as(WarframeCommunityArbitrationEssenceDTO.class).page(pageable));
+        return findBy(CommunitySpecifications.contains(keyword, List.of("recordKey", "nodeName")),
+            query -> query.as(WarframeCommunityArbitrationEssenceDTO.class).page(pageable));
     }
 }

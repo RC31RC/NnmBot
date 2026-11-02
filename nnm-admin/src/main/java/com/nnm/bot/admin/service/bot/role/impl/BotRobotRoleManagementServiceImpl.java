@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.role.impl;
 
+import com.nnm.bot.admin.constant.BotRobotRoleLockPurpose;
 import java.util.Comparator;
 import cn.hutool.core.util.ObjectUtil;
 
@@ -22,7 +23,7 @@ import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.PresentationPolicy;
 import com.nnm.bot.core.plugin.system.SystemCommandCodes;
-import io.github.rdt.lock.LockOptions;
+import io.github.rdt.lock.LockKey;
 import io.github.rdt.lock.RdtLock;
 import io.github.rdt.lock.DistributedLockManager;
 import jakarta.annotation.Resource;
@@ -57,10 +58,8 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
 
     @Override
     public List<BotRobotRoleDTO> list() {
-        return roleRepository.findAll().stream()
-                .sorted(Comparator.comparing(BotRobotRole::getCode))
-                .map(this::toItem)
-                .toList();
+        return roleRepository.findAll().stream().sorted(Comparator.comparing(BotRobotRole::getCode)).map(this::toItem)
+            .toList();
     }
 
     @Override
@@ -83,11 +82,10 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     public void update(long id, BotRobotRoleSaveDTO request) {
         BotRobotRole role = role(id);
         String code = normalize(request.code());
-        roleRepository.findByCodeIgnoreCase(code)
-                .filter(existing -> !existing.getId().equals(id))
-                .ifPresent(existing -> {
-                    throw new IllegalArgumentException("机器人角色编码已存在");
-        });
+        roleRepository.findByCodeIgnoreCase(code).filter(existing -> !existing.getId().equals(id))
+            .ifPresent(existing -> {
+                throw new IllegalArgumentException("机器人角色编码已存在");
+            });
         apply(role, request, code);
         if (ObjectUtil.isNotNull(request.botInstanceIds())) {
             saveInstanceBindings(role, request.botInstanceIds());
@@ -100,41 +98,33 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     @RdtLock
     public void assignInstanceRoles(long instanceId, List<Long> roleIds) {
         // 使用 RDT 锁保护同一实例的角色全集，数据库只负责普通查询和唯一约束。
-        lockManager.lock("bot-instance-role:" + instanceId, LockOptions.defaults());
-        instanceRepository.findById(instanceId)
-                .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
-        Set<Long> targetRoleIds = CollUtil.isEmpty(roleIds)
-                ? Set.of()
-                : roleIds.stream()
-                        .filter(ObjectUtil::isNotNull)
-                        .collect(Collectors.toSet());
+        lockManager.lock(LockKey.forOperation(BotRobotRoleManagementServiceImpl.class,
+            BotRobotRoleLockPurpose.INSTANCE_ROLES.key(), instanceId));
+        instanceRepository.findById(instanceId).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        Set<Long> targetRoleIds = CollUtil.isEmpty(roleIds) ? Set.of()
+            : roleIds.stream().filter(ObjectUtil::isNotNull).collect(Collectors.toSet());
         if (roleRepository.findAllById(targetRoleIds).size() != targetRoleIds.size()) {
             throw new IllegalArgumentException("包含不存在的机器人角色");
         }
 
-        List<BotRobotRoleInstance> currentBindings =
-                instanceBindingRepository.findAllByBotInstanceId(instanceId);
-        Set<Long> currentRoleIds = currentBindings.stream()
-                .map(BotRobotRoleInstance::getRobotRoleId)
-                .collect(Collectors.toSet());
+        List<BotRobotRoleInstance> currentBindings = instanceBindingRepository.findAllByBotInstanceId(instanceId);
+        Set<Long> currentRoleIds =
+            currentBindings.stream().map(BotRobotRoleInstance::getRobotRoleId).collect(Collectors.toSet());
 
-        List<BotRobotRoleInstance> obsoleteBindings = currentBindings.stream()
-                .filter(binding -> !targetRoleIds.contains(binding.getRobotRoleId()))
-                .toList();
+        List<BotRobotRoleInstance> obsoleteBindings =
+            currentBindings.stream().filter(binding -> !targetRoleIds.contains(binding.getRobotRoleId())).toList();
         if (CollUtil.isNotEmpty(obsoleteBindings)) {
             instanceBindingRepository.deleteAll(obsoleteBindings);
             instanceBindingRepository.flush();
         }
 
-        List<BotRobotRoleInstance> missingBindings = targetRoleIds.stream()
-                .filter(roleId -> !currentRoleIds.contains(roleId))
-                .map(roleId -> {
-                    BotRobotRoleInstance binding = new BotRobotRoleInstance();
-                    binding.setRobotRoleId(roleId);
-                    binding.setBotInstanceId(instanceId);
-                    return binding;
-                })
-                .toList();
+        List<BotRobotRoleInstance> missingBindings =
+            targetRoleIds.stream().filter(roleId -> !currentRoleIds.contains(roleId)).map(roleId -> {
+                BotRobotRoleInstance binding = new BotRobotRoleInstance();
+                binding.setRobotRoleId(roleId);
+                binding.setBotInstanceId(instanceId);
+                return binding;
+            }).toList();
         if (CollUtil.isNotEmpty(missingBindings)) {
             instanceBindingRepository.saveAll(missingBindings);
         }
@@ -157,73 +147,55 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         List<Long> ids = CollUtil.isEmpty(botInstanceIds) ? List.of() : botInstanceIds;
         Set<Long> targetInstanceIds = new HashSet<>(ids);
         if (targetInstanceIds.size() != ids.size()
-                || instanceRepository.findAllById(targetInstanceIds).size() != targetInstanceIds.size()) {
+            || instanceRepository.findAllById(targetInstanceIds).size() != targetInstanceIds.size()) {
             throw new IllegalArgumentException("机器人角色包含重复或不存在的机器人实例");
         }
 
-        List<BotRobotRoleInstance> currentBindings =
-                instanceBindingRepository.findAllByRobotRoleId(role.getId());
-        Set<Long> currentInstanceIds = currentBindings.stream()
-                .map(BotRobotRoleInstance::getBotInstanceId)
-                .collect(Collectors.toSet());
+        List<BotRobotRoleInstance> currentBindings = instanceBindingRepository.findAllByRobotRoleId(role.getId());
+        Set<Long> currentInstanceIds =
+            currentBindings.stream().map(BotRobotRoleInstance::getBotInstanceId).collect(Collectors.toSet());
         List<BotRobotRoleInstance> obsoleteBindings = currentBindings.stream()
-                .filter(binding -> !targetInstanceIds.contains(binding.getBotInstanceId()))
-                .toList();
+            .filter(binding -> !targetInstanceIds.contains(binding.getBotInstanceId())).toList();
         if (CollUtil.isNotEmpty(obsoleteBindings)) {
             instanceBindingRepository.deleteAll(obsoleteBindings);
             instanceBindingRepository.flush();
         }
 
         List<BotRobotRoleInstance> missingBindings = targetInstanceIds.stream()
-                .filter(instanceId -> !currentInstanceIds.contains(instanceId))
-                .map(instanceId -> {
-                    BotRobotRoleInstance binding = new BotRobotRoleInstance();
-                    binding.setRobotRoleId(role.getId());
-                    binding.setBotInstanceId(instanceId);
-                    return binding;
-                })
-                .toList();
+            .filter(instanceId -> !currentInstanceIds.contains(instanceId)).map(instanceId -> {
+                BotRobotRoleInstance binding = new BotRobotRoleInstance();
+                binding.setRobotRoleId(role.getId());
+                binding.setBotInstanceId(instanceId);
+                return binding;
+            }).toList();
         if (CollUtil.isNotEmpty(missingBindings)) {
             instanceBindingRepository.saveAll(missingBindings);
         }
     }
 
     private BotRobotRoleDTO toItem(BotRobotRole role) {
-        List<Long> instanceIds = instanceBindingRepository.findAllByRobotRoleId(role.getId())
-                .stream()
-                .map(BotRobotRoleInstance::getBotInstanceId)
-                .toList();
-        Set<Long> assignedCommandIds = commandBindingRepository.findAllByRobotRoleId(role.getId())
-                .stream()
-                .map(BotCommandRobotRole::getCommandId)
-                .collect(Collectors.toSet());
+        List<Long> instanceIds = instanceBindingRepository.findAllByRobotRoleId(role.getId()).stream()
+            .map(BotRobotRoleInstance::getBotInstanceId).toList();
+        Set<Long> assignedCommandIds = commandBindingRepository.findAllByRobotRoleId(role.getId()).stream()
+            .map(BotCommandRobotRole::getCommandId).collect(Collectors.toSet());
         Map<Long, BotCommand> commandsById = commandRepository.findAllById(assignedCommandIds).stream()
-                .collect(Collectors.toMap(BotCommand::getId, Function.identity()));
-        return new BotRobotRoleDTO(
-                role.getId(),
-                role.getCode(),
-                role.getName(),
-                role.getDescription(),
-                role.isEnabled(),
-                instanceRepository.findAllById(instanceIds).stream()
-                        .map(instance -> new BotRobotRoleDTO.ListItemBindingDTO(
-                                instance.getId(), instance.getInstanceId(), instance.getDisplayName()))
-                        .toList(),
-                assignedCommandIds.stream()
-                        .map(commandsById::get)
-                        .filter(command -> ObjectUtil.isNotNull(command))
-                        .sorted(Comparator.comparing(BotCommand::getGameCode)
-                                .thenComparing(BotCommand::getCode))
-                        .map(command -> new BotRobotRoleDTO.CommandBindingDTO(
-                                command.getCode(), command.getName(), command.getGameCode()))
-                        .toList(),
-                role.getCreatedAt(),
-                role.getUpdatedAt());
+            .collect(Collectors.toMap(BotCommand::getId, Function.identity()));
+        return new BotRobotRoleDTO(role.getId(), role.getCode(), role.getName(), role.getDescription(),
+            role.isEnabled(),
+            instanceRepository.findAllById(instanceIds).stream()
+                .map(instance -> new BotRobotRoleDTO.ListItemBindingDTO(instance.getId(), instance.getInstanceId(),
+                    instance.getDisplayName()))
+                .toList(),
+            assignedCommandIds.stream().map(commandsById::get).filter(command -> ObjectUtil.isNotNull(command))
+                .sorted(Comparator.comparing(BotCommand::getGameCode).thenComparing(BotCommand::getCode))
+                .map(command -> new BotRobotRoleDTO.CommandBindingDTO(command.getCode(), command.getName(),
+                    command.getGameCode()))
+                .toList(),
+            role.getCreatedAt(), role.getUpdatedAt());
     }
 
     private BotRobotRole role(long id) {
-        return roleRepository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("机器人角色不存在"));
+        return roleRepository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人角色不存在"));
     }
 
     private void apply(BotRobotRole role, BotRobotRoleSaveDTO request, String code) {
@@ -236,19 +208,17 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     private void saveCommandBindings(BotRobotRole role, List<String> commandCodes) {
         Set<String> codeSet = new HashSet<>(SystemCommandCodes.ALL);
         if (!CollUtil.isEmpty(commandCodes)) {
-            commandCodes.stream()
-                    .filter(StrUtil::isNotBlank)
-                    .map(code -> code.trim().toLowerCase(Locale.ROOT))
-                    .forEach(codeSet::add);
+            commandCodes.stream().filter(StrUtil::isNotBlank).map(code -> code.trim().toLowerCase(Locale.ROOT))
+                .forEach(codeSet::add);
         }
         List<String> codes = codeSet.stream().sorted().toList();
-        Map<String, BotCommand> commands = commandRegistry.descriptors().stream()
+        Map<String,
+            BotCommand> commands = commandRegistry.descriptors().stream()
                 .filter(descriptor -> codes.contains(descriptor.code().toLowerCase(Locale.ROOT)))
                 .collect(Collectors.toMap(
-                        descriptor -> descriptor.code().toLowerCase(Locale.ROOT),
-                        descriptor -> commandRepository.findByCodeIgnoreCase(descriptor.code())
-                                .orElseGet(() -> createDefaultCommand(descriptor)),
-                        (left, right) -> left));
+                    descriptor -> descriptor.code().toLowerCase(Locale.ROOT), descriptor -> commandRepository
+                        .findByCodeIgnoreCase(descriptor.code()).orElseGet(() -> createDefaultCommand(descriptor)),
+                    (left, right) -> left));
         if (commands.size() != codes.size()) {
             throw new IllegalArgumentException("机器人角色包含不存在的命令");
         }
@@ -263,8 +233,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         }
     }
 
-    private BotCommand createDefaultCommand(
-            CommandDescriptor descriptor) {
+    private BotCommand createDefaultCommand(CommandDescriptor descriptor) {
         BotCommand command = new BotCommand();
         command.setCode(descriptor.code());
         command.setName(descriptor.name());

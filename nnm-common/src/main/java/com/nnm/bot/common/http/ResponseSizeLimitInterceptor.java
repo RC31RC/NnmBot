@@ -25,16 +25,19 @@ public final class ResponseSizeLimitInterceptor implements ClientHttpRequestInte
     }
 
     @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body,
-                                        ClientHttpRequestExecution execution) throws IOException {
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
+        throws IOException {
         ClientHttpResponse response = execution.execute(request, body);
         try {
             long limit = Boolean.TRUE.equals(request.getAttributes().get(STREAMING_DOWNLOAD))
-                    && response.getStatusCode().is2xxSuccessful()
-                    ? properties.getMaxDownloadBytes() : properties.getMaxResponseBodyBytes();
+                && response.getStatusCode().is2xxSuccessful() ? properties.getMaxDownloadBytes()
+                    : properties.getMaxResponseBodyBytes();
             // HEAD 的 Content-Length 描述 GET 实体，而非本次响应体，不能据此拒绝。
+            String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
             if (!"HEAD".equals(request.getMethod().name())
-                    && response.getHeaders().getContentLength() > limit) {
+                && (contentEncoding == null || contentEncoding.isBlank()
+                    || "identity".equalsIgnoreCase(contentEncoding.trim()))
+                && response.getHeaders().getContentLength() > limit) {
                 throw tooLarge(request, limit);
             }
             return new LimitedResponse(response, request, limit);
@@ -45,9 +48,8 @@ public final class ResponseSizeLimitInterceptor implements ClientHttpRequestInte
     }
 
     private static ExternalResponseTooLargeException tooLarge(HttpRequest request, long limit) {
-        return new ExternalResponseTooLargeException(
-                request.getMethod().name(), HttpClient.sanitizeUrl(request.getURI().toString()),
-                limit, null);
+        return new ExternalResponseTooLargeException(request.getMethod().name(),
+            HttpClient.sanitizeUrl(request.getURI().toString()), limit, null);
     }
 
     private static final class LimitedResponse implements ClientHttpResponse {
@@ -99,7 +101,7 @@ public final class ResponseSizeLimitInterceptor implements ClientHttpRequestInte
                             return 0;
                         }
                         // 最多多读一个字节来判定超限，不依赖 Content-Length 的真实性。
-                        int allowed = (int) Math.min(length, Math.max(1, limit - count + 1));
+                        int allowed = (int)Math.min(length, Math.max(1, limit - count + 1));
                         int read = in.read(bytes, offset, allowed);
                         if (read > 0) {
                             checkSize(read);
@@ -112,10 +114,10 @@ public final class ResponseSizeLimitInterceptor implements ClientHttpRequestInte
                         if (amount <= 0) {
                             return 0;
                         }
-                        byte[] buffer = new byte[(int) Math.min(8192, amount)];
+                        byte[] buffer = new byte[(int)Math.min(8192, amount)];
                         long skipped = 0;
                         while (skipped < amount) {
-                            int read = read(buffer, 0, (int) Math.min(buffer.length, amount - skipped));
+                            int read = read(buffer, 0, (int)Math.min(buffer.length, amount - skipped));
                             if (read < 0) {
                                 break;
                             }

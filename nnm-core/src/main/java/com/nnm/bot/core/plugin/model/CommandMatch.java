@@ -8,10 +8,7 @@ import java.util.Objects;
  * @param command 匹配到的运行时命令
  * @param invocation 传给插件的调用参数
  */
-public record CommandMatch(
-        RuntimeCommand command,
-        CommandInvocation invocation
-) {
+public record CommandMatch(RuntimeCommand command, CommandInvocation invocation) {
 
     public CommandMatch {
         command = Objects.requireNonNull(command, "command must not be null");

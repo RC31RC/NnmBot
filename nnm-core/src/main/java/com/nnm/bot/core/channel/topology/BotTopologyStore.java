@@ -19,7 +19,8 @@ public class BotTopologyStore {
         try {
             // 先完整构建再原子发布；数据库或解密失败会抛出，读者继续使用上一份完整快照。
             BotTopologySnapshot loaded = loader.load();
-            if (snapshot == null || !snapshot.version().equals(loaded.version())) snapshot = loaded;
+            if (snapshot == null || !snapshot.version().equals(loaded.version()))
+                snapshot = loaded;
         } finally {
             refreshLock.unlock();
         }
@@ -28,7 +29,8 @@ public class BotTopologyStore {
     public void refreshIfChanged(String version) {
         refreshLock.lock();
         try {
-            if (snapshot == null || !snapshot.version().equals(version)) refresh();
+            if (snapshot == null || !snapshot.version().equals(version))
+                refresh();
         } finally {
             refreshLock.unlock();
         }

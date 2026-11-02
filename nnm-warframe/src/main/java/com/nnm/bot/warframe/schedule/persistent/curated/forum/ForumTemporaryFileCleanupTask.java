@@ -9,8 +9,9 @@ import org.springframework.stereotype.Component;
 /**
  * 清理当前实例本地目录中的临时文件。
  *
- * <p>各实例的临时目录相互独立，不能改成只在一个节点执行的集群任务，否则其他节点的
- * 文件不会被清理。</p>
+ * <p>
+ * 各实例的临时目录相互独立，不能改成只在一个节点执行的集群任务，否则其他节点的 文件不会被清理。
+ * </p>
  */
 @Slf4j
 @Component
@@ -22,7 +23,7 @@ public class ForumTemporaryFileCleanupTask {
     /**
      * 清理已过期文件。
      */
-    @Scheduled(fixedDelayString = "#{@warframeForumStorageProperties.cleanupInterval.toString()}")
+    @Scheduled(fixedDelayString = "2h")
     public void cleanExpiredFiles() {
         int deleted = fileService.cleanExpiredTemporaryFiles();
         if (deleted > 0) {

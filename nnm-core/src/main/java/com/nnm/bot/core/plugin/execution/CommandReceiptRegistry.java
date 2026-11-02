@@ -34,18 +34,18 @@ public class CommandReceiptRegistry implements AutoCloseable {
     @PostConstruct
     public void initialize() {
         manager = CacheManager.getInstance("nnm-receipts-" + UUID.randomUUID());
-        windows = new Cache2kBuilder<String, List<String>>() { }.manager(manager).name("windows")
-                .entryCapacity(properties.maxPendingCommands()).strictEviction(true)
-                .expireAfterWrite(properties.receiptRetention()).sharpExpiry(true).build();
+        windows = new Cache2kBuilder<String, List<String>>() {}.manager(manager).name("windows")
+            .entryCapacity(properties.maxPendingCommands()).strictEviction(true)
+            .expireAfterWrite(properties.receiptRetention()).sharpExpiry(true).build();
         batches = new Cache2kBuilder<String, Batch>() {}.manager(manager).name("receipts")
-                .entryCapacity(properties.maxPendingCommands()).strictEviction(true)
-                .expireAfterWrite(properties.receiptRetention()).sharpExpiry(true).build();
+            .entryCapacity(properties.maxPendingCommands()).strictEviction(true)
+            .expireAfterWrite(properties.receiptRetention()).sharpExpiry(true).build();
         nativeClaims = Cache2kBuilder.of(String.class, Boolean.class).manager(manager).name("native-claims")
-                .entryCapacity(cacheProperties.replayCapacity()).strictEviction(true)
-                .expireAfterWrite(cacheProperties.replayRetention()).sharpExpiry(true).build();
+            .entryCapacity(cacheProperties.replayCapacity()).strictEviction(true)
+            .expireAfterWrite(cacheProperties.replayRetention()).sharpExpiry(true).build();
         roundClaims = Cache2kBuilder.of(String.class, Boolean.class).manager(manager).name("round-claims")
-                .entryCapacity(properties.maxPendingCommands()).strictEviction(true)
-                .expireAfterWrite(properties.receiptRetention()).sharpExpiry(true).build();
+            .entryCapacity(properties.maxPendingCommands()).strictEviction(true)
+            .expireAfterWrite(properties.receiptRetention()).sharpExpiry(true).build();
     }
 
     public String observeLocal(String fingerprint, BotMessageContext context) {
@@ -53,17 +53,19 @@ public class CommandReceiptRegistry implements AutoCloseable {
         try {
             List<String> candidates = windows.peek(fingerprint);
             List<String> live = candidates == null ? new ArrayList<>()
-                    : new ArrayList<>(candidates.stream().filter(batches::containsKey).toList());
+                : new ArrayList<>(candidates.stream().filter(batches::containsKey).toList());
             String selected = null;
             long nearest = Long.MAX_VALUE;
             for (String candidate : live) {
                 Batch batch = batches.peek(candidate);
-                if (batch == null) continue;
+                if (batch == null)
+                    continue;
                 if (batch.receipts.stream().anyMatch(receipt -> sameReceipt(receipt, context))) {
                     return candidate;
                 }
                 // 同账号两个不同原生 ID 是真实的两次发送，不能仅因文本相同而合并。
-                if (batch.receipts.stream().anyMatch(receipt -> sameAccount(receipt, context))) continue;
+                if (batch.receipts.stream().anyMatch(receipt -> sameAccount(receipt, context)))
+                    continue;
                 long earliest = Math.min(batch.firstReceivedAt, context.receivedAt());
                 long latest = Math.max(batch.lastReceivedAt, context.receivedAt());
                 long distance = Math.abs(batch.firstReceivedAt - context.receivedAt());
@@ -73,7 +75,8 @@ public class CommandReceiptRegistry implements AutoCloseable {
                 }
             }
             if (selected == null) {
-                if (live.size() >= 64) throw new IllegalStateException("同一命令指纹的在途轮次超过容量");
+                if (live.size() >= 64)
+                    throw new IllegalStateException("同一命令指纹的在途轮次超过容量");
                 selected = UUID.randomUUID().toString();
                 live.add(selected);
             }
@@ -94,7 +97,8 @@ public class CommandReceiptRegistry implements AutoCloseable {
                 batches.put(id, batch);
             }
             if (batch.receipts.stream().noneMatch(receipt -> sameReceipt(receipt, context))) {
-                if (batch.receipts.size() >= 64) throw new IllegalStateException("同一命令轮次的回执超过容量");
+                if (batch.receipts.size() >= 64)
+                    throw new IllegalStateException("同一命令轮次的回执超过容量");
                 batch.receipts.add(context);
                 batch.firstReceivedAt = Math.min(batch.firstReceivedAt, context.receivedAt());
                 batch.lastReceivedAt = Math.max(batch.lastReceivedAt, context.receivedAt());
@@ -118,10 +122,12 @@ public class CommandReceiptRegistry implements AutoCloseable {
         receiptsLock.lock();
         try {
             Batch batch = batches.peek(id);
-            if (batch == null) return false;
+            if (batch == null)
+                return false;
             for (int index = 0; index < batch.receipts.size(); index++) {
                 if (sameReceipt(batch.receipts.get(index), context)) {
-                    return batch.receipts.subList(0, index).stream().anyMatch(item -> item.platform() == context.platform());
+                    return batch.receipts.subList(0, index).stream()
+                        .anyMatch(item -> item.platform() == context.platform());
                 }
             }
             return false;
@@ -140,7 +146,8 @@ public class CommandReceiptRegistry implements AutoCloseable {
         try {
             String nativeId = GroupCommandCoordinator.nativeIdentity(context);
             // 标记后到回执的原生 ID，窗口结束后再次投递也不能重开一轮；失败后不撤销已认领记录。
-            if (nativeId != null && !nativeClaims.putIfAbsent(nativeId, true)) return false;
+            if (nativeId != null && !nativeClaims.putIfAbsent(nativeId, true))
+                return false;
             return context.dispatchId() == null || roundClaims.putIfAbsent(context.dispatchId(), true);
         } finally {
             receiptsLock.unlock();
@@ -148,8 +155,7 @@ public class CommandReceiptRegistry implements AutoCloseable {
     }
 
     private static boolean sameReceipt(BotMessageContext left, BotMessageContext right) {
-        return sameAccount(left, right)
-                && Objects.equals(left.messageId(), right.messageId());
+        return sameAccount(left, right) && Objects.equals(left.messageId(), right.messageId());
     }
 
     private static boolean sameAccount(BotMessageContext left, BotMessageContext right) {
@@ -159,7 +165,8 @@ public class CommandReceiptRegistry implements AutoCloseable {
     @PreDestroy
     @Override
     public void close() {
-        if (manager != null) manager.close();
+        if (manager != null)
+            manager.close();
     }
 
     private static final class Batch {

@@ -30,33 +30,27 @@ public class BotChannelRegistry {
 
     private final ConcurrentHashMap<BotChannelKey, MutableChannel> channels = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, BotChannelKey> instanceKeys = new ConcurrentHashMap<>();
-    private final CopyOnWriteArrayList<Consumer<BotChannelSnapshot>> listeners =
-            new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Consumer<BotChannelSnapshot>> listeners = new CopyOnWriteArrayList<>();
 
-    public void register(String instanceId,
-                                      BotChannelKey key,
-                                      Set<BotChannelCapability> capabilities,
-                                      boolean enabled) {
+    public void register(String instanceId, BotChannelKey key, Set<BotChannelCapability> capabilities,
+        boolean enabled) {
         registrationLock.lock();
         try {
             Assert.hasText(instanceId, "instanceId must not be blank");
             Assert.notNull(key, "key must not be null");
-            Set<BotChannelCapability> safeCapabilities = CollUtil.isEmpty(capabilities) ? Set.of() : Set.copyOf(capabilities);
+            Set<BotChannelCapability> safeCapabilities =
+                CollUtil.isEmpty(capabilities) ? Set.of() : Set.copyOf(capabilities);
             String normalizedInstanceId = instanceId.trim();
             BotChannelKey existingKey = instanceKeys.get(normalizedInstanceId);
             if (ObjectUtil.isNotNull(existingKey) && !existingKey.equals(key)) {
-                throw new BusinessException(
-                        BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
-                        "机器人实例标识已注册到其他渠道: " + normalizedInstanceId);
+                throw new BusinessException(BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
+                    "机器人实例标识已注册到其他渠道: " + normalizedInstanceId);
             }
-            MutableChannel newChannel = new MutableChannel(
-                    normalizedInstanceId, key, safeCapabilities,
-                    enabled ? BotChannelStatus.DISCONNECTED : BotChannelStatus.DISABLED);
+            MutableChannel newChannel = new MutableChannel(normalizedInstanceId, key, safeCapabilities,
+                enabled ? BotChannelStatus.DISCONNECTED : BotChannelStatus.DISABLED);
             MutableChannel previous = channels.putIfAbsent(key, newChannel);
             if (ObjectUtil.isNotNull(previous) && !previous.instanceId.equals(newChannel.instanceId)) {
-                throw new BusinessException(
-                        BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
-                        "机器人账号已注册到其他实例: " + key);
+                throw new BusinessException(BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT, "机器人账号已注册到其他实例: " + key);
             }
             instanceKeys.putIfAbsent(normalizedInstanceId, key);
         } finally {
@@ -64,10 +58,8 @@ public class BotChannelRegistry {
         }
     }
 
-    public void registerIfAbsent(String instanceId,
-                                               BotChannelKey key,
-                                               Set<BotChannelCapability> capabilities,
-                                               boolean enabled) {
+    public void registerIfAbsent(String instanceId, BotChannelKey key, Set<BotChannelCapability> capabilities,
+        boolean enabled) {
         registrationLock.lock();
         try {
             if (!channels.containsKey(key)) {
@@ -102,13 +94,11 @@ public class BotChannelRegistry {
     }
 
     public void startFailed(BotChannelKey key, Throwable error) {
-        update(key, BotChannelStatus.START_FAILED,
-                ObjectUtil.isNull(error) ? null : error.getMessage());
+        update(key, BotChannelStatus.START_FAILED, ObjectUtil.isNull(error) ? null : error.getMessage());
     }
 
     public void failed(BotChannelKey key, Throwable error) {
-        update(key, BotChannelStatus.ERROR,
-                ObjectUtil.isNull(error) ? null : error.getMessage());
+        update(key, BotChannelStatus.ERROR, ObjectUtil.isNull(error) ? null : error.getMessage());
     }
 
     public void unregister(String instanceId) {
@@ -141,15 +131,12 @@ public class BotChannelRegistry {
     }
 
     public List<BotChannelSnapshot> snapshots() {
-        return channels.values().stream()
-                .map(MutableChannel::snapshot)
-                .sorted(Comparator.comparing(BotChannelSnapshot::instanceId))
-                .toList();
+        return channels.values().stream().map(MutableChannel::snapshot)
+            .sorted(Comparator.comparing(BotChannelSnapshot::instanceId)).toList();
     }
 
     /**
-     * 订阅运行状态变化。订阅者只收到实际状态或错误信息变化，避免重连调度造成
-     * 大量重复事件；连接关闭后由订阅者显式释放。
+     * 订阅运行状态变化。订阅者只收到实际状态或错误信息变化，避免重连调度造成 大量重复事件；连接关闭后由订阅者显式释放。
      */
     public Subscription subscribe(Consumer<BotChannelSnapshot> listener) {
         Assert.notNull(listener, "listener must not be null");
@@ -190,18 +177,15 @@ public class BotChannelRegistry {
         private volatile Instant statusChangedAt = Instant.now();
         private volatile String lastError;
 
-        private MutableChannel(String instanceId,
-                               BotChannelKey key,
-                               Set<BotChannelCapability> capabilities,
-                               BotChannelStatus status) {
+        private MutableChannel(String instanceId, BotChannelKey key, Set<BotChannelCapability> capabilities,
+            BotChannelStatus status) {
             this.instanceId = instanceId;
             this.key = key;
             this.capabilities = capabilities;
             this.status = status;
         }
 
-        private BotChannelSnapshot update(
-                BotChannelStatus status, String error) {
+        private BotChannelSnapshot update(BotChannelStatus status, String error) {
             stateLock.lock();
             try {
                 if (this.status == BotChannelStatus.DISABLED) {
@@ -226,8 +210,7 @@ public class BotChannelRegistry {
         }
 
         private BotChannelSnapshot snapshot() {
-            return new BotChannelSnapshot(
-                    instanceId, key, capabilities, status, statusChangedAt, lastError);
+            return new BotChannelSnapshot(instanceId, key, capabilities, status, statusChangedAt, lastError);
         }
     }
 

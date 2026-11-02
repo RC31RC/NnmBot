@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1/bot-commands")
+@RequestMapping("/api/admin/bot-commands")
 public class BotCommandManagementController {
 
     @Resource
@@ -35,87 +35,57 @@ public class BotCommandManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotCommandVO>> commands(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<BotCommandVO>> commands(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandVO(service.commands()));
     }
 
     @PutMapping("/{code}")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> update(
-            @PathVariable
-            String code,
-                                    @Valid
-                                    @RequestBody
-                                    BotCommandSaveDTO request) {
+    public ApiResponse<Void> update(@PathVariable String code, @Valid @RequestBody BotCommandSaveDTO request) {
         service.update(code, request);
         return ApiResponse.ok();
     }
 
     @PostMapping("/{code}/robot-roles/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotCommandRoleVO>> roles(
-            @PathVariable
-            String code,
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<BotCommandRoleVO>> roles(@PathVariable String code,
+        @RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandRoleVO(service.roles(code)));
     }
 
     @PutMapping("/{code}/robot-roles")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> updateRoles(
-            @PathVariable
-            String code,
-            @Valid
-            @RequestBody
-            BotCommandRoleSaveDTO request) {
+    public ApiResponse<Void> updateRoles(@PathVariable String code, @Valid @RequestBody BotCommandRoleSaveDTO request) {
         service.updateRoles(code, request);
         return ApiResponse.ok();
     }
 
     @PostMapping("/{code}/system-role-ids/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<Long>> systemRoleIds(
-            @PathVariable
-            String code,
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<Long>> systemRoleIds(@PathVariable String code,
+        @RequestBody(required = false) EmptyRequest ignored) {
         // 角色详情复用系统管理的 /roles；这里仅返回命令已绑定的主键。
         return ApiResponse.ok(service.systemRoleIds(code));
     }
 
     @PutMapping("/{code}/system-roles")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> updateSystemRoles(
-            @PathVariable
-            String code,
-            @Valid
-            @RequestBody
-            BotCommandSystemRoleSaveDTO request) {
+    public ApiResponse<Void> updateSystemRoles(@PathVariable String code,
+        @Valid @RequestBody BotCommandSystemRoleSaveDTO request) {
         service.updateSystemRoles(code, request);
         return ApiResponse.ok();
     }
 
     @PostMapping("/{code}/cost/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<BotCommandCostVO> cost(
-            @PathVariable
-            String code,
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<BotCommandCostVO> cost(@PathVariable String code,
+        @RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandCostVO(service.cost(code)));
     }
 
     @PutMapping("/{code}/cost")
     @SaCheckPermission("bot:command:update")
-    public ApiResponse<Void> updateCost(
-            @PathVariable
-            String code,
-            @Valid
-            @RequestBody
-            BotCommandCostSaveDTO request) {
+    public ApiResponse<Void> updateCost(@PathVariable String code, @Valid @RequestBody BotCommandCostSaveDTO request) {
         service.updateCost(code, request);
         return ApiResponse.ok();
     }

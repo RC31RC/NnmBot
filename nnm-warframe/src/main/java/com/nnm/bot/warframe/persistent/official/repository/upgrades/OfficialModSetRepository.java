@@ -4,7 +4,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.upgrades.OfficialMod
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 
-/** upgrades/mod-sets.json 主表数据访问；由生成器和契约测试共同维护。 */
+/** upgrades/mod-sets.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
 public interface OfficialModSetRepository extends OfficialMainRepository<OfficialModSetRoot> {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。

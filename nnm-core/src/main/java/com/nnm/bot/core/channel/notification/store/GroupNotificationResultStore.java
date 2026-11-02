@@ -25,15 +25,18 @@ public class GroupNotificationResultStore {
     }
 
     public Map<UUID, GroupNotificationResult> findAll(Collection<UUID> ids) {
-        Map<String, GroupNotificationResult> values = states.getAll(ids.stream().map(this::key).toList(), GroupNotificationResult.class);
+        Map<String, GroupNotificationResult> values =
+            states.getAll(ids.stream().map(this::key).toList(), GroupNotificationResult.class);
         return ids.stream().filter(id -> values.containsKey(key(id)))
-                .filter(id -> values.get(key(id)).status() != GroupResultStatus.IN_PROGRESS)
-                .collect(Collectors.toMap(id -> id, id -> values.get(key(id))));
+            .filter(id -> values.get(key(id)).status() != GroupResultStatus.IN_PROGRESS)
+            .collect(Collectors.toMap(id -> id, id -> values.get(key(id))));
     }
 
     public void save(UUID id, GroupNotificationResult result) {
         states.put(key(id), result, properties.retention());
     }
 
-    private String key(UUID id) { return "group-notification-result:" + id; }
+    private String key(UUID id) {
+        return "group-notification-result:" + id;
+    }
 }

@@ -23,6 +23,7 @@ public class WarframeItemRelationServiceImpl implements WarframeItemRelationServ
 
     /**
      * 按资料类型和关键词查询物品组件及所需数量。
+     *
      * @param parentType 父记录类型。
      * @param keyword 筛选使用的关键词。
      * @return 组件或材料的展示条目组成的列表。
@@ -31,12 +32,14 @@ public class WarframeItemRelationServiceImpl implements WarframeItemRelationServ
     public List<ComponentVO> components(Category parentType, String keyword) {
         List<ComponentVO> result = new ArrayList<>();
         for (var root : (parentType == null ? WarframeCommandCatalog.relationParents().stream()
-                .flatMap(type -> data.find(type, keyword).stream()).toList() : data.find(parentType, keyword))) result.addAll(mapper.components(root));
+            .flatMap(type -> data.find(type, keyword).stream()).toList() : data.find(parentType, keyword)))
+            result.addAll(mapper.components(root));
         return result;
     }
 
     /**
      * 按资料类型和关键词查询物品的已采纳掉落来源。
+     *
      * @param parentType 父记录类型。
      * @param keyword 筛选使用的关键词。
      * @return 单条掉落来源的展示内容组成的列表。
@@ -45,7 +48,8 @@ public class WarframeItemRelationServiceImpl implements WarframeItemRelationServ
     public List<DropVO> drops(Category parentType, String keyword) {
         List<DropVO> result = new ArrayList<>();
         for (var root : (parentType == null ? WarframeCommandCatalog.relationParents().stream()
-                .flatMap(type -> data.find(type, keyword).stream()).toList() : data.find(parentType, keyword))) result.addAll(mapper.drops(root));
+            .flatMap(type -> data.find(type, keyword).stream()).toList() : data.find(parentType, keyword)))
+            result.addAll(mapper.drops(root));
         return result;
     }
 

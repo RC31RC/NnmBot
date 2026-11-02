@@ -1,181 +1,132 @@
 package com.nnm.bot.core.plugin.execution;
 
-import com.nnm.bot.core.plugin.model.CommandAccessDecision;
-import com.nnm.bot.core.plugin.model.CommandAttachment;
-import com.nnm.bot.core.plugin.model.DeliveryReport;
-import cn.hutool.core.util.ObjectUtil;
-
+import com.nnm.bot.common.resource.ResourceScope;
 import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
 import com.nnm.bot.core.plugin.api.CommandAccessPolicy;
-import com.nnm.bot.core.plugin.api.CommandCostGuard;
 import com.nnm.bot.core.plugin.api.CommandCooldownGuard;
+import com.nnm.bot.core.plugin.api.CommandCostGuard;
+import com.nnm.bot.core.plugin.model.CommandAccessDecision;
 import com.nnm.bot.core.plugin.model.CommandCostReservation;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
 import com.nnm.bot.core.plugin.model.CommandMatch;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
-import com.nnm.bot.core.plugin.response.CommandResponseDispatcher;
-import com.nnm.bot.core.plugin.response.ReplyDeliveryException;
+import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import io.github.rdt.lock.RdtLock;
 import jakarta.annotation.Resource;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Locale;
-
-/**
- * 命令统一执行链：配置、能力权限、冷却、可选积分、插件和响应。
- */
+/** 命令执行边界：事务外准入和准备，事务内原子结算积分及业务写入。 */
 @Slf4j
 @Component
 public class CommandExecutionPipeline {
 
-    @Resource
-    private CommandResponseDispatcher responseDispatcher;
+    /** 权限实现由 admin 提供；core 独立运行时仅放行系统命令。 */
     @Resource
     private ObjectProvider<CommandAccessPolicy> accessPolicyProvider;
+    /** 准备完成后按稳定命令码复核最新配置，禁用或移除立即生效。 */
     @Resource
-    private ObjectProvider<CommandCooldownGuard> cooldownGuardProvider;
+    private CommandRegistry registry;
+    /** 冷却只在准入时消耗一次，事务内复核不再次申请。 */
     @Resource
-    private ObjectProvider<CommandCostGuard> costGuardProvider;
+    private CommandCooldownGuard cooldownGuard;
+    /** 积分预扣、业务结果结算及独立投递补偿。 */
+    @Resource
+    private CommandCostGuard costGuard;
+    /** 同群同机的文字轮次关联与原子认领。 */
     @Resource
     private GroupCommandCoordinator coordinator;
-    /** 保留显式身份依赖，成员建立只在写入边界完成。 */
-    @Resource
-    private BotGroupMemberIdentityResolver groupMemberIdentityResolver;
 
     /**
-     * 按固定顺序执行访问控制、冷却、积分预占、插件处理和响应发送。
+     * 在准备前检查权限并认领，防止同轮回执重复下载、查询引用或 OCR。
      *
-     * <p>成功奖励在插件完成后结算，使最终响应可以包含变更后的余额；
-     * 业务失败或必要内容确定未发送时退回预扣；部分接受、未知、可选增强及清理失败不退款。
-     * 成功奖励属于业务结算，不因平台回执未知而撤销。</p>
+     * @param match 已按现有文字规则关联的命令
+     * @return 是否取得本次执行权；失败者不进入准备或业务事务
      */
-    public void execute(CommandMatch match) {
-        RuntimeCommand command = match.command();
+    public boolean admit(CommandMatch match) {
+        if (!allowed(match))
+            return false;
         BotMessageContext context = match.invocation().context();
-        CommandDescriptor descriptor = command.descriptor();
-        CommandExecutionConfiguration configuration = command.configuration();
-        if (!configuration.enabled()) {
-            log.info("Command skipped: disabled command={} messageId={}", descriptor.code(), context.messageId());
-            return;
-        }
-
-        if (coordinator != null && coordinator.shouldIgnore(match)) {
-            log.info("Command skipped: member identity policy command={} messageId={}", descriptor.code(), context.messageId());
-            return;
-        }
-
-        CommandAccessPolicy accessPolicy = this.accessPolicyProvider.getIfAvailable();
-        if (ObjectUtil.isNull(accessPolicy)) {
-            String commandCode = descriptor.code().strip().toLowerCase(Locale.ROOT);
-            if (!SystemCommandCodes.ALL.contains(commandCode)) {
-                // 管理模块或权限策略装配异常时必须默认拒绝，不能让业务命令绕过能力角色校验。
-                log.warn("Command [{}] rejected because no access policy is available for sender [{}]",
-                        descriptor.code(), context.senderId());
-                return;
-            }
-        } else {
-            CommandAccessDecision accessDecision = accessPolicy.check(context, descriptor, configuration);
-            if (!accessDecision.allowed()) {
-                log.info("Command [{}] rejected by access policy for sender [{}]: {}",
-                        descriptor.code(), context.senderId(), accessDecision.reason());
-                return;
-            }
-        }
-
-        // An unauthorized receiver must not consume the shared execution claim.
         if (coordinator != null && !coordinator.claim(context)) {
-            log.info("Command skipped: execution already claimed command={} messageId={}", descriptor.code(), context.messageId());
             coordinator.supplementBindingIfNeeded(match);
-            return;
+            return false;
         }
-
-        CommandCooldownGuard cooldownGuard = this.cooldownGuardProvider.getIfAvailable();
-        if (ObjectUtil.isNotNull(cooldownGuard)
-                && !cooldownGuard.tryAcquire(context, descriptor, configuration.cooldownSeconds())) {
-            log.info("Command [{}] is cooling down for sender [{}]",
-                    descriptor.code(), context.senderId());
-            return;
-        }
-
-        CommandCostGuard costGuard = this.costGuardProvider.getIfAvailable();
-        CommandCostReservation reservation = ObjectUtil.isNull(costGuard)
-                ? CommandCostReservation.none()
-                : costGuard.reserve(context, descriptor);
-        if (ObjectUtil.isNull(reservation) || !reservation.allowed()) {
-            if (ObjectUtil.isNotNull(reservation) && ObjectUtil.isNotNull(reservation.message())
-                    && !reservation.message().isBlank()) {
-                log.info("Command [{}] rejected by cost guard: {}",
-                        descriptor.code(), reservation.message());
-                this.responseDispatcher.dispatchNotice(context, reservation.message());
-            }
-            return;
-        }
-
-        CommandResult result;
-        try {
-            result = command.plugin().handle(match.invocation());
-        } catch (RuntimeException | Error failure) {
-            refund(costGuard, reservation, failure);
-            throw failure;
-        }
-        if (result == null) {
-            refund(costGuard, reservation, null);
-            return;
-        }
-        if (!result.successful()) {
-            try {
-                refund(costGuard, reservation, null);
-            } catch (RuntimeException | Error failure) {
-                // A rejected result has not reached the dispatcher; close its attachments if refund fails first.
-                closeResultResources(result, failure);
-                throw failure;
-            }
-        } else if (costGuard != null) {
-            try {
-                result = costGuard.commit(context, descriptor, reservation, result);
-            } catch (RuntimeException | Error failure) {
-                // 结果尚未交给分发器，结算异常时资源仍归执行链所有。
-                closeResultResources(result, failure);
-                refund(costGuard, reservation, failure);
-                throw failure;
-            }
-        }
-        try {
-            DeliveryReport delivery = responseDispatcher.dispatch(context, command, result);
-            if (result.successful() && delivery.definitelyUnsent()) refund(costGuard, reservation, null);
-            log.info("Command response command={} messageId={} businessSuccess={} delivery={}",
-                    descriptor.code(), context.messageId(), result.successful(), delivery.outcome());
-        } catch (ReplyDeliveryException failure) {
-            if (result.successful() && failure.report().definitelyUnsent()) refund(costGuard, reservation, failure);
-            throw failure;
-        }
+        return cooldownGuard.tryAcquire(context, match.command().descriptor(),
+            match.command().configuration().cooldownSeconds());
     }
 
-    private void refund(CommandCostGuard guard, CommandCostReservation reservation, Throwable failure) {
-        if (guard == null || !reservation.reserved()) return;
-        if (failure == null) {
-            guard.refund(reservation, null);
-            return;
+    /**
+     * 经 Spring 代理执行业务写事务，扣费、Plugin 写入与奖励共同提交或回滚。
+     *
+     * @param prepared 已完成事务外准备并绑定具体输入类型的命令
+     * @param resources 调用入口拥有的资源，生命周期覆盖事务代理最终提交及回复发送
+     * @return 业务结果与积分引用；准备期间配置失效时返回 null
+     */
+    @RdtLock
+    @Transactional(rollbackFor = Exception.class)
+    public CommandExecutionOutcome execute(PreparedCommand<?> prepared, ResourceScope resources) {
+        CommandMatch initial = prepared.match();
+        RuntimeCommand latest = registry.command(initial.invocation().commandCode()).orElse(null);
+        if (latest == null || latest.plugin() != prepared.plugin())
+            return null;
+        CommandMatch match = new CommandMatch(latest, initial.invocation());
+        // 准备可能耗时；只复核条件，不再次认领或消耗冷却。
+        if (!allowed(match))
+            return null;
+        BotMessageContext context = match.invocation().context();
+        CommandDescriptor descriptor = match.command().descriptor();
+        CommandCostReservation reservation = costGuard.reserve(context, descriptor);
+        if (reservation == null || !reservation.allowed()) {
+            String message = reservation == null ? null : reservation.message();
+            throw new CommandRejectedException(
+                message == null || message.isBlank() ? null : CommandResult.rejected(message));
         }
-        try {
-            guard.refund(reservation, failure);
-        } catch (RuntimeException refundFailure) {
-            failure.addSuppressed(refundFailure);
+        CommandResult result = prepared.execute();
+        if (result != null)
+            resources.addAll(result.resources());
+        if (result == null || !result.successful())
+            throw new CommandRejectedException(result);
+        result = costGuard.commit(context, descriptor, reservation, result);
+        if (result != null)
+            resources.addAll(result.resources());
+        if (result == null || !result.successful()) {
+            throw new IllegalStateException("积分结算必须返回成功的命令结果");
         }
+        return new CommandExecutionOutcome(result, reservation);
     }
 
-    private void closeResultResources(CommandResult result, Throwable failure) {
-        for (CommandAttachment resource : result.resources()) {
-            try {
-                resource.close();
-            } catch (RuntimeException cleanup) {
-                failure.addSuppressed(cleanup);
-            }
+    /**
+     * 业务已提交、必要回复确定未发送时，按原扣费引用独立幂等退回消耗。
+     *
+     * @param reservation 已提交的积分预扣引用
+     * @param failure 投递异常；无异常的未发送报告可为 null
+     */
+    @RdtLock
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void refundUnsentCommandCost(CommandCostReservation reservation, Throwable failure) {
+        if (reservation.reserved())
+            costGuard.refund(reservation, failure);
+    }
+
+    /** 检查当前实例和用户是否仍允许执行；不申请锁、扣费、认领或消耗冷却。 */
+    private boolean allowed(CommandMatch match) {
+        RuntimeCommand command = match.command();
+        CommandExecutionConfiguration configuration = command.configuration();
+        if (!configuration.enabled() || (coordinator != null && coordinator.shouldIgnore(match)))
+            return false;
+        CommandAccessPolicy policy = accessPolicyProvider.getIfAvailable();
+        if (policy == null) {
+            return SystemCommandCodes.ALL.contains(command.descriptor().code().strip().toLowerCase(Locale.ROOT));
         }
+        CommandAccessDecision decision =
+            policy.check(match.invocation().context(), command.descriptor(), configuration);
+        return decision.allowed();
     }
 }

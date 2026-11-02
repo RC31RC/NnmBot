@@ -46,8 +46,7 @@ public class HttpClientProperties {
     /** 是否发布 HTTP 客户端 Micrometer 指标 */
     private boolean metricsEnabled = true;
     /**
-     * 是否跳过 SSL 证书校验。仅用于定位本地网络或代理证书问题，
-     * 正式环境必须保持关闭。
+     * 是否跳过 SSL 证书校验。仅用于定位本地网络或代理证书问题， 正式环境必须保持关闭。
      */
     private boolean trustAllCerts = false;
 
@@ -188,21 +187,17 @@ public class HttpClientProperties {
         requireNotNegative(retryBackoff, "nnm.http.retry-backoff");
         requireNotNegative(retryMaxBackoff, "nnm.http.retry-max-backoff");
         if (retryMaxBackoff.compareTo(retryBackoff) < 0) {
-            throw new IllegalArgumentException(
-                    "nnm.http.retry-max-backoff must not be shorter than retry-backoff");
+            throw new IllegalArgumentException("nnm.http.retry-max-backoff must not be shorter than retry-backoff");
         }
         requireNotNegative(slowRequestThreshold, "nnm.http.slow-request-threshold");
         if (maxPayloadLogLength < 128 || maxPayloadLogLength > 65536) {
-            throw new IllegalArgumentException(
-                    "nnm.http.max-payload-log-length must be between 128 and 65536");
+            throw new IllegalArgumentException("nnm.http.max-payload-log-length must be between 128 and 65536");
         }
         if (maxResponseBodyBytes < 1 || maxResponseBodyBytes > 1024 * 1024 * 1024L) {
-            throw new IllegalArgumentException(
-                    "nnm.http.max-response-body-bytes must be between 1 and 1073741824");
+            throw new IllegalArgumentException("nnm.http.max-response-body-bytes must be between 1 and 1073741824");
         }
         if (maxDownloadBytes < 1 || maxDownloadBytes > 4 * 1024 * 1024 * 1024L) {
-            throw new IllegalArgumentException(
-                    "nnm.http.max-download-bytes must be between 1 and 4294967296");
+            throw new IllegalArgumentException("nnm.http.max-download-bytes must be between 1 and 4294967296");
         }
         requireText(requestIdHeader, "nnm.http.request-id-header");
         requireText(requestIdMdcKey, "nnm.http.request-id-mdc-key");

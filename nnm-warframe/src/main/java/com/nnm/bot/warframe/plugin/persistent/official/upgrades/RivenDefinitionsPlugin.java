@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-@BotPluginCommand(code = WarframeCommandCodes.RIVEN_DEFINITIONS, matchType = MatchType.PREFIX,
-        name = "紫卡属性与挑战", gameCode = "warframe", order = 77)
-public final class RivenDefinitionsPlugin extends BotPlugin {
+@BotPluginCommand(code = WarframeCommandCodes.RIVEN_DEFINITIONS, matchType = MatchType.PREFIX, name = "紫卡属性与挑战",
+    gameCode = "warframe", order = 77)
+public final class RivenDefinitionsPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -44,25 +44,29 @@ public final class RivenDefinitionsPlugin extends BotPlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
         String mode = "attributes";
         int page = 1;
         Set<String> seen = new HashSet<>();
         while (true) {
             Matcher matcher = OPTION.matcher(query);
-            if (!matcher.find()) break;
-            if (!seen.add(matcher.group(1))) return CommandResult.rejected("参数不能重复");
+            if (!matcher.find())
+                break;
+            if (!seen.add(matcher.group(1)))
+                return CommandResult.rejected("参数不能重复");
             if (matcher.group(1).equals("mode")) {
                 mode = matcher.group(2);
                 if (!Set.of("attributes", "challenges").contains(mode)) {
                     return CommandResult.rejected("mode 只支持 attributes / challenges");
                 }
             } else {
-                if (!matcher.group(2).matches("[0-9]+")) return CommandResult.rejected("页码必须为正整数");
+                if (!matcher.group(2).matches("[0-9]+"))
+                    return CommandResult.rejected("页码必须为正整数");
                 try {
                     page = Integer.parseInt(matcher.group(2));
                 } catch (NumberFormatException exception) {
@@ -71,34 +75,39 @@ public final class RivenDefinitionsPlugin extends BotPlugin {
             }
             query = query.substring(0, matcher.start()).trim();
         }
-        if (page < 1 || UNKNOWN_OPTION.matcher(query).find()) return CommandResult.rejected("页码或参数不合法");
-        if (query.length() > 200) return CommandResult.rejected("查询内容过长，请缩短到 200 字以内");
-        WarframeRivenDefinitionVO display = WarframeRivenDefinitionVO.page(query, mode, definitionService.find(query, mode), page);
-        StringBuilder text = new StringBuilder(mode.equals("attributes") ? "紫卡属性基准" : "紫卡挑战")
-                .append("：").append(display.pagination());
+        if (page < 1 || UNKNOWN_OPTION.matcher(query).find())
+            return CommandResult.rejected("页码或参数不合法");
+        if (query.length() > 200)
+            return CommandResult.rejected("查询内容过长，请缩短到 200 字以内");
+        WarframeRivenDefinitionVO display =
+            WarframeRivenDefinitionVO.page(query, mode, definitionService.find(query, mode), page);
+        StringBuilder text =
+            new StringBuilder(mode.equals("attributes") ? "紫卡属性基准" : "紫卡挑战").append("：").append(display.pagination());
         for (EntryVO item : display.items()) {
             text.append("\n").append(item.modName());
             if (item.attribute() != null) {
                 AttributeVO attribute = item.attribute();
                 text.append("\n").append(attribute.tag()).append(" · 正属性：").append(flag(attribute.canBeBuff()))
-                        .append(" · 负属性：").append(flag(attribute.canBeCurse()));
+                    .append(" · 负属性：").append(flag(attribute.canBeCurse()));
                 for (VO value : attribute.values()) {
                     text.append("\n").append(value.description() == null ? "未提供本地化描述" : value.description())
-                            .append(" · 基础系数：").append(value.baseCoefficient().toPlainString());
+                        .append(" · 基础系数：").append(value.baseCoefficient().toPlainString());
                 }
-                if (CollUtil.isEmpty(attribute.values())) text.append("\n未采纳数值定义");
+                if (CollUtil.isEmpty(attribute.values()))
+                    text.append("\n未采纳数值定义");
             } else {
                 ChallengeVO challenge = item.challenge();
-                text.append("\n").append(challenge.description() == null
-                        ? challenge.challengeKey() : challenge.description());
+                text.append("\n")
+                    .append(challenge.description() == null ? challenge.challengeKey() : challenge.description());
                 if (challenge.countMin() != null) {
                     text.append(" · 数量：").append(challenge.countMin()).append(" ~ ").append(challenge.countMax());
                 }
                 challenge.complications().forEach(condition -> text.append("\n附加条件：")
-                        .append(condition.description() == null ? condition.complicationKey() : condition.description()));
+                    .append(condition.description() == null ? condition.complicationKey() : condition.description()));
             }
         }
-        if (CollUtil.isEmpty(display.items())) text.append("\n没有找到匹配的已采纳定义");
+        if (CollUtil.isEmpty(display.items()))
+            text.append("\n没有找到匹配的已采纳定义");
         return CommandResult.view("warframe.riven-definitions", text.toString(), display);
     }
 

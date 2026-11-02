@@ -14,6 +14,6 @@ import java.time.Instant;
  * @param planet 经代码簿解析的星球，用于高效筛选
  * @param boundsJson 上游边界信息；arbys.txt 未提供时保留空对象，不推算补造
  */
-public record ArbitrationScheduleEntryDTO(
-        String id, Instant activation, Instant expiry, String node, String missionType,
-        String enemy, String planet, String boundsJson) {}
+public record ArbitrationScheduleEntryDTO(String id, Instant activation, Instant expiry, String node,
+    String missionType, String enemy, String planet, String boundsJson) {
+}

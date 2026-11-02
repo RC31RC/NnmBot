@@ -15,8 +15,7 @@ import java.util.Objects;
  */
 public final class BusinessAssert {
 
-    private BusinessAssert() {
-    }
+    private BusinessAssert() {}
 
     public static void isTrue(boolean expression, ErrorCode errorCode) {
         isTrue(expression, errorCode, errorCode.getMessage());
@@ -64,8 +63,7 @@ public final class BusinessAssert {
         return notEmpty(value, errorCode, errorCode.getMessage());
     }
 
-    public static <T extends Collection<?>> T notEmpty(
-            T value, ErrorCode errorCode, String message) {
+    public static <T extends Collection<?>> T notEmpty(T value, ErrorCode errorCode, String message) {
         if (CollUtil.isEmpty(value)) {
             throw new BusinessException(errorCode, message);
         }
@@ -76,8 +74,7 @@ public final class BusinessAssert {
         isTrue(Objects.equals(actual, expected), errorCode, message);
     }
 
-    public static void notEquals(
-            Object actual, Object expected, ErrorCode errorCode, String message) {
+    public static void notEquals(Object actual, Object expected, ErrorCode errorCode, String message) {
         isFalse(Objects.equals(actual, expected), errorCode, message);
     }
 }

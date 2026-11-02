@@ -3,8 +3,8 @@ package com.nnm.bot.warframe.persistent.official.pojo.vo.upgrades;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record WarframeRivenDefinitionVO(
-        String query, String mode, List<EntryVO> items, int page, int totalPages, int totalCount) {
+public record WarframeRivenDefinitionVO(String query, String mode, List<EntryVO> items, int page, int totalPages,
+    int totalCount) {
     /**
      * 构造紫卡定义展示对象，并保存初始化参数。
      *
@@ -29,11 +29,11 @@ public record WarframeRivenDefinitionVO(
      * @return 紫卡定义的分页视图。
      */
     public static WarframeRivenDefinitionVO page(String query, String mode, List<EntryVO> entries, int page) {
-        if (page < 1) throw new IllegalArgumentException("Page must be positive");
-        int from = (int) Math.min((page - 1L) * 6, entries.size());
-        return new WarframeRivenDefinitionVO(query, mode,
-                entries.subList(from, Math.min(from + 6, entries.size())),
-                page, Math.max(1, (int) ((entries.size() + 5L) / 6)), entries.size());
+        if (page < 1)
+            throw new IllegalArgumentException("Page must be positive");
+        int from = (int)Math.min((page - 1L) * 6, entries.size());
+        return new WarframeRivenDefinitionVO(query, mode, entries.subList(from, Math.min(from + 6, entries.size())),
+            page, Math.max(1, (int)((entries.size() + 5L) / 6)), entries.size());
     }
 
     /**
@@ -45,12 +45,12 @@ public record WarframeRivenDefinitionVO(
         return page + "/" + totalPages + " 页，共 " + totalCount + " 条";
     }
 
-    public record EntryVO(String modKey, String modName, String recordKey, String sourceCode,
-                        AttributeVO attribute, ChallengeVO challenge) {
+    public record EntryVO(String modKey, String modName, String recordKey, String sourceCode, AttributeVO attribute,
+        ChallengeVO challenge) {
     }
 
     public record AttributeVO(String tag, String prefixKey, String prefix, String suffixKey, String suffix,
-                            Boolean canBeBuff, Boolean canBeCurse, List<VO> values) {
+        Boolean canBeBuff, Boolean canBeCurse, List<VO> values) {
         /**
          * 构造属性展示对象，并保存初始化参数。
          *
@@ -69,13 +69,12 @@ public record WarframeRivenDefinitionVO(
     }
 
     public record VO(BigDecimal baseCoefficient, String localizationKey, String description,
-                        Boolean reverseValueSymbol) {
+        Boolean reverseValueSymbol) {
     }
 
     public record ChallengeVO(String challengeKey, String descriptionKey, String description,
-                            String singleDescriptionKey, String singleDescription,
-                            Integer countMin, Integer countMax, BigDecimal complicationChance,
-                            List<ComplicationVO> complications) {
+        String singleDescriptionKey, String singleDescription, Integer countMin, Integer countMax,
+        BigDecimal complicationChance, List<ComplicationVO> complications) {
         /**
          * 构造挑战展示对象，并保存初始化参数。
          *
@@ -95,6 +94,6 @@ public record WarframeRivenDefinitionVO(
     }
 
     public record ComplicationVO(String complicationKey, String descriptionKey, String description,
-                               BigDecimal countMultiplier, BigDecimal selectionWeight) {
+        BigDecimal countMultiplier, BigDecimal selectionWeight) {
     }
 }

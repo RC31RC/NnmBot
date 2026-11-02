@@ -9,22 +9,13 @@ import java.util.Map;
 /**
  * Warframe Market 订单中返回的用户概要。
  *
- * <p>用户状态和最后在线时间属于订单查询时的动态信息，不能从本地物品
- * 数据推断，因此与物品数据分开建模。</p>
+ * <p>
+ * 用户状态和最后在线时间属于订单查询时的动态信息，不能从本地物品 数据推断，因此与物品数据分开建模。
+ * </p>
  */
-public record WarframeMarketUserDTO(
-        String id,
-        String ingameName,
-        String slug,
-        Integer reputation,
-        String platform,
-        boolean crossplay,
-        String locale,
-        String status,
-        String avatar,
-        String lastSeen,
-        Map<String, Object> activity,
-        Map<String, Object> rawFields) {
+public record WarframeMarketUserDTO(String id, String ingameName, String slug, Integer reputation, String platform,
+    boolean crossplay, String locale, String status, String avatar, String lastSeen, Map<String, Object> activity,
+    Map<String, Object> rawFields) {
 
     /**
      * 构造市场用户传输对象，并保存初始化参数。
@@ -90,8 +81,6 @@ public record WarframeMarketUserDTO(
      * @return 以本方法约定的业务键组织的数据映射。
      */
     private static Map<String, Object> immutable(Map<String, Object> values) {
-        return CollUtil.isEmpty(values)
-                ? Map.of()
-                : Collections.unmodifiableMap(new LinkedHashMap<>(values));
+        return CollUtil.isEmpty(values) ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 }

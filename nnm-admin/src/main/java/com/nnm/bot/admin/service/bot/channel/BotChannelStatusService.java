@@ -6,5 +6,7 @@ import java.util.List;
 public interface BotChannelStatusService {
     List<BotChannelSnapshot> snapshots();
 
-    default boolean isDistributed() { return false; }
+    default boolean isDistributed() {
+        return false;
+    }
 }

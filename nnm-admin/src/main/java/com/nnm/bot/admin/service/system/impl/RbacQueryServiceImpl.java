@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.system.impl;
 
+import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.admin.repository.system.SysUserRepository.IdOnly;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -52,193 +53,111 @@ public class RbacQueryServiceImpl implements RbacQueryService {
 
     @Override
     public PageResult<UserListDTO> users(long operatorId, String username, int current, int size) {
-        SysUser operator = userRepository.findWithAuthoritiesById(operatorId)
-                .filter(SysUser::isEnabled)
-                .orElseThrow(() -> new BusinessException(401, "账号不可用"));
-        boolean canViewAll = operator.getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .anyMatch(role -> role.getDataScope() == DataScope.ALL);
+        SysUser operator = userRepository.findWithAuthoritiesById(operatorId).filter(SysUser::isEnabled)
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
+        boolean canViewAll = operator.getRoles().stream().filter(SysRole::isEnabled)
+            .anyMatch(role -> role.getDataScope() == DataScope.ALL);
         if (!canViewAll) {
-            boolean matches = ObjectUtil.isNull(username)
-                    || username.isBlank()
-                    || operator.getUsername().toLowerCase().contains(username.trim().toLowerCase());
-            List<UserListDTO> records = current <= 1 && matches
-                    ? List.of(toUserItem(operator, operator))
-                    : List.of();
-            return PageResult.of(
-                    records,
-                    Math.max(current, 1),
-                    Math.min(Math.max(size, 1), 100),
-                    matches ? 1 : 0
-            );
+            boolean matches = ObjectUtil.isNull(username) || username.isBlank()
+                || operator.getUsername().toLowerCase().contains(username.trim().toLowerCase());
+            List<UserListDTO> records = current <= 1 && matches ? List.of(toUserItem(operator, operator)) : List.of();
+            return PageResult.of(records, Math.max(current, 1), Math.min(Math.max(size, 1), 100), matches ? 1 : 0);
         }
 
         PageRequest pageable = pageable(current, size, "createdAt");
-        Page<IdOnly> page = StrUtil.isBlank(username)
-                ? userRepository.findPageBy(pageable)
-                : userRepository.findPageByUsernameContainingIgnoreCase(username.trim(), pageable);
+        Page<IdOnly> page = StrUtil.isBlank(username) ? userRepository.findPageBy(pageable)
+            : userRepository.findPageByUsernameContainingIgnoreCase(username.trim(), pageable);
 
-        List<Long> userIds = page.getContent().stream()
-                .map(SysUserRepository.IdOnly::getId)
-                .toList();
+        List<Long> userIds = page.getContent().stream().map(SysUserRepository.IdOnly::getId).toList();
         Map<Long, SysUser> usersById = userRepository.findPageDetailsByIdIn(userIds).stream()
-                .collect(Collectors.toMap(SysUser::getId, user -> user));
-        List<UserListDTO> records = userIds.stream()
-                .map(usersById::get)
-                .filter(Objects::nonNull)
-                .map(user -> toUserItem(user, operator))
-                .toList();
-        return PageResult.of(
-                records,
-                page.getNumber() + 1,
-                page.getSize(),
-                page.getTotalElements()
-        );
+            .collect(Collectors.toMap(SysUser::getId, user -> user));
+        List<UserListDTO> records = userIds.stream().map(usersById::get).filter(Objects::nonNull)
+            .map(user -> toUserItem(user, operator)).toList();
+        return PageResult.of(records, page.getNumber() + 1, page.getSize(), page.getTotalElements());
     }
 
     @Override
     public PageResult<RoleListDTO> roles(long operatorId, String keyword, int current, int size) {
         SysUser operator = hierarchyService.operator(operatorId);
         PageRequest pageable = pageable(current, size, "createdAt");
-        Page<SysRole> page = StrUtil.isBlank(keyword)
-                ? roleRepository.findAll(pageable)
-                : roleRepository.findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
-                        keyword.trim(),
-                        keyword.trim(),
-                        pageable
-                );
+        Page<SysRole> page = StrUtil.isBlank(keyword) ? roleRepository.findAll(pageable) : roleRepository
+            .findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(keyword.trim(), keyword.trim(), pageable);
 
         List<RoleListDTO> records = page.getContent().stream()
-                .map(role -> new RoleListDTO(
-                        role.getId(),
-                        role.getName(),
-                        role.getCode(),
-                        role.getDescription(),
-                        role.isEnabled(),
-                        role.getDataScope().name(),
-                        role.getAuthorityLevel(),
-                        hierarchyService.canManageRole(operator, role),
-                        hierarchyService.canAssignRole(operator, role),
-                        role.getCreatedAt()
-                ))
-                .toList();
-        return PageResult.of(
-                records,
-                page.getNumber() + 1,
-                page.getSize(),
-                page.getTotalElements()
-        );
+            .map(role -> new RoleListDTO(role.getId(), role.getName(), role.getCode(), role.getDescription(),
+                role.isEnabled(), role.getDataScope().name(), role.getAuthorityLevel(),
+                hierarchyService.canManageRole(operator, role), hierarchyService.canAssignRole(operator, role),
+                role.getCreatedAt()))
+            .toList();
+        return PageResult.of(records, page.getNumber() + 1, page.getSize(), page.getTotalElements());
     }
 
     @Override
     public List<PermissionDTO> permissions() {
-        return permissionRepository.findAllByOrderByCodeAsc().stream()
-                .map(permission -> new PermissionDTO(
-                        permission.getId(),
-                        permission.getCode(),
-                        permission.getName(),
-                        permission.getType().name(),
-                        permission.isEnabled()
-                ))
-                .toList();
+        return permissionRepository
+            .findAllByOrderByCodeAsc().stream().map(permission -> new PermissionDTO(permission.getId(),
+                permission.getCode(), permission.getName(), permission.getType().name(), permission.isEnabled()))
+            .toList();
     }
 
     @Override
     public List<MenuDTO> menus(long userId) {
-        SysUser user = userRepository.findWithAuthoritiesById(userId)
-                .filter(SysUser::isEnabled)
-                .orElseThrow(() -> new BusinessException(401, "账号不可用"));
+        SysUser user = userRepository.findWithAuthoritiesById(userId).filter(SysUser::isEnabled)
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
 
-        Set<SysMenu> menus = user.getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .flatMap(role -> role.getMenus().stream())
-                .filter(SysMenu::isEnabled)
-                .collect(Collectors.toSet());
+        Set<SysMenu> menus = user.getRoles().stream().filter(SysRole::isEnabled)
+            .flatMap(role -> role.getMenus().stream()).filter(SysMenu::isEnabled).collect(Collectors.toSet());
 
-        Set<String> grantedPermissionCodes = user.getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .flatMap(role -> role.getPermissions().stream())
-                .filter(SysPermission::isEnabled)
-                .map(SysPermission::getCode)
-                .collect(Collectors.toSet());
+        Set<String> grantedPermissionCodes =
+            user.getRoles().stream().filter(SysRole::isEnabled).flatMap(role -> role.getPermissions().stream())
+                .filter(SysPermission::isEnabled).map(SysPermission::getCode).collect(Collectors.toSet());
 
-        Map<Long, List<SysPermission>> permissionsByMenu = permissionRepository.findAllByOrderByCodeAsc().stream()
-                .filter(SysPermission::isEnabled)
-                .filter(permission -> ObjectUtil.isNotNull(permission.getMenuId()))
+        Map<Long,
+            List<SysPermission>> permissionsByMenu = permissionRepository.findAllByOrderByCodeAsc().stream()
+                .filter(SysPermission::isEnabled).filter(permission -> ObjectUtil.isNotNull(permission.getMenuId()))
                 .filter(permission -> grantedPermissionCodes.contains(permission.getCode()))
                 .collect(Collectors.groupingBy(SysPermission::getMenuId));
 
-        Map<Long, List<SysMenu>> childrenByParent = menus.stream()
-                .filter(menu -> ObjectUtil.isNotNull(menu.getParentId()))
+        Map<Long, List<SysMenu>> childrenByParent =
+            menus.stream().filter(menu -> ObjectUtil.isNotNull(menu.getParentId()))
                 .collect(Collectors.groupingBy(SysMenu::getParentId));
 
         return menus.stream()
-                .filter(menu -> ObjectUtil.isNull(menu.getParentId()) || menus.stream()
-                        .noneMatch(parent -> Objects.equals(parent.getId(), menu.getParentId())))
-                .sorted(menuComparator())
-                .map(menu -> toMenuItem(menu, childrenByParent, permissionsByMenu))
-                .toList();
+            .filter(menu -> ObjectUtil.isNull(menu.getParentId())
+                || menus.stream().noneMatch(parent -> Objects.equals(parent.getId(), menu.getParentId())))
+            .sorted(menuComparator()).map(menu -> toMenuItem(menu, childrenByParent, permissionsByMenu)).toList();
     }
 
     @Override
     public List<MenuDTO> allMenus() {
         Set<SysMenu> menus = Set.copyOf(menuRepository.findAllByOrderBySortOrderAscIdAsc());
-        Map<Long, List<SysPermission>> permissionsByMenu = permissionRepository.findAllByOrderByCodeAsc().stream()
+        Map<Long,
+            List<SysPermission>> permissionsByMenu = permissionRepository.findAllByOrderByCodeAsc().stream()
                 .filter(permission -> ObjectUtil.isNotNull(permission.getMenuId()))
                 .collect(Collectors.groupingBy(SysPermission::getMenuId));
-        Map<Long, List<SysMenu>> childrenByParent = menus.stream()
-                .filter(menu -> ObjectUtil.isNotNull(menu.getParentId()))
+        Map<Long, List<SysMenu>> childrenByParent =
+            menus.stream().filter(menu -> ObjectUtil.isNotNull(menu.getParentId()))
                 .collect(Collectors.groupingBy(SysMenu::getParentId));
         return menus.stream()
-                .filter(menu -> ObjectUtil.isNull(menu.getParentId()) || menus.stream()
-                        .noneMatch(parent -> Objects.equals(parent.getId(), menu.getParentId())))
-                .sorted(menuComparator())
-                .map(menu -> toMenuItem(menu, childrenByParent, permissionsByMenu))
-                .toList();
+            .filter(menu -> ObjectUtil.isNull(menu.getParentId())
+                || menus.stream().noneMatch(parent -> Objects.equals(parent.getId(), menu.getParentId())))
+            .sorted(menuComparator()).map(menu -> toMenuItem(menu, childrenByParent, permissionsByMenu)).toList();
     }
 
-    private MenuDTO toMenuItem(
-            SysMenu menu,
-            Map<Long, List<SysMenu>> childrenByParent,
-            Map<Long, List<SysPermission>> permissionsByMenu
-    ) {
+    private MenuDTO toMenuItem(SysMenu menu, Map<Long, List<SysMenu>> childrenByParent,
+        Map<Long, List<SysPermission>> permissionsByMenu) {
         List<AuthDTO> authList = permissionsByMenu.getOrDefault(menu.getId(), List.of()).stream()
-                .map(permission -> new AuthDTO(
-                        permission.getId(),
-                        permission.getName(),
-                        permission.getCode(),
-                        permission.isEnabled()
-                ))
-                .toList();
+            .map(permission -> new AuthDTO(permission.getId(), permission.getName(), permission.getCode(),
+                permission.isEnabled()))
+            .toList();
         List<MenuDTO> children = childrenByParent.getOrDefault(menu.getId(), List.of()).stream()
-                .sorted(menuComparator())
-                .map(child -> toMenuItem(child, childrenByParent, permissionsByMenu))
-                .toList();
+            .sorted(menuComparator()).map(child -> toMenuItem(child, childrenByParent, permissionsByMenu)).toList();
 
-        return new MenuDTO(
-                menu.getId(),
-                menu.getParentId(),
-                menu.getPath(),
-                menu.getName(),
-                menu.getComponent(),
-                new MenuMetaDTO(
-                        menu.getTitle(),
-                        menu.getIcon(),
-                        menu.isKeepAlive(),
-                        menu.isFixedTab(),
-                        menu.isHideTab(),
-                        menu.isFullPage(),
-                        menu.isIframe(),
-                        menu.getLink(),
-                        menu.getActivePath(),
-                        menu.getTextBadge(),
-                        menu.getSortOrder(),
-                        menu.isEnabled(),
-                        !menu.isVisible(),
-                        authList.isEmpty() ? null : authList
-                ),
-                children.isEmpty() ? null : children
-        );
+        return new MenuDTO(menu.getId(), menu.getParentId(), menu.getPath(), menu.getName(), menu.getComponent(),
+            new MenuMetaDTO(menu.getTitle(), menu.getIcon(), menu.isKeepAlive(), menu.isFixedTab(), menu.isHideTab(),
+                menu.isFullPage(), menu.isIframe(), menu.getLink(), menu.getActivePath(), menu.getTextBadge(),
+                menu.getSortOrder(), menu.isEnabled(), !menu.isVisible(), authList.isEmpty() ? null : authList),
+            children.isEmpty() ? null : children);
     }
 
     private PageRequest pageable(int current, int size, String sortProperty) {
@@ -252,25 +171,12 @@ public class RbacQueryServiceImpl implements RbacQueryService {
     }
 
     private UserListDTO toUserItem(SysUser user, SysUser operator) {
-        return new UserListDTO(
-                user.getId(),
-                value(user.getAvatar()),
-                user.isEnabled() ? "1" : "4",
-                user.getUsername(),
-                value(user.getGender()),
-                ObjectUtil.isNull(user.getNickname()) ? user.getUsername() : user.getNickname(),
-                value(user.getPhone()),
-                value(user.getEmail()),
-                user.getRoles().stream()
-                        .map(SysRole::getCode)
-                        .sorted()
-                        .toList(),
-                hierarchyService.canManageUser(operator, user),
-                "system",
-                user.getCreatedAt(),
-                "system",
-                user.getUpdatedAt()
-        );
+        return new UserListDTO(user.getId(), value(user.getAvatar()), user.isEnabled() ? "1" : "4", user.getUsername(),
+            value(user.getGender()), ObjectUtil.isNull(user.getNickname()) ? user.getUsername() : user.getNickname(),
+            value(user.getPhone()), value(user.getEmail()),
+            user.getRoles().stream().map(SysRole::getCode).sorted().toList(),
+            hierarchyService.canManageUser(operator, user), "system", user.getCreatedAt(), "system",
+            user.getUpdatedAt());
     }
 
     private String value(String value) {

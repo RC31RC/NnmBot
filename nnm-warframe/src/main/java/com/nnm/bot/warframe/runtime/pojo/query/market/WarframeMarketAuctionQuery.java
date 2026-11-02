@@ -6,10 +6,8 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** 已完成武器和正负词条解析的拍卖查询，服务层负责分页。 */
-public record WarframeMarketAuctionQuery(
-        String type, String weaponName, String weaponSlug,
-        List<String> positiveStats, List<String> negativeStats, int page,
-        boolean requireNegative) {
+public record WarframeMarketAuctionQuery(String type, String weaponName, String weaponSlug, List<String> positiveStats,
+    List<String> negativeStats, int page, boolean requireNegative) {
 
     /**
      * 构造市场拍卖查询，并保存初始化参数。
@@ -21,8 +19,8 @@ public record WarframeMarketAuctionQuery(
      * @param negativeStats 负面词条统计集合。
      * @param page 从一开始的页码。
      */
-    public WarframeMarketAuctionQuery(String type, String weaponName, String weaponSlug,
-                                      List<String> positiveStats, List<String> negativeStats, int page) {
+    public WarframeMarketAuctionQuery(String type, String weaponName, String weaponSlug, List<String> positiveStats,
+        List<String> negativeStats, int page) {
         this(type, weaponName, weaponSlug, positiveStats, negativeStats, page, false);
     }
 
@@ -51,12 +49,12 @@ public record WarframeMarketAuctionQuery(
 
     /**
      * 规范化拍卖属性筛选值，去除空白和重复项。
+     *
      * @param values 待处理的值集合。
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> normalized(List<String> values) {
-        return values == null ? List.of() : values.stream()
-                .filter(value -> StrUtil.isNotBlank(value))
-                .map(value -> value.trim().toLowerCase(Locale.ROOT)).distinct().sorted().toList();
+        return values == null ? List.of() : values.stream().filter(value -> StrUtil.isNotBlank(value))
+            .map(value -> value.trim().toLowerCase(Locale.ROOT)).distinct().sorted().toList();
     }
 }

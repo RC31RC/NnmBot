@@ -29,7 +29,8 @@ public class WarframeOfficialSelectionServiceImpl implements WarframeOfficialSel
      * @return 当前独立官方记录的摘要及类型化详情组成的列表。
      */
     public List<WarframeOfficialRecordReadDTO> records(Category dataset) {
-        if (dataset == Category.RULE_SYSTEM) return systems();
+        if (dataset == Category.RULE_SYSTEM)
+            return systems();
         List<WarframeOfficialDataDomain> domains = switch (dataset) {
             case REFERENCE_RIVEN_ATTRIBUTE -> List.of(WarframeOfficialDataDomain.RIVEN_ATTRIBUTE);
             case REFERENCE_MARKET_CATALOG -> List.of(WarframeOfficialDataDomain.MARKET_ITEM);
@@ -41,7 +42,7 @@ public class WarframeOfficialSelectionServiceImpl implements WarframeOfficialSel
             case REFERENCE_ACHIEVEMENT -> List.of(WarframeOfficialDataDomain.ACHIEVEMENT);
             case RULE_TILESET -> List.of(WarframeOfficialDataDomain.TILESET);
             case REFERENCE_CODEX_OBJECT, REFERENCE_CODEX_LORE_FRAGMENT, REFERENCE_CODEX_SONG,
-                    REFERENCE_CODEX_FIGHTER_FRAME -> List.of(WarframeOfficialDataDomain.CODEX);
+                REFERENCE_CODEX_FIGHTER_FRAME -> List.of(WarframeOfficialDataDomain.CODEX);
             case MOD -> List.of(WarframeOfficialDataDomain.UPGRADE);
             case RESOURCE, FISH -> List.of(WarframeOfficialDataDomain.RESOURCES);
             case COMPANION -> List.of(WarframeOfficialDataDomain.SENTINELS);
@@ -55,17 +56,15 @@ public class WarframeOfficialSelectionServiceImpl implements WarframeOfficialSel
             default -> List.of(WarframeOfficialDataDomain.fromCode(dataset.name()));
         };
         return domains.stream().filter(domain -> domain != WarframeOfficialDataDomain.OTHER)
-                .flatMap(domain -> catalog.records(domain).stream())
-                .filter(row -> switch (dataset) {
-                    case REFERENCE_CODEX_OBJECT -> row.bkey().startsWith("objects/");
-                    case REFERENCE_CODEX_LORE_FRAGMENT -> row.bkey().startsWith("loreFragments/");
-                    case REFERENCE_CODEX_SONG -> row.bkey().startsWith("songs/");
-                    case REFERENCE_CODEX_FIGHTER_FRAME -> row.bkey().startsWith("fighterFrames/");
-                    case RULE_ARCHON_SHARD -> row.bkey().contains("ArchonCrystal") || row.bkey().contains("ArchonShard");
-                    default -> true;
-                })
-                .filter(row -> dataset != Category.FISH || row.bkey().contains("/Fish/"))
-                .sorted(Comparator.comparing(WarframeOfficialRecordReadDTO::bkey)).toList();
+            .flatMap(domain -> catalog.records(domain).stream()).filter(row -> switch (dataset) {
+                case REFERENCE_CODEX_OBJECT -> row.bkey().startsWith("objects/");
+                case REFERENCE_CODEX_LORE_FRAGMENT -> row.bkey().startsWith("loreFragments/");
+                case REFERENCE_CODEX_SONG -> row.bkey().startsWith("songs/");
+                case REFERENCE_CODEX_FIGHTER_FRAME -> row.bkey().startsWith("fighterFrames/");
+                case RULE_ARCHON_SHARD -> row.bkey().contains("ArchonCrystal") || row.bkey().contains("ArchonShard");
+                default -> true;
+            }).filter(row -> dataset != Category.FISH || row.bkey().contains("/Fish/"))
+            .sorted(Comparator.comparing(WarframeOfficialRecordReadDTO::bkey)).toList();
     }
 
     /**
@@ -75,15 +74,17 @@ public class WarframeOfficialSelectionServiceImpl implements WarframeOfficialSel
      */
     private List<WarframeOfficialRecordReadDTO> systems() {
         var metadata = catalog.record(WarframeOfficialDataDomain.REGION, METADATA_BKEY);
-        if (metadata.isEmpty()) return List.of();
+        if (metadata.isEmpty())
+            return List.of();
         var root = metadata.get();
         List<WarframeOfficialRecordReadDTO> result = new ArrayList<>();
-        for (var system : values(((OfficialRegionDTO) root.data()).getSystems())) {
+        for (var system : values(((OfficialRegionDTO)root.data()).getSystems())) {
             String key = first(system.getSystemIndex(), system.getIndex());
-            if (StrUtil.isBlank(key)) continue;
+            if (StrUtil.isBlank(key))
+                continue;
             result.add(new WarframeOfficialRecordReadDTO(root.databaseId(), root.domain(), "systems/" + key,
-                    root.productPath(), root.domainCode(), first(system.getNameEn(), system.getName()),
-                    system.getZhName(), null, null, "", null, null, null, system));
+                root.productPath(), root.domainCode(), first(system.getNameEn(), system.getName()), system.getZhName(),
+                null, null, "", null, null, null, system));
         }
         return result.stream().sorted(Comparator.comparing(WarframeOfficialRecordReadDTO::bkey)).toList();
     }
@@ -109,7 +110,7 @@ public class WarframeOfficialSelectionServiceImpl implements WarframeOfficialSel
     public boolean matches(WarframeOfficialRecordReadDTO row, String keyword) {
         String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         return StrUtil.isEmpty(query) || (row.bkey() + " " + row.officialName() + " " + row.localizedName())
-                .toLowerCase(Locale.ROOT).contains(query);
+            .toLowerCase(Locale.ROOT).contains(query);
     }
 
 }

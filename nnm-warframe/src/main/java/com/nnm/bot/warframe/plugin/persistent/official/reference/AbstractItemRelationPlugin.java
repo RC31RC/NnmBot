@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-abstract class AbstractItemRelationPlugin extends BotPlugin {
+abstract class AbstractItemRelationPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -34,6 +34,7 @@ abstract class AbstractItemRelationPlugin extends BotPlugin {
 
     /**
      * 解析组件或掉落查询参数，调用关系查询服务并组装命令结果。
+     *
      * @param arguments 当前命令或操作的参数。
      * @param components 组件。
      * @return 命令结果对象。
@@ -46,14 +47,14 @@ abstract class AbstractItemRelationPlugin extends BotPlugin {
             return CommandResult.rejected(exception.getMessage());
         }
         WarframeItemRelationVO display = components
-                ? WarframeItemRelationVO.componentPage(query.keyword(),
-                        relationService.components(query.type(), query.keyword()), query.page())
-                : WarframeItemRelationVO.dropPage(query.keyword(),
-                        relationService.drops(query.type(), query.keyword()), query.page());
+            ? WarframeItemRelationVO.componentPage(query.keyword(),
+                relationService.components(query.type(), query.keyword()), query.page())
+            : WarframeItemRelationVO.dropPage(query.keyword(), relationService.drops(query.type(), query.keyword()),
+                query.page());
         if (components) {
-            display = new WarframeItemRelationVO(display.query(), display.category(), display.page(),
-                    display.totalPages(), display.totalCount(),
-                    display.components().stream().map(relationService::withImage).toList(),
+            display =
+                new WarframeItemRelationVO(display.query(), display.category(), display.page(), display.totalPages(),
+                    display.totalCount(), display.components().stream().map(relationService::withImage).toList(),
                     display.drops(), display.notice());
         }
         return CommandResult.view("warframe.item-relations", display.text(), display);
@@ -81,9 +82,9 @@ abstract class AbstractItemRelationPlugin extends BotPlugin {
                 remaining = remaining.substring(option.end()).trim();
             }
         }
-        if (keyword.length() > 200) throw new IllegalArgumentException("查询内容过长，请缩短到 200 字以内");
-        Category type = options.containsKey("type")
-                ? Category.parse(options.get("type")) : null;
+        if (keyword.length() > 200)
+            throw new IllegalArgumentException("查询内容过长，请缩短到 200 字以内");
+        Category type = options.containsKey("type") ? Category.parse(options.get("type")) : null;
         if (type != null && !WarframeCommandCatalog.relationParents().contains(type)) {
             throw new IllegalArgumentException("物品类型不支持组件或掉落查询");
         }

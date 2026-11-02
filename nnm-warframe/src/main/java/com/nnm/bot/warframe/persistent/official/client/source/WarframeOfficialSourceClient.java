@@ -1,35 +1,50 @@
 package com.nnm.bot.warframe.persistent.official.client.source;
 
-import java.util.concurrent.TimeUnit;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.http.HttpClient.DownloadResult;
-import com.nnm.bot.warframe.persistent.official.client.github.protocol.GithubVersionRawData;
-import com.nnm.bot.warframe.persistent.official.client.github.protocol.GithubVersionRawData.GitObjectRawData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
+import com.nnm.bot.common.http.HttpClient.DownloadResult;
 import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+import com.nnm.bot.warframe.persistent.official.client.github.protocol.GithubVersionRawData;
+import com.nnm.bot.warframe.persistent.official.client.github.protocol.GithubVersionRawData.GitObjectRawData;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.SourceMode;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
+import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialSnapshotValidator;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
+
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.util.function.Function;
+import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest;
+import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest.FileEntry;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-/** GitHub 只负责版本发现和成品传输；批次内所有请求固定为同一个 commit。 */
+/** 版本列表由 GitHub 发现；manifest 和成品优先通过固定 tag 的 CDN 传输，并回退 GitHub API。 */
+@Slf4j
 @Component
 public class WarframeOfficialSourceClient {
 
@@ -39,6 +54,8 @@ public class WarframeOfficialSourceClient {
     private ObjectMapper objectMapper;
     @Resource
     private WarframeOfficialImportProperties properties;
+    @Resource
+    private WarframeOfficialSnapshotValidator validator;
 
     /**
      * 列出可选的官方数据版本。
@@ -56,213 +73,295 @@ public class WarframeOfficialSourceClient {
             for (GithubVersionRawData tag : tags) {
                 String name = tag == null || tag.getName() == null ? "" : tag.getName();
                 String sha = tag == null || tag.getCommit() == null ? null : tag.getCommit().getSha();
-                if (name.startsWith(properties.getTagPrefix()) && validCommit(sha)) {
+                if (validTag(name) && validCommit(sha)) {
                     versions.putIfAbsent(name, new WarframeOfficialVersionDTO(name, sha));
                 }
             }
             if (tags.length < 100) {
                 return versions.values().stream()
-                        .sorted(Comparator.comparing(WarframeOfficialVersionDTO::ref).reversed()).toList();
+                    .sorted(Comparator.comparing(WarframeOfficialVersionDTO::ref).reversed()).toList();
             }
         }
-        throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                "数据源 tag 数量超过配置上限，无法确认完整版本列表");
+        throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE, "数据源 tag 数量超过配置上限，无法确认完整版本列表");
     }
 
     /**
-     * 解析引用或输入对应的实际业务对象。
+     * 解析前端选择的 tag，并保留该 tag 当前对应的 commit 审计信息。
      *
-     * @param ref 明确的标签名称或完整提交哈希。
-     * @return 游戏资料数据文件版本对象。
+     * @param ref 明确的官方数据 tag。
+     * @return tag 及其解析后的提交信息。
      */
     public WarframeOfficialVersionDTO resolve(String ref) {
         if (properties.getSourceMode() == SourceMode.LOCAL) {
             WarframeOfficialVersionDTO version = localVersion();
             BusinessAssert.isTrue(StrUtil.isBlank(ref) || properties.getLocalRef().equals(ref),
-                    WarframeManagementErrorCode.DATASET_VERSION_INVALID,
-                    "本地数据源只接受配置的 local-ref");
+                WarframeManagementErrorCode.DATASET_VERSION_INVALID, "本地数据源只接受配置的 local-ref");
             return version;
         }
         BusinessAssert.notBlank(ref, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
-        BusinessAssert.equals(ref, ref.trim(), WarframeManagementErrorCode.DATASET_VERSION_INVALID,
-                "数据源版本不能包含首尾空格");
-        if (!validCommit(ref)) {
-            BusinessAssert.isTrue(ref.startsWith(properties.getTagPrefix())
-                            && ref.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,199}"),
-                    WarframeManagementErrorCode.DATASET_VERSION_INVALID);
-        }
-        String sha;
-        if (validCommit(ref)) {
-            sha = api("/commits/" + ref, GithubVersionRawData.class).getSha();
-        } else {
-            GithubVersionRawData tagRef = api("/git/ref/tags/" + ref, GithubVersionRawData.class);
-            BusinessAssert.equals(tagRef.getRef(), "refs/tags/" + ref,
-                    WarframeManagementErrorCode.DATASET_VERSION_INVALID, "指定版本不是数据源 tag");
-            GitObjectRawData target = tagRef.getObject();
+        BusinessAssert.equals(ref, ref.trim(), WarframeManagementErrorCode.DATASET_VERSION_INVALID, "数据源版本不能包含首尾空格");
+        BusinessAssert.isTrue(validTag(ref), WarframeManagementErrorCode.DATASET_VERSION_INVALID,
+            "官方数据刷新必须使用 UTC 秒级 yyyyMMddHHmmss tag");
+        GithubVersionRawData tagRef = api("/git/ref/tags/" + ref, GithubVersionRawData.class);
+        BusinessAssert.equals(tagRef.getRef(), "refs/tags/" + ref, WarframeManagementErrorCode.DATASET_VERSION_INVALID,
+            "指定版本不是数据源 tag");
+        GitObjectRawData target = tagRef.getObject();
+        BusinessAssert.notNull(target, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
+        int depth = 0;
+        while ("tag".equals(target.getType()) && depth++ < 8) {
+            String objectSha = target.getSha();
+            BusinessAssert.isTrue(validCommit(objectSha), WarframeManagementErrorCode.DATASET_UNAVAILABLE);
+            target = api("/git/tags/" + objectSha, GithubVersionRawData.class).getObject();
             BusinessAssert.notNull(target, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
-            int depth = 0;
-            while ("tag".equals(target.getType()) && depth++ < 8) {
-                String objectSha = target.getSha();
-                BusinessAssert.isTrue(validCommit(objectSha), WarframeManagementErrorCode.DATASET_UNAVAILABLE);
-                target = api("/git/tags/" + objectSha, GithubVersionRawData.class).getObject();
-                BusinessAssert.notNull(target, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
-            }
-            BusinessAssert.equals(target.getType(), "commit",
-                    WarframeManagementErrorCode.DATASET_VERSION_INVALID, "tag 不能解析为 Git commit");
-            sha = target.getSha();
         }
+        BusinessAssert.equals(target.getType(), "commit", WarframeManagementErrorCode.DATASET_VERSION_INVALID,
+            "tag 不能解析为 Git commit");
+        String sha = target.getSha();
         BusinessAssert.isTrue(validCommit(sha), WarframeManagementErrorCode.DATASET_UNAVAILABLE);
         return new WarframeOfficialVersionDTO(ref, sha.toLowerCase(Locale.ROOT));
     }
 
     /**
-     * 读取并校验官方数据发布清单。
+     * 下载压缩发布清单并流式校验；所有来源使用选定的同一 tag。
      *
-     * @param version 本次操作已经确定的数据版本。
-     * @return 字节对象。
+     * @param version 本次操作选定的 tag 版本。
+     * @param target 保存清单 gzip 原件的路径。
+     * @return schema 3 发布清单。
      */
-    public byte[] manifest(WarframeOfficialVersionDTO version) {
-        if (properties.getSourceMode() == SourceMode.LOCAL) {
-            Path manifest = localFile("manifest.json");
-            try {
-                BusinessAssert.isTrue(Files.isRegularFile(manifest)
-                                && Files.size(manifest) <= properties.getMaxManifestBytes(),
-                        WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                        "本地 manifest 不存在或超过大小限制");
-                return Files.readAllBytes(manifest);
-            } catch (IOException exception) {
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                        "读取本地 manifest 失败", exception);
-            }
-        }
-        return httpClient.getLimitedBytes(rawUrl(version, "manifest.json"),
-                Map.of("Accept", "application/json", "Accept-Encoding", "identity"),
-                properties.getMaxManifestBytes());
+    public WarframeOfficialManifest manifest(WarframeOfficialVersionDTO version, Path target) {
+        return fetch(version, "manifest.json.gz", target, properties.getMaxFileBytes(), validator::manifest);
     }
 
     /**
-     * 下载指定外部数据并执行协议边界检查。
+     * 原样下载官方压缩文件，校验压缩摘要及解压后的 JSON，失败时逐文件切换来源。
      *
-     * @param version 本次操作已经确定的数据版本。
-     * @param path 当前文件或业务资源的路径。
-     * @param target 本次操作的目标对象或路径。
-     * @param maxBytes 本次允许读取的字节上限。
+     * @param version 本次操作选定的 tag 版本。
+     * @param entry 清单中的压缩文件契约。
+     * @param target 保存 gzip 原件的路径。
      */
-    public void download(WarframeOfficialVersionDTO version, String path, Path target, long maxBytes) {
-        if (properties.getSourceMode() == SourceMode.LOCAL) {
-            Path source = localFile(path);
-            try {
+    public void download(WarframeOfficialVersionDTO version, FileEntry entry, Path target) {
+        validatePath(entry.path());
+        BusinessAssert.isTrue(
+            entry.bytes() > 0 && entry.bytes() <= properties.getMaxFileBytes() && entry.sha256() != null
+                && entry.sha256().matches("[a-f0-9]{64}"),
+            WarframeManagementErrorCode.DATASET_INVALID, "官方压缩文件完整性字段不合法：" + entry.path());
+        fetch(version, entry.path(), target, entry.bytes(), file -> {
+            validator.file(entry, file);
+            return null;
+        });
+    }
+
+    /**
+     * 在同目录临时文件中下载、校验并刷新落盘，通过后才原子替换目标。
+     *
+     * @param version 同一次刷新的固定版本。
+     * @param path 压缩文件相对路径。
+     * @param target 保存压缩原件的目标文件。
+     * @param maxBytes 压缩原件大小上限。
+     * @param verify 完整性及协议校验。
+     * @return 校验得到的业务结果。
+     */
+    private <T> T fetch(WarframeOfficialVersionDTO version, String path, Path target, long maxBytes,
+        Function<Path, T> verify) {
+        validatePath(path);
+        Path temporary = null;
+        try {
+            Files.createDirectories(target.toAbsolutePath().getParent());
+            temporary = Files.createTempFile(target.toAbsolutePath().getParent(), ".official-", ".part");
+            if (properties.getSourceMode() == SourceMode.LOCAL) {
+                Path source = localFile(path);
                 BusinessAssert.isTrue(Files.isRegularFile(source) && Files.size(source) <= maxBytes,
-                        WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                        "本地成品不存在或超过大小限制：" + path);
-                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-                return;
-            } catch (IOException exception) {
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                        "读取本地成品失败：" + path, exception);
+                    WarframeManagementErrorCode.DATASET_UNAVAILABLE, "本地压缩文件不存在或超过大小限制：" + path);
+                Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING);
+                T value = verify.apply(temporary);
+                publish(temporary, target);
+                return value;
+            }
+            List<String> urls = new ArrayList<>();
+            for (URI baseUrl : properties.getCdnBaseUrls())
+                urls.add(cdnFileUrl(baseUrl, version, path));
+            urls.add(githubContentsUrl(version, path));
+            List<RuntimeException> failures = new ArrayList<>();
+            for (int index = 0; index < urls.size(); index++) {
+                String url = urls.get(index);
+                Map<String, String> headers =
+                    index == urls.size() - 1 ? githubHeaders("application/vnd.github.raw+json") : cdnHeaders();
+                DownloadResult result = null;
+                try {
+                    result = httpClient.downloadRawTo(url, headers, temporary, maxBytes);
+                    BusinessAssert.isTrue(result != null && result.isSuccess(),
+                        WarframeManagementErrorCode.DATASET_UNAVAILABLE, "官方压缩文件 HTTP 下载失败：" + path);
+                    // 原件必须没有额外 HTTP 编码；不能把解码后的内容误当作清单中的压缩文件。
+                    BusinessAssert.isTrue(
+                        result.headers().getOrEmpty("Content-Encoding").stream()
+                            .allMatch(value -> value.isBlank() || "identity".equalsIgnoreCase(value.trim())),
+                        WarframeManagementErrorCode.DATASET_UNAVAILABLE, "官方压缩文件响应存在额外 Content-Encoding");
+                    T value = verify.apply(temporary);
+                    publish(temporary, target);
+                    return value;
+                } catch (RuntimeException exception) {
+                    if (result != null && result.error() != null)
+                        exception.addSuppressed(result.error());
+                    failures.add(exception);
+                    log.warn("官方压缩文件来源失败，准备切换来源: path={}, url={}", path, url, exception);
+                }
+            }
+            throw unavailable("官方压缩文件下载失败：" + path, failures);
+        } catch (IOException exception) {
+            throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE, "读写官方压缩文件失败：" + path,
+                exception);
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (IOException exception) {
+                    throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE, "清理官方下载临时文件失败：" + path,
+                        exception);
+                }
             }
         }
-        DownloadResult result = httpClient.downloadTo(rawUrl(version, path),
-                Map.of("Accept", "application/json", "Accept-Encoding", "identity"), target, maxBytes);
-        BusinessAssert.isTrue(result != null && result.isSuccess(),
-                WarframeManagementErrorCode.DATASET_UNAVAILABLE, "数据源成品下载失败：" + path);
     }
 
     /**
-     * 请求数据源版本 API 并按具体协议类型绑定响应。
+     * 刷新已通过校验的文件并原子发布，避免失败来源覆盖有效文件。
      *
-     * @param suffix 后缀。
+     * @param temporary 同目录的已校验临时文件。
+     * @param target 正式压缩文件。
+     * @throws IOException 刷新落盘或原子替换失败时抛出。
+     */
+    private void publish(Path temporary, Path target) throws IOException {
+        try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+            channel.force(true);
+        }
+        Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    /**
+     * 返回官方文件的首选 CDN 地址，用于审计和文件来源记录。
+     *
+     * @param version 本次操作选定的 tag 版本。
+     * @param path 当前文件或业务资源的路径。
+     * @return 首选 CDN 地址；本地数据源返回 {@code null}。
+     */
+    public String rawFileUrl(WarframeOfficialVersionDTO version, String path) {
+        if (properties.getSourceMode() == SourceMode.LOCAL)
+            return null;
+        validatePath(path);
+        return cdnFileUrl(properties.getCdnBaseUrls().getFirst(), version, path);
+    }
+
+    private String githubContentsUrl(WarframeOfficialVersionDTO version, String path) {
+        validatePath(path);
+        List<String> segments = new ArrayList<>(List.of("repos"));
+        segments.addAll(List.of(properties.getRepository().split("/")));
+        segments.addAll(List.of("contents", "data", "latest"));
+        segments.addAll(List.of(path.split("/")));
+        return UriComponentsBuilder.fromUri(properties.getApiBaseUrl()).pathSegment(segments.toArray(String[]::new))
+            .queryParam("ref", version.ref()).build().encode().toUriString();
+    }
+
+    private String cdnFileUrl(URI baseUrl, WarframeOfficialVersionDTO version, String path) {
+        validatePath(path);
+        String[] repository = properties.getRepository().split("/");
+        return UriComponentsBuilder.fromUri(baseUrl)
+            .pathSegment("gh", repository[0], repository[1] + "@" + version.ref(), "data", "latest")
+            .pathSegment(path.split("/")).build().encode().toUriString();
+    }
+
+    private Map<String, String> cdnHeaders() {
+        return Map.of("Accept", "application/gzip", "Accept-Encoding", "identity");
+    }
+
+    private Map<String, String> githubHeaders(String accept) {
+        if (StrUtil.isBlank(properties.getGithubToken())) {
+            return Map.of("Accept", accept, "Accept-Encoding", "identity");
+        }
+        return Map.of("Accept", accept, "Accept-Encoding", "identity", "Authorization",
+            "Bearer " + properties.getGithubToken());
+    }
+
+    /**
+     * 请求 GitHub 版本 API 并按具体协议类型绑定响应。
+     *
+     * @param suffix API 路径后缀。
      * @param responseType 响应类型。
-     * @return 目标类型对象。
+     * @return 绑定后的响应对象。
      */
     private <T> T api(String suffix, Class<T> responseType) {
-        String url = properties.getApiBaseUrl().toString().replaceAll("/+$", "")
-                + "/repos/" + properties.getRepository() + suffix;
-        byte[] response = httpClient.getLimitedBytes(url,
-                Map.of("Accept", "application/vnd.github+json"), properties.getMaxManifestBytes());
+        String url = properties.getApiBaseUrl().toString().replaceAll("/+$", "") + "/repos/"
+            + properties.getRepository() + suffix;
+        byte[] response = httpClient.getLimitedBytes(url, githubHeaders("application/vnd.github+json"),
+            properties.getMaxVersionResponseBytes());
         try {
             return objectMapper.readValue(response, responseType);
         } catch (IOException exception) {
-            throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                    "GitHub 数据源版本响应不合法", exception);
+            throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE, "GitHub 数据源版本响应不合法",
+                exception);
         }
     }
 
-    /**
-     * 根据已冻结版本和文件相对路径构造官方原始文件地址。
-     * @param version 本次操作已经确定的数据版本。
-     * @param path 当前文件或业务资源的路径。
-     * @return 原始地址对应的文本。
-     */
-    private String rawUrl(WarframeOfficialVersionDTO version, String path) {
-        BusinessAssert.isTrue("manifest.json".equals(path)
-                        || WarframeOfficialDataDomain.fromPath(path) != null,
-                WarframeManagementErrorCode.DATASET_INVALID);
-        BusinessAssert.isTrue(validCommit(version.commit()), WarframeManagementErrorCode.DATASET_VERSION_INVALID);
-        List<String> segments = new ArrayList<>(List.of(properties.getRepository().split("/")));
-        segments.add(version.commit());
-        segments.addAll(List.of("data", "latest"));
-        segments.addAll(List.of(path.split("/")));
-        return UriComponentsBuilder.fromUri(properties.getRawBaseUrl())
-                .pathSegment(segments.toArray(String[]::new)).build().encode().toUriString();
+    private void validatePath(String path) {
+        BusinessAssert.isTrue("manifest.json.gz".equals(path) || WarframeOfficialDataDomain.fromPath(path) != null,
+            WarframeManagementErrorCode.DATASET_INVALID);
     }
 
-    /**
-     * 判断是否满足有效提交条件。
-     *
-     * @param value 待校验或规范化的文本。
-     * @return 满足本方法说明的业务条件时返回真，否则返回假。
-     */
+    private BusinessException unavailable(String message, List<RuntimeException> failures) {
+        Throwable cause = failures.isEmpty() ? null : failures.getLast();
+        return new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE,
+            message + "；已尝试 CDN 和 GitHub 回退来源 " + failures.size() + " 次", cause);
+    }
+
+    private boolean validTag(String value) {
+        if (value == null || !value.matches("[0-9]{14}"))
+            return false;
+        try {
+            LocalDateTime.parse(value,
+                DateTimeFormatter.ofPattern("uuuuMMddHHmmss").withResolverStyle(ResolverStyle.STRICT));
+            return true;
+        } catch (DateTimeParseException exception) {
+            return false;
+        }
+    }
+
     private static boolean validCommit(String value) {
         return value != null && value.matches("[a-fA-F0-9]{40}");
     }
 
     /**
-     * 将本地数据源仓库的完整提交及发布信息组装为可刷新版本。
-     * @return 游戏资料数据文件版本对象。
+     * 将本地发布目录的完整提交及发布信息组装为可刷新版本。
+     *
+     * @return 本地数据版本对象。
      */
     private WarframeOfficialVersionDTO localVersion() {
         String commit = properties.getLocalCommit();
         if (StrUtil.isBlank(commit)) {
             Path sourceDirectory = properties.getLocalDataDirectory().toAbsolutePath().normalize();
             try {
-                // Git 从实际发布目录向上查找仓库，支持不同层级的本地数据目录。
                 Process process = new ProcessBuilder("git", "-C", sourceDirectory.toString(), "rev-parse", "HEAD")
-                        .redirectErrorStream(true)
-                        .start();
+                    .redirectErrorStream(true).start();
                 try (var output = process.getInputStream()) {
                     if (!process.waitFor(properties.getLocalVersionTimeout().toMillis(), TimeUnit.MILLISECONDS)) {
                         throw new IOException("Timed out resolving local source commit");
                     }
                     commit = new String(output.readAllBytes(), StandardCharsets.UTF_8).trim();
                     BusinessAssert.isTrue(process.exitValue() == 0 && validCommit(commit),
-                            WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                            "本地数据源仓库无法解析 HEAD commit");
+                        WarframeManagementErrorCode.DATASET_UNAVAILABLE, "本地数据源仓库无法解析 HEAD commit");
                 } finally {
-                    if (process.isAlive()) process.destroyForcibly();
+                    if (process.isAlive())
+                        process.destroyForcibly();
                 }
             } catch (IOException exception) {
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                        "解析本地数据源版本失败", exception);
+                throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE, "解析本地数据源版本失败", exception);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE,
-                        "解析本地数据源版本被中断", exception);
+                throw new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE, "解析本地数据源版本被中断", exception);
             }
         }
         return new WarframeOfficialVersionDTO(properties.getLocalRef(), commit.toLowerCase(Locale.ROOT));
     }
 
-    /**
-     * 在已配置本地发布目录内定位文件，并拒绝越界路径。
-     * @param relativePath 相对路径。
-     * @return 路径对象。
-     */
     private Path localFile(String relativePath) {
-        BusinessAssert.isTrue("manifest.json".equals(relativePath)
-                        || WarframeOfficialDataDomain.fromPath(relativePath) != null,
-                WarframeManagementErrorCode.DATASET_INVALID,
-                "本地数据源不支持该成品路径：" + relativePath);
+        validatePath(relativePath);
         Path root = properties.getLocalDataDirectory().toAbsolutePath().normalize();
         Path path = root.resolve(relativePath).normalize();
         BusinessAssert.isTrue(path.startsWith(root), WarframeManagementErrorCode.DATASET_INVALID);

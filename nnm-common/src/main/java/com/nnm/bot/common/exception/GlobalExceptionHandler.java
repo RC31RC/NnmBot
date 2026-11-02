@@ -41,15 +41,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException e) {
         log.warn("业务异常 code={}, message={}", e.getCode(), e.getMessage(), e);
-        return ResponseEntity.status(e.getStatus())
-                .body(ApiResponse.error(e.getCode(), e.getMessage()));
+        return ResponseEntity.status(e.getStatus()).body(ApiResponse.error(e.getCode(), e.getMessage()));
     }
 
     @ExceptionHandler(SystemException.class)
     public ResponseEntity<ApiResponse<Void>> handleSystem(SystemException e) {
         log.error("系统或基础设施异常 code={}, message={}", e.getCode(), e.getMessage(), e);
-        return ResponseEntity.status(e.getStatus())
-                .body(ApiResponse.error(e.getCode(), e.getDescription()));
+        return ResponseEntity.status(e.getStatus()).body(ApiResponse.error(e.getCode(), e.getDescription()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -65,8 +63,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraint(ConstraintViolationException e) {
         String message = e.getConstraintViolations().stream()
-                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
-                .collect(Collectors.joining("; "));
+            .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+            .collect(Collectors.joining("; "));
         return validationResponse("请求参数校验失败", message);
     }
 
@@ -98,11 +96,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
-        log.warn("非法参数: {}", e.getMessage());
-        String message = ObjectUtil.isNull(e.getMessage()) || e.getMessage().isBlank()
-                ? CommonErrorCode.PARAM_INVALID.getMessage()
-                : e.getMessage();
-        return response(CommonErrorCode.PARAM_INVALID, message);
+        // 参数绑定错误已有独立处理；内部 API 合同异常不能回显为用户输入。
+        log.error("内部调用参数约束失败", e);
+        return response(CommonErrorCode.SYSTEM_ERROR);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -112,22 +108,19 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(
-            HttpMediaTypeNotSupportedException e) {
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
         log.warn("请求媒体类型不支持: {}", e.getContentType());
         return response(CommonErrorCode.UNSUPPORTED_MEDIA_TYPE);
     }
 
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotAcceptable(
-            HttpMediaTypeNotAcceptableException e) {
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotAcceptable(HttpMediaTypeNotAcceptableException e) {
         log.warn("请求的响应媒体类型不支持: {}", e.getMessage());
         return response(CommonErrorCode.NOT_ACCEPTABLE);
     }
 
     @ExceptionHandler(HttpMessageNotWritableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMessageNotWritable(
-            HttpMessageNotWritableException e) {
+    public ResponseEntity<ApiResponse<Void>> handleMessageNotWritable(HttpMessageNotWritableException e) {
         if (isClientDisconnect(e)) {
             log.debug("客户端已断开连接，停止写回响应: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -180,23 +173,17 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 客户端提前断开连接后，异步响应继续写回会触发该异常。
-     * 此时响应通道已经不可用，不再按服务器故障记录错误堆栈。
+     * 客户端提前断开连接后，异步响应继续写回会触发该异常。 此时响应通道已经不可用，不再按服务器故障记录错误堆栈。
      */
     @ExceptionHandler(AsyncRequestNotUsableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleClientDisconnect(
-            AsyncRequestNotUsableException e) {
+    public ResponseEntity<ApiResponse<Void>> handleClientDisconnect(AsyncRequestNotUsableException e) {
         log.debug("客户端已断开连接，停止写回响应: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
-    @ExceptionHandler({
-            CompletionException.class,
-            ExecutionException.class,
-            UndeclaredThrowableException.class
-    })
+    @ExceptionHandler({CompletionException.class, ExecutionException.class, UndeclaredThrowableException.class})
     public ResponseEntity<ApiResponse<Void>> handleWrapped(Throwable exception) {
-        Throwable cause = unwrap(exception);
+        Throwable cause = ExceptionCause.unwrap(exception);
         if (isClientDisconnect(cause)) {
             log.debug("客户端已断开连接，停止写回响应: {}", cause.getMessage());
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -225,17 +212,14 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<Void>> validationResponse(String logMessage, String message) {
-        String detail = StrUtil.isBlank(message)
-                ? CommonErrorCode.PARAM_INVALID.getMessage()
-                : message;
+        String detail = StrUtil.isBlank(message) ? CommonErrorCode.PARAM_INVALID.getMessage() : message;
         log.warn("{}: {}", logMessage, detail);
         return response(CommonErrorCode.PARAM_INVALID, detail);
     }
 
     private String fieldErrors(BindException e) {
-        return e.getBindingResult().getFieldErrors().stream()
-                .map(this::formatFieldError)
-                .collect(Collectors.joining("; "));
+        return e.getBindingResult().getFieldErrors().stream().map(this::formatFieldError)
+            .collect(Collectors.joining("; "));
     }
 
     private String formatFieldError(FieldError error) {
@@ -247,22 +231,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<Void>> response(CommonErrorCode errorCode, String message) {
-        return ResponseEntity.status(errorCode.getStatus())
-                .body(ApiResponse.error(errorCode.getCode(), message));
-    }
-
-    private static Throwable unwrap(Throwable exception) {
-        Throwable current = exception;
-        while (current instanceof CompletionException
-                || current instanceof ExecutionException
-                || current instanceof UndeclaredThrowableException) {
-            Throwable cause = current.getCause();
-            if (cause == null) {
-                break;
-            }
-            current = cause;
-        }
-        return current;
+        return ResponseEntity.status(errorCode.getStatus()).body(ApiResponse.error(errorCode.getCode(), message));
     }
 
     private static boolean isClientDisconnect(Throwable exception) {
@@ -271,11 +240,9 @@ public class GlobalExceptionHandler {
             String className = current.getClass().getName();
             String message = current.getMessage();
             String normalizedMessage = message == null ? "" : message.toLowerCase();
-            if (current instanceof AsyncRequestNotUsableException
-                    || className.endsWith("ClientAbortException")
-                    || normalizedMessage.contains("broken pipe")
-                    || normalizedMessage.contains("connection reset by peer")
-                    || normalizedMessage.contains("客户端已断开")) {
+            if (current instanceof AsyncRequestNotUsableException || className.endsWith("ClientAbortException")
+                || normalizedMessage.contains("broken pipe") || normalizedMessage.contains("connection reset by peer")
+                || normalizedMessage.contains("客户端已断开")) {
                 return true;
             }
             current = current.getCause();

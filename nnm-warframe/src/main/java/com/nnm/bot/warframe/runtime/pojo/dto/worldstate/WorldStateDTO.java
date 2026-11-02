@@ -11,9 +11,9 @@ import java.util.Objects;
 /**
  * NnmBot 自己维护的 Warframe 世界状态模型。
  *
- * <p>这个模型不暴露任何上游 SDK 类型。外部 API 的字段变化由类型化输入和映射器
- * 吸收，业务层依赖稳定的任务、奖励、周期与数据质量字段。集合在构造时复制，
- * 避免调用方修改共享快照；该模型不携带 JPA 受管状态。</p>
+ * <p>
+ * 这个模型不暴露任何上游 SDK 类型。外部 API 的字段变化由类型化输入和映射器 吸收，业务层依赖稳定的任务、奖励、周期与数据质量字段。集合在构造时复制， 避免调用方修改共享快照；该模型不携带 JPA 受管状态。
+ * </p>
  *
  * @param alerts 当前警报列表
  * @param fissures 当前虚空裂缝列表
@@ -56,48 +56,19 @@ import java.util.Objects;
  * @param weeklyChallenges 每周挑战
  * @param darkSectors 黑暗地带控制状态
  */
-public record WorldStateDTO(
-        List<AlertDTO> alerts,
-        List<FissureDTO> fissures,
-        List<InvasionDTO> invasions,
-        SortieDTO sortie,
-        CetusCycleDTO cetusCycle,
-        VallisCycleDTO vallisCycle,
-        CambionCycleDTO cambionCycle,
-        VoidTraderDTO voidTrader,
-        ArbitrationDTO arbitration,
-        List<NightwaveMissionDTO> nightwave,
-        Instant timestamp,
-        List<SortieDTO> sorties,
-        List<VoidTraderDTO> voidTraders,
-        EarthCycleDTO earthCycle,
-        DuviriCycleDTO duviriCycle,
-        ZarimanCycleDTO zarimanCycle,
-        List<DailyDealDTO> dailyDeals,
-        List<WorldEventDTO> events,
-        List<NewsItemDTO> news,
-        List<SyndicateMissionDTO> syndicateMissions,
-        List<SteelPathOfferingDTO> steelPathOfferings,
-        List<ActiveMissionDTO> activeMissions,
-        List<SortieDTO> archonHunts,
-        String buildLabel,
-        List<GlobalUpgradeDTO> globalUpgrades,
-        List<FlashSaleDTO> flashSales,
-        List<PersistentEnemyDTO> persistentEnemies,
-        WorldStateMetadataDTO metadata,
-        List<ArchimedeaDTO> archimedeas,
-        List<ConclaveChallengeDTO> conclaveChallenges,
-        ConstructionProgressDTO constructionProgress,
-        SimarisDTO simaris,
-        SentientOutpostDTO sentientOutpost,
-        List<ClanInitiativeDTO> clanInitiatives,
-        List<CircuitChoiceDTO> circuitChoices,
-        List<CalendarSeasonDTO> calendarSeasons,
-        List<VaultTraderDTO> vaultTraders,
-        List<WeeklyChallengeDTO> weeklyChallenges,
-        List<DarkSectorDTO> darkSectors,
-        List<DescentDTO> descents
-) {
+public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, List<InvasionDTO> invasions,
+    SortieDTO sortie, CetusCycleDTO cetusCycle, VallisCycleDTO vallisCycle, CambionCycleDTO cambionCycle,
+    VoidTraderDTO voidTrader, ArbitrationDTO arbitration, List<NightwaveMissionDTO> nightwave, Instant timestamp,
+    List<SortieDTO> sorties, List<VoidTraderDTO> voidTraders, EarthCycleDTO earthCycle, DuviriCycleDTO duviriCycle,
+    ZarimanCycleDTO zarimanCycle, List<DailyDealDTO> dailyDeals, List<WorldEventDTO> events, List<NewsItemDTO> news,
+    List<SyndicateMissionDTO> syndicateMissions, List<SteelPathOfferingDTO> steelPathOfferings,
+    List<ActiveMissionDTO> activeMissions, List<SortieDTO> archonHunts, String buildLabel,
+    List<GlobalUpgradeDTO> globalUpgrades, List<FlashSaleDTO> flashSales, List<PersistentEnemyDTO> persistentEnemies,
+    WorldStateMetadataDTO metadata, List<ArchimedeaDTO> archimedeas, List<ConclaveChallengeDTO> conclaveChallenges,
+    ConstructionProgressDTO constructionProgress, SimarisDTO simaris, SentientOutpostDTO sentientOutpost,
+    List<ClanInitiativeDTO> clanInitiatives, List<CircuitChoiceDTO> circuitChoices,
+    List<CalendarSeasonDTO> calendarSeasons, List<VaultTraderDTO> vaultTraders,
+    List<WeeklyChallengeDTO> weeklyChallenges, List<DarkSectorDTO> darkSectors, List<DescentDTO> descents) {
 
     /**
      * 使用本机周期推算结果构建新快照，保留其他分区。
@@ -110,16 +81,14 @@ public record WorldStateDTO(
      * @param zariman 扎里曼。
      * @return 已经解析并校验的世界状态快照。
      */
-    public WorldStateDTO withLocalCycles(CetusCycleDTO cetus, VallisCycleDTO vallis,
-                                     CambionCycleDTO cambion, EarthCycleDTO earth,
-                                     DuviriCycleDTO duviri, ZarimanCycleDTO zariman) {
-        return new WorldStateDTO(alerts, fissures, invasions, sortie, cetus, vallis, cambion,
-                voidTrader, arbitration, nightwave, timestamp, sorties, voidTraders,
-                earth, duviri, zariman, dailyDeals, events, news, syndicateMissions,
-                steelPathOfferings, activeMissions, archonHunts, buildLabel, globalUpgrades,
-                flashSales, persistentEnemies, metadata, archimedeas, conclaveChallenges,
-                constructionProgress, simaris, sentientOutpost, clanInitiatives, circuitChoices,
-                calendarSeasons, vaultTraders, weeklyChallenges, darkSectors, descents);
+    public WorldStateDTO withLocalCycles(CetusCycleDTO cetus, VallisCycleDTO vallis, CambionCycleDTO cambion,
+        EarthCycleDTO earth, DuviriCycleDTO duviri, ZarimanCycleDTO zariman) {
+        return new WorldStateDTO(alerts, fissures, invasions, sortie, cetus, vallis, cambion, voidTrader, arbitration,
+            nightwave, timestamp, sorties, voidTraders, earth, duviri, zariman, dailyDeals, events, news,
+            syndicateMissions, steelPathOfferings, activeMissions, archonHunts, buildLabel, globalUpgrades, flashSales,
+            persistentEnemies, metadata, archimedeas, conclaveChallenges, constructionProgress, simaris,
+            sentientOutpost, clanInitiatives, circuitChoices, calendarSeasons, vaultTraders, weeklyChallenges,
+            darkSectors, descents);
     }
 
     /**
@@ -129,13 +98,12 @@ public record WorldStateDTO(
      * @return 已经解析并校验的世界状态快照。
      */
     public WorldStateDTO withSyndicateMissions(List<SyndicateMissionDTO> missions) {
-        return new WorldStateDTO(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle,
-                voidTrader, arbitration, nightwave, timestamp, sorties, voidTraders,
-                earthCycle, duviriCycle, zarimanCycle, dailyDeals, events, news, missions,
-                steelPathOfferings, activeMissions, archonHunts, buildLabel, globalUpgrades,
-                flashSales, persistentEnemies, metadata, archimedeas, conclaveChallenges,
-                constructionProgress, simaris, sentientOutpost, clanInitiatives, circuitChoices,
-                calendarSeasons, vaultTraders, weeklyChallenges, darkSectors, descents);
+        return new WorldStateDTO(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle, voidTrader,
+            arbitration, nightwave, timestamp, sorties, voidTraders, earthCycle, duviriCycle, zarimanCycle, dailyDeals,
+            events, news, missions, steelPathOfferings, activeMissions, archonHunts, buildLabel, globalUpgrades,
+            flashSales, persistentEnemies, metadata, archimedeas, conclaveChallenges, constructionProgress, simaris,
+            sentientOutpost, clanInitiatives, circuitChoices, calendarSeasons, vaultTraders, weeklyChallenges,
+            darkSectors, descents);
     }
 
     /**
@@ -166,39 +134,18 @@ public record WorldStateDTO(
      * @param archonHunts 执刑官狩猎集合。
      * @param metadata 元数据。
      */
-    public WorldStateDTO(
-            List<AlertDTO> alerts,
-            List<FissureDTO> fissures,
-            List<InvasionDTO> invasions,
-            SortieDTO sortie,
-            CetusCycleDTO cetusCycle,
-            VallisCycleDTO vallisCycle,
-            CambionCycleDTO cambionCycle,
-            VoidTraderDTO voidTrader,
-            ArbitrationDTO arbitration,
-            List<NightwaveMissionDTO> nightwave,
-            Instant timestamp,
-            List<SortieDTO> sorties,
-            List<VoidTraderDTO> voidTraders,
-            EarthCycleDTO earthCycle,
-            DuviriCycleDTO duviriCycle,
-            ZarimanCycleDTO zarimanCycle,
-            List<DailyDealDTO> dailyDeals,
-            List<WorldEventDTO> events,
-            List<NewsItemDTO> news,
-            List<SyndicateMissionDTO> syndicateMissions,
-            List<SteelPathOfferingDTO> steelPathOfferings,
-            List<ActiveMissionDTO> activeMissions,
-            List<SortieDTO> archonHunts,
-            WorldStateMetadataDTO metadata
-    ) {
-        this(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle,
-                voidTrader, arbitration, nightwave, timestamp, sorties, voidTraders,
-                earthCycle, duviriCycle, zarimanCycle, dailyDeals, events, news,
-                syndicateMissions, steelPathOfferings, activeMissions, archonHunts,
-                null, List.of(), List.of(), List.of(), metadata, List.of(), List.of(),
-                null, null, null, List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of());
+    public WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, List<InvasionDTO> invasions,
+        SortieDTO sortie, CetusCycleDTO cetusCycle, VallisCycleDTO vallisCycle, CambionCycleDTO cambionCycle,
+        VoidTraderDTO voidTrader, ArbitrationDTO arbitration, List<NightwaveMissionDTO> nightwave, Instant timestamp,
+        List<SortieDTO> sorties, List<VoidTraderDTO> voidTraders, EarthCycleDTO earthCycle, DuviriCycleDTO duviriCycle,
+        ZarimanCycleDTO zarimanCycle, List<DailyDealDTO> dailyDeals, List<WorldEventDTO> events, List<NewsItemDTO> news,
+        List<SyndicateMissionDTO> syndicateMissions, List<SteelPathOfferingDTO> steelPathOfferings,
+        List<ActiveMissionDTO> activeMissions, List<SortieDTO> archonHunts, WorldStateMetadataDTO metadata) {
+        this(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle, voidTrader, arbitration,
+            nightwave, timestamp, sorties, voidTraders, earthCycle, duviriCycle, zarimanCycle, dailyDeals, events, news,
+            syndicateMissions, steelPathOfferings, activeMissions, archonHunts, null, List.of(), List.of(), List.of(),
+            metadata, List.of(), List.of(), null, null, null, List.of(), List.of(), List.of(), List.of(), List.of(),
+            List.of(), List.of());
     }
 
     /**
@@ -216,31 +163,17 @@ public record WorldStateDTO(
      * @param nightwave 夜波集合。
      * @param timestamp 时间戳。
      */
-    public WorldStateDTO(
-            List<AlertDTO> alerts,
-            List<FissureDTO> fissures,
-            List<InvasionDTO> invasions,
-            SortieDTO sortie,
-            CetusCycleDTO cetusCycle,
-            VallisCycleDTO vallisCycle,
-            CambionCycleDTO cambionCycle,
-            VoidTraderDTO voidTrader,
-            ArbitrationDTO arbitration,
-            List<NightwaveMissionDTO> nightwave,
-            Instant timestamp
-    ) {
-        this(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle,
-                voidTrader, arbitration, nightwave, timestamp,
-                ObjectUtil.isNull(sortie) ? List.of() : List.of(sortie),
-                ObjectUtil.isNull(voidTrader) ? List.of() : List.of(voidTrader),
-                null, null, null, List.of(), List.of(), List.of(), List.of(), List.of(),
-                CollUtil.isEmpty(fissures) ? List.of() : fissures.stream().filter(Objects::nonNull)
-                        .map(ActiveMissionDTO::fromFissure).toList(),
-                List.of(),
-                null, List.of(), List.of(), List.of(),
-                WorldStateMetadataDTO.unknown(timestamp), List.of(), List.of(),
-                null, null, null, List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of());
+    public WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, List<InvasionDTO> invasions,
+        SortieDTO sortie, CetusCycleDTO cetusCycle, VallisCycleDTO vallisCycle, CambionCycleDTO cambionCycle,
+        VoidTraderDTO voidTrader, ArbitrationDTO arbitration, List<NightwaveMissionDTO> nightwave, Instant timestamp) {
+        this(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle, voidTrader, arbitration,
+            nightwave, timestamp, ObjectUtil.isNull(sortie) ? List.of() : List.of(sortie),
+            ObjectUtil.isNull(voidTrader) ? List.of() : List.of(voidTrader), null, null, null, List.of(), List.of(),
+            List.of(), List.of(), List.of(),
+            CollUtil.isEmpty(fissures) ? List.of()
+                : fissures.stream().filter(Objects::nonNull).map(ActiveMissionDTO::fromFissure).toList(),
+            List.of(), null, List.of(), List.of(), List.of(), WorldStateMetadataDTO.unknown(timestamp), List.of(),
+            List.of(), null, null, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
     /**
@@ -342,9 +275,8 @@ public record WorldStateDTO(
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<ActiveMissionDTO> allActiveMissions() {
-        return CollUtil.isEmpty(activeMissions)
-                ? fissures.stream().map(ActiveMissionDTO::fromFissure).toList()
-                : activeMissions;
+        return CollUtil.isEmpty(activeMissions) ? fissures.stream().map(ActiveMissionDTO::fromFissure).toList()
+            : activeMissions;
     }
 
     /**
@@ -374,8 +306,8 @@ public record WorldStateDTO(
     public Duration ageAt(Instant now) {
         Objects.requireNonNull(now, "now must not be null");
         Instant captured = ObjectUtil.isNull(metadata.fetchedAt()) ? timestamp : metadata.fetchedAt();
-        return ObjectUtil.isNull(captured) ? Duration.ZERO : Duration.between(captured, now).isNegative()
-                ? Duration.ZERO : Duration.between(captured, now);
+        return ObjectUtil.isNull(captured) ? Duration.ZERO
+            : Duration.between(captured, now).isNegative() ? Duration.ZERO : Duration.between(captured, now);
     }
 
     /**
@@ -402,18 +334,8 @@ public record WorldStateDTO(
      * @param maxEnemyLevel 最高敌人等级
      * @param rewardItems 奖励物品及数量
      */
-    public record AlertDTO(
-            String id,
-            String mission,
-            String reward,
-            Instant expiry,
-            Instant activation,
-            String node,
-            String faction,
-            Integer minEnemyLevel,
-            Integer maxEnemyLevel,
-            List<AlertRewardDTO> rewardItems
-    ) {
+    public record AlertDTO(String id, String mission, String reward, Instant expiry, Instant activation, String node,
+        String faction, Integer minEnemyLevel, Integer maxEnemyLevel, List<AlertRewardDTO> rewardItems) {
         /**
          * 按已提供的任务字段构造对象，其余字段使用明确缺省值。
          *
@@ -466,16 +388,8 @@ public record WorldStateDTO(
      * @param hard 是否为钢铁之路裂缝
      * @param voidStorm 是否为虚空风暴
      */
-    public record FissureDTO(
-            String id,
-            String node,
-            String tier,
-            String missionType,
-            Instant expiry,
-            Instant activation,
-            boolean hard,
-            boolean voidStorm
-    ) {
+    public record FissureDTO(String id, String node, String tier, String missionType, Instant expiry,
+        Instant activation, boolean hard, boolean voidStorm) {
         /**
          * 按已提供的任务字段构造对象，其余字段使用明确缺省值。
          *
@@ -503,17 +417,9 @@ public record WorldStateDTO(
      * @param attackerRewards 进攻方奖励列表
      * @param defenderRewards 防守方奖励列表
      */
-    public record InvasionDTO(
-            String id,
-            String node,
-            String attackerReward,
-            String defenderReward,
-            float completion,
-            Instant activation,
-            boolean completed,
-            List<InvasionRewardDTO> attackerRewards,
-            List<InvasionRewardDTO> defenderRewards
-    ) {
+    public record InvasionDTO(String id, String node, String attackerReward, String defenderReward, float completion,
+        Instant activation, boolean completed, List<InvasionRewardDTO> attackerRewards,
+        List<InvasionRewardDTO> defenderRewards) {
         /**
          * 按已提供的任务字段构造对象，其余字段使用明确缺省值。
          *
@@ -650,13 +556,8 @@ public record WorldStateDTO(
      * @param active 当前是否在场
      * @param inventory 出售库存
      */
-    public record VoidTraderDTO(
-            String location,
-            Instant activation,
-            Instant expiry,
-            boolean active,
-            List<VoidTraderItemDTO> inventory
-    ) {
+    public record VoidTraderDTO(String location, Instant activation, Instant expiry, boolean active,
+        List<VoidTraderItemDTO> inventory) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -701,14 +602,8 @@ public record WorldStateDTO(
      * @param reputation 声望奖励
      * @param isDaily 是否为每日任务
      */
-    public record NightwaveMissionDTO(
-            String id,
-            String challenge,
-            String title,
-            String desc,
-            int reputation,
-            boolean isDaily
-    ) {
+    public record NightwaveMissionDTO(String id, String challenge, String title, String desc, int reputation,
+        boolean isDaily) {
     }
 
     /**
@@ -724,7 +619,7 @@ public record WorldStateDTO(
      * @param expiry 结束时间
      */
     public record DailyDealDTO(String id, String item, int stock, int sold, int credits, int platinum,
-                            Instant activation, Instant expiry) {
+        Instant activation, Instant expiry) {
     }
 
     /**
@@ -742,19 +637,9 @@ public record WorldStateDTO(
      * @param rewards 结构化物品奖励列表
      * @param rewardCredits 现金奖励
      */
-    public record WorldEventDTO(
-            String id,
-            String title,
-            String description,
-            Instant activation,
-            Instant expiry,
-            String category,
-            String node,
-            Double progress,
-            Double goal,
-            List<WorldEventRewardDTO> rewards,
-            Integer rewardCredits
-    ) {
+    public record WorldEventDTO(String id, String title, String description, Instant activation, Instant expiry,
+        String category, String node, Double progress, Double goal, List<WorldEventRewardDTO> rewards,
+        Integer rewardCredits) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -795,15 +680,8 @@ public record WorldStateDTO(
      * @param expiry 失效时间
      * @param priority 是否为重点新闻
      */
-    public record NewsItemDTO(
-            String id,
-            String title,
-            String link,
-            String imageUrl,
-            Instant publishedAt,
-            Instant expiry,
-            boolean priority
-    ) {
+    public record NewsItemDTO(String id, String title, String link, String imageUrl, Instant publishedAt,
+        Instant expiry, boolean priority) {
     }
 
     /**
@@ -821,9 +699,8 @@ public record WorldStateDTO(
      * @param supplementStatus 赏金补充数据的解析状态
      */
     public record SyndicateMissionDTO(String id, String syndicate, String node, Instant activation, Instant expiry,
-                                   List<SyndicateJobDTO> jobs, List<String> nodes,
-                                   List<BountyCycleJobDTO> supplementalJobs,
-                                   List<BountyStaticPoolDTO> staticRewardPools, String supplementStatus) {
+        List<SyndicateJobDTO> jobs, List<String> nodes, List<BountyCycleJobDTO> supplementalJobs,
+        List<BountyStaticPoolDTO> staticRewardPools, String supplementStatus) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -864,9 +741,8 @@ public record WorldStateDTO(
      * @param totalTiers 任务等级总数
      */
     public record BountyCycleJobDTO(String node, String nodeName, String systemName, String missionType,
-                                String challenge, String challengeName, String challengeDescription,
-                                String ally, String allyName, String resolutionStatus,
-                                String missionTypeKey, int tier, int totalTiers) {
+        String challenge, String challengeName, String challengeDescription, String ally, String allyName,
+        String resolutionStatus, String missionTypeKey, int tier, int totalTiers) {
     }
 
     /**
@@ -905,20 +781,9 @@ public record WorldStateDTO(
      * @param expiry 结束时间；上游未提供时为空
      * @param timeBound 适用周期限制
      */
-    public record SyndicateJobDTO(
-            String jobType,
-            String type,
-            String rewardPoolReference,
-            List<SyndicateRewardDTO> rewardPool,
-            Integer minEnemyLevel,
-            Integer maxEnemyLevel,
-            List<Integer> standingStages,
-            Integer minMR,
-            boolean isVault,
-            String locationTag,
-            Instant expiry,
-            String timeBound
-    ) {
+    public record SyndicateJobDTO(String jobType, String type, String rewardPoolReference,
+        List<SyndicateRewardDTO> rewardPool, Integer minEnemyLevel, Integer maxEnemyLevel, List<Integer> standingStages,
+        Integer minMR, boolean isVault, String locationTag, Instant expiry, String timeBound) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -977,7 +842,7 @@ public record WorldStateDTO(
      * @param voidStorm 是否为虚空风暴
      */
     public record ActiveMissionDTO(String id, String node, String missionType, String tier, Instant activation,
-                                Instant expiry, boolean hard, boolean voidStorm) {
+        Instant expiry, boolean hard, boolean voidStorm) {
         /**
          * 将裂缝转换为共用的活动任务投影。
          *
@@ -986,7 +851,7 @@ public record WorldStateDTO(
          */
         static ActiveMissionDTO fromFissure(FissureDTO fissure) {
             return new ActiveMissionDTO(fissure.id(), fissure.node(), fissure.missionType(), fissure.tier(),
-                    fissure.activation(), fissure.expiry(), fissure.hard(), fissure.voidStorm());
+                fissure.activation(), fissure.expiry(), fissure.hard(), fissure.voidStorm());
         }
     }
 
@@ -1000,14 +865,8 @@ public record WorldStateDTO(
      * @param activation 开始时间；上游未提供时为空
      * @param expiry 结束时间；上游未提供时为空
      */
-    public record GlobalUpgradeDTO(
-            String id,
-            String upgradeType,
-            String operationType,
-            Double value,
-            Instant activation,
-            Instant expiry
-    ) {
+    public record GlobalUpgradeDTO(String id, String upgradeType, String operationType, Double value,
+        Instant activation, Instant expiry) {
     }
 
     /**
@@ -1024,18 +883,9 @@ public record WorldStateDTO(
      * @param activation 开始时间；上游未提供时为空
      * @param expiry 结束时间；上游未提供时为空
      */
-    public record FlashSaleDTO(
-            String id,
-            String uniqueName,
-            Double discount,
-            Integer regularOverride,
-            Integer premiumOverride,
-            boolean shownInMarket,
-            boolean featured,
-            boolean popular,
-            Instant activation,
-            Instant expiry
-    ) {
+    public record FlashSaleDTO(String id, String uniqueName, Double discount, Integer regularOverride,
+        Integer premiumOverride, boolean shownInMarket, boolean featured, boolean popular, Instant activation,
+        Instant expiry) {
     }
 
     /**
@@ -1053,19 +903,9 @@ public record WorldStateDTO(
      * @param discovered 是否已被发现
      * @param usingTicketing 是否使用票券机制
      */
-    public record PersistentEnemyDTO(
-            String id,
-            String agentType,
-            String locationTag,
-            Integer rank,
-            Double healthPercent,
-            Double fleeDamage,
-            String region,
-            Instant lastDiscoveredTime,
-            String lastDiscoveredLocation,
-            boolean discovered,
-            boolean usingTicketing
-    ) {
+    public record PersistentEnemyDTO(String id, String agentType, String locationTag, Integer rank,
+        Double healthPercent, Double fleeDamage, String region, Instant lastDiscoveredTime,
+        String lastDiscoveredLocation, boolean discovered, boolean usingTicketing) {
     }
 
     /**
@@ -1079,15 +919,8 @@ public record WorldStateDTO(
      * @param activation 开始时间；上游未提供时为空
      * @param expiry 结束时间；上游未提供时为空
      */
-    public record ArchimedeaDTO(
-            String id,
-            String type,
-            String typeKey,
-            List<ArchimedeaMissionDTO> missions,
-            List<String> personalModifiers,
-            Instant activation,
-            Instant expiry
-    ) {
+    public record ArchimedeaDTO(String id, String type, String typeKey, List<ArchimedeaMissionDTO> missions,
+        List<String> personalModifiers, Instant activation, Instant expiry) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -1115,14 +948,8 @@ public record WorldStateDTO(
      * @param deviation 任务偏差条件
      * @param risks 风险条件列表
      */
-    public record ArchimedeaMissionDTO(
-            String faction,
-            String factionKey,
-            String missionType,
-            String missionTypeKey,
-            String deviation,
-            List<String> risks
-    ) {
+    public record ArchimedeaMissionDTO(String faction, String factionKey, String missionType, String missionTypeKey,
+        String deviation, List<String> risks) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -1154,20 +981,9 @@ public record WorldStateDTO(
      * @param activation 开始时间；上游未提供时为空
      * @param expiry 结束时间；上游未提供时为空
      */
-    public record ConclaveChallengeDTO(
-            String id,
-            String mode,
-            String category,
-            String categoryKey,
-            String title,
-            String description,
-            Integer amount,
-            Integer standing,
-            boolean daily,
-            boolean rootChallenge,
-            Instant activation,
-            Instant expiry
-    ) {
+    public record ConclaveChallengeDTO(String id, String mode, String category, String categoryKey, String title,
+        String description, Integer amount, Integer standing, boolean daily, boolean rootChallenge, Instant activation,
+        Instant expiry) {
     }
 
     /**
@@ -1177,7 +993,8 @@ public record WorldStateDTO(
      * @param razorback 豺狼舰队建造进度
      * @param unknown 官方第三项建造进度，保留原始含义
      */
-    public record ConstructionProgressDTO(Double fomorian, Double razorback, Double unknown) {}
+    public record ConstructionProgressDTO(Double fomorian, Double razorback, Double unknown) {
+    }
 
     /**
      * 公共 Sanctuary 研究目标，不是玩家个人每日扫描任务。
@@ -1185,7 +1002,8 @@ public record WorldStateDTO(
      * @param target 目标内部标识或名称
      * @param active 当前是否激活
      */
-    public record SimarisDTO(String target, boolean active) {}
+    public record SimarisDTO(String target, boolean active) {
+    }
 
     /**
      * Tmp.sfn 只给节点；没有明确时间源时不补造起止时间。
@@ -1194,7 +1012,8 @@ public record WorldStateDTO(
      * @param activation 开始时间；上游未提供时为空
      * @param expiry 结束时间；上游未提供时为空
      */
-    public record SentientOutpostDTO(String node, Instant activation, Instant expiry) {}
+    public record SentientOutpostDTO(String node, Instant activation, Instant expiry) {
+    }
 
     /**
      * 氏族每周行动及其奖励。
@@ -1211,7 +1030,9 @@ public record WorldStateDTO(
          * @param region 星区。
          * @param rewards 奖励集合。
          */
-        public ClanInitiativeDTO { rewards = immutable(rewards); }
+        public ClanInitiativeDTO {
+            rewards = immutable(rewards);
+        }
     }
 
     /**
@@ -1222,7 +1043,8 @@ public record WorldStateDTO(
      * @param points 氏族积分
      * @param claimed 是否已领取
      */
-    public record ClanRewardDTO(String item, Integer count, Integer points, Boolean claimed) {}
+    public record ClanRewardDTO(String item, Integer count, Integer points, Boolean claimed) {
+    }
 
     /**
      * 当前回廊分类及装备选项。
@@ -1237,7 +1059,9 @@ public record WorldStateDTO(
          * @param category 分类。
          * @param choices 选项集合。
          */
-        public CircuitChoiceDTO { choices = immutable(choices); }
+        public CircuitChoiceDTO {
+            choices = immutable(choices);
+        }
     }
 
     /**
@@ -1255,7 +1079,9 @@ public record WorldStateDTO(
          * @param iteration 迭代次数。
          * @param days 日集合。
          */
-        public CalendarSeasonDTO { days = immutable(days); }
+        public CalendarSeasonDTO {
+            days = immutable(days);
+        }
     }
 
     /**
@@ -1271,7 +1097,9 @@ public record WorldStateDTO(
          * @param date 日期。
          * @param events 事件集合。
          */
-        public CalendarDayDTO { events = immutable(events); }
+        public CalendarDayDTO {
+            events = immutable(events);
+        }
     }
 
     /**
@@ -1284,8 +1112,9 @@ public record WorldStateDTO(
      * @param dialogueName 对话角色名称
      * @param dialogueConvo 对话内容引用
      */
-    public record CalendarEventDTO(String type, String title, String description, String reward,
-                                String dialogueName, String dialogueConvo) {}
+    public record CalendarEventDTO(String type, String title, String description, String reward, String dialogueName,
+        String dialogueConvo) {
+    }
 
     /**
      * 宝库商人价格字段未声明币种，不能复用奸商 DTO 标成杜卡德金币。
@@ -1295,8 +1124,7 @@ public record WorldStateDTO(
      * @param expiry 结束时间；上游未提供时为空
      * @param inventory 当前库存
      */
-    public record VaultTraderDTO(String location, Instant activation, Instant expiry,
-                               List<VaultProductDTO> inventory) {
+    public record VaultTraderDTO(String location, Instant activation, Instant expiry, List<VaultProductDTO> inventory) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -1305,7 +1133,9 @@ public record WorldStateDTO(
          * @param expiry 到期。
          * @param inventory 库存集合。
          */
-        public VaultTraderDTO { inventory = immutable(inventory); }
+        public VaultTraderDTO {
+            inventory = immutable(inventory);
+        }
     }
 
     /**
@@ -1315,7 +1145,8 @@ public record WorldStateDTO(
      * @param primePrice 官方 Prime 价格；不推断币种
      * @param regularPrice 官方普通价格；不推断币种
      */
-    public record VaultProductDTO(String item, Integer primePrice, Integer regularPrice) {}
+    public record VaultProductDTO(String item, Integer primePrice, Integer regularPrice) {
+    }
 
     /**
      * 官方 WeeklyChallenges 的周期挑战；参考解析器仅做原始字段映射。
@@ -1325,12 +1156,8 @@ public record WorldStateDTO(
      * @param expiry 结束时间；上游未提供时为空
      * @param challenges 挑战列表
      */
-    public record WeeklyChallengeDTO(
-            String id,
-            Instant activation,
-            Instant expiry,
-            List<WeeklyChallengeItemDTO> challenges
-    ) {
+    public record WeeklyChallengeDTO(String id, Instant activation, Instant expiry,
+        List<WeeklyChallengeItemDTO> challenges) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -1354,14 +1181,9 @@ public record WorldStateDTO(
      * @param damageType 伤害类型
      * @param target 目标内部标识或名称
      */
-    public record WeeklyChallengeItemDTO(
-            String type,
-            Integer minimumEnemyLevel,
-            Integer requiredCount,
-            Integer progressIndicatorFrequency,
-            String damageType,
-            String target
-    ) {}
+    public record WeeklyChallengeItemDTO(String type, Integer minimumEnemyLevel, Integer requiredCount,
+        Integer progressIndicatorFrequency, String damageType, String target) {
+    }
 
     /**
      * 官方 BadlandNodes 的暗域状态摘要。
@@ -1376,17 +1198,9 @@ public record WorldStateDTO(
      * @param activation 开始时间；上游未提供时为空
      * @param expiry 结束时间；上游未提供时为空
      */
-    public record DarkSectorDTO(
-            String id,
-            String defender,
-            String attacker,
-            Double strengthRemaining,
-            Double maxStrength,
-            Integer battlePay,
-            String missionNode,
-            Instant activation,
-            Instant expiry
-    ) {}
+    public record DarkSectorDTO(String id, String defender, String attacker, Double strengthRemaining,
+        Double maxStrength, Integer battlePay, String missionNode, Instant activation, Instant expiry) {
+    }
 
     /**
      * 官方 Descents 的每周深层下降轮换；挑战内保留原始键供后续代码簿解析。
@@ -1416,14 +1230,8 @@ public record WorldStateDTO(
      * @param specs 特殊规则原始键列表
      * @param auras 光环效果原始键列表
      */
-    public record DescentChallengeDTO(
-            Integer index,
-            String type,
-            String challenge,
-            String level,
-            List<String> specs,
-            List<String> auras
-    ) {
+    public record DescentChallengeDTO(Integer index, String type, String challenge, String level, List<String> specs,
+        List<String> auras) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -1450,14 +1258,8 @@ public record WorldStateDTO(
      * @param schemaVersion 内部模型版本
      * @param contentDigest 原始内容摘要
      */
-    public record WorldStateMetadataDTO(
-            String source,
-            Instant fetchedAt,
-            Instant providerTimestamp,
-            boolean stale,
-            String schemaVersion,
-            String contentDigest
-    ) {
+    public record WorldStateMetadataDTO(String source, Instant fetchedAt, Instant providerTimestamp, boolean stale,
+        String schemaVersion, String contentDigest) {
         /**
          * 统一缺省值并复制集合，保证运行时快照可安全共享。
          *
@@ -1470,7 +1272,7 @@ public record WorldStateDTO(
          */
         public WorldStateMetadataDTO {
             source = StrUtil.isBlank(source) ? "unknown" : source;
-            schemaVersion = StrUtil.isBlank(schemaVersion) ? "nnm-world-state-v1" : schemaVersion;
+            schemaVersion = StrUtil.isBlank(schemaVersion) ? "nnm-world-state" : schemaVersion;
         }
 
         /**
@@ -1480,8 +1282,8 @@ public record WorldStateDTO(
          * @return 世界状态元数据对象。
          */
         public static WorldStateMetadataDTO unknown(Instant providerTimestamp) {
-            return new WorldStateMetadataDTO("unknown", Instant.now(), providerTimestamp, false,
-                    "nnm-world-state-v1", null);
+            return new WorldStateMetadataDTO("unknown", Instant.now(), providerTimestamp, false, "nnm-world-state",
+                null);
         }
     }
 }

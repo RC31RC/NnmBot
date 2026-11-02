@@ -4,8 +4,8 @@ import cn.hutool.core.collection.CollUtil;
 import java.util.List;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
 
-public record WarframeDefinitionVO(String dataset, String title, String query, int page, int totalPages,
-        int totalCount, List<EntryVO> items) {
+public record WarframeDefinitionVO(String dataset, String title, String query, int page, int totalPages, int totalCount,
+    List<EntryVO> items) {
     /**
      * 构造定义展示对象，并保存初始化参数。
      *
@@ -32,12 +32,12 @@ public record WarframeDefinitionVO(String dataset, String title, String query, i
      * @return 官方基础定义的分页视图。
      */
     public static WarframeDefinitionVO page(String dataset, String title, String query, List<EntryVO> matches,
-            int requested) {
-        int pages = Math.max(1, (int) ((matches.size() + 3L) / 4));
+        int requested) {
+        int pages = Math.max(1, (int)((matches.size() + 3L) / 4));
         int page = Math.max(1, Math.min(requested, pages));
         int from = (page - 1) * 4;
         return new WarframeDefinitionVO(dataset, title, query, page, pages, matches.size(),
-                matches.subList(from, Math.min(from + 4, matches.size())));
+            matches.subList(from, Math.min(from + 4, matches.size())));
     }
 
     /**
@@ -47,18 +47,20 @@ public record WarframeDefinitionVO(String dataset, String title, String query, i
      */
     public String text() {
         StringBuilder text = new StringBuilder(title).append("：").append(page).append("/").append(totalPages)
-                .append(" 页，共 ").append(totalCount).append(" 条");
+            .append(" 页，共 ").append(totalCount).append(" 条");
         for (EntryVO entry : items) {
             text.append("\n\n").append(entry.name()).append("\n").append(entry.key());
-            if (entry.description() != null) text.append("\n").append(entry.description());
+            if (entry.description() != null)
+                text.append("\n").append(entry.description());
             entry.facts().forEach(fact -> text.append("\n").append(fact.label()).append("：").append(fact.value()));
         }
-        if (CollUtil.isEmpty(items)) text.append("\n没有找到匹配的").append(title);
+        if (CollUtil.isEmpty(items))
+            text.append("\n没有找到匹配的").append(title);
         return text.toString();
     }
 
     public record EntryVO(String key, String name, String description, String imageReference, String iconUrl,
-            String sourceCode, String resolutionMode, OfficialObjectDTO details, List<FactVO> facts) {
+        String sourceCode, String resolutionMode, OfficialObjectDTO details, List<FactVO> facts) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *

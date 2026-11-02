@@ -7,13 +7,12 @@ import io.github.rdt.queue.QueueMode;
 
 /** 主题与投递模式不依赖消息载荷或远端元数据。 */
 public abstract class WarframeItemIndexInvalidationMessageDescriptor extends MessageDescriptor<String> {
-    public static final String TOPIC = "warframe-item-index-invalidated-v1";
+    public static final String TOPIC = "warframe-item-index-invalidated";
 
     /**
      * 构造物品索引缓存失效消息描述符，并保存初始化参数。
      */
-    protected WarframeItemIndexInvalidationMessageDescriptor() {
-    }
+    protected WarframeItemIndexInvalidationMessageDescriptor() {}
 
     /**
      * 构造物品索引缓存失效消息描述符，并保存初始化参数。

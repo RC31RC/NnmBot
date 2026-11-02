@@ -20,23 +20,16 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class JmComicConfiguration {
 
     @Bean
-    public JmConfiguration jmClientConfiguration(
-            JmComicProperties properties,
-            @Qualifier("jmDownloadExecutor")
-            ThreadPoolTaskExecutor executor) {
-        Builder builder = new JmConfiguration.Builder()
-                .clientType(ClientType.API)
-                .timeout(properties.getRequestTimeout())
-                .imageTimeout(properties.getImageTimeout())
-                .retryTimes(properties.getRetryTimes())
-                .downloadThreadPoolSize(properties.getDownloadThreads())
-                .executor(executor.getThreadPoolExecutor())
-                .cacheSize(properties.getClientCacheBytes());
+    public JmConfiguration jmClientConfiguration(JmComicProperties properties,
+        @Qualifier("jmDownloadExecutor") ThreadPoolTaskExecutor executor) {
+        Builder builder = new JmConfiguration.Builder().clientType(ClientType.API)
+            .timeout(properties.getRequestTimeout()).imageTimeout(properties.getImageTimeout())
+            .retryTimes(properties.getRetryTimes()).downloadThreadPoolSize(properties.getDownloadThreads())
+            .executor(executor.getThreadPoolExecutor()).cacheSize(properties.getClientCacheBytes());
         if (CollUtil.isNotEmpty(properties.getApiDomains())) {
             builder.apiDomains(properties.getApiDomains());
         }
-        if (StrUtil.isNotBlank(properties.getProxyHost())
-                && ObjectUtil.isNotNull(properties.getProxyPort())) {
+        if (StrUtil.isNotBlank(properties.getProxyHost()) && ObjectUtil.isNotNull(properties.getProxyPort())) {
             builder.proxy(properties.getProxyHost(), properties.getProxyPort());
         }
         return builder.build();
@@ -45,8 +38,9 @@ public class JmComicConfiguration {
     /**
      * JM 客户端构造时会异步探测上游域名。
      *
-     * <p>客户端不是应用启动所必需的基础设施，延迟到真正执行下载时再创建，
-     * 避免上游网络异常拖慢启动并制造误导性的启动失败日志。</p>
+     * <p>
+     * 客户端不是应用启动所必需的基础设施，延迟到真正执行下载时再创建， 避免上游网络异常拖慢启动并制造误导性的启动失败日志。
+     * </p>
      */
     @Bean(destroyMethod = "close")
     @Lazy

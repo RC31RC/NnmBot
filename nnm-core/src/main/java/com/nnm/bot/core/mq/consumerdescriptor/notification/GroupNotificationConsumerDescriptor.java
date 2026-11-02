@@ -25,8 +25,6 @@ public final class GroupNotificationConsumerDescriptor extends ConsumerDescripto
 
     @Override
     public QueueOptions options() {
-        return QueueOptions.builder()
-                .maxAttempts(1)
-                .build();
+        return QueueOptions.builder().maxAttempts(1).build();
     }
 }

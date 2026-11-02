@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.record;
 
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
 import java.util.Collection;
 import java.util.List;
@@ -12,9 +13,11 @@ public interface WarframeOfficialDetailService {
      * 同步当前记录及其所属详情数据。
      *
      * @param records 待批量处理的业务记录。
+     * @param inputs 按主键索引的类型化输入。
      * @param disabledRecordIds 已停用记录标识集合。
      */
-    void synchronize(List<OfficialRecord> records, Collection<Long> disabledRecordIds);
+    void synchronize(List<OfficialRecord> records, Map<Long, OfficialRecordDTO> inputs,
+        Collection<Long> disabledRecordIds);
 
     /**
      * 从具体详情对象生成后台展示属性。

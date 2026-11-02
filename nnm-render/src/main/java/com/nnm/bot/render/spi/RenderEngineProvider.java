@@ -3,8 +3,7 @@ package com.nnm.bot.render.spi;
 import com.nnm.bot.render.RenderEngine;
 
 /**
- * NnmBot 渲染引擎 SPI。实现可以随应用发布，也可以通过 plugin 目录中的 JAR
- * 使用 {@code META-INF/services/...RenderEngineProvider} 注册。
+ * NnmBot 渲染引擎 SPI。实现可以随应用发布，也可以通过 plugin 目录中的 JAR 使用 {@code META-INF/services/...RenderEngineProvider} 注册。
  */
 public interface RenderEngineProvider {
 

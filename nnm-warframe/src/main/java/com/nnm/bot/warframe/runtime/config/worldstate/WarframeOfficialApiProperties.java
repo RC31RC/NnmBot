@@ -21,8 +21,9 @@ public class WarframeOfficialApiProperties {
     @PostConstruct
     public void validate() {
         if (worldStateUrl == null || worldStateUrl.getHost() == null
-                || !("https".equalsIgnoreCase(worldStateUrl.getScheme()) || "http".equalsIgnoreCase(worldStateUrl.getScheme()))
-                || StrUtil.isBlank(language)) {
+            || !("https".equalsIgnoreCase(worldStateUrl.getScheme())
+                || "http".equalsIgnoreCase(worldStateUrl.getScheme()))
+            || StrUtil.isBlank(language)) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.official-api configuration");
         }
     }

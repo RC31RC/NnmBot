@@ -1,7 +1,8 @@
 package com.nnm.bot.common.concurrent;
 
 import com.nnm.bot.common.constant.ComputationErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.exception.ExceptionCause;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,11 +31,11 @@ public final class BoundedTaskExecutor implements AutoCloseable {
     private final Set<Task<?>> tasks = new HashSet<>();
     private boolean closed;
 
-    public BoundedTaskExecutor(AsyncTaskExecutor executor, int maxInFlight,
-                              Duration maxQueueWait, Duration resultTimeout) {
+    public BoundedTaskExecutor(AsyncTaskExecutor executor, int maxInFlight, Duration maxQueueWait,
+        Duration resultTimeout) {
         this.executor = Objects.requireNonNull(executor, "executor must not be null");
-        if (maxInFlight < 1 || maxQueueWait == null || maxQueueWait.toNanos() < 1
-                || resultTimeout == null || resultTimeout.compareTo(maxQueueWait) < 0) {
+        if (maxInFlight < 1 || maxQueueWait == null || maxQueueWait.toNanos() < 1 || resultTimeout == null
+            || resultTimeout.compareTo(maxQueueWait) < 0) {
             throw new IllegalArgumentException("Invalid computation capacity or timing");
         }
         this.maxInFlight = maxInFlight;
@@ -42,16 +43,25 @@ public final class BoundedTaskExecutor implements AutoCloseable {
         this.resultTimeout = resultTimeout;
     }
 
+    /**
+     * 在容量和等待预算内取得计算结果；等待结束不代表底层原生计算已经停止。
+     *
+     * @param action 不读取调用线程事务或锁上下文的计算动作
+     * @param <T> 结果类型
+     * @return 计算结果
+     */
     public <T> T execute(Supplier<T> action) {
         Objects.requireNonNull(action, "action must not be null");
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("Do not wait for platform computation while holding a database transaction");
+            throw new IllegalStateException("禁止在数据库事务中等待平台线程计算");
         }
         Task<T> task;
         tasksLock.lock();
         try {
-            if (closed) throw new BusinessException(ComputationErrorCode.SHUTDOWN);
-            if (tasks.size() >= maxInFlight) throw new BusinessException(ComputationErrorCode.BUSY);
+            if (closed)
+                throw new SystemException(ComputationErrorCode.SHUTDOWN, (Throwable)null);
+            if (tasks.size() >= maxInFlight)
+                throw new SystemException(ComputationErrorCode.BUSY, (Throwable)null);
             task = new Task<>(action);
             tasks.add(task);
         } finally {
@@ -60,8 +70,7 @@ public final class BoundedTaskExecutor implements AutoCloseable {
         try {
             executor.execute(task);
         } catch (TaskRejectedException rejected) {
-            task.cancel(new BusinessException(ComputationErrorCode.BUSY,
-                    "计算执行器拒绝任务", rejected));
+            task.cancel(new SystemException(ComputationErrorCode.BUSY, "计算执行器拒绝任务", rejected));
         } catch (RuntimeException | Error failure) {
             task.cancel(failure);
             throw failure;
@@ -73,8 +82,8 @@ public final class BoundedTaskExecutor implements AutoCloseable {
                 return task.result.get(remaining, TimeUnit.NANOSECONDS);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-                BusinessException failure = new BusinessException(ComputationErrorCode.INTERRUPTED,
-                        "等待计算结果被中断", interrupted);
+                SystemException failure =
+                    new SystemException(ComputationErrorCode.INTERRUPTED, "等待计算结果被中断", interrupted);
                 task.cancel(failure);
                 throw failure;
             } catch (TimeoutException timeout) {
@@ -85,23 +94,28 @@ public final class BoundedTaskExecutor implements AutoCloseable {
                         continue;
                     }
                     remaining = deadline - System.nanoTime();
-                    if (task.running && remaining > 0) continue;
-                    ComputationErrorCode code = task.running ? ComputationErrorCode.WAIT_TIMEOUT : ComputationErrorCode.QUEUE_EXPIRED;
-                    BusinessException failure = new BusinessException(code, code.getMessage(), timeout);
+                    if (task.running && remaining > 0)
+                        continue;
+                    ComputationErrorCode code =
+                        task.running ? ComputationErrorCode.WAIT_TIMEOUT : ComputationErrorCode.QUEUE_EXPIRED;
+                    SystemException failure = new SystemException(code, code.getMessage(), timeout);
                     task.cancel(failure);
                     throw failure;
                 } finally {
                     tasksLock.unlock();
                 }
             } catch (ExecutionException failure) {
-                Throwable cause = failure.getCause();
-                if (cause instanceof RuntimeException runtime) throw runtime;
-                if (cause instanceof Error error) throw error;
+                Throwable cause = ExceptionCause.unwrap(failure);
+                if (cause instanceof RuntimeException runtime)
+                    throw runtime;
+                if (cause instanceof Error error)
+                    throw error;
                 throw new IllegalStateException("Computation failed", cause);
             }
         }
     }
 
+    /** 返回尚未真正结束的排队与运行任务数量。 */
     public int inFlight() {
         tasksLock.lock();
         try {
@@ -111,13 +125,14 @@ public final class BoundedTaskExecutor implements AutoCloseable {
         }
     }
 
+    /** 停止接纳并唤醒等待者；运行中任务在自身退出后释放额度。 */
     @Override
     public void close() {
         tasksLock.lock();
         try {
             closed = true;
             for (Task<?> task : new ArrayList<>(tasks)) {
-                task.cancel(new BusinessException(ComputationErrorCode.SHUTDOWN));
+                task.cancel(new SystemException(ComputationErrorCode.SHUTDOWN, (Throwable)null));
             }
         } finally {
             tasksLock.unlock();
@@ -140,9 +155,10 @@ public final class BoundedTaskExecutor implements AutoCloseable {
             Supplier<T> work;
             tasksLock.lock();
             try {
-                if (terminated) return;
+                if (terminated)
+                    return;
                 if (System.nanoTime() - submitted >= maxQueueWait.toNanos()) {
-                    cancel(new BusinessException(ComputationErrorCode.QUEUE_EXPIRED));
+                    cancel(new SystemException(ComputationErrorCode.QUEUE_EXPIRED, (Throwable)null));
                     return;
                 }
                 running = true;

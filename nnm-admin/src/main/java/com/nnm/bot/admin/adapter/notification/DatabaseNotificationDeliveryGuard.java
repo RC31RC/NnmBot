@@ -32,19 +32,22 @@ public class DatabaseNotificationDeliveryGuard implements NotificationDeliveryGu
 
     @Override
     public void validate(UUID submissionId, BotProactiveTarget target) {
-        BotNotificationJob job = jobs.findById(submissionId).orElseThrow(() -> new BotMessageNotSentException("通知任务已不存在"));
+        BotNotificationJob job =
+            jobs.findById(submissionId).orElseThrow(() -> new BotMessageNotSentException("通知任务已不存在"));
         if (job.getStatus().terminal() || job.getStatus() == JobStatus.CANCEL_REQUESTED
-                || !users.existsByIdAndEnabledTrue(job.getOwnerId())
-                || !StpUtil.hasPermission(job.getOwnerId(), "bot:notification:send")) {
+            || !users.existsByIdAndEnabledTrue(job.getOwnerId())
+            || !StpUtil.hasPermission(job.getOwnerId(), "bot:notification:send")) {
             throw new BotMessageNotSentException("通知任务已结束、取消或发起人已无发送权限");
         }
         BotChannelInstance bot = instances.findByPlatformAndBotAccountId(target.platform(), target.botAccountId())
-                .filter(instance -> instance.isEnabled()).orElseThrow(() -> new BotMessageNotSentException("机器人已停用或删除"));
-        List<Long> groupIds = groups.findAllById(job.getRequest().groupIds()).stream().filter(group -> group.isEnabled())
-                .map(group -> group.getId()).toList();
-        boolean bound = bindings.findAllByGroupIdInAndEnabledTrue(groupIds).stream().anyMatch(binding ->
-                binding.getBotInstanceId().equals(bot.getId()) && "GROUP".equals(binding.getScopeType())
-                        && target.platform().name().equals(binding.getPlatform()) && target.conversationId().equals(binding.getScopeKey()));
-        if (!bound) throw new BotMessageNotSentException("接收群组已停用或机器人绑定已移除");
+            .filter(instance -> instance.isEnabled()).orElseThrow(() -> new BotMessageNotSentException("机器人已停用或删除"));
+        List<Long> groupIds = groups.findAllById(job.getRequest().groupIds()).stream()
+            .filter(group -> group.isEnabled()).map(group -> group.getId()).toList();
+        boolean bound = bindings.findAllByGroupIdInAndEnabledTrue(groupIds).stream()
+            .anyMatch(binding -> binding.getBotInstanceId().equals(bot.getId())
+                && "GROUP".equals(binding.getScopeType()) && target.platform().name().equals(binding.getPlatform())
+                && target.conversationId().equals(binding.getScopeKey()));
+        if (!bound)
+            throw new BotMessageNotSentException("接收群组已停用或机器人绑定已移除");
     }
 }

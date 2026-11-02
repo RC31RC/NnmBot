@@ -43,9 +43,12 @@ public class WarframeSubscriptionEventMemory {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<WarframeWatchMatchDTO> pending(String json, List<WarframeWatchMatchDTO> matches) {
-        if (StrUtil.isBlank(json)) return matches;
-        Map<String, Long> remembered = cacheReader.get(WarframeCacheNames.SUBSCRIPTION_MEMORY, digest(json),
-                () -> Optional.of(Map.copyOf(decode(json)))).orElseThrow();
+        if (StrUtil.isBlank(json))
+            return matches;
+        Map<String,
+            Long> remembered = cacheReader
+                .get(WarframeCacheNames.SUBSCRIPTION_MEMORY, digest(json), () -> Optional.of(Map.copyOf(decode(json))))
+                .orElseThrow();
         long now = warframeClock.millis();
         return matches.stream().filter(match -> remembered.getOrDefault(match.key(), 0L) <= now).toList();
     }
@@ -58,8 +61,8 @@ public class WarframeSubscriptionEventMemory {
      */
     private static String digest(String json) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(json.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                .formatHex(MessageDigest.getInstance("SHA-256").digest(json.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 unavailable", exception);
         }
@@ -80,9 +83,11 @@ public class WarframeSubscriptionEventMemory {
             if (match.key() == null || !match.key().matches("[a-f0-9]{64}")) {
                 throw new IllegalArgumentException("Subscription event key must be a SHA-256 digest");
             }
-            if (remembered.containsKey(match.key())) continue;
+            if (remembered.containsKey(match.key()))
+                continue;
             // 容量不足时不发送无法记住的事件，不驱逐仍有效的身份而导致下一次轮询重复通知。
-            if (remembered.size() >= properties.getMaxRememberedMatches()) break;
+            if (remembered.size() >= properties.getMaxRememberedMatches())
+                break;
             Instant expiry = match.expiry() == null || match.expiry().isBefore(now) ? now : match.expiry();
             remembered.put(match.key(), expiry.plus(properties.getMatchRetention()).toEpochMilli());
             claimed.add(match.key());
@@ -128,11 +133,12 @@ public class WarframeSubscriptionEventMemory {
      * @return 以本方法约定的业务键组织的数据映射。
      */
     private Map<String, Long> decode(String json) {
-        if (StrUtil.isBlank(json)) return Map.of();
+        if (StrUtil.isBlank(json))
+            return Map.of();
         try {
             Map<String, Long> values = objectMapper.readValue(json, new TypeReference<>() {});
-            if (values == null || values.entrySet().stream().anyMatch(entry ->
-                    !entry.getKey().matches("[a-f0-9]{64}") || entry.getValue() == null)) {
+            if (values == null || values.entrySet().stream()
+                .anyMatch(entry -> !entry.getKey().matches("[a-f0-9]{64}") || entry.getValue() == null)) {
                 throw new IllegalStateException("Invalid subscription event memory");
             }
             return values;

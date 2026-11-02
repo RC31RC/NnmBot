@@ -8,8 +8,9 @@ import java.util.List;
 /**
  * 当前世界状态的原子运行时快照。
  *
- * <p>领域投影和原始响应必须一起替换，避免解析结果与排障数据来自不同
- * 的上游响应。本地原子引用服务高频读取，不保存历史快照表。</p>
+ * <p>
+ * 领域投影和原始响应必须一起替换，避免解析结果与排障数据来自不同 的上游响应。本地原子引用服务高频读取，不保存历史快照表。
+ * </p>
  *
  * @param rawData Jackson 绑定的官方原始对象，非官方输入时为空
  * @param state 经映射和业务补全后的不可变运行时 DTO
@@ -19,14 +20,8 @@ import java.util.List;
  * @param fetchedAt 本地获取数据的时间
  * @param topLevelFields 上游响应实际携带的顶层字段目录
  */
-public record WorldStateRuntimeSnapshot(
-        OfficialWorldStateRawData rawData,
-        WorldStateDTO state,
-        String source,
-        String rawJson,
-        String contentHash,
-        Instant fetchedAt,
-        List<String> topLevelFields) {
+public record WorldStateRuntimeSnapshot(OfficialWorldStateRawData rawData, WorldStateDTO state, String source,
+    String rawJson, String contentHash, Instant fetchedAt, List<String> topLevelFields) {
 
     /**
      * 固化顶层字段目录，防止调用方修改快照元数据。
@@ -50,14 +45,9 @@ public record WorldStateRuntimeSnapshot(
      * @return 世界状态运行时快照对象。
      */
     public static WorldStateRuntimeSnapshot fromState(WorldStateDTO state) {
-        return new WorldStateRuntimeSnapshot(
-                null,
-                state,
-                state == null || state.metadata() == null ? null : state.metadata().source(),
-                null,
-                state == null || state.metadata() == null
-                        ? null : state.metadata().contentDigest(),
-                state == null || state.metadata() == null ? null : state.metadata().fetchedAt(),
-                List.of());
+        return new WorldStateRuntimeSnapshot(null, state,
+            state == null || state.metadata() == null ? null : state.metadata().source(), null,
+            state == null || state.metadata() == null ? null : state.metadata().contentDigest(),
+            state == null || state.metadata() == null ? null : state.metadata().fetchedAt(), List.of());
     }
 }

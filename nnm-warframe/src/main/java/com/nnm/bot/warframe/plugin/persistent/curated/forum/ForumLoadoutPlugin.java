@@ -22,14 +22,10 @@ import java.util.Locale;
 /**
  * 查询管理端维护的配装文章，只返回文章地址，不把正文塞进机器人消息。
  */
-@BotPluginCommand(
-        code = WarframeCommandCodes.FORUM_LOADOUT,
-        matchType = MatchType.PREFIX,
-        name = "wf配装",
-        gameCode = "warframe",
-        order = 21)
+@BotPluginCommand(code = WarframeCommandCodes.FORUM_LOADOUT, matchType = MatchType.PREFIX, name = "wf配装",
+    gameCode = "warframe", order = 21)
 // wf_forum_article：按标题、分类和标签检索文章 URL；正文只保留在文章页面，不作为机器人数据返回。
-public class ForumLoadoutPlugin extends BotPlugin {
+public class ForumLoadoutPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -51,29 +47,28 @@ public class ForumLoadoutPlugin extends BotPlugin {
      * 根据命令参数调用业务服务并组装命令结果。
      *
      * @param invocation 命令执行上下文，包含用户、作用域和已匹配参数。
+     * @param prepared 普通命令无需前置输入，固定为 null。
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         if (StrUtil.isBlank(invocation.arguments())) {
             return CommandResult.text("wf配装命令格式：wf配装 关键词");
         }
         ForumArticleSearchQuery query = parseQuery(invocation.arguments());
         List<ForumArticleVO> articles = articleService.searchEnabled(query);
         if (CollUtil.isEmpty(articles)) {
-            return CommandResult.text("没有找到匹配的 Warframe 配装文章："
-                    + invocation.arguments());
+            return CommandResult.text("没有找到匹配的 Warframe 配装文章：" + invocation.arguments());
         }
         return CommandResult.view("warframe.forum.articles", "找到 " + articles.size() + " 篇相关配装文章",
-                articles.stream().map(article -> new ForumArticleLinkVO(
-                        article.title(),
-                        StrUtil.blankToDefault(article.category(), "未分类"),
-                        forumProperties.publicArticleUrl(article.id()))).toList());
+            articles.stream()
+                .map(article -> new ForumArticleLinkVO(article.title(),
+                    StrUtil.blankToDefault(article.category(), "未分类"), forumProperties.publicArticleUrl(article.id())))
+                .toList());
     }
 
     /**
-     * 支持“标题:”、“分类:”和“标签:”字段条件；没有前缀的多个词要求同时命中，
-     *   这样既兼容简单的 wf配装 词条，也能精确筛选分类和标签。
+     * 支持“标题:”、“分类:”和“标签:”字段条件；没有前缀的多个词要求同时命中， 这样既兼容简单的 wf配装 词条，也能精确筛选分类和标签。
      *
      * @param raw 原始。
      * @return 论坛文章搜索查询对象。
@@ -104,14 +99,11 @@ public class ForumLoadoutPlugin extends BotPlugin {
                 default -> keywords.add(token);
             }
         }
-        return new ForumArticleSearchQuery(
-                title.toString(), category.toString(), tags, keywords);
+        return new ForumArticleSearchQuery(title.toString(), category.toString(), tags, keywords);
     }
 
     /**
-     * 一个标签字段可以携带多个完整标签，例如：
-     *    {@code 标签:melee,steel-path} 或 {@code 标签:melee、steel-path}。
-     *    标题和分类不在这里拆分，因为它们允许包含空格。
+     * 一个标签字段可以携带多个完整标签，例如： {@code 标签:melee,steel-path} 或 {@code 标签:melee、steel-path}。 标题和分类不在这里拆分，因为它们允许包含空格。
      *
      * @param value 待校验或规范化的文本。
      * @param target 本次操作的目标对象或路径。
@@ -125,8 +117,7 @@ public class ForumLoadoutPlugin extends BotPlugin {
     }
 
     /**
-     * 按聊天命令语法切分参数：连续空白分隔普通词，单引号和双引号保留其中的空格。
-     *   未闭合引号也按普通文本收尾，避免用户输入错误导致整个插件抛异常。
+     * 按聊天命令语法切分参数：连续空白分隔普通词，单引号和双引号保留其中的空格。 未闭合引号也按普通文本收尾，避免用户输入错误导致整个插件抛异常。
      *
      * @param raw 原始。
      * @return 按当前条件筛选或转换后的数据集合。

@@ -12,7 +12,7 @@ public final class OfficialFactMapper {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private OfficialFactMapper() { }
+    private OfficialFactMapper() {}
 
     /**
      * 数组和对象由各自业务展示模型负责，通用列表仅枚举有值的具体标量字段。
@@ -23,7 +23,8 @@ public final class OfficialFactMapper {
      */
     public static List<FactVO> facts(OfficialObjectDTO value, String identity) {
         List<FactVO> result = new ArrayList<>();
-        if (value == null) return result;
+        if (value == null)
+            return result;
         for (var field : OfficialObjectFields.fields(value.getClass())) {
             String key = field.getAnnotation(JsonProperty.class).value();
             Object item = OfficialObjectFields.get(value, key);

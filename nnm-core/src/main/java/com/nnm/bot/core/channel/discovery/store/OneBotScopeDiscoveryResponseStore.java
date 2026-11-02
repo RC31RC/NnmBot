@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
-/** Cross-instance discovery responses are shared operational state, never a local read cache. */
+/** 跨实例发现响应属于共享运行状态，不能作为本地查询缓存处理。 */
 @Service
 public class OneBotScopeDiscoveryResponseStore {
     @Resource

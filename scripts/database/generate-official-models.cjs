@@ -3,15 +3,16 @@ const { methodComment } = require('./official-method-comments.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
 const { officialFieldMeaning } = require('./official-field-comments.cjs');
 const root = path.resolve(__dirname, '../..');
 const source = path.resolve(process.argv[2] ?? path.join(root, '../warframe-datasource-nnm/data/latest'));
 const javaRoot = path.join(root, 'nnm-warframe/src/main/java/com/nnm/bot/warframe/persistent/official/pojo/entity');
 const resources = path.join(root, 'nnm-warframe/src/main/resources/warframe');
-const manifest = JSON.parse(fs.readFileSync(path.join(source, 'manifest.json'), 'utf8'));
+const manifest = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(source, 'manifest.json.gz'))));
 const domains = new Map([...fs.readFileSync(path.join(root,
   'nnm-warframe/src/main/java/com/nnm/bot/warframe/persistent/official/constant/WarframeOfficialDataDomain.java'), 'utf8')
-  .matchAll(/^    ([A-Z_0-9]+)\("([^"]+\.json)"/gm)].map(match => [match[2], match[1]]));
+  .matchAll(/^    ([A-Z_0-9]+)\("([^"]+\.json\.gz)"/gm)].map(match => [match[2], match[1]]));
 const scalar = value => value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
 const identifier = value => value.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'value';
 const camel = value => identifier(value).split('_').map(part => part[0].toUpperCase() + part.slice(1)).join('');
@@ -209,7 +210,7 @@ for (const entry of manifest.files) {
   const domain = domains.get(entry.path);
   if (!domain) throw new Error('No domain for ' + entry.path);
   const node = shape();
-  const document = JSON.parse(fs.readFileSync(path.join(source, entry.path), 'utf8'));
+  const document = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(source, entry.path))));
   for (const record of records(domain, document)) observe(node, record, '');
   const model = compile(domain, node, [], null);
   roots[domain] = model.table;
@@ -391,7 +392,7 @@ function prune(directory) {
 prune(javaRoot);
 sql.push('-- END GENERATED OFFICIAL MODELS');
 fs.writeFileSync(path.join(resources, 'official-models.json'), JSON.stringify({ version: 3, buildId: manifest.buildId, roots, models: models.map(model => ({ ...model, columns: model.columns.map(({ comment, ...column }) => column) })) }, null, 2) + '\n');
-const sqlPath = path.join(root, 'docs/sql/init.sql');
+const sqlPath = path.join(root, 'sql/init.sql');
 const baseline = fs.readFileSync(sqlPath, 'utf8');
 fs.writeFileSync(sqlPath, baseline.replace(/-- BEGIN GENERATED OFFICIAL MODELS[\s\S]*?-- END GENERATED OFFICIAL MODELS/, sql.join('\n')));
 const inputs = require('./generate-official-inputs.cjs').generateOfficialInputs(root, models);

@@ -15,11 +15,15 @@ import org.springframework.data.repository.query.Param;
 
 public interface BotNotificationJobRepository extends JpaRepository<BotNotificationJob, UUID> {
     List<BotNotificationJob> findTop100ByOwnerIdOrderByCreatedAtDesc(long ownerId);
-    List<BotNotificationJob> findTop50ByStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(JobStatus status, Instant now);
+
+    List<BotNotificationJob> findTop50ByStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(JobStatus status,
+        Instant now);
+
     List<BotNotificationJob> findTop50ByStatusInAndUpdatedAtBefore(Collection<JobStatus> statuses, Instant cutoff);
+
     long countByOwnerIdAndStatusIn(long ownerId, Collection<JobStatus> statuses);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select job from BotNotificationJob job where job.id = :id")
-    Optional<BotNotificationJob> lockById(@Param("id")
-            UUID id);
+    Optional<BotNotificationJob> lockById(@Param("id") UUID id);
 }

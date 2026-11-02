@@ -24,11 +24,15 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
 import java.io.IOException;
+import java.io.FilterInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.zip.GZIPInputStream;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.http.HttpTimeoutException;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.lang.reflect.Type;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -50,8 +54,9 @@ import java.util.function.Supplier;
 /**
  * 统一同步 HTTP 客户端。
  *
- * <p>幂等 GET 对网络异常、超时、5xx 和 429 自动重试；POST 默认不重试，
- * 避免非幂等请求产生重复副作用。</p>
+ * <p>
+ * 幂等 GET 对网络异常、超时、5xx 和 429 自动重试；POST 默认不重试， 避免非幂等请求产生重复副作用。
+ * </p>
  */
 @Slf4j
 @Component
@@ -59,6 +64,8 @@ public class HttpClient {
 
     @Resource
     private RestClient restClient;
+    @Resource(name = "nnmRawHttpClient")
+    private java.net.http.HttpClient rawHttpClient;
     @Resource
     private ObjectMapper objectMapper;
     @Resource
@@ -100,11 +107,9 @@ public class HttpClient {
     }
 
     /**
-     * 执行由 {@code @HttpExchange} 代理构造的 GET 请求。
-     * 请求仍复用结果型 GET 的重试、退避、日志和异常转换策略。
+     * 执行由 {@code @HttpExchange} 代理构造的 GET 请求。 请求仍复用结果型 GET 的重试、退避、日志和异常转换策略。
      */
-    public HttpResult executeGet(
-            String requestUrl, Supplier<ResponseEntity<String>> request) {
+    public HttpResult executeGet(String requestUrl, Supplier<ResponseEntity<String>> request) {
         String url = requireUrl(requestUrl);
         Objects.requireNonNull(request, "request must not be null");
         int maxAttempts = Math.max(1, properties.getMaxAttempts());
@@ -129,33 +134,58 @@ public class HttpClient {
         return getBytes(url, toHttpHeaders(headers));
     }
 
-    /** 单次受限下载；在读取过程中执行业务字节上限，HTTP/传输/超限异常直接传播。 */
+    /** 受限下载；读取时执行业务字节上限，仅对可重试的 GET 失败重试。 */
     public byte[] getLimitedBytes(String url, Map<String, String> headers, long maxBytes) {
         if (maxBytes < 1 || maxBytes >= Integer.MAX_VALUE) {
             throw new IllegalArgumentException("maxBytes must be positive and less than Integer.MAX_VALUE");
         }
         String requestUrl = requireUrl(url);
         int limit = Math.toIntExact(Math.min(maxBytes, properties.getMaxResponseBodyBytes()));
-        logRequest("GET", requestUrl, null);
+        HttpHeaders requestHeaders = requestHeaders(toHttpHeaders(headers));
+        int maxAttempts = Math.max(1, properties.getMaxAttempts());
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return doGetLimitedBytes(requestUrl, requestHeaders, limit);
+            } catch (RuntimeException exception) {
+                if (!isRetryable(exception) || attempt == maxAttempts) {
+                    throw exception;
+                }
+                logRetry("GET", requestUrl, attempt, maxAttempts, statusCode(exception));
+                if (!sleepBackoff(attempt, retryHeaders(exception))) {
+                    throw exception;
+                }
+            }
+        }
+        throw new IllegalStateException("Unreachable limited GET retry state");
+    }
+
+    private byte[] doGetLimitedBytes(String url, HttpHeaders headers, int limit) {
+        logRequest("GET", url, null);
         long startedAt = System.nanoTime();
-        return restClient.get().uri(requestUrl)
-                .headers(target -> copyHeaders(requestHeaders(toHttpHeaders(headers)), target))
+        try {
+            return restClient.get().uri(url).headers(target -> copyHeaders(headers, target))
                 .exchange((request, response) -> {
-                    if (response.getHeaders().getContentLength() > limit) {
-                        throw new ExternalResponseTooLargeException("GET", sanitizeUrl(requestUrl), limit, null);
+                    if (!hasContentEncoding(response) && response.getHeaders().getContentLength() > limit) {
+                        throw new ExternalResponseTooLargeException("GET", sanitizeUrl(url), limit, null);
                     }
-                    byte[] body = response.getBody().readNBytes(limit + 1);
+                    byte[] body;
+                    try (InputStream input = decodedBody(response, url)) {
+                        body = input.readNBytes(limit + 1);
+                    }
                     if (body.length > limit) {
-                        throw new ExternalResponseTooLargeException("GET", sanitizeUrl(requestUrl), limit, null);
+                        throw new ExternalResponseTooLargeException("GET", sanitizeUrl(url), limit, null);
                     }
                     int status = response.getStatusCode().value();
-                    recordMetric("GET", requestUrl, status, startedAt);
+                    recordMetric("GET", url, status, startedAt);
                     if (!response.getStatusCode().is2xxSuccessful()) {
-                        throw new ExternalHttpException("GET", sanitizeUrl(requestUrl), status,
-                                new String(body, StandardCharsets.UTF_8), response.getHeaders(), null);
+                        throw new ExternalHttpException("GET", sanitizeUrl(url), status,
+                            new String(body, StandardCharsets.UTF_8), response.getHeaders(), null);
                     }
                     return body;
                 });
+        } catch (RuntimeException exception) {
+            throw normalizeAndLog("GET", url, exception, startedAt);
+        }
     }
 
     /**
@@ -180,31 +210,118 @@ public class HttpClient {
     }
 
     /**
-     * 流式下载到文件。响应先写入目标文件同目录的临时文件，完整成功后再原子替换目标。
-     * 这样既避免大响应一次性进入堆内存，也不会把半截文件暴露给后续解析逻辑。
+     * 流式下载到文件。响应先写入目标文件同目录的临时文件，完整成功后再原子替换目标。 这样既避免大响应一次性进入堆内存，也不会把半截文件暴露给后续解析逻辑。
      */
-    public DownloadResult downloadTo(
-            String url, Map<String, String> headers, Path target) {
+    public DownloadResult downloadTo(String url, Map<String, String> headers, Path target) {
         return downloadTo(url, toHttpHeaders(headers), target);
     }
 
     /**
      * 流式下载到文件，并在响应成功后原子替换目标文件。
      */
-    public DownloadResult downloadTo(
-            String url, HttpHeaders headers, Path target) {
+    public DownloadResult downloadTo(String url, HttpHeaders headers, Path target) {
         return downloadTo(url, headers, target, properties.getMaxDownloadBytes());
     }
 
     /** 成品下载可使用 manifest 字节数收紧上限；不能突破全局下载预算。 */
-    public DownloadResult downloadTo(
-            String url, Map<String, String> headers, Path target, long maxBytes) {
+    public DownloadResult downloadTo(String url, Map<String, String> headers, Path target, long maxBytes) {
         return downloadTo(url, toHttpHeaders(headers), target, maxBytes);
     }
 
-    private DownloadResult downloadTo(
-            String url, HttpHeaders headers, Path target, long maxBytes) {
-        if (maxBytes < 1) throw new IllegalArgumentException("maxBytes must be positive");
+    /**
+     * 原样读取响应并流式保存，拒绝额外 HTTP 内容编码；仅用于保留压缩原件的协议。
+     *
+     * @param url 原始文件 URL。
+     * @param headers 请求头；方法强制设置 identity。
+     * @param target 成功后原子发布的目标路径。
+     * @param maxBytes 允许下载的压缩原件字节上限。
+     * @return 下载结果；失败时不覆盖目标文件。
+     */
+    public DownloadResult downloadRawTo(String url, Map<String, String> headers, Path target, long maxBytes) {
+        if (maxBytes < 1)
+            throw new IllegalArgumentException("maxBytes must be positive");
+        long limit = Math.min(maxBytes, properties.getMaxDownloadBytes());
+        String requestUrl = requireUrl(url);
+        HttpHeaders requestHeaders = requestHeaders(toHttpHeaders(headers));
+        requestHeaders.set(HttpHeaders.ACCEPT_ENCODING, "identity");
+        Path normalizedTarget = Objects.requireNonNull(target).toAbsolutePath().normalize();
+        int attempts = Math.max(1, properties.getMaxAttempts());
+        DownloadResult last = null;
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            last = doRawDownload(requestUrl, requestHeaders, normalizedTarget, limit);
+            if (!last.isRetryable() || attempt == attempts || Thread.currentThread().isInterrupted())
+                return last;
+            logRetry("GET", requestUrl, attempt, attempts, last.statusCode());
+            if (!sleepBackoff(attempt, last.headers()))
+                return last;
+        }
+        return last;
+    }
+
+    private DownloadResult doRawDownload(String url, HttpHeaders headers, Path target, long limit) {
+        long startedAt = System.nanoTime();
+        Path temporary = null;
+        try {
+            HttpRequest.Builder builder =
+                HttpRequest.newBuilder(URI.create(url)).timeout(properties.getReadTimeout()).GET();
+            headers.forEach((name, values) -> values.forEach(value -> builder.header(name, value)));
+            HttpResponse<InputStream> response =
+                rawHttpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
+            HttpHeaders responseHeaders = new HttpHeaders();
+            response.headers().map().forEach(responseHeaders::put);
+            try (InputStream input = response.body()) {
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    return new DownloadResult(response.statusCode(), 0, responseHeaders, null);
+                }
+                if (response.headers().allValues(HttpHeaders.CONTENT_ENCODING).stream()
+                    .anyMatch(value -> !value.isBlank() && !"identity".equalsIgnoreCase(value.trim()))) {
+                    return new DownloadResult(-1, 0, responseHeaders,
+                        new IOException("Raw download requires identity Content-Encoding"));
+                }
+                Files.createDirectories(target.getParent());
+                temporary = Files.createTempFile(target.getParent(), "." + target.getFileName() + ".", ".download");
+                long size = 0;
+                try (OutputStream output = Files.newOutputStream(temporary)) {
+                    byte[] buffer = new byte[32 * 1024];
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        if (read > limit - size) {
+                            throw new ExternalResponseTooLargeException("GET", sanitizeUrl(url), limit, null);
+                        }
+                        output.write(buffer, 0, read);
+                        size += read;
+                    }
+                }
+                try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+                    channel.force(true);
+                }
+                Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+                temporary = null;
+                recordMetric("GET", url, response.statusCode(), startedAt);
+                return new DownloadResult(response.statusCode(), size, responseHeaders, null);
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return new DownloadResult(-1, 0, HttpHeaders.EMPTY, new IOException("Raw download interrupted", exception));
+        } catch (IOException | RuntimeException exception) {
+            logFailure("GET", url, -1, exception instanceof RuntimeException runtime ? runtime
+                : new IllegalStateException("Raw download failed", exception), startedAt);
+            recordMetric("GET", url, -1, startedAt);
+            return new DownloadResult(-1, 0, HttpHeaders.EMPTY, exception);
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (IOException exception) {
+                    log.warn("Failed to clean raw download temporary file: {}", temporary, exception);
+                }
+            }
+        }
+    }
+
+    private DownloadResult downloadTo(String url, HttpHeaders headers, Path target, long maxBytes) {
+        if (maxBytes < 1)
+            throw new IllegalArgumentException("maxBytes must be positive");
         long downloadLimit = Math.min(maxBytes, properties.getMaxDownloadBytes());
         String requestUrl = requireUrl(url);
         HttpHeaders requestHeaders = requestHeaders(headers);
@@ -227,8 +344,7 @@ public class HttpClient {
     }
 
     /**
-     * 流式下载 UTF-8 文本。先完整写入临时文件，再一次性读取文本，避免 HTTP 客户端
-     * 在响应阶段把大 JSON 直接组装为 byte[]，从而暴露截断响应或过高堆内存峰值。
+     * 流式下载 UTF-8 文本。先完整写入临时文件，再一次性读取文本，避免 HTTP 客户端 在响应阶段把大 JSON 直接组装为 byte[]，从而暴露截断响应或过高堆内存峰值。
      */
     public TextResult downloadText(String url, Map<String, String> headers) {
         return downloadText(url, toHttpHeaders(headers));
@@ -243,12 +359,10 @@ public class HttpClient {
             temporary = Files.createTempFile("nnmbot-http-", ".text");
             DownloadResult result = downloadTo(url, headers, temporary);
             if (!result.isSuccess()) {
-                return new TextResult(
-                        result.statusCode(), null, result.headers(), result.bytes(), result.error());
+                return new TextResult(result.statusCode(), null, result.headers(), result.bytes(), result.error());
             }
             String body = Files.readString(temporary, StandardCharsets.UTF_8);
-            return new TextResult(
-                    result.statusCode(), body, result.headers(), result.bytes(), null);
+            return new TextResult(result.statusCode(), body, result.headers(), result.bytes(), null);
         } catch (IOException | RuntimeException exception) {
             return new TextResult(-1, null, HttpHeaders.EMPTY, 0, exception);
         } finally {
@@ -256,8 +370,7 @@ public class HttpClient {
                 try {
                     Files.deleteIfExists(temporary);
                 } catch (IOException cleanupFailure) {
-                    log.debug("Could not remove temporary text download {}", temporary,
-                            cleanupFailure);
+                    log.debug("Could not remove temporary text download {}", temporary, cleanupFailure);
                 }
             }
         }
@@ -270,42 +383,32 @@ public class HttpClient {
     /**
      * 发起类型化 GET 请求。最终失败时抛出明确的外部 HTTP、超时或传输异常。
      */
-    public <T> T get(String url,
-                     Map<String, String> headers,
-                     Class<T> responseType) {
+    public <T> T get(String url, Map<String, String> headers, Class<T> responseType) {
         return get(url, toHttpHeaders(headers), responseType);
     }
 
     /**
      * 发起类型化 GET 请求。
      */
-    public <T> T get(String url,
-                     HttpHeaders headers,
-                     Class<T> responseType) {
+    public <T> T get(String url, HttpHeaders headers, Class<T> responseType) {
         return getWithRetry(url, headers, responseType);
     }
 
     /**
      * 发起支持泛型返回值的 GET 请求。
      */
-    public <T> T get(String url,
-                     Map<String, String> headers,
-                     ParameterizedTypeReference<T> responseType) {
+    public <T> T get(String url, Map<String, String> headers, ParameterizedTypeReference<T> responseType) {
         return get(url, toHttpHeaders(headers), responseType);
     }
 
     /**
      * 发起支持泛型返回值的 GET 请求。
      */
-    public <T> T get(String url,
-                     HttpHeaders headers,
-                     ParameterizedTypeReference<T> responseType) {
+    public <T> T get(String url, HttpHeaders headers, ParameterizedTypeReference<T> responseType) {
         return getWithRetry(url, headers, responseType.getType());
     }
 
-    private <T> T getWithRetry(String url,
-                               HttpHeaders headers,
-                               Type responseType) {
+    private <T> T getWithRetry(String url, HttpHeaders headers, Type responseType) {
         String requestUrl = requireUrl(url);
         HttpHeaders requestHeaders = requestHeaders(headers);
         Objects.requireNonNull(responseType, "responseType must not be null");
@@ -331,64 +434,43 @@ public class HttpClient {
     /**
      * 发起 JSON POST 请求。该方法不自动重试。
      */
-    public <T> T postJson(String url,
-                          Object body,
-                          Map<String, String> headers,
-                          Class<T> responseType) {
+    public <T> T postJson(String url, Object body, Map<String, String> headers, Class<T> responseType) {
         return postJson(url, body, toHttpHeaders(headers), responseType);
     }
 
     /**
      * 发起 JSON POST 请求。POST 不自动重试，避免非幂等请求产生重复副作用。
      */
-    public <T> T postJson(String url,
-                          Object body,
-                          HttpHeaders headers,
-                          Class<T> responseType) {
+    public <T> T postJson(String url, Object body, HttpHeaders headers, Class<T> responseType) {
         return postJson(url, body, headers, responseType, responseType);
     }
 
     /**
      * 发起支持泛型返回值的 JSON POST 请求。该方法不自动重试。
      */
-    public <T> T postJson(String url,
-                          Object body,
-                          Map<String, String> headers,
-                          ParameterizedTypeReference<T> responseType) {
+    public <T> T postJson(String url, Object body, Map<String, String> headers,
+        ParameterizedTypeReference<T> responseType) {
         return postJson(url, body, toHttpHeaders(headers), responseType);
     }
 
     /**
      * 发起支持泛型返回值的 JSON POST 请求。
      */
-    public <T> T postJson(String url,
-                          Object body,
-                          HttpHeaders headers,
-                          ParameterizedTypeReference<T> responseType) {
+    public <T> T postJson(String url, Object body, HttpHeaders headers, ParameterizedTypeReference<T> responseType) {
         return postJson(url, body, headers, responseType.getType(), responseType);
     }
 
-    private <T> T postJson(String url,
-                           Object body,
-                           HttpHeaders headers,
-                           Type responseType,
-                           Object responseTypeReference) {
+    private <T> T postJson(String url, Object body, HttpHeaders headers, Type responseType,
+        Object responseTypeReference) {
         String requestUrl = requireUrl(url);
         HttpHeaders requestHeaders = requestHeaders(headers);
         Objects.requireNonNull(responseTypeReference, "responseType must not be null");
         String requestBody = serialize("POST", requestUrl, ObjectUtil.isNull(body) ? Map.of() : body);
         logRequest("POST", requestUrl, body);
-        return executeTypedRequest(
-                "POST",
-                requestUrl,
-                responseType,
-                () -> restClient.post()
-                        .uri(requestUrl)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .headers(httpHeaders -> copyHeaders(requestHeaders, httpHeaders))
-                        .body(requestBody)
-                        .retrieve()
-                        .toEntity(String.class));
+        return executeTypedRequest("POST", requestUrl, responseType,
+            () -> restClient.post().uri(requestUrl).contentType(MediaType.APPLICATION_JSON)
+                .headers(httpHeaders -> copyHeaders(requestHeaders, httpHeaders)).body(requestBody).retrieve()
+                .toEntity(String.class));
     }
 
     /**
@@ -405,15 +487,9 @@ public class HttpClient {
         String requestUrl = requireUrl(url);
         HttpHeaders requestHeaders = requestHeaders(headers);
         logRequest("POST", requestUrl, body);
-        return executeTextResult(
-                "POST",
-                requestUrl,
-                () -> restClient.post()
-                        .uri(requestUrl)
-                        .headers(httpHeaders -> copyHeaders(requestHeaders, httpHeaders))
-                        .body(body)
-                        .retrieve()
-                        .toEntity(String.class));
+        return executeTextResult("POST", requestUrl,
+            () -> restClient.post().uri(requestUrl).headers(httpHeaders -> copyHeaders(requestHeaders, httpHeaders))
+                .body(body).retrieve().toEntity(String.class));
     }
 
     /**
@@ -431,51 +507,35 @@ public class HttpClient {
         HttpHeaders requestHeaders = requestHeaders(headers);
         Objects.requireNonNull(body, "body must not be null");
         logRequest("PUT", requestUrl, null);
-        return executeTextResult(
-                "PUT",
-                requestUrl,
-                () -> restClient.put()
-                        .uri(requestUrl)
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .headers(httpHeaders -> copyHeaders(requestHeaders, httpHeaders))
-                        .body(body)
-                        .retrieve()
-                        .toEntity(String.class));
+        return executeTextResult("PUT", requestUrl,
+            () -> restClient.put().uri(requestUrl).contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .headers(httpHeaders -> copyHeaders(requestHeaders, httpHeaders)).body(body).retrieve()
+                .toEntity(String.class));
     }
 
     private HttpResult doGetResult(String url, HttpHeaders headers) {
         logRequest("GET", url, null);
-        return executeTextResult(
-                "GET",
-                url,
-                () -> restClient.get()
-                        .uri(url)
-                        .headers(httpHeaders -> copyHeaders(headers, httpHeaders))
-                        .retrieve()
-                        .toEntity(String.class));
+        return executeTextResult("GET", url, () -> restClient.get().uri(url)
+            .headers(httpHeaders -> copyHeaders(headers, httpHeaders)).retrieve().toEntity(String.class));
     }
 
     /**
      * 结果型调用在此统一把 HTTP 状态和传输异常转换为值对象，调用方自行决定业务语义。
      */
-    private HttpResult executeTextResult(
-            String method,
-            String url,
-            Supplier<ResponseEntity<String>> request) {
+    private HttpResult executeTextResult(String method, String url, Supplier<ResponseEntity<String>> request) {
         long startedAt = System.nanoTime();
         try {
             ResponseEntity<String> response = request.get();
             ensureResponseBodySize(method, url, response.getBody());
             logResponse(method, url, response, startedAt);
             recordMetric(method, url, response.getStatusCode().value(), startedAt);
-            return new HttpResult(response.getStatusCode().value(), response.getBody(),
-                    response.getHeaders(), null);
+            return new HttpResult(response.getStatusCode().value(), response.getBody(), response.getHeaders(), null);
         } catch (RestClientResponseException exception) {
             ensureResponseBodySize(method, url, exception.getResponseBodyAsByteArray());
             logFailure(method, url, exception.getStatusCode().value(), exception, startedAt);
             recordMetric(method, url, exception.getStatusCode().value(), startedAt);
-            return new HttpResult(exception.getStatusCode().value(),
-                    exception.getResponseBodyAsString(), exception.getResponseHeaders(), exception);
+            return new HttpResult(exception.getStatusCode().value(), exception.getResponseBodyAsString(),
+                exception.getResponseHeaders(), exception);
         } catch (RuntimeException exception) {
             logFailure(method, url, -1, exception, startedAt);
             recordMetric(method, url, -1, startedAt);
@@ -487,44 +547,109 @@ public class HttpClient {
         logRequest("GET", url, null);
         long startedAt = System.nanoTime();
         try {
-            ResponseEntity<byte[]> response = restClient.get()
-                    .uri(url)
-                    .headers(httpHeaders -> copyHeaders(headers, httpHeaders))
-                    .retrieve()
-                    .toEntity(byte[].class);
+            ResponseEntity<byte[]> response = restClient.get().uri(url)
+                .headers(httpHeaders -> copyHeaders(headers, httpHeaders)).retrieve().toEntity(byte[].class);
             ensureResponseBodySize("GET", url, response.getBody());
             logResponse("GET", url, response, startedAt);
             recordMetric("GET", url, response.getStatusCode().value(), startedAt);
-            return new ByteResult(response.getStatusCode().value(), response.getBody(),
-                    response.getHeaders(), null);
+            return new ByteResult(response.getStatusCode().value(), response.getBody(), response.getHeaders(), null);
         } catch (RestClientResponseException exception) {
             ensureResponseBodySize("GET", url, exception.getResponseBodyAsByteArray());
             logFailure("GET", url, exception.getStatusCode().value(), exception, startedAt);
             recordMetric("GET", url, exception.getStatusCode().value(), startedAt);
-            return new ByteResult(exception.getStatusCode().value(), null,
-                    exception.getResponseHeaders(), exception);
+            return new ByteResult(exception.getStatusCode().value(), null, exception.getResponseHeaders(), exception);
         } catch (RuntimeException exception) {
-            logFailure("GET", url, -1, exception, startedAt);
+            logFailure("GET", url, -1, exception instanceof RuntimeException runtime ? runtime
+                : new IllegalStateException("Raw download failed", exception), startedAt);
             recordMetric("GET", url, -1, startedAt);
             return new ByteResult(-1, null, exception);
         }
     }
 
-    private DownloadResult doDownload(
-            String url, HttpHeaders headers, Path target, long downloadLimit) {
+    private static boolean hasContentEncoding(ClientHttpResponse response) {
+        String encoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
+        return encoding != null && !encoding.isBlank() && !"identity".equalsIgnoreCase(encoding.trim());
+    }
+
+    /**
+     * 按响应的 Content-Encoding 逐层解码一般下载响应；原件下载使用独立入口跳过此处理。
+     */
+    private InputStream decodedBody(ClientHttpResponse response, String url) throws IOException {
+        InputStream input;
+        try {
+            input = response.getBody();
+        } catch (IOException exception) {
+            throw transportFailure(url, exception);
+        }
+        String encoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
+        if (encoding == null || encoding.isBlank()) {
+            return transportInput(input, url);
+        }
+        String[] encodings = encoding.split(",");
+        for (int index = encodings.length - 1; index >= 0; index--) {
+            String value = encodings[index].trim();
+            if (value.isEmpty() || "identity".equalsIgnoreCase(value)) {
+                continue;
+            }
+            if (!"gzip".equalsIgnoreCase(value)) {
+                throw new ExternalTransportException("GET", sanitizeUrl(url),
+                    new IOException("Unsupported Content-Encoding: " + value));
+            }
+            try {
+                input = new GZIPInputStream(input);
+            } catch (IOException exception) {
+                throw transportFailure(url, exception);
+            }
+        }
+        return transportInput(input, url);
+    }
+
+    private InputStream transportInput(InputStream input, String url) {
+        return new FilterInputStream(input) {
+            @Override
+            public int read() throws IOException {
+                try {
+                    return super.read();
+                } catch (IOException exception) {
+                    throw transportFailure(url, exception);
+                }
+            }
+
+            @Override
+            public int read(byte[] bytes, int offset, int length) throws IOException {
+                try {
+                    return super.read(bytes, offset, length);
+                } catch (IOException exception) {
+                    throw transportFailure(url, exception);
+                }
+            }
+
+            @Override
+            public void close() throws IOException {
+                try {
+                    super.close();
+                } catch (IOException exception) {
+                    throw transportFailure(url, exception);
+                }
+            }
+        };
+    }
+
+    private ExternalTransportException transportFailure(String url, IOException cause) {
+        return new ExternalTransportException("GET", sanitizeUrl(url), cause);
+    }
+
+    private DownloadResult doDownload(String url, HttpHeaders headers, Path target, long downloadLimit) {
         logRequest("GET", url, null);
         long startedAt = System.nanoTime();
         Path temporary = null;
         try {
             Files.createDirectories(target.getParent());
-            temporary = Files.createTempFile(
-                    target.getParent(), "." + target.getFileName() + ".", ".download");
+            temporary = Files.createTempFile(target.getParent(), "." + target.getFileName() + ".", ".download");
             Path temporaryFile = temporary;
-            DownloadResult result = restClient.get()
-                    .uri(url)
-                    .attribute(ResponseSizeLimitInterceptor.STREAMING_DOWNLOAD, true)
-                    .headers(httpHeaders -> copyHeaders(headers, httpHeaders))
-                    .exchange((request, response) -> {
+            DownloadResult result =
+                restClient.get().uri(url).attribute(ResponseSizeLimitInterceptor.STREAMING_DOWNLOAD, true)
+                    .headers(httpHeaders -> copyHeaders(headers, httpHeaders)).exchange((request, response) -> {
                         int statusCode = response.getStatusCode().value();
                         HttpHeaders responseHeaders = copyHeaders(response.getHeaders());
                         if (statusCode < 200 || statusCode >= 300) {
@@ -532,11 +657,9 @@ public class HttpClient {
                             return new DownloadResult(statusCode, 0, responseHeaders, null);
                         }
                         long bytes = 0;
-                        try (InputStream input = response.getBody();
-                             OutputStream output = Files.newOutputStream(
-                                     temporaryFile,
-                                     StandardOpenOption.TRUNCATE_EXISTING,
-                                     StandardOpenOption.WRITE)) {
+                        try (InputStream input = decodedBody(response, url);
+                            OutputStream output = Files.newOutputStream(temporaryFile,
+                                StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
                             byte[] buffer = new byte[32 * 1024];
                             int read;
                             while ((read = input.read(buffer)) >= 0) {
@@ -544,9 +667,8 @@ public class HttpClient {
                                     continue;
                                 }
                                 if (bytes > downloadLimit - read) {
-                                    throw new ExternalResponseTooLargeException(
-                                            "GET", sanitizeUrl(url),
-                                            downloadLimit, null);
+                                    throw new ExternalResponseTooLargeException("GET", sanitizeUrl(url), downloadLimit,
+                                        null);
                                 }
                                 output.write(buffer, 0, read);
                                 bytes += read;
@@ -555,29 +677,21 @@ public class HttpClient {
                         return new DownloadResult(statusCode, bytes, responseHeaders, null);
                     });
             if (result.isSuccess()) {
-                try (FileChannel channel = FileChannel.open(
-                        temporary,
-                        StandardOpenOption.WRITE)) {
+                try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
                     channel.force(true);
                 }
                 // 不支持原子替换时直接失败，不能降级为可能损坏原文件的覆盖写入。
-                Files.move(temporary, target,
-                        StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING);
+                Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
                 temporary = null;
             }
-            log.debug("[GET] <<< url={}, status={}, bytes={}, elapsedMs={}",
-                    sanitizeUrl(url),
-                    result.statusCode(),
-                    result.bytes(),
-                    TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startedAt)));
+            log.debug("[GET] <<< url={}, status={}, bytes={}, elapsedMs={}", sanitizeUrl(url), result.statusCode(),
+                result.bytes(), TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startedAt)));
             recordMetric("GET", url, result.statusCode(), startedAt);
             return result;
         } catch (IOException | RuntimeException exception) {
             DownloadResult result = new DownloadResult(-1, 0, HttpHeaders.EMPTY, exception);
-            RuntimeException failure = exception instanceof RuntimeException runtime
-                    ? runtime
-                    : new IllegalStateException("Streaming download failed", exception);
+            RuntimeException failure = exception instanceof RuntimeException runtime ? runtime
+                : new IllegalStateException("Streaming download failed", exception);
             logFailure("GET", url, -1, failure, startedAt);
             recordMetric("GET", url, -1, startedAt);
             return result;
@@ -592,29 +706,17 @@ public class HttpClient {
         }
     }
 
-    private <T> T doGet(String url,
-                        HttpHeaders headers,
-                        Type responseType) {
+    private <T> T doGet(String url, HttpHeaders headers, Type responseType) {
         logRequest("GET", url, null);
-        return executeTypedRequest(
-                "GET",
-                url,
-                responseType,
-                () -> restClient.get()
-                        .uri(url)
-                        .headers(httpHeaders -> copyHeaders(headers, httpHeaders))
-                        .retrieve()
-                        .toEntity(String.class));
+        return executeTypedRequest("GET", url, responseType, () -> restClient.get().uri(url)
+            .headers(httpHeaders -> copyHeaders(headers, httpHeaders)).retrieve().toEntity(String.class));
     }
 
     /**
      * 类型化调用在此统一记录耗时并转换外部 HTTP、超时、传输和载荷异常。
      */
-    private <T> T executeTypedRequest(
-            String method,
-            String url,
-            Type responseType,
-            Supplier<ResponseEntity<String>> request) {
+    private <T> T executeTypedRequest(String method, String url, Type responseType,
+        Supplier<ResponseEntity<String>> request) {
         long startedAt = System.nanoTime();
         try {
             ResponseEntity<String> response = request.get();
@@ -628,44 +730,33 @@ public class HttpClient {
         }
     }
 
-    private RuntimeException normalizeAndLog(String method,
-                                             String url,
-                                             RuntimeException exception,
-                                             long startedAt) {
+    private RuntimeException normalizeAndLog(String method, String url, RuntimeException exception, long startedAt) {
         RuntimeException normalized = normalize(method, url, exception);
         logFailure(method, url, statusCode(normalized), normalized, startedAt);
         recordMetric(method, url, statusCode(normalized), startedAt);
         return normalized;
     }
 
-    private RuntimeException normalize(String method,
-                                       String url,
-                                       RuntimeException exception) {
+    private RuntimeException normalize(String method, String url, RuntimeException exception) {
         // 消息转换器可能包装读取异常，超限不能被误判为可重试的网络故障。
         for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
             if (cause instanceof ExternalResponseTooLargeException tooLarge) {
                 return tooLarge;
             }
         }
-        if (exception instanceof ExternalHttpException
-                || exception instanceof ExternalTimeoutException
-                || exception instanceof ExternalTransportException
-                || exception instanceof ExternalPayloadException
-                || exception instanceof ExternalResponseTooLargeException) {
+        if (exception instanceof ExternalHttpException || exception instanceof ExternalTimeoutException
+            || exception instanceof ExternalTransportException || exception instanceof ExternalPayloadException
+            || exception instanceof ExternalResponseTooLargeException) {
             return exception;
         }
         String safeUrl = sanitizeUrl(url);
         if (exception instanceof RestClientResponseException responseException) {
-            return new ExternalHttpException(
-                    method,
-                    safeUrl,
-                    responseException.getStatusCode().value(),
-                    truncate(responseException.getResponseBodyAsString()),
-                    responseException.getResponseHeaders(),
-                    exception);
+            return new ExternalHttpException(method, safeUrl, responseException.getStatusCode().value(),
+                truncate(responseException.getResponseBodyAsString()), responseException.getResponseHeaders(),
+                exception);
         }
         if (containsCause(exception, HttpTimeoutException.class)
-                || containsCause(exception, SocketTimeoutException.class)) {
+            || containsCause(exception, SocketTimeoutException.class)) {
             return new ExternalTimeoutException(method, safeUrl, exception);
         }
         return new ExternalTransportException(method, safeUrl, exception);
@@ -678,30 +769,23 @@ public class HttpClient {
         try {
             return objectMapper.writeValueAsString(body);
         } catch (JsonProcessingException exception) {
-            throw new ExternalPayloadException(
-                    method, sanitizeUrl(url), "serialization", exception);
+            throw new ExternalPayloadException(method, sanitizeUrl(url), "serialization", exception);
         }
     }
 
-    private <T> T deserialize(String method,
-                              String url,
-                              String body,
-                              Type responseType) {
-        if (responseType == Void.class || responseType == void.class
-                || StrUtil.isBlank(body)) {
+    private <T> T deserialize(String method, String url, String body, Type responseType) {
+        if (responseType == Void.class || responseType == void.class || StrUtil.isBlank(body)) {
             return null;
         }
         if (responseType == String.class) {
             @SuppressWarnings("unchecked")
-            T result = (T) body;
+            T result = (T)body;
             return result;
         }
         try {
-            return objectMapper.readValue(body, objectMapper.getTypeFactory()
-                    .constructType(responseType));
+            return objectMapper.readValue(body, objectMapper.getTypeFactory().constructType(responseType));
         } catch (JsonProcessingException exception) {
-            throw new ExternalPayloadException(
-                    method, sanitizeUrl(url), "deserialization", exception);
+            throw new ExternalPayloadException(method, sanitizeUrl(url), "deserialization", exception);
         }
     }
 
@@ -712,48 +796,32 @@ public class HttpClient {
         }
     }
 
-    private void logResponse(String method,
-                             String url,
-                             ResponseEntity<?> response,
-                             long startedAt) {
+    private void logResponse(String method, String url, ResponseEntity<?> response, long startedAt) {
         long elapsedNanos = elapsedNanos(startedAt);
         long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(elapsedNanos);
         if (!properties.getSlowRequestThreshold().isZero()
-                && elapsedNanos >= properties.getSlowRequestThreshold().toNanos()) {
-            log.warn("[{}] <<< url={}, status={}, elapsedMs={}",
-                    method, sanitizeUrl(url), response.getStatusCode().value(), elapsedMillis);
+            && elapsedNanos >= properties.getSlowRequestThreshold().toNanos()) {
+            log.warn("[{}] <<< url={}, status={}, elapsedMs={}", method, sanitizeUrl(url),
+                response.getStatusCode().value(), elapsedMillis);
         } else {
-            log.debug("[{}] <<< url={}, status={}, elapsedMs={}",
-                    method, sanitizeUrl(url), response.getStatusCode().value(), elapsedMillis);
+            log.debug("[{}] <<< url={}, status={}, elapsedMs={}", method, sanitizeUrl(url),
+                response.getStatusCode().value(), elapsedMillis);
         }
-        if (properties.isPayloadLoggingEnabled()
-                && ObjectUtil.isNotNull(response.getBody())
-                && log.isDebugEnabled()) {
+        if (properties.isPayloadLoggingEnabled() && ObjectUtil.isNotNull(response.getBody()) && log.isDebugEnabled()) {
             log.debug("[{}] <<< payload={}", method, truncate(String.valueOf(response.getBody())));
         }
     }
 
-    private void logFailure(String method,
-                            String url,
-                            int statusCode,
-                            RuntimeException exception,
-                            long startedAt) {
+    private void logFailure(String method, String url, int statusCode, RuntimeException exception, long startedAt) {
         if (statusCode == 404) {
-            log.debug("[{}] <<< url={}, status=404, elapsedMs={}",
-                    method,
-                    sanitizeUrl(url),
-                    TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startedAt)));
+            log.debug("[{}] <<< url={}, status=404, elapsedMs={}", method, sanitizeUrl(url),
+                TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startedAt)));
             return;
         }
         Throwable cause = mostSpecificCause(exception);
-        log.warn("[{}] <<< url={}, status={}, elapsedMs={}, error={}, cause={}, message={}",
-                method,
-                sanitizeUrl(url),
-                statusCode,
-                TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startedAt)),
-                exception.getClass().getSimpleName(),
-                cause.getClass().getSimpleName(),
-                safeFailureMessage(cause.getMessage(), url));
+        log.warn("[{}] <<< url={}, status={}, elapsedMs={}, error={}, cause={}, message={}", method, sanitizeUrl(url),
+            statusCode, TimeUnit.NANOSECONDS.toMillis(elapsedNanos(startedAt)), exception.getClass().getSimpleName(),
+            cause.getClass().getSimpleName(), safeFailureMessage(cause.getMessage(), url));
         log.debug("[{}] external HTTP failure details", method, exception);
     }
 
@@ -775,30 +843,21 @@ public class HttpClient {
         return HttpDiagnostics.safeFailureMessage(message, requestUrl);
     }
 
-    private void logRetry(String method,
-                          String url,
-                          int attempt,
-                          int maxAttempts,
-                          int statusCode) {
-        log.warn("[{}] url={} attempt={}/{} failed(status={}), retrying",
-                method, sanitizeUrl(url), attempt, maxAttempts, statusCode);
+    private void logRetry(String method, String url, int attempt, int maxAttempts, int statusCode) {
+        log.warn("[{}] url={} attempt={}/{} failed(status={}), retrying", method, sanitizeUrl(url), attempt,
+            maxAttempts, statusCode);
     }
 
     private boolean sleepBackoff(int attempt, HttpHeaders responseHeaders) {
         try {
-            Duration exponential = RetryBackoff.exponential(
-                    properties.getRetryBackoff(),
-                    properties.getRetryMaxBackoff(),
-                    attempt
-            );
+            Duration exponential =
+                RetryBackoff.exponential(properties.getRetryBackoff(), properties.getRetryMaxBackoff(), attempt);
             Duration retryAfter = retryAfter(responseHeaders);
             if (retryAfter != null && retryAfter.compareTo(properties.getRetryMaxBackoff()) > 0) {
                 // 上游要求的等待超出本次同步调用预算时停止重试，不能提前再请求。
                 return false;
             }
-            Duration wait = retryAfter == null || retryAfter.compareTo(exponential) < 0
-                    ? exponential
-                    : retryAfter;
+            Duration wait = retryAfter == null || retryAfter.compareTo(exponential) < 0 ? exponential : retryAfter;
             Thread.sleep(wait.toMillis());
             return true;
         } catch (InterruptedException exception) {
@@ -819,8 +878,7 @@ public class HttpClient {
         if (value.length() <= maxLength) {
             return value;
         }
-        return value.substring(0, maxLength)
-                + "...(truncated, total=" + value.length() + ")";
+        return value.substring(0, maxLength) + "...(truncated, total=" + value.length() + ")";
     }
 
     private static String requireUrl(String url) {
@@ -890,17 +948,15 @@ public class HttpClient {
 
     private void ensureResponseBodySize(String method, String url, byte[] body) {
         if (body != null && body.length > properties.getMaxResponseBodyBytes()) {
-            throw new ExternalResponseTooLargeException(
-                    method, sanitizeUrl(url), properties.getMaxResponseBodyBytes(), null);
+            throw new ExternalResponseTooLargeException(method, sanitizeUrl(url), properties.getMaxResponseBodyBytes(),
+                null);
         }
     }
 
-    private void drainAndCheck(ClientHttpResponse response, String url, long maxBytes)
-            throws IOException {
+    private void drainAndCheck(ClientHttpResponse response, String url, long maxBytes) throws IOException {
         long contentLength = response.getHeaders().getContentLength();
         if (contentLength > maxBytes) {
-            throw new ExternalResponseTooLargeException(
-                    "GET", sanitizeUrl(url), maxBytes, null);
+            throw new ExternalResponseTooLargeException("GET", sanitizeUrl(url), maxBytes, null);
         }
         long bytes = 0;
         byte[] buffer = new byte[8192];
@@ -912,8 +968,7 @@ public class HttpClient {
                 }
                 bytes += read;
                 if (bytes > maxBytes) {
-                    throw new ExternalResponseTooLargeException(
-                            "GET", sanitizeUrl(url), maxBytes, null);
+                    throw new ExternalResponseTooLargeException("GET", sanitizeUrl(url), maxBytes, null);
                 }
             }
         }
@@ -942,8 +997,7 @@ public class HttpClient {
             return Duration.ofSeconds(seconds);
         } catch (NumberFormatException ignored) {
             try {
-                Instant retryAt = ZonedDateTime.parse(
-                        value, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant();
+                Instant retryAt = ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant();
                 Duration delay = Duration.between(Instant.now(), retryAt);
                 return delay.isNegative() ? Duration.ZERO : delay;
             } catch (DateTimeParseException ignoredDate) {
@@ -964,24 +1018,17 @@ public class HttpClient {
             } catch (IllegalArgumentException exception) {
                 host = null;
             }
-            String outcome = statusCode >= 200 && statusCode < 300
-                    ? "success"
-                    : statusCode < 0 ? "transport_error" : "http_error";
-            Timer.builder("nnm.http.client.requests")
-                    .tag("method", method)
-                    .tag("host", host == null ? "unknown" : host)
-                    .tag("status", String.valueOf(statusCode))
-                    .tag("outcome", outcome)
-                    .register(registry)
-                    .record(Duration.ofNanos(elapsedNanos(startedAt)));
+            String outcome =
+                statusCode >= 200 && statusCode < 300 ? "success" : statusCode < 0 ? "transport_error" : "http_error";
+            Timer.builder("nnm.http.client.requests").tag("method", method).tag("host", host == null ? "unknown" : host)
+                .tag("status", String.valueOf(statusCode)).tag("outcome", outcome).register(registry)
+                .record(Duration.ofNanos(elapsedNanos(startedAt)));
         });
     }
 
     private static boolean isRetryable(RuntimeException exception) {
-        return exception instanceof ExternalTimeoutException
-                || exception instanceof ExternalTransportException
-                || exception instanceof ExternalHttpException httpException
-                && httpException.isRetryable();
+        return exception instanceof ExternalTimeoutException || exception instanceof ExternalTransportException
+            || exception instanceof ExternalHttpException httpException && httpException.isRetryable();
     }
 
     private static boolean isRetryableResult(int status, Exception error) {
@@ -992,19 +1039,15 @@ public class HttpClient {
             return true;
         }
         // 本地磁盘错误、参数错误和响应超限都不会因重发请求而恢复。
-        return status == -1 && (error instanceof ResourceAccessException
-                || error instanceof ExternalTimeoutException
-                || error instanceof ExternalTransportException);
+        return status == -1 && (error instanceof ResourceAccessException || error instanceof ExternalTimeoutException
+            || error instanceof ExternalTransportException);
     }
 
     private static int statusCode(RuntimeException exception) {
-        return exception instanceof ExternalHttpException httpException
-                ? httpException.getStatusCode()
-                : -1;
+        return exception instanceof ExternalHttpException httpException ? httpException.getStatusCode() : -1;
     }
 
-    private static boolean containsCause(Throwable throwable,
-                                         Class<? extends Throwable> causeType) {
+    private static boolean containsCause(Throwable throwable, Class<? extends Throwable> causeType) {
         Throwable current = throwable;
         while (ObjectUtil.isNotNull(current)) {
             if (causeType.isInstance(current)) {
@@ -1026,11 +1069,7 @@ public class HttpClient {
      * @param body 响应正文
      * @param error 请求过程中捕获的异常
      */
-    public record HttpResult(
-            int statusCode,
-            String body,
-            HttpHeaders headers,
-            Exception error) {
+    public record HttpResult(int statusCode, String body, HttpHeaders headers, Exception error) {
 
         public HttpResult(int statusCode, String body, Exception error) {
             this(statusCode, body, HttpHeaders.EMPTY, error);
@@ -1053,16 +1092,11 @@ public class HttpClient {
         }
 
         public boolean is2xx() {
-            return HttpStatusCode.valueOf(statusCode == -1 ? 599 : statusCode)
-                    .is2xxSuccessful();
+            return HttpStatusCode.valueOf(statusCode == -1 ? 599 : statusCode).is2xxSuccessful();
         }
     }
 
-    public record ByteResult(
-            int statusCode,
-            byte[] body,
-            HttpHeaders headers,
-            Exception error) {
+    public record ByteResult(int statusCode, byte[] body, HttpHeaders headers, Exception error) {
 
         public ByteResult(int statusCode, byte[] body, Exception error) {
             this(statusCode, body, HttpHeaders.EMPTY, error);
@@ -1081,12 +1115,7 @@ public class HttpClient {
         }
     }
 
-    public record TextResult(
-            int statusCode,
-            String body,
-            HttpHeaders headers,
-            long bytes,
-            Exception error) {
+    public record TextResult(int statusCode, String body, HttpHeaders headers, long bytes, Exception error) {
 
         public TextResult(int statusCode, String body, Exception error) {
             this(statusCode, body, HttpHeaders.EMPTY, 0, error);
@@ -1105,11 +1134,7 @@ public class HttpClient {
         }
     }
 
-    public record DownloadResult(
-            int statusCode,
-            long bytes,
-            HttpHeaders headers,
-            Exception error) {
+    public record DownloadResult(int statusCode, long bytes, HttpHeaders headers, Exception error) {
 
         public DownloadResult(int statusCode, long bytes, Exception error) {
             this(statusCode, bytes, HttpHeaders.EMPTY, error);

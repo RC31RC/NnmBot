@@ -15,8 +15,9 @@ import java.time.LocalDateTime;
 /**
  * Warframe 论坛文章。
  *
- * <p>文章正文明确映射为 PostgreSQL TEXT，不使用 {@code @Lob}，避免 PostgreSQL
- * 将管理端内容存储为大型对象并要求额外的事务上下文。</p>
+ * <p>
+ * 文章正文明确映射为 PostgreSQL TEXT，不使用 {@code @Lob}，避免 PostgreSQL 将管理端内容存储为大型对象并要求额外的事务上下文。
+ * </p>
  */
 @Getter
 @Setter

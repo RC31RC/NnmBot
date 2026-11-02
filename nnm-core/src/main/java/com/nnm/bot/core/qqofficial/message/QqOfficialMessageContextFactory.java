@@ -6,6 +6,8 @@ import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nnm.bot.core.constant.QqOfficialChatType;
 import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.message.model.BotMessageReference;
+import com.nnm.bot.core.constant.BotMessageConstants.ReferenceKind;
 import com.nnm.bot.core.message.model.BotIncomingAttachment;
 import com.nnm.bot.core.constant.BotMessageConstants.BotIncomingAttachmentType;
 import com.nnm.bot.core.constant.BotMessageScope;
@@ -21,20 +23,21 @@ import java.time.Instant;
 /**
  * 将 QQ 官方 Gateway 消息事件转换为平台无关上下文。
  *
- * <p>非消息事件或缺少发送者、会话标识的事件返回空结果，由 Gateway 继续维护连接，
- * 不进入命令链。</p>
+ * <p>
+ * 非消息事件或缺少发送者、会话标识的事件返回空结果，由 Gateway 继续维护连接， 不进入命令链。
+ * </p>
  */
 public final class QqOfficialMessageContextFactory {
 
-    private QqOfficialMessageContextFactory() {
-    }
+    /** 平台引用消息类型，仅用于协议结构识别。 */
+    private static final int REFERENCE_MESSAGE_TYPE = 103;
+
+    private QqOfficialMessageContextFactory() {}
 
     /**
      * 解析支持的消息事件，并移除机器人自身的 at 标记。
      */
-    public static Optional<BotMessageContext> from(String appId,
-                                                   String eventType,
-                                                   JsonNode event) {
+    public static Optional<BotMessageContext> from(String appId, String eventType, JsonNode event) {
         QqOfficialChatType chatType = chatType(eventType);
         if (ObjectUtil.isNull(chatType) || ObjectUtil.isNull(event)) {
             return Optional.empty();
@@ -62,19 +65,49 @@ public final class QqOfficialMessageContextFactory {
             case CHANNEL -> BotMessageScope.CHANNEL;
             case C2C, DIRECT -> BotMessageScope.PRIVATE;
         };
-        return Optional.of(BotMessageContext.of(
-                BotPlatform.QQ_OFFICIAL,
-                scope,
-                appId,
-                senderId,
-                targetId,
-                messageId,
-                event.toString(),
-                content,
-                new QqOfficialMessageSource(
-                        eventType, chatType, targetId, messageId, appId, event.toString(), timestamp(event)),
-                attachments(event)
-        ));
+        return Optional
+            .of(BotMessageContext
+                .of(BotPlatform.QQ_OFFICIAL, scope, appId, senderId, targetId, messageId, event.toString(), content,
+                    new QqOfficialMessageSource(eventType, chatType, targetId, messageId, appId, event.toString(),
+                        timestamp(event)),
+                    attachments(event))
+                .withReference(reference(event), index(event, "msg_idx")));
+    }
+
+    /** 解析 QQ 引用索引和当前事件直接携带的原附件，不递归读取嵌套引用。 */
+    static BotMessageReference reference(JsonNode event) {
+        JsonNode elements = event.path("msg_elements");
+        String id = index(event, "ref_msg_idx");
+        JsonNode element = elements.isArray() && !elements.isEmpty() ? elements.get(0) : null;
+        if (id == null && event.path("message_type").asInt() == REFERENCE_MESSAGE_TYPE && element != null) {
+            id = text(element, "msg_idx");
+        }
+        if (id != null) {
+            // 有索引时只采用与目标一致或未另标索引的元素，避免混用其他消息的图片。
+            List<BotIncomingAttachment> referenced =
+                element != null && (text(element, "msg_idx") == null || id.equals(text(element, "msg_idx")))
+                    ? attachments(element) : List.of();
+            return new BotMessageReference(ReferenceKind.REFERENCE_INDEX, id, referenced);
+        }
+        id = text(event.path("message_reference"), "message_id");
+        return id == null ? null : new BotMessageReference(ReferenceKind.MESSAGE_ID, id, List.of());
+    }
+
+    /** 精确读取 ext 的键，普通消息 ID 与 REFIDX 不互换。 */
+    private static String index(JsonNode event, String key) {
+        JsonNode ext = event.path("message_scene").path("ext");
+        if (!ext.isArray())
+            return null;
+        for (JsonNode value : ext) {
+            String entry = value.asText("");
+            int separator = entry.indexOf('=');
+            if (separator > 0 && key.equals(entry.substring(0, separator).trim())) {
+                String id = entry.substring(separator + 1).trim();
+                if (!id.isEmpty())
+                    return id;
+            }
+        }
+        return null;
     }
 
     private static Instant timestamp(JsonNode event) {
@@ -111,12 +144,11 @@ public final class QqOfficialMessageContextFactory {
         if (isBlank(content) || isBlank(appId)) {
             return content;
         }
-        return content
-                .replace("<@!" + appId + ">", "")
-                .replace("<@" + appId + ">", "");
+        return content.replace("<@!" + appId + ">", "").replace("<@" + appId + ">", "");
     }
 
-    private static List<BotIncomingAttachment> attachments(JsonNode event) {
+    /** 提取当前消息或原消息查询结果的附件摘要，不下载内容或展开嵌套引用。 */
+    public static List<BotIncomingAttachment> attachments(JsonNode event) {
         JsonNode attachmentNodes = event.path("attachments");
         if (!attachmentNodes.isArray()) {
             return List.of();
@@ -129,27 +161,18 @@ public final class QqOfficialMessageContextFactory {
             String fileId = firstText(node, "id", "file_id");
             String type = firstText(node, "type", "content_type");
             BotIncomingAttachmentType attachmentType =
-                    isImage(type, contentType, fileName)
-                            ? BotIncomingAttachmentType.IMAGE
-                            : BotIncomingAttachmentType.FILE;
-            attachments.add(new BotIncomingAttachment(
-                    attachmentType,
-                    fileName,
-                    contentType,
-                    url,
-                    fileId,
-                    positiveLong(node, "size", "file_size"),
-                    positiveInt(node, "width"),
-                    positiveInt(node, "height"),
-                    Map.of("platformType", type == null ? "unknown" : type)));
+                isImage(type, contentType, fileName) ? BotIncomingAttachmentType.IMAGE : BotIncomingAttachmentType.FILE;
+            attachments.add(new BotIncomingAttachment(attachmentType, fileName, contentType, url, fileId,
+                positiveLong(node, "size", "file_size"), positiveInt(node, "width"), positiveInt(node, "height"),
+                Map.of("platformType", type == null ? "unknown" : type)));
         }
         return List.copyOf(attachments);
     }
 
     private static boolean isImage(String type, String contentType, String fileName) {
         return (type != null && type.toLowerCase().contains("image"))
-                || (contentType != null && contentType.toLowerCase().startsWith("image/"))
-                || (fileName != null && contentTypeFromName(fileName) != null);
+            || (contentType != null && contentType.toLowerCase().startsWith("image/"))
+            || (fileName != null && contentTypeFromName(fileName) != null);
     }
 
     private static Long positiveLong(JsonNode node, String... fields) {
@@ -164,15 +187,19 @@ public final class QqOfficialMessageContextFactory {
 
     private static Integer positiveInt(JsonNode node, String field) {
         long value = node.path(field).asLong(0);
-        return value > 0 && value <= Integer.MAX_VALUE ? (int) value : null;
+        return value > 0 && value <= Integer.MAX_VALUE ? (int)value : null;
     }
 
     private static String contentTypeFromName(String fileName) {
         String lower = fileName.toLowerCase();
-        if (lower.endsWith(".png")) return "image/png";
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-        if (lower.endsWith(".webp")) return "image/webp";
-        if (lower.endsWith(".gif")) return "image/gif";
+        if (lower.endsWith(".png"))
+            return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg"))
+            return "image/jpeg";
+        if (lower.endsWith(".webp"))
+            return "image/webp";
+        if (lower.endsWith(".gif"))
+            return "image/gif";
         return null;
     }
 

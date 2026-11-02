@@ -3,8 +3,8 @@ package com.nnm.bot.warframe.persistent.official.pojo.vo.guide;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record WarframeGuideVO<T>(String query, String world, String layer, List<T> items,
-                                 int page, int totalPages, int totalCount) {
+public record WarframeGuideVO<T>(String query, String world, String layer, List<T> items, int page, int totalPages,
+    int totalCount) {
     /**
      * 构造指南展示对象，并保存初始化参数。
      *
@@ -30,13 +30,12 @@ public record WarframeGuideVO<T>(String query, String world, String layer, List<
      * @param page 从一开始的页码。
      * @return 钓鱼或地图资料的分页视图。
      */
-    public static <T> WarframeGuideVO<T> page(String query, String world, String layer,
-                                              List<T> entries, int page) {
-        if (page < 1) throw new IllegalArgumentException("Page must be positive");
-        int from = (int) Math.min((long) (page - 1) * 4, entries.size());
-        return new WarframeGuideVO<>(query, world, layer,
-                entries.subList(from, Math.min(from + 4, entries.size())), page,
-                Math.max(1, (int) ((entries.size() + 3L) / 4)), entries.size());
+    public static <T> WarframeGuideVO<T> page(String query, String world, String layer, List<T> entries, int page) {
+        if (page < 1)
+            throw new IllegalArgumentException("Page must be positive");
+        int from = (int)Math.min((long)(page - 1) * 4, entries.size());
+        return new WarframeGuideVO<>(query, world, layer, entries.subList(from, Math.min(from + 4, entries.size())),
+            page, Math.max(1, (int)((entries.size() + 3L) / 4)), entries.size());
     }
 
     /**
@@ -50,6 +49,7 @@ public record WarframeGuideVO<T>(String query, String world, String layer, List<
 
     /**
      * 将开放世界代码转换为中文地点名称。
+     *
      * @param world 世界。
      * @return 开放世界的中文名称。
      */
@@ -62,9 +62,9 @@ public record WarframeGuideVO<T>(String query, String world, String layer, List<
         };
     }
 
-    public record FishVO(String name, String world, String location, String rarity, String baitName,
-                         FishTimeVO time, List<String> spears, List<String> uniqueResources, List<SizeRewardVO> sizeRewards,
-                         String maximumMass, String maximumPoint, String sourceCode, String resolutionMode) {
+    public record FishVO(String name, String world, String location, String rarity, String baitName, FishTimeVO time,
+        List<String> spears, List<String> uniqueResources, List<SizeRewardVO> sizeRewards, String maximumMass,
+        String maximumPoint, String sourceCode, String resolutionMode) {
         /**
          * 构造鱼类展示对象，并保存初始化参数。
          *
@@ -120,9 +120,8 @@ public record WarframeGuideVO<T>(String query, String world, String layer, List<
     public record ResourceAmountVO(String name, BigDecimal amount) {
     }
 
-    public record FeatureVO(String name, String world, String layer, String featureType,
-                            GeometryVO geometry, FeaturePropertiesVO properties,
-                            String sourceCode, String resolutionMode) {
+    public record FeatureVO(String name, String world, String layer, String featureType, GeometryVO geometry,
+        FeaturePropertiesVO properties, String sourceCode, String resolutionMode) {
     }
 
     public record GeometryVO(String type, List<BigDecimal> pointCoordinates, int boundaryRingCount) {

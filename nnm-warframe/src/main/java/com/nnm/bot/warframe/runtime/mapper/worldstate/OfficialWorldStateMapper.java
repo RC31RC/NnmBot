@@ -82,6 +82,7 @@ public class OfficialWorldStateMapper {
 
     /**
      * 按指定来源从官方 JSON 文本完成类型绑定和稳定 DTO 映射。
+     *
      * @param json 待绑定的 JSON 文本。
      * @param source 当前快照的数据源标识，用于采集元数据和排障。
      * @return 已经解析并校验的世界状态快照。
@@ -100,6 +101,7 @@ public class OfficialWorldStateMapper {
 
     /**
      * 从已绑定对象构造 DTO，并使用原始响应文本生成内容摘要。
+     *
      * @param rawData Jackson 绑定得到的原始协议对象。
      * @param source 当前快照的数据源标识，用于采集元数据和排障。
      * @param rawJson 用于审核或排障的原始响应文本。
@@ -114,48 +116,22 @@ public class OfficialWorldStateMapper {
         List<WorldStateDTO.ActiveMissionDTO> activeMissions = activeMissions(rawData);
         List<WorldStateDTO.SortieDTO> sorties = sorties(rawData.getSorties());
         List<WorldStateDTO.VoidTraderDTO> traders = voidTraders(rawData.getVoidTraders());
-        WorldStateDTO state = new WorldStateDTO(
-                alerts(rawData.getAlerts()),
-                fissures(activeMissions),
-                invasions(rawData.getInvasions()),
-                first(sorties),
-                cetusCycle(rawData),
-                vallisCycle(rawData),
-                cambionCycle(rawData),
-                first(traders),
-                arbitration(rawData),
-                nightwave(rawData.getNightwave()),
-                providerTimestamp,
-                sorties,
-                traders,
-                earthCycle(rawData),
-                duviriCycle(rawData),
-                zarimanCycle(rawData),
-                dailyDeals(rawData.getDailyDeals()),
-                worldEvents(rawData.getGoals()),
-                news(rawData.getNews()),
-                syndicateMissions(rawData.getSyndicateMissions()),
-                steelPathOfferings(rawData.getSteelPathOfferings()),
-                activeMissions,
-                sorties(rawData.getArchonHunts()),
-                rawData.getBuildLabel(),
-                globalUpgrades(rawData.getGlobalUpgrades()),
-                flashSales(rawData.getFlashSales()),
-                persistentEnemies(rawData.getPersistentEnemies()),
-                new WorldStateDTO.WorldStateMetadataDTO(source, fetchedAt, providerTimestamp, false,
-                        "nnm-world-state-v1", sha256(Objects.requireNonNull(rawJson, "官方原始响应不能为空"))),
-                archimedeas(rawData),
-                conclaveChallenges(rawData.getPvpChallengeInstances()),
-                constructionProgress(rawData),
-                simaris(rawData),
-                sentientOutpost(rawData),
-                clanInitiatives(rawData.getWeeklyVaultBonusRewards()),
-                circuitChoices(rawData.getEndlessXpSchedule()),
-                calendarSeasons(rawData.getKnownCalendarSeasons()),
-                vaultTraders(rawData.getPrimeVaultTraders()),
-                weeklyChallenges(rawData.getWeeklyChallenges()),
-                darkSectors(rawData.getDarkSectors()),
-                descents(rawData.getDescents()));
+        WorldStateDTO state = new WorldStateDTO(alerts(rawData.getAlerts()), fissures(activeMissions),
+            invasions(rawData.getInvasions()), first(sorties), cetusCycle(rawData), vallisCycle(rawData),
+            cambionCycle(rawData), first(traders), arbitration(rawData), nightwave(rawData.getNightwave()),
+            providerTimestamp, sorties, traders, earthCycle(rawData), duviriCycle(rawData), zarimanCycle(rawData),
+            dailyDeals(rawData.getDailyDeals()), worldEvents(rawData.getGoals()), news(rawData.getNews()),
+            syndicateMissions(rawData.getSyndicateMissions()), steelPathOfferings(rawData.getSteelPathOfferings()),
+            activeMissions, sorties(rawData.getArchonHunts()), rawData.getBuildLabel(),
+            globalUpgrades(rawData.getGlobalUpgrades()), flashSales(rawData.getFlashSales()),
+            persistentEnemies(rawData.getPersistentEnemies()),
+            new WorldStateDTO.WorldStateMetadataDTO(source, fetchedAt, providerTimestamp, false, "nnm-world-state",
+                sha256(Objects.requireNonNull(rawJson, "官方原始响应不能为空"))),
+            archimedeas(rawData), conclaveChallenges(rawData.getPvpChallengeInstances()), constructionProgress(rawData),
+            simaris(rawData), sentientOutpost(rawData), clanInitiatives(rawData.getWeeklyVaultBonusRewards()),
+            circuitChoices(rawData.getEndlessXpSchedule()), calendarSeasons(rawData.getKnownCalendarSeasons()),
+            vaultTraders(rawData.getPrimeVaultTraders()), weeklyChallenges(rawData.getWeeklyChallenges()),
+            darkSectors(rawData.getDarkSectors()), descents(rawData.getDescents()));
         validate(state);
         return state;
     }
@@ -172,11 +148,11 @@ public class OfficialWorldStateMapper {
             MissionInfoRawData mission = alert.getMissionInfo();
             RewardRawData reward = mission == null ? null : mission.getMissionReward();
             List<WorldStateDTO.AlertRewardDTO> rewards = alertRewards(reward);
-            result.add(new WorldStateDTO.AlertDTO(
-                    alert.getId(), mission == null ? null : mission.getMissionType(), rewardSummary(reward, rewards),
-                    alert.getExpiry(), alert.getActivation(), mission == null ? null : mission.getLocation(),
-                    mission == null ? null : mission.getFaction(), mission == null ? null : mission.getMinEnemyLevel(),
-                    mission == null ? null : mission.getMaxEnemyLevel(), rewards));
+            result.add(new WorldStateDTO.AlertDTO(alert.getId(), mission == null ? null : mission.getMissionType(),
+                rewardSummary(reward, rewards), alert.getExpiry(), alert.getActivation(),
+                mission == null ? null : mission.getLocation(), mission == null ? null : mission.getFaction(),
+                mission == null ? null : mission.getMinEnemyLevel(),
+                mission == null ? null : mission.getMaxEnemyLevel(), rewards));
         }
         return List.copyOf(result);
     }
@@ -202,21 +178,18 @@ public class OfficialWorldStateMapper {
      * @param input 待解析或校验的输入。
      * @param stormSection 风暴分区。
      */
-    private void addMissions(Map<String, WorldStateDTO.ActiveMissionDTO> target,
-                             List<ActiveMissionRawData> input, boolean stormSection) {
+    private void addMissions(Map<String, WorldStateDTO.ActiveMissionDTO> target, List<ActiveMissionRawData> input,
+        boolean stormSection) {
         for (ActiveMissionRawData raw : values(input)) {
             MissionInfoRawData mission = raw.getMissionInfo();
             String node = firstNonNull(raw.getNode(), mission == null ? null : mission.getLocation());
             String type = firstNonNull(raw.getMissionType(), mission == null ? null : mission.getMissionType());
             boolean storm = stormSection || Boolean.TRUE.equals(raw.getVoidStorm());
-            WorldStateDTO.ActiveMissionDTO value = new WorldStateDTO.ActiveMissionDTO(
-                    raw.getId(), node, type, raw.getTier(), raw.getActivation(), raw.getExpiry(),
-                    Boolean.TRUE.equals(raw.getHard()), storm);
-            String key = raw.getId() == null
-                    ? String.join("|", Objects.toString(node, ""), Objects.toString(type, ""),
-                    Objects.toString(raw.getActivation(), ""), Objects.toString(raw.getExpiry(), ""),
-                    Boolean.toString(value.hard()), Boolean.toString(storm))
-                    : raw.getId();
+            WorldStateDTO.ActiveMissionDTO value = new WorldStateDTO.ActiveMissionDTO(raw.getId(), node, type,
+                raw.getTier(), raw.getActivation(), raw.getExpiry(), Boolean.TRUE.equals(raw.getHard()), storm);
+            String key = raw.getId() == null ? String.join("|", Objects.toString(node, ""), Objects.toString(type, ""),
+                Objects.toString(raw.getActivation(), ""), Objects.toString(raw.getExpiry(), ""),
+                Boolean.toString(value.hard()), Boolean.toString(storm)) : raw.getId();
             target.putIfAbsent(key, value);
         }
     }
@@ -228,12 +201,10 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.FissureDTO> fissures(List<WorldStateDTO.ActiveMissionDTO> missions) {
-        return missions.stream()
-                .filter(mission -> mission.tier() != null || mission.voidStorm())
-                .map(mission -> new WorldStateDTO.FissureDTO(mission.id(), mission.node(), mission.tier(),
-                        mission.missionType(), mission.expiry(), mission.activation(), mission.hard(),
-                        mission.voidStorm()))
-                .toList();
+        return missions.stream().filter(mission -> mission.tier() != null || mission.voidStorm())
+            .map(mission -> new WorldStateDTO.FissureDTO(mission.id(), mission.node(), mission.tier(),
+                mission.missionType(), mission.expiry(), mission.activation(), mission.hard(), mission.voidStorm()))
+            .toList();
     }
 
     /**
@@ -252,9 +223,9 @@ public class OfficialWorldStateMapper {
                 completion = invasionCompletion(invasion);
             }
             result.add(new WorldStateDTO.InvasionDTO(invasion.getId(), invasion.getNode(),
-                    invasionRewardSummary(invasion.getAttackerReward(), attacker),
-                    invasionRewardSummary(invasion.getDefenderReward(), defender), completion.floatValue(),
-                    invasion.getActivation(), Boolean.TRUE.equals(invasion.getCompleted()), attacker, defender));
+                invasionRewardSummary(invasion.getAttackerReward(), attacker),
+                invasionRewardSummary(invasion.getDefenderReward(), defender), completion.floatValue(),
+                invasion.getActivation(), Boolean.TRUE.equals(invasion.getCompleted()), attacker, defender));
         }
         return List.copyOf(result);
     }
@@ -295,9 +266,9 @@ public class OfficialWorldStateMapper {
      */
     private WorldStateDTO.SortieDTO sortie(SortieRawData raw) {
         List<WorldStateDTO.SortieVariantDTO> variants = values(raw.getVariants()).stream()
-                .map(variant -> new WorldStateDTO.SortieVariantDTO(
-                        variant.getMissionType(), variant.getModifier(), variant.getNode()))
-                .toList();
+            .map(variant -> new WorldStateDTO.SortieVariantDTO(variant.getMissionType(), variant.getModifier(),
+                variant.getNode()))
+            .toList();
         return new WorldStateDTO.SortieDTO(raw.getId(), raw.getBoss(), variants, raw.getExpiry());
     }
 
@@ -314,14 +285,13 @@ public class OfficialWorldStateMapper {
             if (CollUtil.isEmpty(inventory)) {
                 inventory = values(trader.getManifest());
             }
-            List<WorldStateDTO.VoidTraderItemDTO> items = inventory.stream()
-                    .map(item -> new WorldStateDTO.VoidTraderItemDTO(item.getItem(), integer(item.getDucats()),
-                            integer(item.getCredits())))
-                    .toList();
+            List<WorldStateDTO.VoidTraderItemDTO> items =
+                inventory.stream().map(item -> new WorldStateDTO.VoidTraderItemDTO(item.getItem(),
+                    integer(item.getDucats()), integer(item.getCredits()))).toList();
             Instant start = trader.getActivation();
             Instant end = trader.getExpiry();
             boolean active = !Boolean.TRUE.equals(trader.getCompleted()) && start != null && end != null
-                    && !now.isBefore(start) && now.isBefore(end);
+                && !now.isBefore(start) && now.isBefore(end);
             return new WorldStateDTO.VoidTraderDTO(trader.getLocation(), start, end, active, items);
         }).toList();
     }
@@ -349,10 +319,10 @@ public class OfficialWorldStateMapper {
         String challenge = Objects.toString(raw.getChallenge(), "");
         boolean daily = Boolean.TRUE.equals(raw.getIsDaily());
         boolean elite = challenge.toLowerCase(Locale.ROOT).contains("hard");
-        int standing = raw.getReputation() == null ? 1000 + (daily ? 0 : 3500) + (elite ? 2500 : 0)
-                : raw.getReputation();
+        int standing =
+            raw.getReputation() == null ? 1000 + (daily ? 0 : 3500) + (elite ? 2500 : 0) : raw.getReputation();
         return new WorldStateDTO.NightwaveMissionDTO(raw.getId(), raw.getChallenge(), raw.getTitle(), raw.getDesc(),
-                standing, daily);
+            standing, daily);
     }
 
     /**
@@ -362,9 +332,11 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.DailyDealDTO> dailyDeals(List<DailyDealRawData> input) {
-        return values(input).stream().map(deal -> new WorldStateDTO.DailyDealDTO(deal.getId(), deal.getItem(),
-                integer(deal.getStock()), integer(deal.getSold()), integer(deal.getCredits()),
-                integer(deal.getPlatinum()), deal.getActivation(), deal.getExpiry())).toList();
+        return values(input).stream()
+            .map(deal -> new WorldStateDTO.DailyDealDTO(deal.getId(), deal.getItem(), integer(deal.getStock()),
+                integer(deal.getSold()), integer(deal.getCredits()), integer(deal.getPlatinum()), deal.getActivation(),
+                deal.getExpiry()))
+            .toList();
     }
 
     /**
@@ -377,9 +349,8 @@ public class OfficialWorldStateMapper {
         return values(input).stream().map(event -> {
             List<WorldStateDTO.WorldEventRewardDTO> rewards = eventRewards(event.getReward());
             return new WorldStateDTO.WorldEventDTO(event.getId(), event.getDescription(), event.getTooltip(),
-                    event.getActivation(), event.getExpiry(), event.getCategory(), event.getNode(),
-                    event.getCurrentScore(), event.getMaximumScore(), rewards,
-                    event.getReward() == null ? null : event.getReward().getCredits());
+                event.getActivation(), event.getExpiry(), event.getCategory(), event.getNode(), event.getCurrentScore(),
+                event.getMaximumScore(), rewards, event.getReward() == null ? null : event.getReward().getCredits());
         }).toList();
     }
 
@@ -390,9 +361,10 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.NewsItemDTO> news(List<NewsRawData> input) {
-        return values(input).stream().map(item -> new WorldStateDTO.NewsItemDTO(item.getId(),
-                localizedTitle(item), item.getLink(), item.getImageLink(), item.getActivation(), item.getExpiry(),
-                Boolean.TRUE.equals(item.getPriority()))).toList();
+        return values(input).stream()
+            .map(item -> new WorldStateDTO.NewsItemDTO(item.getId(), localizedTitle(item), item.getLink(),
+                item.getImageLink(), item.getActivation(), item.getExpiry(), Boolean.TRUE.equals(item.getPriority())))
+            .toList();
     }
 
     /**
@@ -433,10 +405,12 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.SyndicateMissionDTO> syndicateMissions(List<SyndicateMissionRawData> input) {
-        return values(input).stream().map(mission -> new WorldStateDTO.SyndicateMissionDTO(
-                mission.getId(), mission.getTag(), first(values(mission.getNodes())), mission.getActivation(),
-                mission.getExpiry(), values(mission.getJobs()).stream().map(job -> syndicateJob(job, mission)).toList(),
-                values(mission.getNodes()), List.of(), List.of(), "OFFICIAL_ONLY")).toList();
+        return values(input).stream()
+            .map(mission -> new WorldStateDTO.SyndicateMissionDTO(mission.getId(), mission.getTag(),
+                first(values(mission.getNodes())), mission.getActivation(), mission.getExpiry(),
+                values(mission.getJobs()).stream().map(job -> syndicateJob(job, mission)).toList(),
+                values(mission.getNodes()), List.of(), List.of(), "OFFICIAL_ONLY"))
+            .toList();
     }
 
     /**
@@ -446,10 +420,9 @@ public class OfficialWorldStateMapper {
      * @param mission 任务。
      * @return 集团任务对象。
      */
-    private WorldStateDTO.SyndicateJobDTO syndicateJob(
-            SyndicateJobRawData job, SyndicateMissionRawData mission) {
-        List<WorldStateDTO.SyndicateRewardDTO> rewards = values(job.getRewardPoolDrops()).stream()
-                .map(this::syndicateReward).toList();
+    private WorldStateDTO.SyndicateJobDTO syndicateJob(SyndicateJobRawData job, SyndicateMissionRawData mission) {
+        List<WorldStateDTO.SyndicateRewardDTO> rewards =
+            values(job.getRewardPoolDrops()).stream().map(this::syndicateReward).toList();
         String reference = String.join(", ", values(job.getRewards()));
         List<String> pool = values(job.getRewardPool());
         if (StrUtil.isBlank(reference) && CollUtil.isNotEmpty(pool)) {
@@ -463,8 +436,8 @@ public class OfficialWorldStateMapper {
         }
         String type = firstNonNull(job.getType(), job.getJobType());
         return new WorldStateDTO.SyndicateJobDTO(job.getJobType(), type, reference, rewards, min, max,
-                values(job.getXpAmounts()), job.getMasteryReq(), Boolean.TRUE.equals(job.getIsVault()),
-                job.getLocationTag(), mission.getExpiry(), null);
+            values(job.getXpAmounts()), job.getMasteryReq(), Boolean.TRUE.equals(job.getIsVault()),
+            job.getLocationTag(), mission.getExpiry(), null);
     }
 
     /**
@@ -474,8 +447,8 @@ public class OfficialWorldStateMapper {
      * @return 集团奖励对象。
      */
     private WorldStateDTO.SyndicateRewardDTO syndicateReward(SyndicateRewardRawData reward) {
-        return new WorldStateDTO.SyndicateRewardDTO(
-                reward.getItem(), reward.getCount(), reward.getChance(), reward.getRarity());
+        return new WorldStateDTO.SyndicateRewardDTO(reward.getItem(), reward.getCount(), reward.getChance(),
+            reward.getRarity());
     }
 
     /**
@@ -484,10 +457,9 @@ public class OfficialWorldStateMapper {
      * @param input 待解析或校验的输入。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    private List<WorldStateDTO.SteelPathOfferingDTO> steelPathOfferings(
-            List<SteelPathOfferingRawData> input) {
+    private List<WorldStateDTO.SteelPathOfferingDTO> steelPathOfferings(List<SteelPathOfferingRawData> input) {
         return values(input).stream().map(item -> new WorldStateDTO.SteelPathOfferingDTO(item.getId(), null,
-                item.getItem(), item.getActivation(), item.getExpiry())).toList();
+            item.getItem(), item.getActivation(), item.getExpiry())).toList();
     }
 
     /**
@@ -498,8 +470,8 @@ public class OfficialWorldStateMapper {
      */
     private List<WorldStateDTO.GlobalUpgradeDTO> globalUpgrades(List<GlobalUpgradeRawData> input) {
         return values(input).stream().map(item -> new WorldStateDTO.GlobalUpgradeDTO(item.getId(),
-                item.getUpgradeType(), item.getOperationType(), item.getValue(), item.getActivation(),
-                item.getExpiry())).toList();
+            item.getUpgradeType(), item.getOperationType(), item.getValue(), item.getActivation(), item.getExpiry()))
+            .toList();
     }
 
     /**
@@ -509,10 +481,12 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.FlashSaleDTO> flashSales(List<FlashSaleRawData> input) {
-        return values(input).stream().map(item -> new WorldStateDTO.FlashSaleDTO(item.getId(), item.getItem(),
-                item.getDiscount(), item.getCredits(), item.getPlatinum(), Boolean.TRUE.equals(item.getShownInMarket()),
+        return values(input).stream()
+            .map(item -> new WorldStateDTO.FlashSaleDTO(item.getId(), item.getItem(), item.getDiscount(),
+                item.getCredits(), item.getPlatinum(), Boolean.TRUE.equals(item.getShownInMarket()),
                 Boolean.TRUE.equals(item.getFeatured()), Boolean.TRUE.equals(item.getPopular()), item.getActivation(),
-                item.getExpiry())).toList();
+                item.getExpiry()))
+            .toList();
     }
 
     /**
@@ -522,11 +496,12 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.PersistentEnemyDTO> persistentEnemies(List<PersistentEnemyRawData> input) {
-        return values(input).stream().map(item -> new WorldStateDTO.PersistentEnemyDTO(item.getId(),
-                item.getAgentType(), item.getLocationTag(), item.getRank(), item.getHealthPercent(),
-                item.getFleeDamage(), item.getRegion(), item.getLastDiscoveredTime(),
-                item.getLastDiscoveredLocation(), Boolean.TRUE.equals(item.getDiscovered()),
-                Boolean.TRUE.equals(item.getUsingTicketing()))).toList();
+        return values(input).stream()
+            .map(item -> new WorldStateDTO.PersistentEnemyDTO(item.getId(), item.getAgentType(), item.getLocationTag(),
+                item.getRank(), item.getHealthPercent(), item.getFleeDamage(), item.getRegion(),
+                item.getLastDiscoveredTime(), item.getLastDiscoveredLocation(),
+                Boolean.TRUE.equals(item.getDiscovered()), Boolean.TRUE.equals(item.getUsingTicketing())))
+            .toList();
     }
 
     /**
@@ -537,10 +512,10 @@ public class OfficialWorldStateMapper {
      */
     private List<WorldStateDTO.ArchimedeaDTO> archimedeas(OfficialWorldStateRawData input) {
         return values(input.getConquests()).stream().map(conquest -> {
-            List<WorldStateDTO.ArchimedeaMissionDTO> missions = values(conquest.getMissions()).stream()
-                    .map(this::archimedeaMission).toList();
-            return new WorldStateDTO.ArchimedeaDTO(conquest.getId(), conquest.getType(), conquest.getType(),
-                    missions, values(conquest.getVariables()), conquest.getActivation(), conquest.getExpiry());
+            List<WorldStateDTO.ArchimedeaMissionDTO> missions =
+                values(conquest.getMissions()).stream().map(this::archimedeaMission).toList();
+            return new WorldStateDTO.ArchimedeaDTO(conquest.getId(), conquest.getType(), conquest.getType(), missions,
+                values(conquest.getVariables()), conquest.getActivation(), conquest.getExpiry());
         }).toList();
     }
 
@@ -552,11 +527,12 @@ public class OfficialWorldStateMapper {
      */
     private WorldStateDTO.ArchimedeaMissionDTO archimedeaMission(ConquestMissionRawData mission) {
         ConquestDifficultyRawData selected = values(mission.getDifficulties()).stream()
-                .filter(difficulty -> "CD_NORMAL".equalsIgnoreCase(difficulty.getType()))
-                .findFirst().orElse(first(values(mission.getDifficulties())));
+            .filter(difficulty -> "CD_NORMAL".equalsIgnoreCase(difficulty.getType())).findFirst()
+            .orElse(first(values(mission.getDifficulties())));
         return new WorldStateDTO.ArchimedeaMissionDTO(mission.getFaction(), mission.getFaction(),
-                mission.getMissionType(), mission.getMissionType(), selected == null ? mission.getDeviation() : selected.getDeviation(),
-                selected == null ? values(mission.getRisks()) : values(selected.getRisks()));
+            mission.getMissionType(), mission.getMissionType(),
+            selected == null ? mission.getDeviation() : selected.getDeviation(),
+            selected == null ? values(mission.getRisks()) : values(selected.getRisks()));
     }
 
     /**
@@ -567,14 +543,13 @@ public class OfficialWorldStateMapper {
      */
     private List<WorldStateDTO.ConclaveChallengeDTO> conclaveChallenges(List<ConclaveChallengeRawData> input) {
         return values(input).stream().map(challenge -> {
-            Integer amount = values(challenge.getParams()).stream()
-                    .map(ConclaveParameterRawData::getValue)
-                    .filter(Objects::nonNull).findFirst().orElse(challenge.getRequiredCount());
+            Integer amount = values(challenge.getParams()).stream().map(ConclaveParameterRawData::getValue)
+                .filter(Objects::nonNull).findFirst().orElse(challenge.getRequiredCount());
             String category = challenge.getCategory();
-            return new WorldStateDTO.ConclaveChallengeDTO(challenge.getId(), challenge.getMode(), category,
-                    category, challenge.getTitle(), null, amount, null,
-                    category != null && category.toUpperCase(Locale.ROOT).contains("DAILY"),
-                    category != null && category.endsWith("_ROOT"), challenge.getActivation(), challenge.getExpiry());
+            return new WorldStateDTO.ConclaveChallengeDTO(challenge.getId(), challenge.getMode(), category, category,
+                challenge.getTitle(), null, amount, null,
+                category != null && category.toUpperCase(Locale.ROOT).contains("DAILY"),
+                category != null && category.endsWith("_ROOT"), challenge.getActivation(), challenge.getExpiry());
         }).toList();
     }
 
@@ -590,8 +565,8 @@ public class OfficialWorldStateMapper {
             return new WorldStateDTO.ConstructionProgressDTO(at(values, 0), at(values, 1), at(values, 2));
         }
         ConstructionProgressRawData progress = input.getConstructionProgress();
-        return progress == null ? null : new WorldStateDTO.ConstructionProgressDTO(
-                progress.getFomorianProgress(), progress.getRazorbackProgress(), progress.getUnknownProgress());
+        return progress == null ? null : new WorldStateDTO.ConstructionProgressDTO(progress.getFomorianProgress(),
+            progress.getRazorbackProgress(), progress.getUnknownProgress());
     }
 
     /**
@@ -622,7 +597,8 @@ public class OfficialWorldStateMapper {
     private WorldStateDTO.SentientOutpostDTO sentientOutpost(OfficialWorldStateRawData input) {
         var outpost = input.getSentientOutposts();
         if (outpost != null && outpost.getNode() != null) {
-            return new WorldStateDTO.SentientOutpostDTO(outpost.getNode(), outpost.getActivation(), outpost.getExpiry());
+            return new WorldStateDTO.SentientOutpostDTO(outpost.getNode(), outpost.getActivation(),
+                outpost.getExpiry());
         }
         if (StrUtil.isBlank(input.getTmp())) {
             return null;
@@ -631,7 +607,7 @@ public class OfficialWorldStateMapper {
             TmpRawData tmp = objectMapper.readValue(input.getTmp(), TmpRawData.class);
             Integer node = tmp.getSentientFleetNode();
             return node == null || node <= 0 ? null
-                    : new WorldStateDTO.SentientOutpostDTO("CrewBattleNode" + node, null, null);
+                : new WorldStateDTO.SentientOutpostDTO("CrewBattleNode" + node, null, null);
         } catch (JsonProcessingException exception) {
             // Tmp 是官方临时扩展，单独损坏时不丢弃其他有效分区；原文仍在快照中。
             log.warn("官方 Tmp 扩展无法绑定为前哨状态：{}", exception.getOriginalMessage());
@@ -646,9 +622,10 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.ClanInitiativeDTO> clanInitiatives(List<ClanInitiativeRawData> input) {
-        return values(input).stream().map(initiative -> new WorldStateDTO.ClanInitiativeDTO(
-                initiative.getWeekCount(), initiative.getBonusRegion(), values(initiative.getRewards()).stream()
-                .map(this::clanReward).toList())).toList();
+        return values(input).stream()
+            .map(initiative -> new WorldStateDTO.ClanInitiativeDTO(initiative.getWeekCount(),
+                initiative.getBonusRegion(), values(initiative.getRewards()).stream().map(this::clanReward).toList()))
+            .toList();
     }
 
     /**
@@ -659,7 +636,7 @@ public class OfficialWorldStateMapper {
      */
     private WorldStateDTO.ClanRewardDTO clanReward(ClanRewardRawData reward) {
         return new WorldStateDTO.ClanRewardDTO(reward.getReward(), reward.getItemCount(), reward.getPointThreshold(),
-                reward.getRewardClaimed());
+            reward.getRewardClaimed());
     }
 
     /**
@@ -670,8 +647,8 @@ public class OfficialWorldStateMapper {
      */
     private List<WorldStateDTO.CircuitChoiceDTO> circuitChoices(List<EndlessXpScheduleRawData> input) {
         return values(input).stream().limit(1).flatMap(schedule -> values(schedule.getCategoryChoices()).stream())
-                .map(choice -> new WorldStateDTO.CircuitChoiceDTO(choice.getCategory(), values(choice.getChoices())))
-                .toList();
+            .map(choice -> new WorldStateDTO.CircuitChoiceDTO(choice.getCategory(), values(choice.getChoices())))
+            .toList();
     }
 
     /**
@@ -682,7 +659,7 @@ public class OfficialWorldStateMapper {
      */
     private List<WorldStateDTO.CalendarSeasonDTO> calendarSeasons(List<CalendarSeasonRawData> input) {
         return values(input).stream().map(season -> new WorldStateDTO.CalendarSeasonDTO(season.getSeason(),
-                season.getYearIteration(), values(season.getDays()).stream().map(this::calendarDay).toList())).toList();
+            season.getYearIteration(), values(season.getDays()).stream().map(this::calendarDay).toList())).toList();
     }
 
     /**
@@ -693,10 +670,10 @@ public class OfficialWorldStateMapper {
      */
     private WorldStateDTO.CalendarDayDTO calendarDay(CalendarDayRawData day) {
         Integer index = day.getDay();
-        String date = index != null && index >= 1 && index <= 365
-                ? LocalDate.ofYearDay(1999, index).toString() : day.getDate();
+        String date =
+            index != null && index >= 1 && index <= 365 ? LocalDate.ofYearDay(1999, index).toString() : day.getDate();
         return new WorldStateDTO.CalendarDayDTO(date,
-                values(day.getEvents()).stream().map(this::calendarEvent).toList());
+            values(day.getEvents()).stream().map(this::calendarEvent).toList());
     }
 
     /**
@@ -707,8 +684,8 @@ public class OfficialWorldStateMapper {
      */
     private WorldStateDTO.CalendarEventDTO calendarEvent(CalendarEventRawData event) {
         return new WorldStateDTO.CalendarEventDTO(event.getType(),
-                firstNonNull(event.getChallenge(), event.getUpgrade()), event.getDescription(), event.getUniqueName(),
-                event.getDialogueName(), event.getDialogueConvo());
+            firstNonNull(event.getChallenge(), event.getUpgrade()), event.getDescription(), event.getUniqueName(),
+            event.getDialogueName(), event.getDialogueConvo());
     }
 
     /**
@@ -724,10 +701,10 @@ public class OfficialWorldStateMapper {
                 inventory = values(trader.getInventory());
             }
             List<WorldStateDTO.VaultProductDTO> products = inventory.stream()
-                    .map(item -> new WorldStateDTO.VaultProductDTO(item.getItem(), item.getDucats(), item.getCredits()))
-                    .toList();
+                .map(item -> new WorldStateDTO.VaultProductDTO(item.getItem(), item.getDucats(), item.getCredits()))
+                .toList();
             return new WorldStateDTO.VaultTraderDTO(trader.getLocation(), trader.getActivation(), trader.getExpiry(),
-                    products);
+                products);
         }).toList();
     }
 
@@ -738,9 +715,11 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.WeeklyChallengeDTO> weeklyChallenges(List<WeeklyChallengeRawData> input) {
-        return values(input).stream().map(challenge -> new WorldStateDTO.WeeklyChallengeDTO(challenge.getId(),
-                challenge.getActivation(), challenge.getExpiry(), values(challenge.getChallenges()).stream()
-                .map(this::weeklyChallengeItem).toList())).toList();
+        return values(input).stream()
+            .map(challenge -> new WorldStateDTO.WeeklyChallengeDTO(challenge.getId(), challenge.getActivation(),
+                challenge.getExpiry(),
+                values(challenge.getChallenges()).stream().map(this::weeklyChallengeItem).toList()))
+            .toList();
     }
 
     /**
@@ -751,8 +730,8 @@ public class OfficialWorldStateMapper {
      */
     private WorldStateDTO.WeeklyChallengeItemDTO weeklyChallengeItem(WeeklyChallengeItemRawData item) {
         return new WorldStateDTO.WeeklyChallengeItemDTO(item.getType(), item.getMinimumEnemyLevel(),
-                item.getRequiredCount(), item.getProgressIndicatorFreq(), item.getDamageType(), firstNonNull(item.getVictimType(),
-                        item.getScript() == null ? null : item.getScript().getFaction()));
+            item.getRequiredCount(), item.getProgressIndicatorFreq(), item.getDamageType(),
+            firstNonNull(item.getVictimType(), item.getScript() == null ? null : item.getScript().getFaction()));
     }
 
     /**
@@ -775,11 +754,11 @@ public class OfficialWorldStateMapper {
         DarkSectorDefenderRawData defender = raw.getDefenderInfo();
         MissionInfoRawData mission = defender == null ? null : defender.getMissionInfo();
         return new WorldStateDTO.DarkSectorDTO(raw.getId(), defender == null ? null : defender.getName(),
-                defender == null ? null : defender.getAttacker(),
-                defender == null ? null : defender.getStrengthRemaining(), defender == null ? null : defender.getMaxStrength(),
-                defender == null ? null : defender.getMissionBattlePay(), mission == null ? null : mission.getLocation(),
-                defender == null ? null : defender.getDeploymentActivationTime(),
-                defender == null ? null : defender.getDeploymentExpiryTime());
+            defender == null ? null : defender.getAttacker(), defender == null ? null : defender.getStrengthRemaining(),
+            defender == null ? null : defender.getMaxStrength(),
+            defender == null ? null : defender.getMissionBattlePay(), mission == null ? null : mission.getLocation(),
+            defender == null ? null : defender.getDeploymentActivationTime(),
+            defender == null ? null : defender.getDeploymentExpiryTime());
     }
 
     /**
@@ -789,9 +768,8 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.DescentDTO> descents(List<DescentRawData> input) {
-        return values(input).stream().map(descent -> new WorldStateDTO.DescentDTO(
-                descent.getRandSeed(),
-                values(descent.getChallenges()).stream().map(this::descentChallenge).toList())).toList();
+        return values(input).stream().map(descent -> new WorldStateDTO.DescentDTO(descent.getRandSeed(),
+            values(descent.getChallenges()).stream().map(this::descentChallenge).toList())).toList();
     }
 
     /**
@@ -802,32 +780,36 @@ public class OfficialWorldStateMapper {
      */
     private WorldStateDTO.DescentChallengeDTO descentChallenge(DescentChallengeRawData challenge) {
         return new WorldStateDTO.DescentChallengeDTO(challenge.getIndex(), challenge.getType(),
-                challenge.getChallenge(), challenge.getLevel(), values(challenge.getSpecs()),
-                values(challenge.getAuras()));
+            challenge.getChallenge(), challenge.getLevel(), values(challenge.getSpecs()), values(challenge.getAuras()));
     }
 
     /**
      * 从已绑定的官方协议字段构造希图斯昼夜周期；未提供的动态状态保持缺省。
+     *
      * @param input 待解析或校验的输入。
      * @return 希图斯周期对象。
      */
     private WorldStateDTO.CetusCycleDTO cetusCycle(OfficialWorldStateRawData input) {
         var raw = input.getCetusCycle();
-        return raw == null ? null : new WorldStateDTO.CetusCycleDTO(Boolean.TRUE.equals(raw.getIsDay()), raw.getExpiry());
+        return raw == null ? null
+            : new WorldStateDTO.CetusCycleDTO(Boolean.TRUE.equals(raw.getIsDay()), raw.getExpiry());
     }
 
     /**
      * 从已绑定的官方协议字段构造奥布山谷冷热周期；未提供的动态状态保持缺省。
+     *
      * @param input 待解析或校验的输入。
      * @return 奥布山谷周期对象。
      */
     private WorldStateDTO.VallisCycleDTO vallisCycle(OfficialWorldStateRawData input) {
         var raw = input.getVallisCycle();
-        return raw == null ? null : new WorldStateDTO.VallisCycleDTO(Boolean.TRUE.equals(raw.getIsWarm()), raw.getExpiry());
+        return raw == null ? null
+            : new WorldStateDTO.VallisCycleDTO(Boolean.TRUE.equals(raw.getIsWarm()), raw.getExpiry());
     }
 
     /**
      * 从已绑定的官方协议字段构造魔胎之境双蠕虫周期；未提供的动态状态保持缺省。
+     *
      * @param input 待解析或校验的输入。
      * @return 魔胎之境周期对象。
      */
@@ -838,16 +820,19 @@ public class OfficialWorldStateMapper {
 
     /**
      * 从已绑定的官方协议字段构造地球昼夜周期；未提供的动态状态保持缺省。
+     *
      * @param input 待解析或校验的输入。
      * @return 地球周期对象。
      */
     private WorldStateDTO.EarthCycleDTO earthCycle(OfficialWorldStateRawData input) {
         var raw = input.getEarthCycle();
-        return raw == null ? null : new WorldStateDTO.EarthCycleDTO(Boolean.TRUE.equals(raw.getIsDay()), raw.getExpiry());
+        return raw == null ? null
+            : new WorldStateDTO.EarthCycleDTO(Boolean.TRUE.equals(raw.getIsDay()), raw.getExpiry());
     }
 
     /**
      * 从已绑定的官方协议字段构造双衍王境情绪周期；未提供的动态状态保持缺省。
+     *
      * @param input 待解析或校验的输入。
      * @return 双衍王境周期对象。
      */
@@ -858,6 +843,7 @@ public class OfficialWorldStateMapper {
 
     /**
      * 从已绑定的官方协议字段构造扎里曼阵营周期；未提供的动态状态保持缺省。
+     *
      * @param input 待解析或校验的输入。
      * @return 扎里曼周期对象。
      */
@@ -889,8 +875,8 @@ public class OfficialWorldStateMapper {
         }
         List<WorldStateDTO.AlertRewardDTO> result = new ArrayList<>();
         values(reward.getItems()).forEach(item -> result.add(new WorldStateDTO.AlertRewardDTO(item, null)));
-        values(reward.getCountedItems()).forEach(item -> result.add(
-                new WorldStateDTO.AlertRewardDTO(item.getItemType(), item.getItemCount())));
+        values(reward.getCountedItems())
+            .forEach(item -> result.add(new WorldStateDTO.AlertRewardDTO(item.getItemType(), item.getItemCount())));
         return List.copyOf(result);
     }
 
@@ -902,7 +888,7 @@ public class OfficialWorldStateMapper {
      */
     private List<WorldStateDTO.WorldEventRewardDTO> eventRewards(RewardRawData reward) {
         return alertRewards(reward).stream()
-                .map(item -> new WorldStateDTO.WorldEventRewardDTO(item.item(), item.count())).toList();
+            .map(item -> new WorldStateDTO.WorldEventRewardDTO(item.item(), item.count())).toList();
     }
 
     /**
@@ -912,8 +898,8 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.InvasionRewardDTO> invasionRewards(RewardRawData reward) {
-        return alertRewards(reward).stream()
-                .map(item -> new WorldStateDTO.InvasionRewardDTO(item.item(), item.count())).toList();
+        return alertRewards(reward).stream().map(item -> new WorldStateDTO.InvasionRewardDTO(item.item(), item.count()))
+            .toList();
     }
 
     /**
@@ -991,8 +977,8 @@ public class OfficialWorldStateMapper {
      */
     private String sha256(String value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("cannot calculate world state digest", exception);
         }
@@ -1005,16 +991,16 @@ public class OfficialWorldStateMapper {
      */
     private void validate(WorldStateDTO state) {
         boolean hasData = state.timestamp() != null || state.cetusCycle() != null || state.vallisCycle() != null
-                || state.cambionCycle() != null || state.earthCycle() != null || state.duviriCycle() != null
-                || state.zarimanCycle() != null || state.arbitration() != null || state.constructionProgress() != null
-                || state.simaris() != null || state.sentientOutpost() != null
-                || List.of(state.alerts(), state.fissures(), state.allActiveMissions(), state.invasions(),
+            || state.cambionCycle() != null || state.earthCycle() != null || state.duviriCycle() != null
+            || state.zarimanCycle() != null || state.arbitration() != null || state.constructionProgress() != null
+            || state.simaris() != null || state.sentientOutpost() != null
+            || List.of(state.alerts(), state.fissures(), state.allActiveMissions(), state.invasions(),
                 state.allSorties(), state.archonHunts(), state.events(), state.news(), state.syndicateMissions(),
                 state.allVoidTraders(), state.dailyDeals(), state.archimedeas(), state.descents(), state.flashSales(),
                 state.globalUpgrades(), state.persistentEnemies(), state.nightwave(), state.steelPathOfferings(),
                 state.conclaveChallenges(), state.clanInitiatives(), state.circuitChoices(), state.calendarSeasons(),
-                state.vaultTraders(), state.weeklyChallenges(), state.darkSectors())
-                .stream().anyMatch(section -> CollUtil.isNotEmpty(section));
+                state.vaultTraders(), state.weeklyChallenges(), state.darkSectors()).stream()
+                .anyMatch(section -> CollUtil.isNotEmpty(section));
         if (!hasData) {
             throw new IllegalArgumentException("world state response contains no recognized data");
         }

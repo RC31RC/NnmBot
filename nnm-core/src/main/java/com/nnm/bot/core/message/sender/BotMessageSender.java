@@ -24,11 +24,12 @@ public interface BotMessageSender {
 
     /** 整组预留必须原子完成；无协议额度的平台只提供生命周期句柄。 */
     default List<BotMessageSendPermit> reserve(BotMessageContext context, int count) {
-        if (count < 1) throw new IllegalArgumentException("count must be positive");
+        if (count < 1)
+            throw new IllegalArgumentException("count must be positive");
         return IntStream.range(0, count).mapToObj(index -> BotMessageSendPermit.unrestricted()).toList();
     }
 
     /** 可上传或暂存资源，但不得创建平台消息；调用方负责关闭返回对象。 */
     PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
-                               BotMessageSendPermit permit);
+        BotMessageSendPermit permit);
 }

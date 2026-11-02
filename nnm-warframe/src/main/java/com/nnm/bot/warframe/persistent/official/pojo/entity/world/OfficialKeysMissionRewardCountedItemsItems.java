@@ -52,5 +52,7 @@ public class OfficialKeysMissionRewardCountedItemsItems extends OfficialChildRow
     private OfficialKeysRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysMissionRewardCountedItemsItemsItemReferencesItems> officialKeysMissionRewardCountedItemsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysMissionRewardCountedItemsItemsItemReferencesItems> officialKeysMissionRewardCountedItemsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

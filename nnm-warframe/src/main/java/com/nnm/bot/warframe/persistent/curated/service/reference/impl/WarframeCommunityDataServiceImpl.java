@@ -39,6 +39,7 @@ import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommuni
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityFieldChangeDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityOperationDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPendingPreviewDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewPageDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
@@ -54,6 +55,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -65,6 +68,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -105,6 +109,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     private SharedStateStore state;
     @Resource
     private WarframeItemIndexInvalidator invalidator;
+    @Resource
+    private PlatformTransactionManager transactionManager;
 
     /**
      * 列出当前支持的数据文件。
@@ -114,8 +120,10 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     @Override
     public List<WarframeCommunityDatasetVO> datasets() {
         List<WarframeCommunityDatasetVO> result = new ArrayList<>();
-        for (var dataset : WarframeCommunityDataset.values()) result.add(new WarframeCommunityDatasetVO(dataset.code(), dataset.label(),
-                repository(dataset).count(), sources.findById(dataset.code()).map(WarframeCommunityImportSource::getRawUrl).orElse(null)));
+        for (var dataset : WarframeCommunityDataset.values())
+            result.add(new WarframeCommunityDatasetVO(dataset.code(), dataset.label(), dataset.description(),
+                repository(dataset).count(),
+                sources.findById(dataset.code()).map(WarframeCommunityImportSource::getRawUrl).orElse(null)));
         return result;
     }
 
@@ -139,7 +147,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             case ARBITRATION_ESSENCE -> essence.query(keyword, pageable);
             case RIVEN_ALIAS -> rivenAliases.query(keyword, pageable);
         };
-        return PageResult.of(result.getContent().stream().map(this::readRow).toList(), page, size, result.getTotalElements());
+        return PageResult.of(result.getContent().stream().map(this::readRow).toList(), page, size,
+            result.getTotalElements());
     }
 
     /**
@@ -153,9 +162,11 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     public WarframeCommunityPreviewDTO preview(String code, String json) {
         var dataset = WarframeCommunityDataset.parse(code);
         BusinessAssert.isTrue(json != null && json.getBytes(StandardCharsets.UTF_8).length <= properties.getMaxBytes(),
-                WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
+            WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
         Map<String, WarframeCommunityInputDTO> incoming = importParser.parse(dataset, json);
         List<WarframeCommunityOperationDTO> operations = new ArrayList<>();
+        // 输入只产生新增或修改；提前确定字段顺序，避免每条记录重复排序。
+        List<String> fieldsToCompare = dataset.fields().stream().sorted().toList();
         List<Map.Entry<String, WarframeCommunityInputDTO>> rows = List.copyOf(incoming.entrySet());
         for (int start = 0; start < rows.size(); start += BATCH_SIZE) {
             var batch = rows.subList(start, Math.min(start + BATCH_SIZE, rows.size()));
@@ -165,22 +176,100 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
                 var previous = current.get(entry.getKey());
                 WarframeCommunityInputDTO before = previous == null ? null : readValues(previous);
                 Map<String, WarframeCommunityFieldChangeDTO> fields = new LinkedHashMap<>();
-                for (String field : dataset.fields().stream().sorted().toList()) {
-                    if (!Objects.equals(fieldValue(before, field), fieldValue(value, field))) {
-                        fields.put(field, new WarframeCommunityFieldChangeDTO(fieldValue(before, field), fieldValue(value, field)));
+                for (String field : fieldsToCompare) {
+                    String oldValue = fieldValue(before, field);
+                    String newValue = fieldValue(value, field);
+                    if (!Objects.equals(oldValue, newValue)) {
+                        fields.put(field, new WarframeCommunityFieldChangeDTO(oldValue, newValue));
                     }
                 }
-                if (CollUtil.isNotEmpty(fields)) operations.add(new WarframeCommunityOperationDTO(UUID.randomUUID().toString(), entry.getKey(),
+                if (CollUtil.isNotEmpty(fields))
+                    operations.add(new WarframeCommunityOperationDTO(UUID.randomUUID().toString(), entry.getKey(),
                         previous == null ? "ADDED" : "CHANGED", value, previous == null ? null : previous.getId(),
                         previous == null ? null : previous.getVersion(), Map.copyOf(fields)));
             }
         }
         Instant now = Instant.now();
-        WarframeCommunityPreviewDTO preview = new WarframeCommunityPreviewDTO(UUID.randomUUID().toString(), code, now, now.plus(properties.getPreviewTtl()),
-                incoming.size(), (int) operations.stream().filter(item -> item.type().equals("ADDED")).count(),
-                (int) operations.stream().filter(item -> item.type().equals("CHANGED")).count(), List.copyOf(operations));
-        state.put(previewKey(dataset), encode(preview), properties.getPreviewTtl());
+        WarframeCommunityPreviewDTO preview = new WarframeCommunityPreviewDTO(UUID.randomUUID().toString(), code, now,
+            now.plus(properties.getPreviewTtl()), incoming.size(),
+            (int)operations.stream().filter(item -> item.type().equals("ADDED")).count(),
+            (int)operations.stream().filter(item -> item.type().equals("CHANGED")).count(), List.copyOf(operations));
+        // 预览按 ID 隔离：新的上传或远端拉取不得覆盖仍待审核的任务结果。
+        // 同一数据集的索引读写通过数据库行锁串行化；预览正文仍独立按 ID 过期。
+        // uploadPreview/pullPreview 在同一 Bean 内调用 preview，显式事务保证锁跨入口生效。
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            lock(dataset);
+            state.put(previewKey(dataset, preview.id()), encode(preview), properties.getPreviewTtl());
+            List<WarframeCommunityPendingPreviewDTO> pending = new ArrayList<>(pendingIndex(dataset));
+            pending.add(WarframeCommunityPendingPreviewDTO.from(preview));
+            state.put(pendingKey(dataset), encodePending(pending), properties.getPreviewTtl());
+        });
         return preview;
+    }
+
+    /**
+     * 列出尚未过期且未被丢弃或采纳的社区预览，供管理员稍后审核。
+     *
+     * @return 全部数据集的待审核索引，按生成时间倒序。
+     */
+    @Override
+    public List<WarframeCommunityPendingPreviewDTO> pendingPreviews() {
+        List<WarframeCommunityPendingPreviewDTO> result = new ArrayList<>();
+        for (WarframeCommunityDataset dataset : WarframeCommunityDataset.values()) {
+            result.addAll(pendingIndex(dataset));
+        }
+        result.sort(Comparator.comparing(WarframeCommunityPendingPreviewDTO::createdAt).reversed());
+        return result;
+    }
+
+    /**
+     * 过滤已过期、丢弃和已采纳的索引项，不延长原预览的生命周期。
+     *
+     * @param dataset 社区数据集。
+     * @return 当前仍可审核的轻量索引。
+     */
+    private List<WarframeCommunityPendingPreviewDTO> pendingIndex(WarframeCommunityDataset dataset) {
+        String json = state.<String>get(pendingKey(dataset), String.class).orElse(null);
+        if (json == null)
+            return List.of();
+        try {
+            List<WarframeCommunityPendingPreviewDTO> entries = mapper.readValue(json,
+                mapper.getTypeFactory().constructCollectionType(List.class, WarframeCommunityPendingPreviewDTO.class));
+            Instant now = Instant.now();
+            return entries.stream()
+                .filter(entry -> entry.dataset().equals(dataset.code()) && entry.expiresAt().isAfter(now)
+                    && !receipts.existsById(entry.id())
+                    && state.get(previewKey(dataset, entry.id()), String.class).isPresent())
+                .toList();
+        } catch (IOException exception) {
+            throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_PREVIEW_CACHE_UNAVAILABLE, "社区预览索引无法解析",
+                exception);
+        }
+    }
+
+    /**
+     * 将待审核索引编码成共享状态存储可读的文本。
+     *
+     * @param pending 有效的索引项。
+     * @return 索引 JSON。
+     */
+    private String encodePending(List<WarframeCommunityPendingPreviewDTO> pending) {
+        try {
+            return mapper.writeValueAsString(pending);
+        } catch (IOException exception) {
+            throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_PREVIEW_CACHE_UNAVAILABLE, "社区预览索引无法保存",
+                exception);
+        }
+    }
+
+    /**
+     * 获取按社区数据集隔离的待审核索引缓存键。
+     *
+     * @param dataset 社区数据集。
+     * @return 索引缓存键。
+     */
+    private static String pendingKey(WarframeCommunityDataset dataset) {
+        return "warframe:community:pending:" + dataset.code();
     }
 
     /**
@@ -192,10 +281,12 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      */
     @Override
     public WarframeCommunityPreviewDTO uploadPreview(String dataset, MultipartFile file) {
-        BusinessAssert.isTrue(file != null && file.getSize() <= properties.getMaxBytes(), WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
+        BusinessAssert.isTrue(file != null && file.getSize() <= properties.getMaxBytes(),
+            WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
         try (var input = file.getInputStream()) {
             byte[] bytes = input.readNBytes(properties.getMaxBytes() + 1);
-            BusinessAssert.isTrue(bytes.length <= properties.getMaxBytes(), WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
+            BusinessAssert.isTrue(bytes.length <= properties.getMaxBytes(),
+                WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
             return preview(dataset, new String(bytes, StandardCharsets.UTF_8));
         } catch (IOException exception) {
             throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT, "上传内容无法读取", exception);
@@ -230,10 +321,39 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         WarframeCommunityPreviewDTO preview = requirePreview(WarframeCommunityDataset.parse(code), id);
         int page = Math.max(1, current);
         int limit = Math.max(1, Math.min(100, size));
-        int start = (int) Math.min((page - 1L) * limit, preview.operations().size());
-        return new WarframeCommunityPreviewPageDTO(id, code, preview.createdAt(), preview.expiresAt(), preview.inputCount(),
-                preview.addedCount(), preview.changedCount(), PageResult.of(preview.operations().subList(start,
-                Math.min(start + limit, preview.operations().size())), page, limit, preview.operations().size()));
+        int start = (int)Math.min((page - 1L) * limit, preview.operations().size());
+        return new WarframeCommunityPreviewPageDTO(id, code, preview.createdAt(), preview.expiresAt(),
+            preview.inputCount(), preview.addedCount(), preview.changedCount(),
+            PageResult.of(preview.operations().subList(start, Math.min(start + limit, preview.operations().size())),
+                page, limit, preview.operations().size()));
+    }
+
+    /**
+     * 取得冻结预览的全部业务操作 ID，支持分页视图跨页全选。
+     *
+     * @param code 社区数据集代码。
+     * @param id 冻结预览 ID。
+     * @return 全部可选择的操作 ID。
+     */
+    @Override
+    public List<String> operationIds(String code, String id) {
+        return requirePreview(WarframeCommunityDataset.parse(code), id).operations().stream()
+            .map(WarframeCommunityOperationDTO::id).toList();
+    }
+
+    /**
+     * 主动丢弃预览；缓存自身另有 30 分钟自动过期机制。
+     *
+     * @param code 社区数据集代码。
+     * @param id 待丢弃预览 ID。
+     */
+    @Override
+    @Transactional
+    public void discard(String code, String id) {
+        WarframeCommunityDataset dataset = WarframeCommunityDataset.parse(code);
+        lock(dataset);
+        requirePreview(dataset, id);
+        state.evict(previewKey(dataset, id));
     }
 
     /**
@@ -247,31 +367,38 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     @Transactional
     public WarframeCommunityApplyVO apply(String code, WarframeCommunityApplyDTO request) {
         var dataset = WarframeCommunityDataset.parse(code);
-        BusinessAssert.isTrue(request != null && request.previewId() != null && request.selectedOperationIds() != null
-                && CollUtil.isNotEmpty(request.selectedOperationIds()), WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT, "请逐条选择需要应用的新增或修改");
+        BusinessAssert.isTrue(
+            request != null && request.previewId() != null && request.selectedOperationIds() != null
+                && CollUtil.isNotEmpty(request.selectedOperationIds()),
+            WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT, "请逐条选择需要应用的新增或修改");
         lock(dataset);
-        String selectionHash = digest(request.selectedOperationIds().stream().sorted().collect(Collectors.joining("\n")));
+        String selectionHash =
+            digest(request.selectedOperationIds().stream().sorted().collect(Collectors.joining("\n")));
         var receipt = receipts.findById(request.previewId());
         if (receipt.isPresent()) {
-            BusinessAssert.isTrue(receipt.get().getDataset().equals(code) && receipt.get().getSelectionHash().equals(selectionHash),
-                    WarframeManagementErrorCode.COMMUNITY_PREVIEW_CONFLICT);
+            BusinessAssert.isTrue(
+                receipt.get().getDataset().equals(code) && receipt.get().getSelectionHash().equals(selectionHash),
+                WarframeManagementErrorCode.COMMUNITY_PREVIEW_CONFLICT);
             return new WarframeCommunityApplyVO(request.previewId(), receipt.get().getAppliedCount());
         }
         WarframeCommunityPreviewDTO preview = requirePreview(dataset, request.previewId());
         List<WarframeCommunityOperationDTO> selected = preview.operations().stream()
-                .filter(operation -> request.selectedOperationIds().contains(operation.id())).toList();
-        BusinessAssert.isTrue(selected.size() == request.selectedOperationIds().size(), WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT);
+            .filter(operation -> request.selectedOperationIds().contains(operation.id())).toList();
+        BusinessAssert.isTrue(selected.size() == request.selectedOperationIds().size(),
+            WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT);
         // 一个根事务包住全部批次；任何后续冲突或写入失败都回滚此前批次的 flush。
         for (int start = 0; start < selected.size(); start += BATCH_SIZE) {
-            List<WarframeCommunityOperationDTO> batch = selected.subList(start, Math.min(start + BATCH_SIZE, selected.size()));
+            List<WarframeCommunityOperationDTO> batch =
+                selected.subList(start, Math.min(start + BATCH_SIZE, selected.size()));
             var current = byKey(dataset, batch.stream().map(WarframeCommunityOperationDTO::key).toList());
             List<WarframeCommunityRow> writing = new ArrayList<>();
             for (WarframeCommunityOperationDTO operation : batch) {
                 var old = current.get(operation.key());
-                BusinessAssert.isTrue(old == null ? operation.baselineId() == null
-                                : Objects.equals(old.getId(), operation.baselineId())
-                                && Objects.equals(old.getVersion(), operation.baselineVersion()),
-                        WarframeManagementErrorCode.COMMUNITY_PREVIEW_CONFLICT, operation.key());
+                BusinessAssert.isTrue(
+                    old == null ? operation.baselineId() == null
+                        : Objects.equals(old.getId(), operation.baselineId())
+                            && Objects.equals(old.getVersion(), operation.baselineVersion()),
+                    WarframeManagementErrorCode.COMMUNITY_PREVIEW_CONFLICT, operation.key());
                 var row = old == null ? create(dataset) : old;
                 row.setRecordKey(operation.key());
                 row.setUpdatedAt(Instant.now());
@@ -346,12 +473,15 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @return 游戏资料社区预览对象。
      */
     private WarframeCommunityPreviewDTO requirePreview(WarframeCommunityDataset dataset, String id) {
-        Object stored = state.get(previewKey(dataset), String.class).orElse(null);
+        BusinessAssert.isTrue(id != null && id.matches("[a-f0-9-]{36}"),
+            WarframeManagementErrorCode.COMMUNITY_PREVIEW_NOT_FOUND);
+        Object stored = state.get(previewKey(dataset, id), String.class).orElse(null);
         String encoded = stored instanceof String value ? value : null;
         BusinessAssert.notNull(encoded, WarframeManagementErrorCode.COMMUNITY_PREVIEW_NOT_FOUND);
+        BusinessAssert.isTrue(!receipts.existsById(id), WarframeManagementErrorCode.COMMUNITY_PREVIEW_NOT_FOUND);
         WarframeCommunityPreviewDTO preview = decode(encoded);
         BusinessAssert.isTrue(preview.id().equals(id) && preview.dataset().equals(dataset.code())
-                && preview.expiresAt().isAfter(Instant.now()), WarframeManagementErrorCode.COMMUNITY_PREVIEW_NOT_FOUND);
+            && preview.expiresAt().isAfter(Instant.now()), WarframeManagementErrorCode.COMMUNITY_PREVIEW_NOT_FOUND);
         return preview;
     }
 
@@ -368,7 +498,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             }
             return Base64.getEncoder().encodeToString(bytes.toByteArray());
         } catch (IOException exception) {
-            throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_PREVIEW_CACHE_UNAVAILABLE, "预览编码失败", exception);
+            throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_PREVIEW_CACHE_UNAVAILABLE, "预览编码失败",
+                exception);
         }
     }
 
@@ -381,10 +512,12 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     private WarframeCommunityPreviewDTO decode(String value) {
         try (var gzip = new GZIPInputStream(new ByteArrayInputStream(Base64.getDecoder().decode(value)))) {
             byte[] bytes = gzip.readNBytes(properties.getMaxBytes() * 8 + 1);
-            BusinessAssert.isTrue(bytes.length <= properties.getMaxBytes() * 8, WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
+            BusinessAssert.isTrue(bytes.length <= properties.getMaxBytes() * 8,
+                WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
             return mapper.readValue(bytes, WarframeCommunityPreviewDTO.class);
         } catch (IOException | IllegalArgumentException exception) {
-            throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_PREVIEW_CACHE_UNAVAILABLE, "预览内容无法读取", exception);
+            throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_PREVIEW_CACHE_UNAVAILABLE, "预览内容无法读取",
+                exception);
         }
     }
 
@@ -394,8 +527,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @param dataset 本次操作所属的数据文件或社区资料类型。
      * @return 当前业务冻结预览使用的缓存键对应的文本。
      */
-    private static String previewKey(WarframeCommunityDataset dataset) {
-        return "warframe:community:preview:" + dataset.code();
+    private static String previewKey(WarframeCommunityDataset dataset, String id) {
+        return "warframe:community:preview:" + dataset.code() + ":" + id;
     }
 
     /**
@@ -406,7 +539,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      */
     private static String digest(String value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 unavailable", exception);
         }
@@ -426,7 +560,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             case ARBITRATION_ESSENCE -> essence;
             case RIVEN_ALIAS -> rivenAliases;
         };
-        return (JpaRepository<WarframeCommunityRow, Long>) repository;
+        return (JpaRepository<WarframeCommunityRow, Long>)repository;
     }
 
     /**
@@ -470,7 +604,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @return 单条社区资料的管理视图。
      */
     private WarframeCommunityRecordVO readRow(WarframeCommunityRowDTO row) {
-        return new WarframeCommunityRecordVO(row.getId(), row.getRecordKey(), readValues(row), row.getUpdatedAt(), row.getVersion());
+        return new WarframeCommunityRecordVO(row.getId(), row.getRecordKey(), readValues(row), row.getUpdatedAt(),
+            row.getVersion());
     }
 
     /**
@@ -481,10 +616,14 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      */
     private WarframeCommunityInputDTO readValues(WarframeCommunityRowDTO row) {
         return switch (row) {
-            case WarframeCommunityAliasDTO item -> new WarframeCommunityRecordDTO.AliasDTO(item.getAliasName(), item.getTargetName());
-            case WarframeCommunityTermDTO item -> new WarframeCommunityRecordDTO.TermDTO(item.getTermGroup(), item.getEnglishText(), item.getChineseText());
-            case WarframeCommunityArbitrationEssenceDTO item -> new WarframeCommunityRecordDTO.EssenceDTO(item.getNodeName(), item.getEssenceAmount());
-            case WarframeCommunityRivenAliasDTO item -> new WarframeCommunityRecordDTO.RivenAliasDTO(item.getAttributeCode(), item.getAliasName());
+            case WarframeCommunityAliasDTO item ->
+                new WarframeCommunityRecordDTO.AliasDTO(item.getAliasName(), item.getTargetName());
+            case WarframeCommunityTermDTO item -> new WarframeCommunityRecordDTO.TermDTO(item.getTermGroup(),
+                item.getEnglishText(), item.getChineseText());
+            case WarframeCommunityArbitrationEssenceDTO item ->
+                new WarframeCommunityRecordDTO.EssenceDTO(item.getNodeName(), item.getEssenceAmount());
+            case WarframeCommunityRivenAliasDTO item ->
+                new WarframeCommunityRecordDTO.RivenAliasDTO(item.getAttributeCode(), item.getAliasName());
             default -> throw new IllegalArgumentException("未登记的社区资料类型");
         };
     }
@@ -496,7 +635,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @return 单条社区资料的管理视图。
      */
     private WarframeCommunityRecordVO row(WarframeCommunityRow row) {
-        return new WarframeCommunityRecordVO(row.getId(), row.getRecordKey(), values(row), row.getUpdatedAt(), row.getVersion());
+        return new WarframeCommunityRecordVO(row.getId(), row.getRecordKey(), values(row), row.getUpdatedAt(),
+            row.getVersion());
     }
 
     /**
@@ -507,10 +647,14 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      */
     private WarframeCommunityInputDTO values(WarframeCommunityRow row) {
         return switch (row) {
-            case WarframeCommunityAlias item -> new WarframeCommunityRecordDTO.AliasDTO(item.getAliasName(), item.getTargetName());
-            case WarframeCommunityTerm item -> new WarframeCommunityRecordDTO.TermDTO(item.getTermGroup(), item.getEnglishText(), item.getChineseText());
-            case WarframeCommunityArbitrationEssence item -> new WarframeCommunityRecordDTO.EssenceDTO(item.getNodeName(), item.getEssenceAmount());
-            case WarframeCommunityRivenAlias item -> new WarframeCommunityRecordDTO.RivenAliasDTO(item.getAttributeCode(), item.getAliasName());
+            case WarframeCommunityAlias item ->
+                new WarframeCommunityRecordDTO.AliasDTO(item.getAliasName(), item.getTargetName());
+            case WarframeCommunityTerm item -> new WarframeCommunityRecordDTO.TermDTO(item.getTermGroup(),
+                item.getEnglishText(), item.getChineseText());
+            case WarframeCommunityArbitrationEssence item ->
+                new WarframeCommunityRecordDTO.EssenceDTO(item.getNodeName(), item.getEssenceAmount());
+            case WarframeCommunityRivenAlias item ->
+                new WarframeCommunityRecordDTO.RivenAliasDTO(item.getAttributeCode(), item.getAliasName());
             default -> throw new IllegalArgumentException("未登记的社区实体类型");
         };
     }
@@ -523,12 +667,24 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @return 字段值对应的文本。
      */
     private static String fieldValue(WarframeCommunityInputDTO value, String field) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         return switch (value) {
-            case WarframeCommunityRecordDTO.AliasDTO item -> switch (field) { case "aliasName" -> item.aliasName(); case "targetName" -> item.targetName(); default -> null; };
-            case WarframeCommunityRecordDTO.TermDTO item -> switch (field) { case "termGroup" -> item.termGroup(); case "englishText" -> item.englishText(); case "chineseText" -> item.chineseText(); default -> null; };
-            case WarframeCommunityRecordDTO.EssenceDTO item -> "nodeName".equals(field) ? item.nodeName() : Objects.toString(item.essenceAmount(), null);
-            case WarframeCommunityRecordDTO.RivenAliasDTO item -> "aliasName".equals(field) ? item.aliasName() : item.attributeCode();
+            case WarframeCommunityRecordDTO.AliasDTO item -> switch (field) {
+                case "aliasName" -> item.aliasName();
+                case "targetName" -> item.targetName();
+                default -> null;
+            };
+            case WarframeCommunityRecordDTO.TermDTO item -> switch (field) {
+                case "termGroup" -> item.termGroup();
+                case "englishText" -> item.englishText();
+                case "chineseText" -> item.chineseText();
+                default -> null;
+            };
+            case WarframeCommunityRecordDTO.EssenceDTO item ->
+                "nodeName".equals(field) ? item.nodeName() : Objects.toString(item.essenceAmount(), null);
+            case WarframeCommunityRecordDTO.RivenAliasDTO item ->
+                "aliasName".equals(field) ? item.aliasName() : item.attributeCode();
         };
     }
 
@@ -555,10 +711,27 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      */
     private static void assign(WarframeCommunityRow row, WarframeCommunityInputDTO value) {
         switch (value) {
-            case WarframeCommunityRecordDTO.AliasDTO input -> { var item = (WarframeCommunityAlias) row; item.setAliasName(input.aliasName()); item.setTargetName(input.targetName()); }
-            case WarframeCommunityRecordDTO.TermDTO input -> { var item = (WarframeCommunityTerm) row; item.setTermGroup(input.termGroup()); item.setEnglishText(input.englishText()); item.setChineseText(input.chineseText()); }
-            case WarframeCommunityRecordDTO.EssenceDTO input -> { var item = (WarframeCommunityArbitrationEssence) row; item.setNodeName(input.nodeName()); item.setEssenceAmount(input.essenceAmount()); }
-            case WarframeCommunityRecordDTO.RivenAliasDTO input -> { var item = (WarframeCommunityRivenAlias) row; item.setAttributeCode(input.attributeCode()); item.setAliasName(input.aliasName()); }
+            case WarframeCommunityRecordDTO.AliasDTO input -> {
+                var item = (WarframeCommunityAlias)row;
+                item.setAliasName(input.aliasName());
+                item.setTargetName(input.targetName());
+            }
+            case WarframeCommunityRecordDTO.TermDTO input -> {
+                var item = (WarframeCommunityTerm)row;
+                item.setTermGroup(input.termGroup());
+                item.setEnglishText(input.englishText());
+                item.setChineseText(input.chineseText());
+            }
+            case WarframeCommunityRecordDTO.EssenceDTO input -> {
+                var item = (WarframeCommunityArbitrationEssence)row;
+                item.setNodeName(input.nodeName());
+                item.setEssenceAmount(input.essenceAmount());
+            }
+            case WarframeCommunityRecordDTO.RivenAliasDTO input -> {
+                var item = (WarframeCommunityRivenAlias)row;
+                item.setAttributeCode(input.attributeCode());
+                item.setAliasName(input.aliasName());
+            }
         }
     }
 }

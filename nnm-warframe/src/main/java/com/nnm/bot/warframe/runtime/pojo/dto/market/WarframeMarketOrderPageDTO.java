@@ -7,45 +7,31 @@ import com.nnm.bot.common.response.PageResult;
 import java.util.List;
 
 /**
- * Service 返回的完整订单查询结果，包含详情和分页，供命令按用途选择展示字段。
- * WM handler 将其投影为 WarframeMarketOrderVO，输出渠道不再筛选业务字段。
+ * Service 返回的完整订单查询结果，包含详情和分页，供命令按用途选择展示字段。 WM handler 将其投影为 WarframeMarketOrderVO，输出渠道不再筛选业务字段。
  */
-public record WarframeMarketOrderPageDTO(
-        @JsonPropertyDescription("物品")
-        String itemName,
+public record WarframeMarketOrderPageDTO(@JsonPropertyDescription("物品") String itemName,
 
-        @JsonPropertyDescription("查询内容")
-        String query,
+    @JsonPropertyDescription("查询内容") String query,
 
-        @JsonPropertyDescription("市场物品标识")
-        String marketSlug,
+    @JsonPropertyDescription("市场物品标识") String marketSlug,
 
-        @JsonPropertyDescription("平台")
-        String platform,
+    @JsonPropertyDescription("平台") String platform,
 
-        @JsonPropertyDescription("筛选条件")
-        String filter,
+    @JsonPropertyDescription("筛选条件") String filter,
 
-        @JsonPropertyDescription("仅查询满级")
-        boolean maxRankRequested,
+    @JsonPropertyDescription("仅查询满级") boolean maxRankRequested,
 
-        @JsonPropertyDescription("最高等级")
-        Integer maxRank,
+    @JsonPropertyDescription("最高等级") Integer maxRank,
 
-        @JsonIgnore
-        PageResult<WarframeMarketOrderEntryDTO> orderPage,
+    @JsonIgnore PageResult<WarframeMarketOrderEntryDTO> orderPage,
 
-        @JsonPropertyDescription("最低售价")
-        String lowestSellPrice,
+    @JsonPropertyDescription("最低售价") String lowestSellPrice,
 
-        @JsonPropertyDescription("最高收购价")
-        String highestBuyPrice,
+    @JsonPropertyDescription("最高收购价") String highestBuyPrice,
 
-        @JsonPropertyDescription("物品详情")
-        WarframeMarketItemSummaryDTO item,
+    @JsonPropertyDescription("物品详情") WarframeMarketItemSummaryDTO item,
 
-        @JsonPropertyDescription("套装部件")
-        List<WarframeMarketItemSummaryDTO> setItems) {
+    @JsonPropertyDescription("套装部件") List<WarframeMarketItemSummaryDTO> setItems) {
 
     /**
      * 构造市场订单分页传输对象，并保存初始化参数。
@@ -91,6 +77,7 @@ public record WarframeMarketOrderPageDTO(
 
     /**
      * 读取当前订单页面使用的每页条目上限。
+     *
      * @return 当前允许的每页条目上限。
      */
     @JsonProperty
@@ -120,6 +107,7 @@ public record WarframeMarketOrderPageDTO(
     public long totalPages() {
         return (totalOrders() + pageSize() - 1) / pageSize();
     }
+
     /**
      * 判断查询结果后面是否仍有下一页。
      *
@@ -141,6 +129,7 @@ public record WarframeMarketOrderPageDTO(
     public List<WarframeMarketOrderEntryDTO> sellers() {
         return orders().stream().filter(order -> "sell".equals(order.orderType())).toList();
     }
+
     /**
      * 取得满足筛选条件的买方订单。
      *
@@ -151,8 +140,10 @@ public record WarframeMarketOrderPageDTO(
     public List<WarframeMarketOrderEntryDTO> buyers() {
         return orders().stream().filter(order -> "buy".equals(order.orderType())).toList();
     }
+
     /**
      * 统计当前筛选结果中的卖方订单数量。
+     *
      * @return 当前操作计算或读取的数值。
      */
     @JsonProperty
@@ -163,6 +154,7 @@ public record WarframeMarketOrderPageDTO(
 
     /**
      * 统计当前筛选结果中的买方订单数量。
+     *
      * @return 当前操作计算或读取的数值。
      */
     @JsonProperty

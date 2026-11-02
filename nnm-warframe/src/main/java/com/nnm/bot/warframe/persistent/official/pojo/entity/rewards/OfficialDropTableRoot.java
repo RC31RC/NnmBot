@@ -440,5 +440,7 @@ public class OfficialDropTableRoot extends OfficialRecord {
     private List<OfficialDropTableRewardsItems> officialDropTableRewardsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialDropTableSourceCandidateUniqueNamesItems> officialDropTableSourceCandidateUniqueNamesItemsRows = new ArrayList<>();
+    private List<
+        OfficialDropTableSourceCandidateUniqueNamesItems> officialDropTableSourceCandidateUniqueNamesItemsRows =
+            new ArrayList<>();
 }

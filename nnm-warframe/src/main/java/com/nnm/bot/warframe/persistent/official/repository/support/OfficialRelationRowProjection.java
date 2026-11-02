@@ -31,9 +31,8 @@ public final class OfficialRelationRowProjection extends FactoryExpressionBase<O
         }
         if (expressions.getFirst() instanceof Path<?> fieldPath) {
             Path<?> entityPath = fieldPath.getRoot();
-            // Child-row map values need their original source key when the relation tree is rebuilt.
-            if (OfficialChildRow.class.isAssignableFrom(entityPath.getType())
-                    && !properties.contains("memberKey")) {
+            // 重建关联树时，映射形式的子行必须保留原始来源键。
+            if (OfficialChildRow.class.isAssignableFrom(entityPath.getType()) && !properties.contains("memberKey")) {
                 ArrayList<String> projectedProperties = new ArrayList<>(properties);
                 ArrayList<Expression<?>> projectedExpressions = new ArrayList<>(expressions);
                 projectedProperties.add("memberKey");

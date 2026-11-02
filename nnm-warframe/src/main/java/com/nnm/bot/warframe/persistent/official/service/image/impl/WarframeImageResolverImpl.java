@@ -65,8 +65,8 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
             return safePath(path) && safeHash(hash) ? official(path, hash) : null;
         }
         if (safePath(reference)) {
-            OfficialImageDTO metadata = (OfficialImageDTO) snapshot(WarframeOfficialDataDomain.IMAGE)
-                    .entries().get(reference);
+            OfficialImageDTO metadata =
+                (OfficialImageDTO)snapshot(WarframeOfficialDataDomain.IMAGE).entries().get(reference);
             if (metadata == null) {
                 return null;
             }
@@ -95,8 +95,8 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
         if (token == null || !token.matches("[a-zA-Z0-9_]+")) {
             return null;
         }
-        OfficialTextIconDTO mapping = (OfficialTextIconDTO) snapshot(WarframeOfficialDataDomain.TEXT_ICON)
-                .entries().get(token);
+        OfficialTextIconDTO mapping =
+            (OfficialTextIconDTO)snapshot(WarframeOfficialDataDomain.TEXT_ICON).entries().get(token);
         if (mapping == null) {
             return null;
         }
@@ -114,7 +114,8 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
             case "DIT_STEAM" -> mapping.getDitSteam();
             default -> mapping.getDitAgnostic();
         };
-        if (StrUtil.isBlank(path)) path = mapping.getDitAgnostic();
+        if (StrUtil.isBlank(path))
+            path = mapping.getDitAgnostic();
         return resolve(path, null);
     }
 
@@ -132,6 +133,7 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
 
     /**
      * 读取指定官方资料领域的图片索引快照。
+     *
      * @param domain 官方数据文件所属的业务领域。
      * @return 索引快照对象。
      */
@@ -141,10 +143,12 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
             Cache cache = Objects.requireNonNull(cacheManager.getCache(WarframeCacheNames.IMAGE_INDEX));
             IndexSnapshot previous = cache.get(domain.name(), IndexSnapshot.class);
             Instant now = warframeClock.instant();
-            if (previous != null && now.isBefore(previous.nextAttemptAt())) return previous;
+            if (previous != null && now.isBefore(previous.nextAttemptAt()))
+                return previous;
             Map<String, OfficialObjectDTO> entries = new LinkedHashMap<>();
             for (var record : catalog.records(domain)) {
-                if (record.data() != null) entries.put(record.bkey(), record.data());
+                if (record.data() != null)
+                    entries.put(record.bkey(), record.data());
             }
             IndexSnapshot next = new IndexSnapshot(Map.copyOf(entries), now, now.plus(properties.getRefreshInterval()));
             cache.put(domain.name(), next);
@@ -156,6 +160,7 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
 
     /**
      * 校验图片地址的协议与允许主机，通过时返回规范化地址。
+     *
      * @param value 待校验或规范化的文本。
      * @return 允许地址对应的文本。
      */
@@ -163,10 +168,10 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
         try {
             URI uri = URI.create(value);
             return uri.getHost() != null && uri.getUserInfo() == null && uri.getFragment() == null
-                    && uri.getQuery() == null && (uri.getPort() == -1 || uri.getPort() == 443
-                    || uri.getPort() == 80) && safeAbsolutePath(uri.getPath())
-                    && properties.getAllowedHosts().stream().anyMatch(
-                    host -> host.equalsIgnoreCase(uri.getHost())) ? uri.toASCIIString() : null;
+                && uri.getQuery() == null && (uri.getPort() == -1 || uri.getPort() == 443 || uri.getPort() == 80)
+                && safeAbsolutePath(uri.getPath())
+                && properties.getAllowedHosts().stream().anyMatch(host -> host.equalsIgnoreCase(uri.getHost()))
+                    ? uri.toASCIIString() : null;
         } catch (IllegalArgumentException exception) {
             return null;
         }
@@ -180,7 +185,7 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
      */
     private boolean safeAbsolutePath(String path) {
         return path != null && !path.contains("..") && !path.contains("\\") && !path.contains("%")
-                && path.chars().noneMatch(Character::isISOControl);
+            && path.chars().noneMatch(Character::isISOControl);
     }
 
     /**
@@ -191,7 +196,7 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
      */
     private boolean safePath(String path) {
         return path != null && (path.startsWith("/Lotus/") || path.startsWith("/EE/"))
-                && path.matches("/[a-zA-Z0-9_/.-]+") && !path.contains("..");
+            && path.matches("/[a-zA-Z0-9_/.-]+") && !path.contains("..");
     }
 
     /**
@@ -212,18 +217,18 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
      * @return 当前业务需要的已采纳官方记录对应的文本。
      */
     private String official(String path, String hash) {
-        return properties.getOfficialUrlTemplate().replace("{path}", encodePath(path))
-                .replace("{hash}", encode(hash));
+        return properties.getOfficialUrlTemplate().replace("{path}", encodePath(path)).replace("{hash}", encode(hash));
     }
 
     /**
      * 按 URL 路径片段编码图片资源路径。
+     *
      * @param path 当前文件或业务资源的路径。
      * @return 编码路径对应的文本。
      */
     private String encodePath(String path) {
-        return String.join("/", Arrays.stream(path.substring(1).split("/"))
-                .map(WarframeImageResolverImpl::encode).toList());
+        return String.join("/",
+            Arrays.stream(path.substring(1).split("/")).map(WarframeImageResolverImpl::encode).toList());
     }
 
     /**

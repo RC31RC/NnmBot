@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Test Fish",
+    "location": "Cave",
+    "rarity": "Rare",
+    "time": {"string": "Vome", "fass": {"appear": false, "prefer": false}, "vome": {"appear": true, "prefer": true}},
+    "bait": {"name": "Processed Residue"},
+    "spear": {"Test Spear": true, "Other Spear": false},
+    "unique": [{"name": "Material A"}, {"name": "Material B"}],
+    "small": {"resources": {"Material A": 0, "Material B": 1}, "standing": 0},
+    "large": {"resources": {"Material A": 3}},
+    "maximumPoint": "9.0"
+  }
+]

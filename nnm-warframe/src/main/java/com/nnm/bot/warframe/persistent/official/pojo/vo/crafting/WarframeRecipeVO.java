@@ -25,10 +25,11 @@ public record WarframeRecipeVO(String query, List<EntryVO> items, int page, int 
      * @return 制作配方的分页视图。
      */
     public static WarframeRecipeVO page(String query, List<EntryVO> entries, int page) {
-        if (page < 1) throw new IllegalArgumentException("Page must be positive");
-        int from = (int) Math.min((long) (page - 1) * 4, entries.size());
-        return new WarframeRecipeVO(query, entries.subList(from, Math.min(from + 4, entries.size())),
-                page, Math.max(1, (int) ((entries.size() + 3L) / 4)), entries.size());
+        if (page < 1)
+            throw new IllegalArgumentException("Page must be positive");
+        int from = (int)Math.min((long)(page - 1) * 4, entries.size());
+        return new WarframeRecipeVO(query, entries.subList(from, Math.min(from + 4, entries.size())), page,
+            Math.max(1, (int)((entries.size() + 3L) / 4)), entries.size());
     }
 
     /**
@@ -41,10 +42,9 @@ public record WarframeRecipeVO(String query, List<EntryVO> items, int page, int 
     }
 
     public record EntryVO(String recordKey, String uniqueName, String name, String recipeKind, String dojoSection,
-                        String productKey, String productName, Long buildPrice, Long buildTime,
-                        Long skipTimePrice, Long replicatePrice, Long resultCount, String quantityBasis,
-                        List<IngredientVO> ingredients, String imageReference, String iconUrl,
-                        String sourceCode, String resolutionMode) {
+        String productKey, String productName, Long buildPrice, Long buildTime, Long skipTimePrice, Long replicatePrice,
+        Long resultCount, String quantityBasis, List<IngredientVO> ingredients, String imageReference, String iconUrl,
+        String sourceCode, String resolutionMode) {
         /**
          * 构造条目展示对象，并保存初始化参数。
          *
@@ -79,8 +79,8 @@ public record WarframeRecipeVO(String query, List<EntryVO> items, int page, int 
          */
         public EntryVO withIconUrl(String url) {
             return new EntryVO(recordKey, uniqueName, name, recipeKind, dojoSection, productKey, productName,
-                    buildPrice, buildTime, skipTimePrice, replicatePrice, resultCount, quantityBasis,
-                    ingredients, imageReference, url, sourceCode, resolutionMode);
+                buildPrice, buildTime, skipTimePrice, replicatePrice, resultCount, quantityBasis, ingredients,
+                imageReference, url, sourceCode, resolutionMode);
         }
     }
 

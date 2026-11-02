@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** REGION 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 储藏舱奖励清单；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("cacheRewardManifest")
@@ -878,7 +878,8 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(zhName), null, null, null);
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(zhName), null,
+            null, null);
     }
 
     /**
@@ -894,7 +895,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ItemReferencesRotationsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesRotationsDTO extends OfficialObjectDTO {
         /** 物品引用的轮次的物品的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("item__domain")
@@ -1066,7 +1067,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1238,7 +1239,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 MiscItemFeeItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MiscItemFeeItemReferencesDTO extends OfficialObjectDTO {
         /** 杂项物品费用的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1380,7 +1381,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 MissionRewardCountedItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardCountedItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 任务奖励的带数量的物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1522,7 +1523,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 MissionRewardCountedItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionRewardCountedItemsDTO extends OfficialObjectDTO {
         /** 任务奖励的带数量的物品列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -1574,7 +1575,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 SystemsResourcesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class SystemsResourcesItemReferencesDTO extends OfficialObjectDTO {
         /** 星系列表的资源列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1731,7 +1732,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 SystemsResourcesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class SystemsResourcesDTO extends OfficialObjectDTO {
         /** 星系列表的资源列表的物品的图标状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("item__iconStatus")
@@ -1903,7 +1904,7 @@ public class OfficialRegionDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 SystemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class SystemsDTO extends OfficialObjectDTO {
         /** 星系列表的伤害几率；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("damageChance")

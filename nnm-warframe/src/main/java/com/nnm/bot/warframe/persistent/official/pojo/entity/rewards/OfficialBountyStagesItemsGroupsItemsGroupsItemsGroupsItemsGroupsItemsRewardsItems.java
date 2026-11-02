@@ -18,7 +18,8 @@ import java.math.BigDecimal;
 @Setter
 @Entity
 @Table(name = "wf_official_bounty_stages_items_groups_items_groups__91ce8b9ab5")
-public class OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRewardsItems extends OfficialChildRow {
+public class OfficialBountyStagesItemsGroupsItemsGroupsItemsGroupsItemsGroupsItemsRewardsItems
+    extends OfficialChildRow {
     /** 本表记录是否缺失、为空或属于特定 JSON 类型。 */
     @Column(name = "root_state")
     private Short rootState;

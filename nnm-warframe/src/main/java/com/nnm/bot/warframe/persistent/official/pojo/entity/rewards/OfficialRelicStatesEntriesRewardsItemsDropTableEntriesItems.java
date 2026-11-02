@@ -148,5 +148,7 @@ public class OfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems extends
     private OfficialRelicStatesEntriesRewardsItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems> officialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItemsRows = new ArrayList<>();
+    private List<
+        OfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems> officialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItemsRows =
+            new ArrayList<>();
 }

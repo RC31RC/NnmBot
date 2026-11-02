@@ -40,12 +40,10 @@ public class AdminBootstrapProperties {
             return;
         }
         if (StrUtil.isBlank(username)) {
-            throw new IllegalStateException(
-                    "nnm.admin.bootstrap.username must be configured");
+            throw new IllegalStateException("nnm.admin.bootstrap.username must be configured");
         }
         if (StrUtil.isBlank(password)) {
-            throw new IllegalStateException(
-                    "nnm.admin.bootstrap.password must be configured");
+            throw new IllegalStateException("nnm.admin.bootstrap.password must be configured");
         }
     }
 }

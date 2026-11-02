@@ -7,10 +7,11 @@ import java.util.List;
 
 /** 各官方关系表的强类型 QueryDSL 标量投影与批量 DML。由模型生成器维护。 */
 public final class OfficialRelationQueryDsl {
-    private OfficialRelationQueryDsl() { }
+    private OfficialRelationQueryDsl() {}
 
     public static List<OfficialRelationRowDTO> select(JPAQueryFactory query, String table, Collection<Long> ids) {
-        if (ids.isEmpty()) return List.of();
+        if (ids.isEmpty())
+            return List.of();
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.select(query, table, ids);
             case 1 -> OfficialRelationQueryDslPart01.select(query, table, ids);
@@ -56,7 +57,8 @@ public final class OfficialRelationQueryDsl {
     }
 
     public static List<Long> selectChildIds(JPAQueryFactory query, String table, Collection<Long> parentIds) {
-        if (parentIds.isEmpty()) return List.of();
+        if (parentIds.isEmpty())
+            return List.of();
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.selectChildIds(query, table, parentIds);
             case 1 -> OfficialRelationQueryDslPart01.selectChildIds(query, table, parentIds);
@@ -102,7 +104,8 @@ public final class OfficialRelationQueryDsl {
     }
 
     public static long deleteByIds(JPAQueryFactory query, String table, Collection<Long> ids) {
-        if (ids.isEmpty()) return 0;
+        if (ids.isEmpty())
+            return 0;
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.deleteByIds(query, table, ids);
             case 1 -> OfficialRelationQueryDslPart01.deleteByIds(query, table, ids);

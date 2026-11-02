@@ -1,0 +1,6 @@
+[
+  {"type": "Feature", "properties": {"name": "Test Cave", "type": "cave", "description": "Image coordinates"},
+   "geometry": {"type": "Point", "coordinates": [1024.25, -640.125]}},
+  {"type": "Feature", "properties": {"name": "Test Area"},
+   "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1024, 0], [1024, 1024], [0, 0]]]}}
+]

@@ -57,8 +57,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
 
     private static final int COPY_BUFFER_BYTES = 64 * 1024;
     private static final byte[] PDF_SIGNATURE = {'%', 'P', 'D', 'F', '-'};
-    private static final Set<String> IMAGE_EXTENSIONS =
-            Set.of(".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp");
+    private static final Set<String> IMAGE_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp");
 
     @Resource
     private JmComicProperties properties;
@@ -69,31 +68,21 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
 
     @PostConstruct
     void initialize() {
-        OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .connectTimeout(this.properties.getRequestTimeout())
-                .readTimeout(this.properties.getWholeFileTimeout())
-                .writeTimeout(this.properties.getWholeFileTimeout())
-                .callTimeout(this.properties.getWholeFileTimeout())
-                .retryOnConnectionFailure(true)
-                .followRedirects(true)
-                .followSslRedirects(true);
+        OkHttpClient.Builder builder = new OkHttpClient.Builder().connectTimeout(this.properties.getRequestTimeout())
+            .readTimeout(this.properties.getWholeFileTimeout()).writeTimeout(this.properties.getWholeFileTimeout())
+            .callTimeout(this.properties.getWholeFileTimeout()).retryOnConnectionFailure(true).followRedirects(true)
+            .followSslRedirects(true);
         if (StrUtil.isNotBlank(this.properties.getProxyHost())
-                && ObjectUtil.isNotNull(this.properties.getProxyPort())) {
-            builder.proxy(new Proxy(
-                    Proxy.Type.HTTP,
-                    new InetSocketAddress(
-                            this.properties.getProxyHost(),
-                            this.properties.getProxyPort())));
+            && ObjectUtil.isNotNull(this.properties.getProxyPort())) {
+            builder.proxy(new Proxy(Proxy.Type.HTTP,
+                new InetSocketAddress(this.properties.getProxyHost(), this.properties.getProxyPort())));
         }
         this.httpClient = builder.build();
     }
 
     @Override
-    public Optional<JmComicDocument> download(
-            AbstractJmClient client,
-            String albumId,
-            String fallbackTitle,
-            Path workspace) {
+    public Optional<JmComicDocument> download(AbstractJmClient client, String albumId, String fallbackTitle,
+        Path workspace) {
         if (!this.properties.isWholeFileEnabled()) {
             return Optional.empty();
         }
@@ -111,19 +100,15 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             if (exception.getStatus() == HttpStatus.CONTENT_TOO_LARGE) {
                 throw exception;
             }
-            throw new JmComicWholeFileException(
-                    "JM 整本下载内容处理失败: " + albumId, exception);
+            throw new JmComicWholeFileException("JM 整本下载内容处理失败: " + albumId, exception);
         } catch (JmComicWholeFileException exception) {
             throw exception;
         } catch (RuntimeException | IOException exception) {
-            throw new JmComicWholeFileException(
-                    "JM 整本下载快速路径执行失败: " + albumId,
-                    exception);
+            throw new JmComicWholeFileException("JM 整本下载快速路径执行失败: " + albumId, exception);
         }
     }
 
-    private void downloadPayload(String downloadUrl, List<Cookie> cookies, Path target)
-            throws IOException {
+    private void downloadPayload(String downloadUrl, List<Cookie> cookies, Path target) throws IOException {
         HttpUrl url = this.parseDownloadUrl(downloadUrl);
         Request.Builder request = new Request.Builder().url(url).get();
         String cookieHeader = this.cookieHeader(url, cookies);
@@ -133,8 +118,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
 
         try (Response response = this.httpClient.newCall(request.build()).execute()) {
             if (!response.isSuccessful()) {
-                throw new JmComicWholeFileException(
-                        "JM 整本文件请求失败，HTTP 状态码: " + response.code());
+                throw new JmComicWholeFileException("JM 整本文件请求失败，HTTP 状态码: " + response.code());
             }
             ResponseBody body = response.body();
             if (ObjectUtil.isNull(body)) {
@@ -142,23 +126,14 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             }
             long contentLength = body.contentLength();
             if (contentLength > this.properties.getMaxDownloadBytes()) {
-                throw new BusinessException(
-                        JmComicErrorCode.DOWNLOAD_TOO_LARGE,
-                        "JM 整本文件大小为 " + contentLength + " 字节，超过限制 "
-                                + this.properties.getMaxDownloadBytes() + " 字节");
+                throw new BusinessException(JmComicErrorCode.DOWNLOAD_TOO_LARGE,
+                    "JM 整本文件大小为 " + contentLength + " 字节，超过限制 " + this.properties.getMaxDownloadBytes() + " 字节");
             }
             Files.createDirectories(target.getParent());
             try (InputStream input = new BufferedInputStream(body.byteStream());
-                    OutputStream output = new BufferedOutputStream(Files.newOutputStream(
-                            target,
-                            StandardOpenOption.CREATE,
-                            StandardOpenOption.TRUNCATE_EXISTING,
-                            StandardOpenOption.WRITE))) {
-                this.copyWithLimit(
-                        input,
-                        output,
-                        this.properties.getMaxDownloadBytes(),
-                        "JM 整本文件超过下载大小限制");
+                OutputStream output = new BufferedOutputStream(Files.newOutputStream(target, StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE))) {
+                this.copyWithLimit(input, output, this.properties.getMaxDownloadBytes(), "JM 整本文件超过下载大小限制");
             }
         }
     }
@@ -170,8 +145,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         }
         HttpUrl url = HttpUrl.parse(normalizedUrl);
         if (ObjectUtil.isNull(url)
-                || (!"http".equalsIgnoreCase(url.scheme())
-                        && !"https".equalsIgnoreCase(url.scheme()))) {
+            || (!"http".equalsIgnoreCase(url.scheme()) && !"https".equalsIgnoreCase(url.scheme()))) {
             throw new JmComicWholeFileException("JM 整本下载地址无效");
         }
         return url;
@@ -181,18 +155,12 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         if (CollUtil.isEmpty(cookies)) {
             return null;
         }
-        return cookies.stream()
-                .filter(ObjectUtil::isNotNull)
-                .filter(cookie -> cookie.matches(url))
-                .map(cookie -> cookie.name() + "=" + cookie.value())
-                .collect(Collectors.joining("; "));
+        return cookies.stream().filter(ObjectUtil::isNotNull).filter(cookie -> cookie.matches(url))
+            .map(cookie -> cookie.name() + "=" + cookie.value()).collect(Collectors.joining("; "));
     }
 
-    private JmComicDocument convertPayload(
-            String albumId,
-            String title,
-            Path payload,
-            Path workspace) throws IOException {
+    private JmComicDocument convertPayload(String albumId, String title, Path payload, Path workspace)
+        throws IOException {
         if (this.hasSignature(payload, PDF_SIGNATURE)) {
             return this.usePdf(albumId, title, payload, workspace);
         }
@@ -202,35 +170,23 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         throw new JmComicWholeFileException("JM 整本接口返回了不支持的文件格式");
     }
 
-    private JmComicDocument usePdf(
-            String albumId,
-            String title,
-            Path source,
-            Path workspace) throws IOException {
+    private JmComicDocument usePdf(String albumId, String title, Path source, Path workspace) throws IOException {
         long pdfBytes = Files.size(source);
         if (pdfBytes > this.properties.getMaxPdfBytes()) {
-            throw new BusinessException(
-                    JmComicErrorCode.PDF_TOO_LARGE,
-                    "JM 整本 PDF 大小为 " + pdfBytes + " 字节，超过限制 "
-                            + this.properties.getMaxPdfBytes() + " 字节");
+            throw new BusinessException(JmComicErrorCode.PDF_TOO_LARGE,
+                "JM 整本 PDF 大小为 " + pdfBytes + " 字节，超过限制 " + this.properties.getMaxPdfBytes() + " 字节");
         }
         int pageCount = this.readPdfPageCount(source);
         if (pageCount > this.properties.getMaxPages()) {
-            throw new BusinessException(
-                    JmComicErrorCode.ALBUM_TOO_LARGE,
-                    "JM 整本 PDF 共 " + pageCount + " 页，超过限制 "
-                            + this.properties.getMaxPages() + " 页");
+            throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE,
+                "JM 整本 PDF 共 " + pageCount + " 页，超过限制 " + this.properties.getMaxPages() + " 页");
         }
         Path target = workspace.resolve(this.safePdfFileName(title, albumId));
         this.moveAtomically(source, target);
         return new JmComicDocument(albumId, title, pageCount, target, workspace);
     }
 
-    private JmComicDocument convertZip(
-            String albumId,
-            String title,
-            Path archive,
-            Path workspace) throws IOException {
+    private JmComicDocument convertZip(String albumId, String title, Path archive, Path workspace) throws IOException {
         Path imageDirectory = workspace.resolve("whole-file-images");
         Files.createDirectories(imageDirectory);
         List<Path> images = this.extractImages(archive, imageDirectory);
@@ -249,15 +205,12 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         Map<Path, String> entryNames = new HashMap<>();
         int inspectedEntries = 0;
         int maxEntries = Math.addExact(Math.multiplyExact(this.properties.getMaxPages(), 2), 32);
-        try (ZipInputStream input = new ZipInputStream(new BufferedInputStream(
-                Files.newInputStream(archive)))) {
+        try (ZipInputStream input = new ZipInputStream(new BufferedInputStream(Files.newInputStream(archive)))) {
             ZipEntry entry;
             while (ObjectUtil.isNotNull(entry = input.getNextEntry())) {
                 inspectedEntries++;
                 if (inspectedEntries > maxEntries) {
-                    throw new BusinessException(
-                            JmComicErrorCode.ALBUM_TOO_LARGE,
-                            "JM 整本压缩包文件项过多");
+                    throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE, "JM 整本压缩包文件项过多");
                 }
                 if (entry.isDirectory() || !this.isImageEntry(entry.getName())) {
                     input.closeEntry();
@@ -267,21 +220,14 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
                     throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE);
                 }
                 String extension = this.fileExtension(entry.getName());
-                Path image = imageDirectory.resolve(
-                        String.format(Locale.ROOT, "%05d%s", images.size() + 1, extension));
+                Path image = imageDirectory.resolve(String.format(Locale.ROOT, "%05d%s", images.size() + 1, extension));
                 long remaining = this.properties.getMaxDownloadBytes() - extractedBytes;
                 if (remaining <= 0) {
                     throw new BusinessException(JmComicErrorCode.DOWNLOAD_TOO_LARGE);
                 }
-                try (OutputStream output = new BufferedOutputStream(Files.newOutputStream(
-                        image,
-                        StandardOpenOption.CREATE_NEW,
-                        StandardOpenOption.WRITE))) {
-                    extractedBytes += this.copyWithLimit(
-                            input,
-                            output,
-                            remaining,
-                            "JM 整本压缩包解压后超过大小限制");
+                try (OutputStream output = new BufferedOutputStream(
+                    Files.newOutputStream(image, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE))) {
+                    extractedBytes += this.copyWithLimit(input, output, remaining, "JM 整本压缩包解压后超过大小限制");
                 }
                 images.add(image);
                 entryNames.put(image, entry.getName());
@@ -292,11 +238,8 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         return images;
     }
 
-    private long copyWithLimit(
-            InputStream input,
-            OutputStream output,
-            long maxBytes,
-            String limitMessage) throws IOException {
+    private long copyWithLimit(InputStream input, OutputStream output, long maxBytes, String limitMessage)
+        throws IOException {
         byte[] buffer = new byte[COPY_BUFFER_BYTES];
         long copied = 0;
         int read;
@@ -306,9 +249,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             }
             copied = Math.addExact(copied, read);
             if (copied > maxBytes) {
-                throw new BusinessException(
-                        JmComicErrorCode.DOWNLOAD_TOO_LARGE,
-                        limitMessage + " " + maxBytes + " 字节");
+                throw new BusinessException(JmComicErrorCode.DOWNLOAD_TOO_LARGE, limitMessage + " " + maxBytes + " 字节");
             }
             output.write(buffer, 0, read);
         }
@@ -316,9 +257,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
     }
 
     private int readPdfPageCount(Path pdf) {
-        try (PDDocument document = PDDocument.load(
-                pdf.toFile(),
-                MemoryUsageSetting.setupTempFileOnly())) {
+        try (PDDocument document = PDDocument.load(pdf.toFile(), MemoryUsageSetting.setupTempFileOnly())) {
             return document.getNumberOfPages();
         } catch (IOException exception) {
             throw new JmComicWholeFileException("JM 整本 PDF 无法读取", exception);
@@ -346,11 +285,8 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
                 return false;
             }
         }
-        return signature[0] == 'P'
-                && signature[1] == 'K'
-                && ((signature[2] == 3 && signature[3] == 4)
-                        || (signature[2] == 5 && signature[3] == 6)
-                        || (signature[2] == 7 && signature[3] == 8));
+        return signature[0] == 'P' && signature[1] == 'K' && ((signature[2] == 3 && signature[3] == 4)
+            || (signature[2] == 5 && signature[3] == 6) || (signature[2] == 7 && signature[3] == 8));
     }
 
     private boolean isImageEntry(String entryName) {
@@ -360,16 +296,12 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
 
     private String fileExtension(String fileName) {
         String lowerName = StrUtil.blankToDefault(fileName, "").toLowerCase(Locale.ROOT);
-        return IMAGE_EXTENSIONS.stream()
-                .filter(lowerName::endsWith)
-                .findFirst()
-                .orElse(".img");
+        return IMAGE_EXTENSIONS.stream().filter(lowerName::endsWith).findFirst().orElse(".img");
     }
 
     private String safePdfFileName(String title, String albumId) {
-        String safeTitle = StrUtil.blankToDefault(title, "jm-" + albumId)
-                .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_")
-                .trim();
+        String safeTitle =
+            StrUtil.blankToDefault(title, "jm-" + albumId).replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").trim();
         if (safeTitle.length() > 100) {
             safeTitle = safeTitle.substring(0, 100);
         }
@@ -378,11 +310,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
 
     private void moveAtomically(Path source, Path target) throws IOException {
         try {
-            Files.move(
-                    source,
-                    target,
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING);
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } catch (AtomicMoveNotSupportedException exception) {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }

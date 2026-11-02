@@ -15,6 +15,5 @@ public final class WarframeCacheNames {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private WarframeCacheNames() {
-    }
+    private WarframeCacheNames() {}
 }

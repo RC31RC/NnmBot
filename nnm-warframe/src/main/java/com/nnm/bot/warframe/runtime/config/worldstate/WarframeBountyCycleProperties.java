@@ -24,9 +24,8 @@ public class WarframeBountyCycleProperties {
     @PostConstruct
     public void validate() {
         if (url == null || url.getHost() == null
-                || !("https".equalsIgnoreCase(url.getScheme())
-                || "http".equalsIgnoreCase(url.getScheme()))
-                || maxBytes <= 0 || maxBytes > 8L * 1024 * 1024) {
+            || !("https".equalsIgnoreCase(url.getScheme()) || "http".equalsIgnoreCase(url.getScheme())) || maxBytes <= 0
+            || maxBytes > 8L * 1024 * 1024) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.bounty-cycle configuration");
         }
     }

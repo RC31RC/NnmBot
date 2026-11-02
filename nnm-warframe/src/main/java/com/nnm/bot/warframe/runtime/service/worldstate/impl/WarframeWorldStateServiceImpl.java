@@ -58,8 +58,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     @Resource
     private WarframeBountyCycleService bountyCycleService;
     /** 最近一次完整的本机快照，所有分区必须一起替换。 */
-    private final AtomicReference<WorldStateRuntimeSnapshot> currentSnapshot =
-            new AtomicReference<>();
+    private final AtomicReference<WorldStateRuntimeSnapshot> currentSnapshot = new AtomicReference<>();
 
     /**
      * 接收已有运行时投影并统一发布本地状态更新事件。
@@ -79,8 +78,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     private void applySnapshot(WorldStateRuntimeSnapshot newSnapshot) {
         refreshLock.lock();
         try {
-            WorldStateDTO newState = Objects.requireNonNull(newSnapshot.state(),
-                    "newSnapshot.state must not be null");
+            WorldStateDTO newState = Objects.requireNonNull(newSnapshot.state(), "newSnapshot.state must not be null");
             // 原子替换完整快照，读取线程不会看到领域状态与原始 JSON 的半更新结果。
             WorldStateRuntimeSnapshot oldSnapshot = currentSnapshot.getAndSet(newSnapshot);
             WorldStateDTO oldState = oldSnapshot == null ? null : oldSnapshot.state();
@@ -138,12 +136,10 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     public WorldStateDTO refresh(TaskProgressReporter reporter) {
         refreshLock.lock();
         try {
-            TaskProgressReporter progress = reporter == null
-                    ? TaskProgressReporter.noop() : reporter;
+            TaskProgressReporter progress = reporter == null ? TaskProgressReporter.noop() : reporter;
             progress.report("DOWNLOADING_WORLD_STATE", "正在拉取 Warframe 世界数据");
             HttpResult result = officialApiClient.fetchWorldStateResult();
-            if (result == null || !result.isSuccess()
-                    || StrUtil.isBlank(result.body())) {
+            if (result == null || !result.isSuccess() || StrUtil.isBlank(result.body())) {
                 // 保留最近一次成功的 JVM 内存快照，由本机下一个轮询周期重试。
                 throw new SystemException("Warframe WorldStateDTO upstream unavailable");
             }
@@ -155,16 +151,10 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             } catch (JsonProcessingException exception) {
                 throw new IllegalArgumentException("官方世界状态字段绑定失败：" + exception.getMessage(), exception);
             }
-            WorldStateDTO state = cycleService.resolve(bountyCycleService.enrich(
-                    worldStateMapper.map(rawData, source, result.body())));
-            applySnapshot(new WorldStateRuntimeSnapshot(
-                    rawData,
-                    state,
-                    source,
-                    result.body(),
-                    sha256(result.body()),
-                    state.metadata().fetchedAt(),
-                    topLevelFields(result.body())));
+            WorldStateDTO state =
+                cycleService.resolve(bountyCycleService.enrich(worldStateMapper.map(rawData, source, result.body())));
+            applySnapshot(new WorldStateRuntimeSnapshot(rawData, state, source, result.body(), sha256(result.body()),
+                state.metadata().fetchedAt(), topLevelFields(result.body())));
             progress.complete("Warframe 世界数据已更新");
             return state;
         } finally {
@@ -203,8 +193,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
      */
     private static String sha256(String value) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available", exception);

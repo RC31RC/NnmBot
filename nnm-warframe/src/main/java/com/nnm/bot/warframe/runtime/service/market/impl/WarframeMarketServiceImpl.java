@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.runtime.service.market.impl;
 
+import com.nnm.bot.warframe.runtime.exception.market.WarframeMarketDataException;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketOrderPageDTO;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketAuctionEntryDTO.AttributeDTO;
@@ -47,8 +48,7 @@ import java.util.*;
 import java.util.function.Supplier;
 
 /**
- * Warframe Market 统一业务服务：接收查询对象，完成缓存、响应解析、筛选和分页。
- * HTTP 地址及请求头仅由 ApiClient 管理，命令语法和摘要仅由 Plugin 处理。
+ * Warframe Market 统一业务服务：接收查询对象，完成缓存、响应解析、筛选和分页。 HTTP 地址及请求头仅由 ApiClient 管理，命令语法和摘要仅由 Plugin 处理。
  */
 @Slf4j
 @Service
@@ -90,8 +90,8 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             if (Boolean.TRUE.equals(item.setRoot()) || CollUtil.isNotEmpty(item.setParts())) {
                 try {
                     setItems = fetchItemSet(query.marketSlug())
-                            .map(set -> set.items().stream().map(WarframeMarketItemSummaryDTO::from).toList())
-                            .orElseGet(List::of);
+                        .map(set -> set.items().stream().map(WarframeMarketItemSummaryDTO::from).toList())
+                        .orElseGet(List::of);
                 } catch (RuntimeException exception) {
                     // 部件详情是增强数据；上游故障时仍返回已获得的有效订单。
                     log.warn("Unable to load market set for [{}]", query.marketSlug(), exception);
@@ -99,25 +99,25 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             }
             Integer maxRank = item.maxRank() == null ? snapshot.maxRank() : item.maxRank();
             List<WarframeMarketOrderDTO> orders = snapshot.orders().stream()
-                    .filter(order -> query.filter().accepts(order.orderType()))
-                    .filter(WarframeMarketOrderDTO::visible)
-                    .filter(order -> !"offline".equalsIgnoreCase(order.status()))
-                    .filter(order -> matchesMaxRank(query.maxLevel(), maxRank, item, order))
-                    .sorted(Comparator.comparing((WarframeMarketOrderDTO order) -> !"sell".equals(order.orderType()))
-                            .thenComparingLong(order -> "sell".equals(order.orderType())
-                                    ? order.platinum() : -(long) order.platinum())
-                            .thenComparing(WarframeMarketOrderDTO::userName))
-                    .toList();
-            PageResult<WarframeMarketOrderEntryDTO> page = page(
-                    orders.stream().map(WarframeMarketOrderEntryDTO::from).toList(), query.page(),
+                .filter(order -> query.filter().accepts(order.orderType())).filter(WarframeMarketOrderDTO::visible)
+                .filter(order -> !"offline".equalsIgnoreCase(order.status()))
+                .filter(order -> matchesMaxRank(query.maxLevel(), maxRank, item, order))
+                .sorted(Comparator.comparing((WarframeMarketOrderDTO order) -> !"sell".equals(order.orderType()))
+                    .thenComparingLong(
+                        order -> "sell".equals(order.orderType()) ? order.platinum() : -(long)order.platinum())
+                    .thenComparing(WarframeMarketOrderDTO::userName))
+                .toList();
+            PageResult<WarframeMarketOrderEntryDTO> page =
+                page(orders.stream().map(WarframeMarketOrderEntryDTO::from).toList(), query.page(),
                     properties.getOrderPageSize());
             String name = item.localizedName("zh-hans");
-            if (StrUtil.isBlank(name)) name = snapshot.itemName();
-            if (StrUtil.isBlank(name)) name = query.itemInput();
-            return new WarframeMarketOrderPageDTO(name, query.itemInput(), query.marketSlug(),
-                    snapshot.platform(), query.filter().name(), query.maxLevel(), maxRank, page,
-                    price(orders, "sell"), price(orders, "buy"),
-                    WarframeMarketItemSummaryDTO.from(item), setItems);
+            if (StrUtil.isBlank(name))
+                name = snapshot.itemName();
+            if (StrUtil.isBlank(name))
+                name = query.itemInput();
+            return new WarframeMarketOrderPageDTO(name, query.itemInput(), query.marketSlug(), snapshot.platform(),
+                query.filter().name(), query.maxLevel(), maxRank, page, price(orders, "sell"), price(orders, "buy"),
+                WarframeMarketItemSummaryDTO.from(item), setItems);
         });
     }
 
@@ -130,23 +130,20 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
     @Override
     public Optional<WarframeMarketAuctionPageDTO> queryAuctions(WarframeMarketAuctionQuery query) {
         Objects.requireNonNull(query, "query");
-        List<String> negative = query.requireNegative() && CollUtil.isEmpty(query.negativeStats())
-                ? List.of("has") : query.negativeStats();
-        return searchAuctions(query.type(), query.weaponSlug(), query.positiveStats(), negative)
-                .map(snapshot -> {
-                    List<WarframeMarketAuctionEntryDTO> auctions = snapshot.auctions().stream()
-                            // “负任意”不等于忽略条件，须在分页前筛出确实带负词条的紫卡。
-                            .filter(auction -> !query.requireNegative()
-                                    || auction.item().attributes().stream().anyMatch(attribute -> !attribute.positive()))
-                            .sorted(Comparator.comparing(
-                                    WarframeMarketServiceImpl::auctionPrice,
-                                    Comparator.nullsLast(Integer::compareTo))
-                                    .thenComparing(WarframeMarketAuctionEntryDTO::id))
-                            .toList();
-                    return new WarframeMarketAuctionPageDTO(query.type(), query.weaponName(),
-                            query.weaponSlug(), query.positiveStats(), query.negativeStats(),
-                            page(auctions, query.page()), query.requireNegative());
-                });
+        List<String> negative =
+            query.requireNegative() && CollUtil.isEmpty(query.negativeStats()) ? List.of("has") : query.negativeStats();
+        return searchAuctions(query.type(), query.weaponSlug(), query.positiveStats(), negative).map(snapshot -> {
+            List<WarframeMarketAuctionEntryDTO> auctions = snapshot.auctions().stream()
+                // “负任意”不等于忽略条件，须在分页前筛出确实带负词条的紫卡。
+                .filter(auction -> !query.requireNegative()
+                    || auction.item().attributes().stream().anyMatch(attribute -> !attribute.positive()))
+                .sorted(Comparator
+                    .comparing(WarframeMarketServiceImpl::auctionPrice, Comparator.nullsLast(Integer::compareTo))
+                    .thenComparing(WarframeMarketAuctionEntryDTO::id))
+                .toList();
+            return new WarframeMarketAuctionPageDTO(query.type(), query.weaponName(), query.weaponSlug(),
+                query.positiveStats(), query.negativeStats(), page(auctions, query.page()), query.requireNegative());
+        });
     }
 
     /**
@@ -158,12 +155,12 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     @Override
     public Optional<WarframeMarketOrderSnapshotDTO> fetchOrders(String slug, String platform) {
-        if (blank(slug)) return Optional.empty();
+        if (blank(slug))
+            return Optional.empty();
         String normalizedSlug = norm(slug);
         String normalizedPlatform = blank(platform) ? norm(apiClient.configuredMarketPlatform()) : norm(platform);
-        return cached(WarframeCacheNames.MARKET_ORDERS,
-                List.of("orders", normalizedSlug, normalizedPlatform),
-                () -> loadOrders(normalizedSlug, normalizedPlatform));
+        return cached(WarframeCacheNames.MARKET_ORDERS, List.of("orders", normalizedSlug, normalizedPlatform),
+            () -> loadOrders(normalizedSlug, normalizedPlatform));
     }
 
     /**
@@ -175,21 +172,25 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     private Optional<WarframeMarketOrderSnapshotDTO> loadOrders(String slug, String platform) {
         HttpResult response = apiClient.fetchMarketOrdersResult(slug, platform);
-        if (!success(response)) return Optional.empty();
+        if (!success(response))
+            return Optional.empty();
         MarketResponseRawData<List<OrderRawData>> root = readResponse(response,
-                objectMapper.getTypeFactory().constructCollectionType(List.class, OrderRawData.class), slug);
+            objectMapper.getTypeFactory().constructCollectionType(List.class, OrderRawData.class), slug);
         var payload = root.getPayload();
         ItemRawData item = payload == null ? root.getItem() : payload.getItem();
         List<OrderRawData> values = payload == null ? root.getData() : payload.getOrders();
-        if (values == null) values = root.getData();
-        if (values == null) throw new WarframeMarketDataException("市场响应缺少订单数组：" + slug, null);
+        if (values == null)
+            values = root.getData();
+        if (values == null)
+            throw new WarframeMarketDataException("市场响应缺少订单数组：" + slug, null);
         List<WarframeMarketOrderDTO> orders = values.stream().map(this::parseOrder).toList();
         WarframeMarketItemDTO details = itemParser.parse(item);
         String name = details.localizedName("zh-hans");
-        if (StrUtil.isBlank(name)) name = details.localizedName("en");
+        if (StrUtil.isBlank(name))
+            name = details.localizedName("en");
         return Optional.of(new WarframeMarketOrderSnapshotDTO(name, details.maxRank(),
-                blank(platform) ? apiClient.configuredMarketPlatform() : platform,
-                orders, response.body(), details, root.getApiVersion(), error(root.getError())));
+            blank(platform) ? apiClient.configuredMarketPlatform() : platform, orders, response.body(), details,
+            root.getApiVersion(), error(root.getError())));
     }
 
     /**
@@ -200,9 +201,9 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     @Override
     public Optional<WarframeMarketItemDTO> fetchItem(String slug) {
-        if (blank(slug)) return Optional.empty();
-        return cached(WarframeCacheNames.METADATA, List.of("market:item", norm(slug)),
-                () -> loadItem(norm(slug)));
+        if (blank(slug))
+            return Optional.empty();
+        return cached(WarframeCacheNames.METADATA, List.of("market:item", norm(slug)), () -> loadItem(norm(slug)));
     }
 
     /**
@@ -213,10 +214,13 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     private Optional<WarframeMarketItemDTO> loadItem(String slug) {
         HttpResult response = apiClient.fetchMarketItemResult(slug.trim());
-        if (!success(response)) return Optional.empty();
-        MarketResponseRawData<ItemRawData> root = readResponse(response, objectMapper.constructType(ItemRawData.class), slug);
+        if (!success(response))
+            return Optional.empty();
+        MarketResponseRawData<ItemRawData> root =
+            readResponse(response, objectMapper.constructType(ItemRawData.class), slug);
         ItemRawData data = root.getData();
-        if (data == null && root.getPayload() != null) data = root.getPayload().getItem();
+        if (data == null && root.getPayload() != null)
+            data = root.getPayload().getItem();
         return data == null ? Optional.empty() : Optional.of(itemParser.parse(data));
     }
 
@@ -228,9 +232,9 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     @Override
     public Optional<WarframeMarketItemSetDTO> fetchItemSet(String slug) {
-        if (blank(slug)) return Optional.empty();
-        return cached(WarframeCacheNames.METADATA, List.of("market:set", norm(slug)),
-                () -> loadItemSet(norm(slug)));
+        if (blank(slug))
+            return Optional.empty();
+        return cached(WarframeCacheNames.METADATA, List.of("market:set", norm(slug)), () -> loadItemSet(norm(slug)));
     }
 
     /**
@@ -241,11 +245,15 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     private Optional<WarframeMarketItemSetDTO> loadItemSet(String slug) {
         HttpResult response = apiClient.fetchMarketItemSetResult(slug.trim());
-        if (!success(response)) return Optional.empty();
-        MarketResponseRawData<ItemSetRawData> root = readResponse(response, objectMapper.constructType(ItemSetRawData.class), slug);
+        if (!success(response))
+            return Optional.empty();
+        MarketResponseRawData<ItemSetRawData> root =
+            readResponse(response, objectMapper.constructType(ItemSetRawData.class), slug);
         ItemSetRawData data = root.getData();
-        if (data == null || data.getItems() == null) return Optional.empty();
-        return Optional.of(new WarframeMarketItemSetDTO(data.getId(), data.getItems().stream().map(itemParser::parse).toList(),
+        if (data == null || data.getItems() == null)
+            return Optional.empty();
+        return Optional
+            .of(new WarframeMarketItemSetDTO(data.getId(), data.getItems().stream().map(itemParser::parse).toList(),
                 root.getApiVersion(), error(root.getError()), response.body()));
     }
 
@@ -297,11 +305,13 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      * @return 市场物品的非受管详情组成的列表。
      */
     private List<WarframeMarketItemDTO> parseCatalog(HttpResult response) {
-        if (!success(response)) return List.of();
+        if (!success(response))
+            return List.of();
         MarketResponseRawData<List<ItemRawData>> root = readResponse(response,
-                objectMapper.getTypeFactory().constructCollectionType(List.class, ItemRawData.class), "物品目录");
+            objectMapper.getTypeFactory().constructCollectionType(List.class, ItemRawData.class), "物品目录");
         List<ItemRawData> values = root.getData();
-        if (values == null && root.getPayload() != null) values = root.getPayload().getItems();
+        if (values == null && root.getPayload() != null)
+            values = root.getPayload().getItems();
         return CollUtil.isEmpty(values) ? List.of() : values.stream().map(itemParser::parse).toList();
     }
 
@@ -315,13 +325,14 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     @Override
-    public Optional<WarframeMarketAuctionSnapshotDTO> searchAuctions(
-            String type, String weapon, List<String> positive, List<String> negative) {
-        if (blank(weapon)) return Optional.empty();
+    public Optional<WarframeMarketAuctionSnapshotDTO> searchAuctions(String type, String weapon, List<String> positive,
+        List<String> negative) {
+        if (blank(weapon))
+            return Optional.empty();
         String t = norm(type), w = norm(weapon);
         List<String> p = normalize(positive), n = normalize(negative);
         return cached(WarframeCacheNames.MARKET_AUCTIONS, List.of("auction", t, w, p, n),
-                () -> loadAuctions(t, w, p, n));
+            () -> loadAuctions(t, w, p, n));
     }
 
     /**
@@ -333,17 +344,18 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      * @param n 负面词条筛选列表。
      * @return 匹配的业务结果；没有有效数据时为空。
      */
-    private Optional<WarframeMarketAuctionSnapshotDTO> loadAuctions(
-            String t, String w, List<String> p, List<String> n) {
+    private Optional<WarframeMarketAuctionSnapshotDTO> loadAuctions(String t, String w, List<String> p,
+        List<String> n) {
         HttpResult response = apiClient.fetchAuctionSearchResult(t, w, p, n);
-        if (!success(response)) return Optional.empty();
+        if (!success(response))
+            return Optional.empty();
         MarketResponseRawData<Void> root = readResponse(response, objectMapper.constructType(Void.class), w);
         if (root.getPayload() == null || root.getPayload().getAuctions() == null) {
             throw new WarframeMarketDataException("市场响应缺少拍卖数组：" + w, null);
         }
         var auctions = root.getPayload().getAuctions().stream()
-                .filter(value -> value.getOwner() == null || !"offline".equalsIgnoreCase(value.getOwner().getStatus()))
-                .map(this::parseAuction).toList();
+            .filter(value -> value.getOwner() == null || !"offline".equalsIgnoreCase(value.getOwner().getStatus()))
+            .map(this::parseAuction).toList();
         return Optional.of(new WarframeMarketAuctionSnapshotDTO(t, w, auctions, p, n, response.body()));
     }
 
@@ -355,9 +367,10 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     @Override
     public Optional<WarframeMarketStatisticsDTO> fetchStatistics(String slug) {
-        if (blank(slug)) return Optional.empty();
+        if (blank(slug))
+            return Optional.empty();
         return cached(WarframeCacheNames.MARKET_STATISTICS, List.of("statistics", norm(slug)),
-                () -> loadStatistics(norm(slug)));
+            () -> loadStatistics(norm(slug)));
     }
 
     /**
@@ -368,14 +381,23 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     private Optional<WarframeMarketStatisticsDTO> loadStatistics(String slug) {
         HttpResult response = apiClient.fetchMarketStatisticsResult(slug.trim());
-        if (!success(response)) return Optional.empty();
-        MarketResponseRawData<StatisticsDataRawData> root = readResponse(response, objectMapper.constructType(StatisticsDataRawData.class), slug);
+        if (!success(response))
+            return Optional.empty();
+        MarketResponseRawData<StatisticsDataRawData> root =
+            readResponse(response, objectMapper.constructType(StatisticsDataRawData.class), slug);
         var payload = root.getPayload();
-        var values = payload == null || payload.getStatisticsLive() == null ? null : payload.getStatisticsLive().getDays90();
-        if (values == null && root.getData() != null) values = root.getData().getStatistics();
-        return Optional.of(new WarframeMarketStatisticsDTO(slug.trim(), CollUtil.isEmpty(values) ? List.of() : values.stream().map(value -> new MarketStatisticDTO(
-                value.getDatetime(), value.getVolume(), value.getOrderType(), value.getMinimum(), value.getMaximum(),
-                value.getAverage(), value.getWeightedAverage(), value.getMedian(), value.getModRank())).toList(), response.body()));
+        var values =
+            payload == null || payload.getStatisticsLive() == null ? null : payload.getStatisticsLive().getDays90();
+        if (values == null && root.getData() != null)
+            values = root.getData().getStatistics();
+        return Optional.of(new WarframeMarketStatisticsDTO(slug.trim(),
+            CollUtil.isEmpty(values) ? List.of()
+                : values.stream()
+                    .map(value -> new MarketStatisticDTO(value.getDatetime(), value.getVolume(), value.getOrderType(),
+                        value.getMinimum(), value.getMaximum(), value.getAverage(), value.getWeightedAverage(),
+                        value.getMedian(), value.getModRank()))
+                    .toList(),
+            response.body()));
     }
 
     /**
@@ -384,15 +406,15 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
     @Override
     public void clearCache() {
         for (String name : List.of(WarframeCacheNames.METADATA, WarframeCacheNames.MARKET_ORDERS,
-                WarframeCacheNames.MARKET_AUCTIONS, WarframeCacheNames.MARKET_STATISTICS)) {
+            WarframeCacheNames.MARKET_AUCTIONS, WarframeCacheNames.MARKET_STATISTICS)) {
             Cache cache = cacheManager.getCache(name);
-            if (cache != null) cache.clear();
+            if (cache != null)
+                cache.clear();
         }
     }
 
     /**
-     * 显式缓存避免合并服务后内部调用绕过 Spring AOP，也不再依赖 SpEL 参数名。
-     *   使用缓存自身的同键加载协调；请求失败不缓存，真实的空订单快照仍可缓存。
+     * 显式缓存避免合并服务后内部调用绕过 Spring AOP，也不再依赖 SpEL 参数名。 使用缓存自身的同键加载协调；请求失败不缓存，真实的空订单快照仍可缓存。
      *
      * @param cacheName 缓存名称。
      * @param key 当前记录或字段的查找键。
@@ -424,7 +446,7 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     private static <T> PageResult<T> page(List<T> values, int page, int size) {
         // 先以 long 运算，避免用户输入超大页码导致负数下标。
-        int from = (int) Math.min(((long) page - 1) * size, values.size());
+        int from = (int)Math.min(((long)page - 1) * size, values.size());
         return PageResult.of(values.subList(from, Math.min(from + size, values.size())), page, size, values.size());
     }
 
@@ -437,7 +459,7 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     private static String price(List<WarframeMarketOrderDTO> orders, String type) {
         return orders.stream().filter(order -> type.equals(order.orderType())).findFirst()
-                .map(order -> order.platinum() + " 白金").orElse("");
+            .map(order -> order.platinum() + " 白金").orElse("");
     }
 
     /**
@@ -449,13 +471,15 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      * @param order 成员在输入集合中的位置。
      * @return 满足订单等级是否满足当前最高等级筛选时为真，否则为假。
      */
-    private static boolean matchesMaxRank(boolean requested, Integer maxRank,
-                                          WarframeMarketItemDTO item, WarframeMarketOrderDTO order) {
-        if (!requested) return true;
-        if (maxRank != null && !maxRank.equals(order.rank())) return false;
+    private static boolean matchesMaxRank(boolean requested, Integer maxRank, WarframeMarketItemDTO item,
+        WarframeMarketOrderDTO order) {
+        if (!requested)
+            return true;
+        if (maxRank != null && !maxRank.equals(order.rank()))
+            return false;
         // 阿耶檀识塑像的满级是两种星星分别装满，不可将星星数量与 Mod 等级比较。
         return (item.maxAmberStars() == null || item.maxAmberStars().equals(order.amberStars()))
-                && (item.maxCyanStars() == null || item.maxCyanStars().equals(order.cyanStars()));
+            && (item.maxCyanStars() == null || item.maxCyanStars().equals(order.cyanStars()));
     }
 
     /**
@@ -469,8 +493,11 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
         UserRawData owner = value.getOwner() == null ? new UserRawData() : value.getOwner();
         AuctionItemRawData item = value.getItem() == null ? new AuctionItemRawData() : value.getItem();
         List<AttributeDTO> attributes = CollUtil.isEmpty(item.getAttributes()) ? List.of()
-                : item.getAttributes().stream().map(attribute -> new AttributeDTO(attribute.getUrlName(),
-                        attribute.getValue() == null ? 0 : attribute.getValue().doubleValue(), Boolean.TRUE.equals(attribute.getPositive()))).toList();
+            : item.getAttributes().stream()
+                .map(attribute -> new AttributeDTO(attribute.getUrlName(),
+                    attribute.getValue() == null ? 0 : attribute.getValue().doubleValue(),
+                    Boolean.TRUE.equals(attribute.getPositive())))
+                .toList();
         String status = StrUtil.emptyIfNull(owner.getStatus());
         String statusText = switch (status.toLowerCase(Locale.ROOT)) {
             case "online" -> "在线";
@@ -479,9 +506,10 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             default -> status;
         };
         return new WarframeMarketAuctionEntryDTO(value.getId(), owner.getIngameName(), status, statusText,
-                value.getStartingPrice(), value.getBuyoutPrice(), value.getTopBid(), Boolean.TRUE.equals(value.getDirectSell()),
-                value.getCreated(), new WarframeMarketAuctionEntryDTO.AuctionItemDTO(item.getType(), item.getWeaponUrlName(),
-                item.getName(), item.getModRank(), item.getRerolls(), item.getMasteryLevel(), item.getPolarity(), item.getElement(),
+            value.getStartingPrice(), value.getBuyoutPrice(), value.getTopBid(),
+            Boolean.TRUE.equals(value.getDirectSell()), value.getCreated(),
+            new WarframeMarketAuctionEntryDTO.AuctionItemDTO(item.getType(), item.getWeaponUrlName(), item.getName(),
+                item.getModRank(), item.getRerolls(), item.getMasteryLevel(), item.getPolarity(), item.getElement(),
                 item.getDamage(), item.getEphemera(), item.getQuirk(), attributes));
     }
 
@@ -505,13 +533,16 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
         Objects.requireNonNull(order, "订单不能为空");
         UserRawData user = order.getUser() == null ? new UserRawData() : order.getUser();
         return new WarframeMarketOrderDTO(order.getId(), StrUtil.emptyIfNull(order.getType()).toLowerCase(Locale.ROOT),
-                order.getPlatinum() == null ? 0 : order.getPlatinum(), order.getQuantity() == null ? 0 : order.getQuantity(),
-                order.getPerTrade(), order.getSubtype(), order.getRank(), order.getCharges(), order.getAmberStars(), order.getCyanStars(),
-                !Boolean.FALSE.equals(order.getVisible()), order.getCreatedAt(), order.getUpdatedAt(), order.getItemId(), order.getGroupId(),
-                new WarframeMarketUserDTO(user.getId(), user.getIngameName(), user.getSlug(), user.getReputation(), user.getPlatform(),
-                        Boolean.TRUE.equals(user.getCrossplay()), user.getLocale(), user.getStatus(), user.getAvatar(), user.getLastSeen(),
-                        user.getActivity(), objectMapper.convertValue(user, new TypeReference<>() {})),
-                objectMapper.convertValue(order, new TypeReference<>() {}));
+            order.getPlatinum() == null ? 0 : order.getPlatinum(),
+            order.getQuantity() == null ? 0 : order.getQuantity(), order.getPerTrade(), order.getSubtype(),
+            order.getRank(), order.getCharges(), order.getAmberStars(), order.getCyanStars(),
+            !Boolean.FALSE.equals(order.getVisible()), order.getCreatedAt(), order.getUpdatedAt(), order.getItemId(),
+            order.getGroupId(),
+            new WarframeMarketUserDTO(user.getId(), user.getIngameName(), user.getSlug(), user.getReputation(),
+                user.getPlatform(), Boolean.TRUE.equals(user.getCrossplay()), user.getLocale(), user.getStatus(),
+                user.getAvatar(), user.getLastSeen(), user.getActivity(),
+                objectMapper.convertValue(user, new TypeReference<>() {})),
+            objectMapper.convertValue(order, new TypeReference<>() {}));
     }
 
     /**
@@ -524,10 +555,11 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      */
     private <T> MarketResponseRawData<T> readResponse(HttpResult response, JavaType dataType, String identity) {
         try {
-            return objectMapper.readValue(response.body(), objectMapper.getTypeFactory()
-                    .constructParametricType(MarketResponseRawData.class, dataType));
+            return objectMapper.readValue(response.body(),
+                objectMapper.getTypeFactory().constructParametricType(MarketResponseRawData.class, dataType));
         } catch (JsonProcessingException exception) {
-            throw new WarframeMarketDataException("市场响应不符合类型化字段合同：" + identity + "：" + exception.getOriginalMessage(), exception);
+            throw new WarframeMarketDataException("市场响应不符合类型化字段合同：" + identity + "：" + exception.getOriginalMessage(),
+                exception);
         }
     }
 
@@ -538,30 +570,40 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> normalize(List<String> values) {
-        return values == null ? List.of() : values.stream().filter(v -> !blank(v)).map(WarframeMarketServiceImpl::norm)
-                .distinct().sorted().toList();
+        return values == null ? List.of()
+            : values.stream().filter(v -> !blank(v)).map(WarframeMarketServiceImpl::norm).distinct().sorted().toList();
     }
+
     /**
      * 规范化文本的首尾空白和大小写，供查找键比较使用。
      *
      * @param value 待校验或规范化的文本。
      * @return 规范化文本的首尾空白和大小写，供查找键比较使用对应的文本。
      */
-    private static String norm(String value) { return value == null ? "" : value.trim().toLowerCase(Locale.ROOT); }
+    private static String norm(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
     /**
      * 判断 HTTP 响应是否成功且包含可用正文。
      *
      * @param r 当前 HTTP 响应。
      * @return 满足 HTTP 响应是否成功且包含可用正文时为真，否则为假。
      */
-    private static boolean success(HttpResult r) { return r != null && r.isSuccess() && !blank(r.body()); }
+    private static boolean success(HttpResult r) {
+        return r != null && r.isSuccess() && !blank(r.body());
+    }
+
     /**
      * 判断文本是否缺失或仅包含空白字符。
      *
      * @param value 待校验或规范化的文本。
      * @return 满足文本是否缺失或仅包含空白字符时为真，否则为假。
      */
-    private static boolean blank(String value) { return StrUtil.isBlank(value); }
+    private static boolean blank(String value) {
+        return StrUtil.isBlank(value);
+    }
+
     /**
      * 保留上游错误的 JSON 表达，仅用于排障输出。
      *
@@ -569,7 +611,8 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
      * @return 错误的 JSON 文本；未提供错误时返回空字符串
      */
     private String error(Object value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
@@ -577,13 +620,4 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
         }
     }
 
-    public static final class WarframeMarketDataException extends RuntimeException {
-        /**
-         * 构造市场数据异常，并保存初始化参数。
-         *
-         * @param message 待发送或处理的消息。
-         * @param cause 失败原因。
-         */
-        public WarframeMarketDataException(String message, Throwable cause) { super(message, cause); }
-    }
 }

@@ -1,5 +1,6 @@
 package com.nnm.bot.core.plugin.model;
 
+import com.nnm.bot.common.exception.SystemException;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -36,8 +37,7 @@ public final class CommandAttachment implements AutoCloseable {
         this(fileName, contentType, content, null, null);
     }
 
-    private CommandAttachment(String fileName, String contentType, byte[] content,
-                              Path path, Path cleanupRoot) {
+    private CommandAttachment(String fileName, String contentType, byte[] content, Path path, Path cleanupRoot) {
         if (StrUtil.isBlank(fileName)) {
             throw new IllegalArgumentException("fileName must not be blank");
         }
@@ -50,15 +50,11 @@ public final class CommandAttachment implements AutoCloseable {
             throw new IllegalArgumentException("exactly one of content or path is required");
         }
         if (hasPath && (!Files.isRegularFile(path) || !Files.isReadable(path))) {
-            throw new IllegalArgumentException(
-                    "attachment path must be a readable regular file: " + path);
+            throw new IllegalArgumentException("attachment path must be a readable regular file: " + path);
         }
         Path normalizedPath = hasPath ? path.toAbsolutePath().normalize() : null;
-        Path normalizedRoot = ObjectUtil.isNull(cleanupRoot)
-                ? null
-                : cleanupRoot.toAbsolutePath().normalize();
-        if (ObjectUtil.isNotNull(normalizedRoot)
-                && !normalizedPath.startsWith(normalizedRoot)) {
+        Path normalizedRoot = ObjectUtil.isNull(cleanupRoot) ? null : cleanupRoot.toAbsolutePath().normalize();
+        if (ObjectUtil.isNotNull(normalizedRoot) && !normalizedPath.startsWith(normalizedRoot)) {
             throw new IllegalArgumentException("cleanupRoot must contain attachment path");
         }
         this.fileName = fileName.trim();
@@ -68,8 +64,7 @@ public final class CommandAttachment implements AutoCloseable {
         this.cleanupRoot = normalizedRoot;
     }
 
-    public static CommandAttachment temporaryFile(String fileName, String contentType,
-                                                  Path path, Path cleanupRoot) {
+    public static CommandAttachment temporaryFile(String fileName, String contentType, Path path, Path cleanupRoot) {
         return new CommandAttachment(fileName, contentType, null, path, cleanupRoot);
     }
 
@@ -97,9 +92,8 @@ public final class CommandAttachment implements AutoCloseable {
     }
 
     public BotFile toBotFile() {
-        return this.pathBacked()
-                ? new BotFile(this.fileName, this.contentType, this.path)
-                : new BotFile(this.fileName, this.contentType, this.content);
+        return this.pathBacked() ? new BotFile(this.fileName, this.contentType, this.path)
+            : new BotFile(this.fileName, this.contentType, this.content);
     }
 
     @Override
@@ -110,15 +104,13 @@ public final class CommandAttachment implements AutoCloseable {
         try {
             Files.walkFileTree(this.cleanupRoot, new SimpleFileVisitor<>() {
                 @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                        throws IOException {
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     Files.deleteIfExists(file);
                     return FileVisitResult.CONTINUE;
                 }
 
                 @Override
-                public FileVisitResult postVisitDirectory(Path directory, IOException exception)
-                        throws IOException {
+                public FileVisitResult postVisitDirectory(Path directory, IOException exception) throws IOException {
                     if (ObjectUtil.isNotNull(exception)) {
                         throw exception;
                     }
@@ -127,10 +119,8 @@ public final class CommandAttachment implements AutoCloseable {
                 }
             });
         } catch (IOException exception) {
-            throw new BusinessException(
-                    BotChannelErrorCode.FILE_CLEANUP_FAILED,
-                    "清理命令临时文件失败: " + this.cleanupRoot,
-                    exception);
+            throw new SystemException(BotChannelErrorCode.FILE_CLEANUP_FAILED, "清理命令临时文件失败: " + this.cleanupRoot,
+                exception);
         }
     }
 }

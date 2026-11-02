@@ -7,8 +7,7 @@ public final class WarframeItemIndexInvalidationMessage extends WarframeItemInde
     /**
      * 构造物品索引缓存失效消息，并保存初始化参数。
      */
-    public WarframeItemIndexInvalidationMessage() {
-    }
+    public WarframeItemIndexInvalidationMessage() {}
 
     /**
      * 构造物品索引缓存失效消息，并保存初始化参数。

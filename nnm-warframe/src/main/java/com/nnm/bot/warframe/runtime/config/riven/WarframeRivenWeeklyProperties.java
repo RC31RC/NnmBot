@@ -20,8 +20,6 @@ public class WarframeRivenWeeklyProperties {
     private Map<String, Source> sources = defaultSources();
     private Duration refreshInterval = Duration.ofHours(4);
     private Duration retryInterval = Duration.ofMinutes(10);
-    private Duration refreshCheckInterval = Duration.ofMinutes(15);
-    private Duration initialDelay = Duration.ofMinutes(2);
     private boolean enabled = true;
     private int maxRecords = 20_000;
 
@@ -30,23 +28,22 @@ public class WarframeRivenWeeklyProperties {
      */
     @PostConstruct
     public void validate() {
-        if (sources == null || !sources.keySet().equals(Set.of("pc", "ps4", "xb1", "swi"))
-                || invalid(refreshInterval) || invalid(retryInterval) || invalid(refreshCheckInterval)
-                || invalid(initialDelay) || maxRecords < 1 || maxRecords > 100_000) {
+        if (sources == null || !sources.keySet().equals(Set.of("pc")) || invalid(refreshInterval)
+            || invalid(retryInterval) || maxRecords < 1 || maxRecords > 100_000) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.riven-weekly configuration");
         }
         sources.forEach((platform, source) -> {
             String suffix = platform.toUpperCase(Locale.ROOT);
             if (source == null || !("WF_RUNTIME_RIVEN_WEEKLY_OFFICIAL_" + suffix).equals(source.sourceCode)
-                    || !("repos/weeklyRivens" + suffix + ".json").equals(source.path)
-                    || !"Digital Extremes".equals(source.project) || !"GET".equals(source.method)
-                    || !"nnm.http".equals(source.httpPolicy) || !"RUNTIME_SNAPSHOT".equals(source.cachePolicy)
-                    || !"SHA-256".equals(source.digest) || CollUtil.isEmpty(source.urls)) {
+                || !("repos/weeklyRivens" + suffix + ".json").equals(source.path)
+                || !"Digital Extremes".equals(source.project) || !"GET".equals(source.method)
+                || !"nnm.http".equals(source.httpPolicy) || !"RUNTIME_SNAPSHOT".equals(source.cachePolicy)
+                || !"SHA-256".equals(source.digest) || CollUtil.isEmpty(source.urls)) {
                 throw new IllegalArgumentException("Invalid official weekly Riven source: " + platform);
             }
             for (URI url : source.urls) {
-                if (url == null || !List.of("https", "http").contains(url.getScheme())
-                        || url.getHost() == null || url.getUserInfo() != null || url.getFragment() != null) {
+                if (url == null || !List.of("https", "http").contains(url.getScheme()) || url.getHost() == null
+                    || url.getUserInfo() != null || url.getFragment() != null) {
                     throw new IllegalArgumentException("Weekly Riven source requires an absolute HTTP URL");
                 }
             }
@@ -86,20 +83,18 @@ public class WarframeRivenWeeklyProperties {
     }
 
     /**
-     * 创建各平台周紫卡接口的默认来源配置。
+     * 创建 PC 周紫卡接口的默认来源配置。
+     *
      * @return 以本方法约定的业务键组织的数据映射。
      */
     private static Map<String, Source> defaultSources() {
         Map<String, Source> sources = new LinkedHashMap<>();
-        for (String platform : List.of("pc", "ps4", "xb1", "swi")) {
-            String suffix = platform.toUpperCase(Locale.ROOT);
-            Source source = new Source();
-            source.sourceCode = "WF_RUNTIME_RIVEN_WEEKLY_OFFICIAL_" + suffix;
-            source.project = "Digital Extremes";
-            source.path = "repos/weeklyRivens" + suffix + ".json";
-            source.urls = List.of(URI.create("https://www-static.warframe.com/" + source.path));
-            sources.put(platform, source);
-        }
+        Source source = new Source();
+        source.sourceCode = "WF_RUNTIME_RIVEN_WEEKLY_OFFICIAL_PC";
+        source.project = "Digital Extremes";
+        source.path = "repos/weeklyRivensPC.json";
+        source.urls = List.of(URI.create("https://www-static.warframe.com/" + source.path));
+        sources.put("pc", source);
         return sources;
     }
 

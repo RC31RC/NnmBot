@@ -11,11 +11,7 @@ import java.time.Instant;
  * @param current 更新后的世界状态
  * @param observedAt 本地观察到本次更新的时间
  */
-public record WorldStateUpdatedEvent(
-        WorldStateDTO previous,
-        WorldStateDTO current,
-        Instant observedAt
-) {
+public record WorldStateUpdatedEvent(WorldStateDTO previous, WorldStateDTO current, Instant observedAt) {
     /**
      * 构造世界状态更新时间事件，并保存初始化参数。
      *

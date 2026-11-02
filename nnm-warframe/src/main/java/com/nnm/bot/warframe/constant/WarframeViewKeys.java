@@ -8,6 +8,5 @@ public final class WarframeViewKeys {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private WarframeViewKeys() {
-    }
+    private WarframeViewKeys() {}
 }

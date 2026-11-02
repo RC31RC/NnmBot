@@ -39,40 +39,53 @@ public class WarframeVendorDefinitionServiceImpl implements WarframeVendorDefini
         List<EntryVO> result = new ArrayList<>();
         List<String> vendors = new ArrayList<>();
         for (var root : catalog.records(WarframeOfficialDataDomain.VENDOR)) {
-            OfficialVendorDTO value = (OfficialVendorDTO) root.data();
-            VendorDTO vendor = new VendorDTO(bool(value.getIsDynamic()), bool(value.getIsOneBinPerCycle()), count(value.getNumItemsMinValue()),
-                    count(value.getNumItemsMaxValue()), null, first(value.getRandomSeedType()), first(value.getRequiredGoalTag()));
+            OfficialVendorDTO value = (OfficialVendorDTO)root.data();
+            VendorDTO vendor = new VendorDTO(bool(value.getIsDynamic()), bool(value.getIsOneBinPerCycle()),
+                count(value.getNumItemsMinValue()), count(value.getNumItemsMaxValue()), null,
+                first(value.getRandomSeedType()), first(value.getRequiredGoalTag()));
             vendors.add(root.bkey());
             int order = 0;
             if (section == VendorSection.ITEMS) {
-                for (OfficialVendorDTO.ItemsDTO child : values(value.getItems())){
+                for (OfficialVendorDTO.ItemsDTO child : values(value.getItems())) {
                     OfficialVendorDTO.ItemsItemReferencesDTO reference = at(child.getItemReferences(), 0);
-                    String itemName = reference == null ? "" : first(reference.getNameZh(), reference.getNameEn(), reference.getName());
-                    if (!selection.matches(root, keyword) && !itemName.toLowerCase().contains(keyword.toLowerCase())) { order++; continue; }
+                    String itemName = reference == null ? ""
+                        : first(reference.getNameZh(), reference.getNameEn(), reference.getName());
+                    if (!selection.matches(root, keyword) && !itemName.toLowerCase().contains(keyword.toLowerCase())) {
+                        order++;
+                        continue;
+                    }
                     List<PriceVO> prices = new ArrayList<>();
                     int priceOrder = 0;
-                    for (OfficialVendorDTO.ItemsItemPricesDTO price : values(child.getItemPrices())){
-                        prices.add(new PriceVO(null, null, null, null, OFFICIAL_SOURCE_CODE, priceOrder++, first(price.getItemType()),
-                                values(price.getItemReferences()).stream().map(item -> first(item.getNameZh(), item.getNameEn(), item.getName())).findFirst().orElse(""), count(price.getItemCount())));
+                    for (OfficialVendorDTO.ItemsItemPricesDTO price : values(child.getItemPrices())) {
+                        prices.add(new PriceVO(null, null, null, null, OFFICIAL_SOURCE_CODE, priceOrder++,
+                            first(price.getItemType()),
+                            values(price.getItemReferences()).stream()
+                                .map(item -> first(item.getNameZh(), item.getNameEn(), item.getName())).findFirst()
+                                .orElse(""),
+                            count(price.getItemCount())));
                     }
-                    ItemDTO item = new ItemDTO(null, null, root.bkey(), order, first(child.getStoreItem()), count(child.getQuantity()),
-                            bool(child.getAlwaysOffered()), integer(child.getBin()), integer(child.getDuplicates()),
-                            decimal(child.getProbability()), integer(child.getNumRandomItemPrices()), count(child.getPurchaseLimit()),
-                            bool(child.getRotatedWeekly()), null, null, null, "", null,
-                            null, null,
-                            null, "", null);
-                    result.add(new EntryVO(null, null, null, null, root.bkey(), OFFICIAL_SOURCE_CODE, OFFICIAL_SOURCE_CODE, "ROOT_SELECTED",
-                            order++, first(child.getStoreItem()), itemName, vendor, item, prices, null, null, null));
+                    ItemDTO item = new ItemDTO(null, null, root.bkey(), order, first(child.getStoreItem()),
+                        count(child.getQuantity()), bool(child.getAlwaysOffered()), integer(child.getBin()),
+                        integer(child.getDuplicates()), decimal(child.getProbability()),
+                        integer(child.getNumRandomItemPrices()), count(child.getPurchaseLimit()),
+                        bool(child.getRotatedWeekly()), null, null, null, "", null, null, null, null, "", null);
+                    result.add(new EntryVO(null, null, null, null, root.bkey(), OFFICIAL_SOURCE_CODE,
+                        OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", order++, first(child.getStoreItem()), itemName, vendor,
+                        item, prices, null, null, null));
                 }
             } else {
                 int bin = 0;
-                for (List<OfficialVendorDTO.RandomItemPricesPerBinDTO> members : values(value.getRandomItemPricesPerBin())){
-                    for (OfficialVendorDTO.RandomItemPricesPerBinDTO price : values(members)){
-                        String name = values(price.getItemReferences()).stream().map(item -> first(item.getNameZh(), item.getNameEn(), item.getName())).findFirst().orElse("");
+                for (List<OfficialVendorDTO.RandomItemPricesPerBinDTO> members : values(
+                    value.getRandomItemPricesPerBin())) {
+                    for (OfficialVendorDTO.RandomItemPricesPerBinDTO price : values(members)) {
+                        String name = values(price.getItemReferences()).stream()
+                            .map(item -> first(item.getNameZh(), item.getNameEn(), item.getName())).findFirst()
+                            .orElse("");
                         if (selection.matches(root, keyword) || name.toLowerCase().contains(keyword.toLowerCase())) {
-                            result.add(new EntryVO(null, null, null, null, root.bkey(), OFFICIAL_SOURCE_CODE, OFFICIAL_SOURCE_CODE, "ROOT_SELECTED",
-                                    order++, first(price.getType()), name, vendor, null, List.of(), bin,
-                                    count(price.getCountMinValue()), count(price.getCountMaxValue())));
+                            result.add(new EntryVO(null, null, null, null, root.bkey(), OFFICIAL_SOURCE_CODE,
+                                OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", order++, first(price.getType()), name, vendor,
+                                null, List.of(), bin, count(price.getCountMinValue()),
+                                count(price.getCountMaxValue())));
                         }
                     }
                     bin++;

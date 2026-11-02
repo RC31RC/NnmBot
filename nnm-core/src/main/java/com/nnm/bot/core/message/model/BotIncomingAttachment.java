@@ -9,8 +9,9 @@ import java.util.Map;
 /**
  * 渠道无关的入站附件引用。
  *
- * <p>这里只保存平台事件提供的元数据和远程引用，不在消息接收阶段下载文件。
- * 后续 OCR 或文件处理服务应根据 url/fileId 进行受控暂存和校验。</p>
+ * <p>
+ * 这里只保存平台事件提供的元数据和远程引用，不在消息接收阶段下载文件。 后续 OCR 或文件处理服务应根据 url/fileId 进行受控暂存和校验。
+ * </p>
  *
  * @param type 附件类型
  * @param fileName 平台提供的文件名或资源名
@@ -22,16 +23,8 @@ import java.util.Map;
  * @param height 图片高度
  * @param metadata 平台扩展元数据
  */
-public record BotIncomingAttachment(
-        BotIncomingAttachmentType type,
-        String fileName,
-        String contentType,
-        String url,
-        String fileId,
-        Long size,
-        Integer width,
-        Integer height,
-        Map<String, String> metadata) {
+public record BotIncomingAttachment(BotIncomingAttachmentType type, String fileName, String contentType, String url,
+    String fileId, Long size, Integer width, Integer height, Map<String, String> metadata) {
 
     public BotIncomingAttachment {
         if (type == null) {

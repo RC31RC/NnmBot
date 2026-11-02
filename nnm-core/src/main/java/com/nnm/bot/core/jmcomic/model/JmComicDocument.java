@@ -11,11 +11,5 @@ import java.nio.file.Path;
  * @param pdfPath PDF 文件路径
  * @param workspace 发送结束后清理的任务目录
  */
-public record JmComicDocument(
-        String albumId,
-        String title,
-        int pageCount,
-        Path pdfPath,
-        Path workspace
-) {
+public record JmComicDocument(String albumId, String title, int pageCount, Path pdfPath, Path workspace) {
 }

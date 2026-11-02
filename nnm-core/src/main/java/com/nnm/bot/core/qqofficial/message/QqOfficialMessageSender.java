@@ -42,13 +42,12 @@ public class QqOfficialMessageSender implements BotMessageSender {
 
     @Override
     public boolean supports(BotMessageContext context, BotChannelCapability capability) {
-        if (capability == BotChannelCapability.NATIVE_KEYBOARD) return replyProperties.keyboardAllowed(context.botAccountId(), context.scope());
-        if (capability == BotChannelCapability.TEXT_MESSAGE
-                || capability == BotChannelCapability.MARKDOWN_MESSAGE) {
+        if (capability == BotChannelCapability.NATIVE_KEYBOARD)
+            return replyProperties.keyboardAllowed(context.botAccountId(), context.scope());
+        if (capability == BotChannelCapability.TEXT_MESSAGE || capability == BotChannelCapability.MARKDOWN_MESSAGE) {
             return true;
         }
-        if (capability == BotChannelCapability.IMAGE_MESSAGE
-                || capability == BotChannelCapability.FILE_MESSAGE) {
+        if (capability == BotChannelCapability.IMAGE_MESSAGE || capability == BotChannelCapability.FILE_MESSAGE) {
             return context.nativeSource(QqOfficialMessageSource.class).supportsMedia();
         }
         return false;
@@ -57,25 +56,24 @@ public class QqOfficialMessageSender implements BotMessageSender {
     @Override
     public boolean supportsComposition(BotMessageContext context, List<PartKind> parts) {
         if (parts.contains(PartKind.KEYBOARD) || parts.contains(PartKind.MARKDOWN)) {
-            return parts.stream().allMatch(kind -> kind == PartKind.TEXT
-                    || kind == PartKind.MARKDOWN || kind == PartKind.KEYBOARD)
-                    && (!parts.contains(PartKind.KEYBOARD)
-                        || replyProperties.keyboardAllowed(context.botAccountId(), context.scope()));
+            return parts.stream()
+                .allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.MARKDOWN || kind == PartKind.KEYBOARD)
+                && (!parts.contains(PartKind.KEYBOARD)
+                    || replyProperties.keyboardAllowed(context.botAccountId(), context.scope()));
         }
         return context.nativeSource(QqOfficialMessageSource.class).supportsMedia()
-                && (parts.equals(List.of(PartKind.IMAGE))
-                    || parts.equals(List.of(PartKind.TEXT, PartKind.IMAGE))
-                    || parts.equals(List.of(PartKind.TEXT, PartKind.FILE)));
+            && (parts.equals(List.of(PartKind.IMAGE)) || parts.equals(List.of(PartKind.TEXT, PartKind.IMAGE))
+                || parts.equals(List.of(PartKind.TEXT, PartKind.FILE)));
     }
 
     @Override
     public PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
-                                     BotMessageSendPermit permit) {
+        BotMessageSendPermit permit) {
         if (blocks.stream().anyMatch(BotMessagePart.Keyboard.class::isInstance)
-                && !replyProperties.keyboardAllowed(context.botAccountId(), context.scope())) {
+            && !replyProperties.keyboardAllowed(context.botAccountId(), context.scope())) {
             throw new BotMessageNotSentException("QQ 原生键盘资格已变化，尚未发送");
         }
-        return this.gatewayClient.apiClient(context.botAccountId()).prepare(
-                context.nativeSource(QqOfficialMessageSource.class), blocks, permit);
+        return this.gatewayClient.apiClient(context.botAccountId())
+            .prepare(context.nativeSource(QqOfficialMessageSource.class), blocks, permit);
     }
 }

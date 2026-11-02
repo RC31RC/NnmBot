@@ -11,7 +11,7 @@ import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.regex.Pattern;
 
-abstract class AbstractEquipmentPlugin extends BotPlugin {
+abstract class AbstractEquipmentPlugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -31,6 +31,7 @@ abstract class AbstractEquipmentPlugin extends BotPlugin {
 
     /**
      * 解析装备查询参数，调用战甲或武器服务并组装命令结果。
+     *
      * @param dataset 本次操作所属的数据文件或社区资料类型。
      * @param title 标题。
      * @param arguments 当前命令或操作的参数。
@@ -54,7 +55,8 @@ abstract class AbstractEquipmentPlugin extends BotPlugin {
         if (query.length() > 200) {
             return CommandResult.rejected("查询内容过长，请缩短到 200 字以内");
         }
-        WarframeEquipmentVO display = WarframeEquipmentVO.page(query, title, equipmentService.find(dataset, query), page);
+        WarframeEquipmentVO display =
+            WarframeEquipmentVO.page(query, title, equipmentService.find(dataset, query), page);
         return CommandResult.view("warframe.equipment", title + "：" + display.pagination(), display);
     }
 }

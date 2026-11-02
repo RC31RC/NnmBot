@@ -37,8 +37,9 @@ import java.util.regex.Pattern;
 /**
  * 按“已选官方/自维护名称 -> 人工别名 -> 术语跳板 -> 高置信模糊候选”解析物品。
  *
- * <p>该索引是所有需要物品入参的命令共用的能力，不在每次 wm、wiki 或紫卡查询时
- * 重复访问数据库。数据维护完成后由管理服务清理缓存，启动时也会主动预热。</p>
+ * <p>
+ * 该索引是所有需要物品入参的命令共用的能力，不在每次 wm、wiki 或紫卡查询时 重复访问数据库。数据维护完成后由管理服务清理缓存，启动时也会主动预热。
+ * </p>
  */
 @Service
 public class WarframeItemResolverServiceImpl implements WarframeItemResolverService {
@@ -95,7 +96,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
     public WarframeItemResolutionDTO resolveExact(String input) {
         String normalized = WarframeNameNormalizer.item(input);
         return StrUtil.isBlank(normalized) ? WarframeItemResolutionDTO.notFound()
-                : exactResolution(cachedIndex(), input, normalized);
+            : exactResolution(cachedIndex(), input, normalized);
     }
 
     /**
@@ -106,25 +107,23 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @param normalized 规范化。
      * @return 游戏资料物品解析状态对象。
      */
-    private static WarframeItemResolutionDTO exactResolution(
-            SearchIndex index, String input, String normalized) {
+    private static WarframeItemResolutionDTO exactResolution(SearchIndex index, String input, String normalized) {
         String raw = input.trim();
         if (raw.startsWith("/")) {
             return resolveKeys(index, index.items().entrySet().stream()
-                    .filter(entry -> raw.equals(entry.getValue().getSourceKey()))
-                    .map(Map.Entry::getKey).toList());
+                .filter(entry -> raw.equals(entry.getValue().getSourceKey())).map(Map.Entry::getKey).toList());
         }
         WarframeItemResolutionDTO names = resolveKeys(index, index.names().get(normalized));
-        return names.found() || names.ambiguous()
-                ? names : resolveKeys(index, index.aliases().get(normalized));
+        return names.found() || names.ambiguous() ? names : resolveKeys(index, index.aliases().get(normalized));
     }
 
     /**
      * 结合官方名称、译名与社区别名生成市场查询候选词。
      *
-     *    <p>Warframe Market 的词库不是官方导出表的简单别名表。参考项目会先把
-     *    玩家黑话解析为标准英文，再把部件词作为第二个词参与商品词库匹配。
-     *    这里保留原始输入，并补充黑话跳板和常见部件英文词，供 WM 目录做候选评分。</p>
+     * <p>
+     * Warframe Market 的词库不是官方导出表的简单别名表。参考项目会先把 玩家黑话解析为标准英文，再把部件词作为第二个词参与商品词库匹配。 这里保留原始输入，并补充黑话跳板和常见部件英文词，供 WM 目录做候选评分。
+     * </p>
+     *
      * @param input 待解析或校验的输入。
      * @return 按当前条件筛选或转换后的数据集合。
      */
@@ -156,11 +155,11 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
             addResolvedTerms(terms, base);
         }
         Set<String> queries = terms.keySet().stream().map(WarframeItemResolverServiceImpl::marketName)
-                .filter(value -> value.length() >= 2).collect(Collectors.toSet());
-        List<MarketName> matches = cachedIndex().marketNames().stream()
-                .filter(item -> !setRequested || item.slug().endsWith("_set"))
+            .filter(value -> value.length() >= 2).collect(Collectors.toSet());
+        List<MarketName> matches =
+            cachedIndex().marketNames().stream().filter(item -> !setRequested || item.slug().endsWith("_set"))
                 .filter(item -> item.names().stream().map(WarframeItemResolverServiceImpl::marketName)
-                        .anyMatch(name -> queries.stream().anyMatch(query -> name.startsWith(query))))
+                    .anyMatch(name -> queries.stream().anyMatch(query -> name.startsWith(query))))
                 .toList();
         if (matches.size() == 1) {
             addSearchTerm(terms, matches.getFirst().slug());
@@ -171,6 +170,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
 
     /**
      * 将已确定的物品名称转换为市场匹配使用的名称形式。
+     *
      * @param value 待校验或规范化的文本。
      * @return 用于匹配市场目录的名称。
      */
@@ -196,6 +196,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
 
     /**
      * 结合官方紫卡武器定义及别名生成拍卖武器查询候选词。
+     *
      * @param input 待解析或校验的输入。
      * @return 按当前条件筛选或转换后的数据集合。
      */
@@ -224,8 +225,8 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
         addSearchTerm(terms, expanded);
         SearchIndex index = cachedIndex();
         for (String term : List.of(input, expanded)) {
-            Set<String> keys = new LinkedHashSet<>(
-                    index.names().getOrDefault(WarframeNameNormalizer.item(term), List.of()));
+            Set<String> keys =
+                new LinkedHashSet<>(index.names().getOrDefault(WarframeNameNormalizer.item(term), List.of()));
             keys.addAll(index.aliases().getOrDefault(WarframeNameNormalizer.item(term), List.of()));
             for (String key : keys) {
                 WarframeItemDTO item = index.items().get(key);
@@ -246,8 +247,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
     }
 
     /**
-     * 解析索引使用配置中的八小时缓存，避免每条命令都重新查询官方目录和人工白名单。
-     *   数据管理写入后应清理该缓存；TTL 也保证外部同步遗漏清理时最终可见。
+     * 解析索引使用配置中的八小时缓存，避免每条命令都重新查询官方目录和人工白名单。 数据管理写入后应清理该缓存；TTL 也保证外部同步遗漏清理时最终可见。
      *
      * @return 搜索索引对象。
      */
@@ -266,19 +266,15 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 搜索索引对象。
      */
     private SearchIndex loadIndex() {
-        SearchIndex index = new SearchIndex(
-                new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>(),
-                safeAliases().stream().map(WarframeCommunityRecordDTO::details)
-                        .filter(alias -> StrUtil.isNotBlank(alias.aliasName())
-                                && StrUtil.isNotBlank(alias.targetName()))
-                        .sorted(Comparator.comparingInt(
-                                (AliasDTO alias) -> alias.aliasName().length())
-                                .reversed())
-                        .toList(), new ArrayList<>());
+        SearchIndex index = new SearchIndex(new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>(),
+            safeAliases().stream().map(WarframeCommunityRecordDTO::details)
+                .filter(alias -> StrUtil.isNotBlank(alias.aliasName()) && StrUtil.isNotBlank(alias.targetName()))
+                .sorted(Comparator.comparingInt((AliasDTO alias) -> alias.aliasName().length()).reversed()).toList(),
+            new ArrayList<>());
         officialCatalogService.records(WarframeOfficialDataDomain.MARKET_ITEM).forEach(record -> {
             String slug = StrUtil.blankToDefault(record.marketSlug(), record.bkey());
-            List<String> names = Stream.of(record.officialName(), record.localizedName())
-                    .filter(StrUtil::isNotBlank).distinct().toList();
+            List<String> names = Stream.of(record.officialName(), record.localizedName()).filter(StrUtil::isNotBlank)
+                .distinct().toList();
             index.marketNames().add(new MarketName(slug, names));
         });
         loadOfficial(index);
@@ -327,8 +323,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
     private void loadTerms(SearchIndex index) {
         // term 是参考项目中的完整黑话/补充词库。它的中文词只负责入口，
         // englishText 继续走同一套官方名称解析，避免为每个词库复制一份物品实体。
-        for (WarframeCommunityRecordDTO<TermDTO> term
-                : safeTerms()) {
+        for (WarframeCommunityRecordDTO<TermDTO> term : safeTerms()) {
             TermDTO details = term.details();
             String target = WarframeNameNormalizer.item(details.englishText());
             String key = uniqueKey(index.names().get(target));
@@ -355,8 +350,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
         for (AliasDTO alias : index.expansionAliases()) {
             String normalizedTarget = WarframeNameNormalizer.item(alias.targetName());
             List<String> translationKeys = index.names().getOrDefault(normalizedTarget, List.of());
-            String key = CollUtil.size(translationKeys) == 1
-                    ? translationKeys.getFirst() : null;
+            String key = CollUtil.size(translationKeys) == 1 ? translationKeys.getFirst() : null;
             if (key == null) {
                 key = resolveOfficialKey(alias.targetName(), index.items());
             }
@@ -377,8 +371,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WarframeCommunityRecordDTO<TermDTO>> safeTerms() {
-        List<WarframeCommunityRecordDTO<TermDTO>> terms =
-                communityCatalogService.terms();
+        List<WarframeCommunityRecordDTO<TermDTO>> terms = communityCatalogService.terms();
         return terms == null ? List.of() : terms;
     }
 
@@ -393,7 +386,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
         Map<String, Set<String>> targets = new LinkedHashMap<>();
         for (AliasDTO alias : cachedIndex().expansionAliases()) {
             targets.computeIfAbsent(WarframeNameNormalizer.item(alias.aliasName()), ignored -> new LinkedHashSet<>())
-                    .add(WarframeNameNormalizer.item(alias.targetName()));
+                .add(WarframeNameNormalizer.item(alias.targetName()));
         }
         // 逐个替换必须保持最长别名优先，避免短别名截断复合黑话。
         for (AliasDTO alias : cachedIndex().expansionAliases()) {
@@ -414,8 +407,8 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 替换忽略大小写对应的文本。
      */
     private static String replaceIgnoreCase(String value, String source, String target) {
-        boolean chinese = source.codePoints().anyMatch(code -> Character.UnicodeScript.of(code)
-                == Character.UnicodeScript.HAN);
+        boolean chinese =
+            source.codePoints().anyMatch(code -> Character.UnicodeScript.of(code) == Character.UnicodeScript.HAN);
         String pattern = chinese ? Pattern.quote(source) : "(?<!\\S)" + Pattern.quote(source) + "(?!\\S)";
         return value.replaceAll("(?i)" + pattern, Matcher.quoteReplacement(target));
     }
@@ -438,8 +431,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WarframeCommunityRecordDTO<AliasDTO>> safeAliases() {
-        List<WarframeCommunityRecordDTO<AliasDTO>> aliases =
-                communityCatalogService.aliases();
+        List<WarframeCommunityRecordDTO<AliasDTO>> aliases = communityCatalogService.aliases();
         return aliases == null ? List.of() : aliases;
     }
 
@@ -460,13 +452,11 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @param normalizedInput 规范化输入。
      * @return 游戏资料物品解析状态对象。
      */
-    private static WarframeItemResolutionDTO resolveLocalizedContains(
-            SearchIndex index, String normalizedInput) {
+    private static WarframeItemResolutionDTO resolveLocalizedContains(SearchIndex index, String normalizedInput) {
         List<String> candidates = index.items().entrySet().stream()
-                .filter(entry -> StrUtil.isNotBlank(entry.getValue().getLocalizedName()))
-                .filter(entry -> WarframeNameNormalizer.item(entry.getValue().getLocalizedName()).contains(normalizedInput))
-                .map(Map.Entry::getKey)
-                .toList();
+            .filter(entry -> StrUtil.isNotBlank(entry.getValue().getLocalizedName()))
+            .filter(entry -> WarframeNameNormalizer.item(entry.getValue().getLocalizedName()).contains(normalizedInput))
+            .map(Map.Entry::getKey).toList();
         return resolveKeys(index, candidates);
     }
 
@@ -490,16 +480,11 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
             return WarframeItemResolutionDTO.notFound();
         }
 
-        double bestScore = scores.values().stream()
-                .mapToDouble(Double::doubleValue)
-                .max()
-                .orElse(0D);
-        List<String> candidateKeys = scores.entrySet().stream()
-                .filter(entry -> bestScore - entry.getValue() <= FUZZY_AMBIGUITY_MARGIN)
-                .sorted(Map.Entry.<String, Double>comparingByValue().reversed()
-                        .thenComparing(Map.Entry::getKey))
-                .map(Map.Entry::getKey)
-                .toList();
+        double bestScore = scores.values().stream().mapToDouble(Double::doubleValue).max().orElse(0D);
+        List<String> candidateKeys =
+            scores.entrySet().stream().filter(entry -> bestScore - entry.getValue() <= FUZZY_AMBIGUITY_MARGIN)
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed().thenComparing(Map.Entry::getKey))
+                .map(Map.Entry::getKey).toList();
         return resolveKeys(index, candidateKeys);
     }
 
@@ -511,16 +496,13 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @param threshold 阈值。
      * @param scores 评分。
      */
-    private static void collectFuzzyScores(
-            Map<String, List<String>> terms,
-            String input,
-            FuzzyThreshold threshold,
-            Map<String, Double> scores) {
-        for (Entry<String,List<String>> entry : terms.entrySet()) {
+    private static void collectFuzzyScores(Map<String, List<String>> terms, String input, FuzzyThreshold threshold,
+        Map<String, Double> scores) {
+        for (Entry<String, List<String>> entry : terms.entrySet()) {
             String candidate = entry.getKey();
             int distance = LEVENSHTEIN.apply(input, candidate);
             int longest = Math.max(input.length(), candidate.length());
-            double score = longest == 0 ? 1D : 1D - ((double) distance / longest);
+            double score = longest == 0 ? 1D : 1D - ((double)distance / longest);
             if (distance > threshold.maxDistance() || score < threshold.minScore()) {
                 continue;
             }
@@ -537,24 +519,18 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @param keys 待处理的查找键集合。
      * @return 游戏资料物品解析状态对象。
      */
-    private static WarframeItemResolutionDTO resolveKeys(
-            SearchIndex index, List<String> keys) {
+    private static WarframeItemResolutionDTO resolveKeys(SearchIndex index, List<String> keys) {
         if (CollUtil.isEmpty(keys)) {
             return WarframeItemResolutionDTO.notFound();
         }
-        List<WarframeItemDTO> matches = keys.stream()
-                .map(index.items()::get)
-                .filter(Objects::nonNull)
-                .distinct()
-                .sorted(itemComparator())
-                .toList();
+        List<WarframeItemDTO> matches =
+            keys.stream().map(index.items()::get).filter(Objects::nonNull).distinct().sorted(itemComparator()).toList();
         List<WarframeItemDTO> prioritized = prioritize(matches);
         if (prioritized.size() == 1) {
             return WarframeItemResolutionDTO.resolved(prioritized.getFirst());
         }
-        return CollUtil.isEmpty(prioritized)
-                ? WarframeItemResolutionDTO.notFound()
-                : WarframeItemResolutionDTO.ambiguous(prioritized);
+        return CollUtil.isEmpty(prioritized) ? WarframeItemResolutionDTO.notFound()
+            : WarframeItemResolutionDTO.ambiguous(prioritized);
     }
 
     /**
@@ -573,11 +549,9 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 比较器对象。
      */
     private static Comparator<WarframeItemDTO> itemComparator() {
-        return Comparator.comparing(
-                        (WarframeItemDTO item) -> StrUtil.blankToDefault(
-                                item.getLocalizedName(), ""))
-                .thenComparing(item -> StrUtil.blankToDefault(item.getOfficialName(), ""))
-                .thenComparing(item -> StrUtil.blankToDefault(item.getSourceKey(), ""));
+        return Comparator.comparing((WarframeItemDTO item) -> StrUtil.blankToDefault(item.getLocalizedName(), ""))
+            .thenComparing(item -> StrUtil.blankToDefault(item.getOfficialName(), ""))
+            .thenComparing(item -> StrUtil.blankToDefault(item.getSourceKey(), ""));
     }
 
     /**
@@ -587,20 +561,18 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @param items 当前物品或成员列表。
      * @return 解析官方键对应的文本。
      */
-    private String resolveOfficialKey(
-            String target,
-            Map<String, WarframeItemDTO> items) {
+    private String resolveOfficialKey(String target, Map<String, WarframeItemDTO> items) {
         String normalized = WarframeNameNormalizer.item(target);
         if (StrUtil.isBlank(normalized)) {
             return null;
         }
         String matched = null;
-        for (Entry<String,WarframeItemDTO> entry : items.entrySet()) {
+        for (Entry<String, WarframeItemDTO> entry : items.entrySet()) {
             WarframeItemDTO item = entry.getValue();
             if ((!normalized.equals(WarframeNameNormalizer.item(item.getSourceKey()))
-                    && !normalized.equals(WarframeNameNormalizer.item(item.getOfficialName()))
-                    && !normalized.equals(WarframeNameNormalizer.item(item.getLocalizedName()))
-                    && !normalized.equals(WarframeNameNormalizer.item(terminalName(item.getSourceKey()))))) {
+                && !normalized.equals(WarframeNameNormalizer.item(item.getOfficialName()))
+                && !normalized.equals(WarframeNameNormalizer.item(item.getLocalizedName()))
+                && !normalized.equals(WarframeNameNormalizer.item(terminalName(item.getSourceKey()))))) {
                 continue;
             }
             if (matched != null && !matched.equals(entry.getKey())) {
@@ -618,8 +590,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @param normalized 规范化。
      * @param itemKey 物品键。
      */
-    private static void add(
-            Map<String, List<String>> index, String normalized, String itemKey) {
+    private static void add(Map<String, List<String>> index, String normalized, String itemKey) {
         if (StrUtil.isBlank(normalized)) {
             return;
         }
@@ -648,8 +619,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 官方键对应的文本。
      */
     private static String officialKey(String domainCode, String uniqueName) {
-        return "official:" + StrUtil.blankToDefault(domainCode, "")
-                + ":" + StrUtil.blankToDefault(uniqueName, "");
+        return "official:" + StrUtil.blankToDefault(domainCode, "") + ":" + StrUtil.blankToDefault(uniqueName, "");
     }
 
     /** 名称匹配统一全角、大小写和常见分隔符；完整路径另做原文精确比较。 */
@@ -664,13 +634,8 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
     private record MarketName(String slug, List<String> names) {
     }
 
-    private record SearchIndex(
-            Map<String, WarframeItemDTO> items,
-            Map<String, List<String>> names,
-            Map<String, List<String>> aliases,
-            List<AliasDTO> expansionAliases,
-            List<MarketName> marketNames
-    ) {
+    private record SearchIndex(Map<String, WarframeItemDTO> items, Map<String, List<String>> names,
+        Map<String, List<String>> aliases, List<AliasDTO> expansionAliases, List<MarketName> marketNames) {
     }
 
     /**

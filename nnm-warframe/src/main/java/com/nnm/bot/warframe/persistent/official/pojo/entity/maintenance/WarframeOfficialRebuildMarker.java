@@ -15,11 +15,9 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(
-        name = "wf_official_rebuild_marker",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uq_wf_official_rebuild_marker_identity",
-                columnNames = {"product_path", "domain_code", "bkey"}))
+@Table(name = "wf_official_rebuild_marker",
+    uniqueConstraints = @UniqueConstraint(name = "uq_wf_official_rebuild_marker_identity",
+        columnNames = {"product_path", "domain_code", "bkey"}))
 public class WarframeOfficialRebuildMarker {
 
     @Id

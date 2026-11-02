@@ -1,6 +1,7 @@
 package com.nnm.bot.core.plugin.response;
 
 import com.nnm.bot.core.plugin.response.CommandReplyRouter.Selection;
+import com.nnm.bot.common.resource.ResourceScope;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
 import com.nnm.bot.core.plugin.model.CommandView;
 import com.nnm.bot.core.plugin.model.DeliveryReport.Item;
@@ -77,18 +78,24 @@ public class CommandResponseDispatcher {
     private MarkdownViewRenderer markdownViews;
 
     public DeliveryReport dispatch(BotMessageContext origin, RuntimeCommand command, CommandResult result) {
-        return dispatch(origin, command, command.configuration(), result);
+        return dispatch(origin, command, result, new ResourceScope());
+    }
+
+    /** 使用调用入口的资源作用域，覆盖结算替换附件与最终回复产生的资源。 */
+    public DeliveryReport dispatch(BotMessageContext origin, RuntimeCommand command, CommandResult result,
+        ResourceScope resources) {
+        return dispatch(origin, command, command.configuration(), result, resources);
     }
 
     public void dispatchNotice(BotMessageContext context, String message) {
         if (message != null && !message.isBlank()) {
-            dispatch(context, null, CommandExecutionConfiguration.defaults(), CommandResult.text(message));
+            dispatch(context, null, CommandExecutionConfiguration.defaults(), CommandResult.text(message),
+                new ResourceScope());
         }
     }
 
     private DeliveryReport dispatch(BotMessageContext origin, RuntimeCommand command,
-                                    CommandExecutionConfiguration configuration, CommandResult result) {
-        result = relatedActionAppender.append(origin, command, result);
+        CommandExecutionConfiguration configuration, CommandResult result, ResourceScope scope) {
         List<Item> items = new ArrayList<>();
         List<String> cleanupFailures = new ArrayList<>();
         Set<CommandAttachment> resources = new LinkedHashSet<>(result.resources());
@@ -101,14 +108,20 @@ public class CommandResponseDispatcher {
         Throwable primary = null;
         int attempted = -1;
         try {
-            if (!configuration.enabled()) throw new IllegalStateException("Command is disabled");
-            if (command != null) validateViews(command, result);
-            selection = replyRouter.select(origin, command == null ? null : command.descriptor(), configuration, result);
+            result = relatedActionAppender.append(origin, command, result);
+            resources.addAll(result.resources());
+            if (!configuration.enabled())
+                throw new IllegalStateException("Command is disabled");
+            if (command != null)
+                validateViews(command, result);
+            selection =
+                replyRouter.select(origin, command == null ? null : command.descriptor(), configuration, result);
             target = selection.context();
             permits = selection.permits();
-            prepared = new ArrayList<>(planner.compile(target,
-                    prepare(selection.plans(), command, configuration, resources, target)));
-            if (permits.size() < prepared.size()) throw new IllegalStateException("Reply permits do not cover prepared messages");
+            prepared = new ArrayList<>(
+                planner.compile(target, prepare(selection.plans(), command, configuration, resources, target)));
+            if (permits.size() < prepared.size())
+                throw new IllegalStateException("Reply permits do not cover prepared messages");
             for (int index = 0; index < prepared.size(); index++) {
                 ResponsePlan plan = prepared.get(index);
                 replyRouter.validate(selection, command == null ? null : command.descriptor());
@@ -118,45 +131,21 @@ public class CommandResponseDispatcher {
                 // 准备耗时可能跨越 owner/配置变更；检查失败属于未提交，不是结果未知。
                 replyRouter.validate(selection, command == null ? null : command.descriptor());
                 attempted = index;
-                boolean usedTextFallback = false;
-                String fallbackReason = null;
-                BotMessageReceipt receipt;
-                try {
-                    receipt = transmissions.get(index).send();
-                } catch (BotMessageRejectedException rejection) {
-                    PresentationPolicy presentation = configuration.presentation().resolve(target.platform(), target.scope());
-                    Optional<ResponsePlan> fallback = rejection.sameInstanceTextFallbackAllowed()
-                            ? planner.explicitTextFallback(target, prepared.get(index), presentation)
-                            : Optional.<ResponsePlan>empty();
-                    // Later QQ requests already hold lower msg_seq values, so a new fallback permit is safe only at the tail.
-                    if (fallback.isEmpty() || index != prepared.size() - 1) throw rejection;
-                    log.warn("Using declared text fallback after explicit platform rejection: command={} instance={} message={} part={} status={}",
-                            command == null ? "notice" : command.descriptor().code(), target.botAccountId(),
-                            prepared.get(index).logicalMessage(), prepared.get(index).part(), rejection.getMessage());
-                    receipt = sendTextFallback(target, fallback.get(), selection,
-                            command == null ? null : command.descriptor(), rejection, prepared,
-                            transmissions, index);
-                    usedTextFallback = true;
-                    fallbackReason = rejection.getMessage();
-                }
-                items.add(new DeliveryReport.Item(prepared.get(index).logicalMessage(), prepared.get(index).part(),
-                        target.botAccountId(), receipt.platformMessageId(), DeliveryStatus.ACCEPTED,
-                        usedTextFallback ? "Declared text fallback accepted after explicit platform rejection: "
-                                + fallbackReason : null));
+                items.add(sendPreparedReply(selection, command, configuration, prepared, transmissions, index));
                 attempted = -1;
             }
         } catch (RuntimeException exception) {
             primary = failure = exception;
             if (prepared.isEmpty()) {
                 for (int i = 0; i < result.replies().size(); i++) {
-                    items.add(new DeliveryReport.Item(i, 0, target.botAccountId(), null,
-                            DeliveryStatus.NOT_SENT, exception.getMessage()));
+                    items.add(new DeliveryReport.Item(i, 0, target.botAccountId(), null, DeliveryStatus.NOT_SENT,
+                        exception.getMessage()));
                 }
             } else {
                 for (int i = items.size(); i < prepared.size(); i++) {
-                    DeliveryStatus status = i != attempted || exception instanceof BotMessageNotSentException
-                            ? DeliveryStatus.NOT_SENT : rejected(exception)
-                            ? DeliveryStatus.REJECTED : DeliveryStatus.UNKNOWN;
+                    DeliveryStatus status =
+                        i != attempted || exception instanceof BotMessageNotSentException ? DeliveryStatus.NOT_SENT
+                            : rejected(exception) ? DeliveryStatus.REJECTED : DeliveryStatus.UNKNOWN;
                     items.add(item(target, prepared.get(i), status, exception.getMessage()));
                 }
             }
@@ -164,45 +153,71 @@ public class CommandResponseDispatcher {
             primary = error;
             throw error;
         } finally {
-            for (PreparedBotMessage transmission : transmissions) {
-                try {
-                    transmission.close();
-                } catch (RuntimeException cleanup) {
-                    if (primary != null) primary.addSuppressed(cleanup);
-                    cleanupFailures.add(cleanup.toString());
-                    log.error("Protocol resource cleanup failed; acceptance remains unchanged", cleanup);
-                }
-            }
-            for (BotMessageSendPermit permit : permits) {
-                try {
-                    permit.close();
-                } catch (RuntimeException cleanup) {
-                    if (primary != null) primary.addSuppressed(cleanup);
-                    cleanupFailures.add(cleanup.toString());
-                    log.error("Reply permit cleanup failed; unknown/accepted sends remain consumed", cleanup);
-                }
-            }
-            for (CommandAttachment resource : resources) {
-                try {
-                    resource.close();
-                } catch (RuntimeException cleanup) {
-                    if (primary != null) primary.addSuppressed(cleanup);
-                    cleanupFailures.add(cleanup.toString());
-                    log.error("Reply cleanup failed; delivery/settlement remain unchanged", cleanup);
-                }
-            }
+            scope.addAll(resources);
+            scope.addAll(permits);
+            scope.addAll(transmissions);
+            cleanupResources(scope, primary, cleanupFailures);
         }
         DeliveryReport report = DeliveryReport.from(items, prepared, cleanupFailures);
         log.info("Reply delivery command={} outcome={} parts={} cleanupFailures={}",
-                command == null ? "notice" : command.descriptor().code(), report.outcome(), items.size(), cleanupFailures.size());
-        if (failure != null) throw new ReplyDeliveryException(report, failure);
+            command == null ? "notice" : command.descriptor().code(), report.outcome(), items.size(),
+            cleanupFailures.size());
+        if (failure != null)
+            throw new ReplyDeliveryException(report, failure);
         return report;
     }
 
-    private BotMessageReceipt sendTextFallback(
-            BotMessageContext target, ResponsePlan fallback, Selection selection,
-            CommandDescriptor descriptor, BotMessageRejectedException rejection,
-            List<ResponsePlan> plans, List<PreparedBotMessage> transmissions, int index) {
+    /** 清理错误只追加诊断；主 Error 始终原样传播，其他致命错误也不降格为投递报告。 */
+    private void cleanupResources(ResourceScope scope, Throwable primary, List<String> failures) {
+        try {
+            for (Exception cleanup : scope.closeFailures()) {
+                if (primary != null && primary != cleanup)
+                    primary.addSuppressed(cleanup);
+                failures.add(cleanup.toString());
+                log.error("回复资源清理失败，保留已获得的投递结果", cleanup);
+            }
+        } catch (Error cleanup) {
+            if (primary instanceof Error) {
+                if (primary != cleanup)
+                    primary.addSuppressed(cleanup);
+            } else {
+                if (primary != null && primary != cleanup)
+                    cleanup.addSuppressed(primary);
+                throw cleanup;
+            }
+        }
+    }
+
+    /** 发送单片并按显式声明执行同实例文字回退，不重做业务或切换渠道。 */
+    private Item sendPreparedReply(Selection selection, RuntimeCommand command,
+        CommandExecutionConfiguration configuration, List<ResponsePlan> plans, List<PreparedBotMessage> transmissions,
+        int index) {
+        BotMessageContext target = selection.context();
+        boolean usedTextFallback = false;
+        String fallbackReason = null;
+        BotMessageReceipt receipt;
+        try {
+            receipt = transmissions.get(index).send();
+        } catch (BotMessageRejectedException rejection) {
+            PresentationPolicy presentation = configuration.presentation().resolve(target.platform(), target.scope());
+            Optional<ResponsePlan> fallback = rejection.sameInstanceTextFallbackAllowed()
+                ? planner.explicitTextFallback(target, plans.get(index), presentation) : Optional.empty();
+            // 后续 QQ 请求已预留较小的 msg_seq，只有末尾请求能安全申请新额度。
+            if (fallback.isEmpty() || index != plans.size() - 1)
+                throw rejection;
+            receipt = sendTextFallback(target, fallback.get(), selection, command == null ? null : command.descriptor(),
+                rejection, plans, transmissions, index);
+            usedTextFallback = true;
+            fallbackReason = rejection.getMessage();
+        }
+        return new Item(plans.get(index).logicalMessage(), plans.get(index).part(), target.botAccountId(),
+            receipt.platformMessageId(), DeliveryStatus.ACCEPTED,
+            usedTextFallback ? "平台明确拒绝后的声明式文字回退已接受：" + fallbackReason : null);
+    }
+
+    private BotMessageReceipt sendTextFallback(BotMessageContext target, ResponsePlan fallback, Selection selection,
+        CommandDescriptor descriptor, BotMessageRejectedException rejection, List<ResponsePlan> plans,
+        List<PreparedBotMessage> transmissions, int index) {
         BotMessageSendPermit permit;
         try {
             replyRouter.validate(selection, descriptor);
@@ -210,7 +225,7 @@ public class CommandResponseDispatcher {
         } catch (RuntimeException preparationFailure) {
             preparationFailure.addSuppressed(rejection);
             throw new BotMessageRejectedException("Primary request was rejected; text fallback could not be prepared",
-                    preparationFailure, false);
+                preparationFailure, false);
         }
 
         PreparedBotMessage transmission;
@@ -220,7 +235,7 @@ public class CommandResponseDispatcher {
             closePermit(permit, preparationFailure);
             preparationFailure.addSuppressed(rejection);
             throw new BotMessageRejectedException("Primary request was rejected; text fallback could not be prepared",
-                    preparationFailure, false);
+                preparationFailure, false);
         } catch (Error preparationFailure) {
             closePermit(permit, preparationFailure);
             preparationFailure.addSuppressed(rejection);
@@ -234,7 +249,7 @@ public class CommandResponseDispatcher {
         } catch (BotMessageNotSentException notSubmitted) {
             notSubmitted.addSuppressed(rejection);
             throw new BotMessageRejectedException("Primary request was rejected; text fallback was not submitted",
-                    notSubmitted, false);
+                notSubmitted, false);
         } catch (RuntimeException | Error fallbackFailure) {
             fallbackFailure.addSuppressed(rejection);
             throw fallbackFailure;
@@ -253,20 +268,23 @@ public class CommandResponseDispatcher {
         return failure instanceof BotMessageRejectedException || failure instanceof BotChannelCapabilityException;
     }
 
-    private DeliveryReport.Item item(BotMessageContext target, ResponsePlan plan, DeliveryStatus status, String reason) {
+    private DeliveryReport.Item item(BotMessageContext target, ResponsePlan plan, DeliveryStatus status,
+        String reason) {
         return new DeliveryReport.Item(plan.logicalMessage(), plan.part(), target.botAccountId(), null, status, reason);
     }
 
     private List<ResponsePlan> prepare(List<ResponsePlan> plans, RuntimeCommand command,
-                                        CommandExecutionConfiguration configuration, Set<CommandAttachment> resources, BotMessageContext target) {
+        CommandExecutionConfiguration configuration, Set<CommandAttachment> resources, BotMessageContext target) {
         List<ResponsePlan> prepared = new ArrayList<>();
         for (ResponsePlan plan : plans) {
             List<ReplyBlock> blocks = new ArrayList<>();
             StringBuilder text = new StringBuilder();
             for (ReplyBlock block : plan.blocks()) {
-                if (block instanceof DataView<?> view) block = compileView(command, configuration, plan, view, target);
+                if (block instanceof DataView<?> view)
+                    block = compileView(command, configuration, plan, view, target);
                 if (block instanceof Text part) {
-                    if (!text.isEmpty()) text.append('\n');
+                    if (!text.isEmpty())
+                        text.append('\n');
                     text.append(part.content());
                 } else {
                     flushText(blocks, text);
@@ -284,45 +302,53 @@ public class CommandResponseDispatcher {
             }
             flushText(blocks, text);
             prepared.add(new ResponsePlan(plan.logicalMessage(), 0, blocks, plan.actions(), plan.mentionUserId(),
-                    plan.composition(), plan.viewFormat(), plan.plainMarkdown()));
+                plan.composition(), plan.viewFormat(), plan.plainMarkdown()));
         }
         return List.copyOf(prepared);
     }
 
     private ReplyBlock compileView(RuntimeCommand command, CommandExecutionConfiguration configuration,
-                                    ResponsePlan plan, DataView<?> view, BotMessageContext target) {
-        if (command != null && command.plugin().views().stream()
-                .noneMatch(declared -> declared.key().equals(view.viewKey())
-                        && declared.formats().contains(plan.viewFormat()))) {
+        ResponsePlan plan, DataView<?> view, BotMessageContext target) {
+        if (command != null && command.plugin().views().stream().noneMatch(
+            declared -> declared.key().equals(view.viewKey()) && declared.formats().contains(plan.viewFormat()))) {
             throw new IllegalStateException("Undeclared view format: " + view.viewKey() + "/" + plan.viewFormat());
         }
-        if (plan.viewFormat() == ViewFormat.TEXT) return text(view);
+        if (plan.viewFormat() == ViewFormat.TEXT)
+            return text(view);
         if (plan.viewFormat() == ViewFormat.SUMMARY_ONLY) {
-            if (view.summary() == null) throw new IllegalStateException("Selected view has no declared summary");
+            if (view.summary() == null)
+                throw new IllegalStateException("Selected view has no declared summary");
             return new ReplyBlock.Text(view.summary());
         }
         if (plan.viewFormat() == ViewFormat.MARKDOWN) {
             CommandTemplate template = configuration.markdownTemplate(view.viewKey());
-            if (template == null) throw new IllegalStateException("Missing Markdown view template");
+            if (template == null)
+                throw new IllegalStateException("Missing Markdown view template");
             Map<String, Object> data = displayData(view.data());
-            if (plan.plainMarkdown()) return new ReplyBlock.Text(markdownViews.render(template.plainText(), data, false));
-            return new ReplyBlock.Markdown(BotMarkdownMessage.content(markdownViews.render(template.markdown(), data, true)),
-                    markdownViews.render(template.plainText(), data, false));
+            if (plan.plainMarkdown())
+                return new ReplyBlock.Text(markdownViews.render(template.plainText(), data, false));
+            return new ReplyBlock.Markdown(
+                BotMarkdownMessage.content(markdownViews.render(template.markdown(), data, true)),
+                markdownViews.render(template.plainText(), data, false));
         }
         BotImageRenderer renderer = imageRendererProvider.getIfAvailable();
         String html = configuration.templateHtml(view.viewKey());
-        if (renderer == null || html == null) throw new IllegalStateException("Selected image renderer is unavailable");
+        if (renderer == null || html == null)
+            throw new IllegalStateException("Selected image renderer is unavailable");
         Map<String, Object> data = displayData(view.data());
         try {
             if (command != null) {
                 for (CommandImageCache cache : imageCaches) {
                     Optional<byte[]> image = cache.renderIfSupported(command, view.viewKey(), data, renderer);
-                    if (image.isPresent()) return image(image.get());
+                    if (image.isPresent())
+                        return image(image.get());
                 }
             }
             return image(renderer.renderHtml(html, data));
         } catch (BotImageRenderException renderFailure) {
-            if (!configuration.presentation().resolve(target.platform(), target.scope()).allowsFallback(plan.viewFormat(), ViewFormat.TEXT)) throw renderFailure;
+            if (!configuration.presentation().resolve(target.platform(), target.scope())
+                .allowsFallback(plan.viewFormat(), ViewFormat.TEXT))
+                throw renderFailure;
             log.warn("Declared text fallback used for view={}", view.viewKey(), renderFailure);
             return text(view);
         }
@@ -332,8 +358,8 @@ public class CommandResponseDispatcher {
         List<CommandView> declared = command.plugin().views();
         for (ReplyMessage reply : result.replies()) {
             for (ReplyBlock block : reply.blocks()) {
-                if (block instanceof DataView<?> view && declared.stream()
-                        .noneMatch(candidate -> candidate.key().equals(view.viewKey()))) {
+                if (block instanceof DataView<?> view
+                    && declared.stream().noneMatch(candidate -> candidate.key().equals(view.viewKey()))) {
                     throw new IllegalStateException("Undeclared view: " + view.viewKey());
                 }
             }
@@ -345,15 +371,18 @@ public class CommandResponseDispatcher {
     }
 
     private ReplyBlock.Image image(byte[] bytes) {
-        if (bytes.length > limits.getMaxImageBytes()) throw new IllegalArgumentException("Rendered image limit exceeded");
+        if (bytes.length > limits.getMaxImageBytes())
+            throw new IllegalArgumentException("Rendered image limit exceeded");
         return new ReplyBlock.Image(new CommandAttachment("reply.png", "image/png", bytes));
     }
 
     private void validateResource(CommandAttachment resource, boolean image) {
         try {
             long maximum = image ? limits.getMaxImageBytes() : limits.getMaxFileBytes();
-            if (resource.toBotFile().size() > maximum) throw new IllegalArgumentException("Reply resource limit exceeded");
-            if (image) validateImage(resource);
+            if (resource.toBotFile().size() > maximum)
+                throw new IllegalArgumentException("Reply resource limit exceeded");
+            if (image)
+                validateImage(resource);
         } catch (IOException exception) {
             throw new UncheckedIOException("Reply resource is unavailable", exception);
         }
@@ -362,14 +391,16 @@ public class CommandResponseDispatcher {
     private void validateImage(CommandAttachment resource) throws IOException {
         // 仅探测图像头，不为检查像素数解码整张图片，避免小文件触发巨大像素分配。
         try (InputStream stream = resource.toBotFile().openStream();
-             ImageInputStream input = ImageIO.createImageInputStream(stream)) {
-            if (input == null) throw new IllegalArgumentException("Reply image is unreadable");
+            ImageInputStream input = ImageIO.createImageInputStream(stream)) {
+            if (input == null)
+                throw new IllegalArgumentException("Reply image is unreadable");
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
-            if (!readers.hasNext()) throw new IllegalArgumentException("Reply image format is unsupported");
+            if (!readers.hasNext())
+                throw new IllegalArgumentException("Reply image format is unsupported");
             ImageReader reader = readers.next();
             try {
                 reader.setInput(input, true, true);
-                long pixels = (long) reader.getWidth(0) * reader.getHeight(0);
+                long pixels = (long)reader.getWidth(0) * reader.getHeight(0);
                 if (pixels <= 0 || pixels > limits.getMaxImagePixels()) {
                     throw new IllegalArgumentException("Reply image pixel limit exceeded");
                 }
@@ -381,13 +412,16 @@ public class CommandResponseDispatcher {
 
     private Map<String, Object> displayData(Object source) {
         Object value = objectMapper.convertValue(source, Object.class);
-        if (value instanceof Map<?, ?>) return objectMapper.convertValue(value, new TypeReference<>() {});
+        if (value instanceof Map<?, ?>)
+            return objectMapper.convertValue(value, new TypeReference<>() {});
         return Map.of("items", value);
     }
 
     private void flushText(List<ReplyBlock> blocks, StringBuilder text) {
-        if (text.isEmpty()) return;
-        if (text.length() > limits.getMaxTextCharacters()) throw new IllegalArgumentException("Rendered text limit exceeded");
+        if (text.isEmpty())
+            return;
+        if (text.length() > limits.getMaxTextCharacters())
+            throw new IllegalArgumentException("Rendered text limit exceeded");
         blocks.add(new ReplyBlock.Text(text.toString()));
         text.setLength(0);
     }

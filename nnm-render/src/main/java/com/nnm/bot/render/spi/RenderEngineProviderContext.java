@@ -14,9 +14,7 @@ import java.nio.file.Path;
  * @param chromiumArgs Chromium 启动参数
  * @param fontPaths 可用字体文件路径
  */
-public record RenderEngineProviderContext(String templateBaseUri,
-                                          List<String> chromiumArgs,
-                                          List<Path> fontPaths) {
+public record RenderEngineProviderContext(String templateBaseUri, List<String> chromiumArgs, List<Path> fontPaths) {
 
     public RenderEngineProviderContext(String templateBaseUri, List<String> chromiumArgs) {
         this(templateBaseUri, chromiumArgs, List.of());

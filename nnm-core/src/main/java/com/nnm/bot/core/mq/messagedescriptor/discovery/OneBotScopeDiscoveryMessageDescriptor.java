@@ -8,10 +8,9 @@ import io.github.rdt.queue.QueueMode;
 
 /** 主题与投递模式不依赖消息载荷或远端元数据。 */
 public abstract class OneBotScopeDiscoveryMessageDescriptor extends MessageDescriptor<OneBotScopeDiscoveryRequest> {
-    public static final String TOPIC = "onebot-scope-discovery-v1";
+    public static final String TOPIC = "onebot-scope-discovery";
 
-    protected OneBotScopeDiscoveryMessageDescriptor() {
-    }
+    protected OneBotScopeDiscoveryMessageDescriptor() {}
 
     protected OneBotScopeDiscoveryMessageDescriptor(OneBotScopeDiscoveryRequest payload) {
         super(payload);

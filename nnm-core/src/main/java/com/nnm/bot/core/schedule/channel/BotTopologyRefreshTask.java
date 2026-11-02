@@ -11,7 +11,7 @@ public class BotTopologyRefreshTask {
     @Resource
     private BotTopologyStore topology;
 
-    @Scheduled(fixedDelayString = "${nnm.cache.bot.topology-refresh:60s}")
+    @Scheduled(fixedDelayString = "60s")
     public void execute() {
         topology.refresh();
     }

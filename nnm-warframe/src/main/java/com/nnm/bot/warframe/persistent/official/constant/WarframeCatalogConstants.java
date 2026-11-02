@@ -7,16 +7,12 @@ public final class WarframeCatalogConstants {
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
-    private WarframeCatalogConstants() {
-    }
+    private WarframeCatalogConstants() {}
 
     public enum EnemySection {
-        AVATARS(Category.REFERENCE_ENEMY_AVATAR),
-        AGENTS(Category.REFERENCE_ENEMY_AGENT),
-        DAMAGE_CONTROLLERS(Category.REFERENCE_ENEMY_DAMAGE_CONTROLLER),
-        DROPTABLES(Category.REFERENCE_ENEMY_DROPTABLE),
-        HIT_PROXIES(Category.REFERENCE_ENEMY_HIT_PROXY),
-        AI_WEAPONS(Category.REFERENCE_ENEMY_AI_WEAPON);
+        AVATARS(Category.REFERENCE_ENEMY_AVATAR), AGENTS(Category.REFERENCE_ENEMY_AGENT),
+        DAMAGE_CONTROLLERS(Category.REFERENCE_ENEMY_DAMAGE_CONTROLLER), DROPTABLES(Category.REFERENCE_ENEMY_DROPTABLE),
+        HIT_PROXIES(Category.REFERENCE_ENEMY_HIT_PROXY), AI_WEAPONS(Category.REFERENCE_ENEMY_AI_WEAPON);
 
         private final Category dataset;
 

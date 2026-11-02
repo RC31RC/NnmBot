@@ -28,23 +28,29 @@ public class WarframeRivenAttributeServiceImpl implements WarframeRivenAttribute
     public List<WarframeRivenAttributeDTO> definitions() {
         List<WarframeRivenAttributeDTO> result = new ArrayList<>();
         for (var root : catalog.records(WarframeOfficialDataDomain.RIVEN_ATTRIBUTE)) {
-            OfficialRivenAttributeDTO value = (OfficialRivenAttributeDTO) root.data();
+            OfficialRivenAttributeDTO value = (OfficialRivenAttributeDTO)root.data();
             Set<String> exclusive = new HashSet<>();
-            for (String group : values(value.getExclusiveTo()))exclusive.add(first(group));
+            for (String group : values(value.getExclusiveTo()))
+                exclusive.add(first(group));
             List<ParameterDTO> parameters = new ArrayList<>();
-            for (OfficialRivenAttributeDTO.OfficialEntriesDTO entry : values(value.getOfficialEntries())){
-                for (OfficialRivenAttributeDTO.OfficialEntriesUpgradeValuesDTO parameter : values(entry.getUpgradeValues())){
-                    parameters.add(new ParameterDTO(first(entry.getRivenUniqueName()), first(entry.getTag()), decimal(parameter.getValue()),
-                            first(parameter.getLocTag()), first(parameter.getLocTagZh(), parameter.getLocTag()), bool(parameter.getReverseValueSymbol()),
-                            first(entry.getParameterSemantics())));
+            for (OfficialRivenAttributeDTO.OfficialEntriesDTO entry : values(value.getOfficialEntries())) {
+                for (OfficialRivenAttributeDTO.OfficialEntriesUpgradeValuesDTO parameter : values(
+                    entry.getUpgradeValues())) {
+                    parameters.add(new ParameterDTO(first(entry.getRivenUniqueName()), first(entry.getTag()),
+                        decimal(parameter.getValue()), first(parameter.getLocTag()),
+                        first(parameter.getLocTagZh(), parameter.getLocTag()), bool(parameter.getReverseValueSymbol()),
+                        first(entry.getParameterSemantics())));
                 }
             }
-            result.add(new WarframeRivenAttributeDTO(first(value.getSlug(), value.getUrlName()), first(value.getEffectZh(), value.getEffect()),
-                    first(value.getEffect(), value.getNameEn()), first(value.getGroup()),
-                    value.isPresent("negativeOnly") ? bool(value.getNegativeOnly_dc2c5e2a()) : bool(value.getNegativeOnly()),
-                    value.isPresent("positiveIsNegative") ? bool(value.getPositiveIsNegative_50714505()) : bool(value.getPositiveIsNegative()),
-                    first(value.getPrefix()), bool(value.getSearchOnly()), first(value.getSuffix()), first(value.getUnits()),
-                    Set.copyOf(exclusive), List.copyOf(parameters)));
+            result.add(new WarframeRivenAttributeDTO(first(value.getSlug(), value.getUrlName()),
+                first(value.getEffectZh(), value.getEffect()), first(value.getEffect(), value.getNameEn()),
+                first(value.getGroup()),
+                value.isPresent("negativeOnly") ? bool(value.getNegativeOnly_dc2c5e2a())
+                    : bool(value.getNegativeOnly()),
+                value.isPresent("positiveIsNegative") ? bool(value.getPositiveIsNegative_50714505())
+                    : bool(value.getPositiveIsNegative()),
+                first(value.getPrefix()), bool(value.getSearchOnly()), first(value.getSuffix()),
+                first(value.getUnits()), Set.copyOf(exclusive), List.copyOf(parameters)));
         }
         return result;
     }

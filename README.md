@@ -4,18 +4,20 @@ Warframe QQ Bot - Modular Architecture
 
 ## 开发入口
 
+`docs/` 是本地开发文档，不随代码仓库提交；下述 `docs/` 路径仅供持有本地文档的开发环境参考。
+
 新开发会话先阅读：
 
 1. [`AGENTS.md`](AGENTS.md)：仓库级开发约定和运行边界。
-2. [`docs/项目架构与开发约定.md`](docs/项目架构与开发约定.md)：项目目标、前后端仓库、
+2. `docs/项目架构与开发约定.md`：项目目标、前后端仓库、
    Warframe 参考项目、数据表与 JSON 来源、当前实现和验证边界。
-3. [`docs/README.md`](docs/README.md)：现行文档索引和按任务选择的阅读顺序。
+3. `docs/README.md`：现行文档索引和按任务选择的阅读顺序。
 
 当前命令、表及 JSON 来源的完整清单见
-[`docs/reference/命令与数据目录.md`](docs/reference/命令与数据目录.md)；
-命令用途与返回语义见 [`docs/Warframe数据与命令实现.md`](docs/Warframe数据与命令实现.md)。
+`docs/reference/命令与数据目录.md`；
+命令用途与返回语义见 `docs/Warframe数据与命令实现.md`。
 QQ Markdown 关联按钮目前仅有
-[`设计方案`](docs/命令模板数据约定.md)，尚未修改运行时代码。
+`docs/命令模板数据约定.md`，尚未修改运行时代码。
 
 动态 WorldState、仲裁排期和周紫卡数据按运行时刷新，在每个 JVM 内存中持有快照；人工白名单只保留物品别名、术语/黑话、仲裁精华和紫卡自定义别名，持久化到独立 `wf_community_*` 表。
 
@@ -51,7 +53,7 @@ Warframe 属性由 `WarframePropertiesConfiguration` 集中注册，各业务域
 `nnm.bot.channels.qq-official` 属性绑定，未实现的配置项不会生效。
 图片模板只绑定命令展示 DTO；图标 URL、背景 URL 和文字按真实字段名取值，
 不再使用 `render.template-assets` 或渲染器注入的全局图片变量。
-字段清单、多样式模板及缺图处理见 [`命令模板数据约定`](docs/命令模板数据约定.md)。
+字段清单、多样式模板及缺图处理见 `docs/命令模板数据约定.md`。
 `nnm.executor` 是本机共享线程池、调度器和并发背压预算，属于基础设施配置；
 RDT 执行策略和 Warframe 拉取周期等业务策略分别放在对应配置文件。
 
@@ -106,11 +108,11 @@ PostgreSQL. YAML files are not a robot-instance configuration source.
 
 Distributed business mode is enabled in `application-system.yml`; RDT infrastructure is configured independently in `application.yml`. Each concurrent application
 node needs a unique, stable `INSTANCE_ID`; the local default is `local-1`.
-See [RDT接入与多实例运行.md](docs/RDT接入与多实例运行.md) for module boundaries,
+See `docs/RDT接入与多实例运行.md` for module boundaries,
 queue semantics, shared storage requirements and two-node verification.
 
 Database schemas are managed manually during the current development phase. Execute
-`docs/sql/init.sql` against PostgreSQL when creating or rebuilding a local database.
+`sql/init.sql` against PostgreSQL when creating or rebuilding a local database.
 Hibernate validates entity mappings at startup and does not create or update tables
 automatically. Application tables use the `nnmbot` schema.
 

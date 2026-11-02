@@ -57,6 +57,7 @@ public interface WarframeGroupWatchRuleService {
 
     /**
      * 在订阅规则锁内认领本轮尚未发送的事件身份，避免重复通知。
+     *
      * @param ruleId 规则标识。
      * @param matches 匹配集合。
      * @return 按当前条件筛选或转换后的数据集合。

@@ -13,21 +13,18 @@ import java.util.Locale;
  */
 public interface CommandAccessPolicy {
 
-    CommandAccessDecision check(BotMessageContext context,
-                                 CommandDescriptor descriptor,
-                                 CommandExecutionConfiguration configuration);
+    CommandAccessDecision check(BotMessageContext context, CommandDescriptor descriptor,
+        CommandExecutionConfiguration configuration);
 
     /** 回复实例只检查自身命令能力，不用另一个渠道的身份重新判断调用者权限。 */
     default CommandAccessDecision checkInstance(BotPlatform platform, String botAccountId,
-                                                CommandDescriptor descriptor) {
+        CommandDescriptor descriptor) {
         return SystemCommandCodes.ALL.contains(descriptor.code().strip().toLowerCase(Locale.ROOT))
-                ? CommandAccessDecision.permit()
-                : CommandAccessDecision.denied("未提供机器人命令能力校验");
+            ? CommandAccessDecision.permit() : CommandAccessDecision.denied("未提供机器人命令能力校验");
     }
 
-    default boolean allowed(BotMessageContext context,
-                            CommandDescriptor descriptor,
-                            CommandExecutionConfiguration configuration) {
+    default boolean allowed(BotMessageContext context, CommandDescriptor descriptor,
+        CommandExecutionConfiguration configuration) {
         return this.check(context, descriptor, configuration).allowed();
     }
 }

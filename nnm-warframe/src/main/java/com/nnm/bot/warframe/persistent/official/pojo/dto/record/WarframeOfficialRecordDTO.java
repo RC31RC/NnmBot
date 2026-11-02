@@ -37,10 +37,6 @@ public class WarframeOfficialRecordDTO {
 
     private String marketSlug;
 
-    private String rawJson;
-
-    private String localizedRawJson;
-
     private boolean enabled;
 
     private LocalDateTime createdAt;

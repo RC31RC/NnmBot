@@ -19,6 +19,7 @@ public class WarframeUpgradeServiceImpl implements WarframeUpgradeService {
     private OfficialUpgradeMapper mapper;
     @Resource
     private WarframeOfficialSelectionService data;
+
     /**
      * 读取本业务直接使用的已采纳振幅晶体及升级定义。
      *
@@ -40,8 +41,8 @@ public class WarframeUpgradeServiceImpl implements WarframeUpgradeService {
      */
     @Override
     public List<WarframeUpgradeVO.EntryVO> find(Category dataset, String keyword, Integer rank) {
-        return data.find(dataset, keyword).stream().map(row -> mapper.map(row, dataset, rank))
-                .filter(Objects::nonNull).toList();
+        return data.find(dataset, keyword).stream().map(row -> mapper.map(row, dataset, rank)).filter(Objects::nonNull)
+            .toList();
     }
 
 }

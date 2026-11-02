@@ -3,25 +3,14 @@ package com.nnm.bot.core.constant;
 import java.util.Set;
 
 public enum BotPlatform {
-    ONEBOT(
-            BotChannelCapability.TEXT_MESSAGE,
-            BotChannelCapability.IMAGE_MESSAGE,
-            BotChannelCapability.FILE_MESSAGE,
-            BotChannelCapability.GROUP_MEMBER_LIST,
-            BotChannelCapability.GROUP_MEMBER_DETAIL,
-            BotChannelCapability.GROUP_DISCOVERY,
-            BotChannelCapability.GROUP_LIST,
-            BotChannelCapability.GROUP_MEMBER_EVENTS),
-    QQ_OFFICIAL(
-            BotChannelCapability.TEXT_MESSAGE,
-            BotChannelCapability.IMAGE_MESSAGE,
-            BotChannelCapability.FILE_MESSAGE,
-            BotChannelCapability.MARKDOWN_MESSAGE,
-            BotChannelCapability.GROUP_DISCOVERY,
-            BotChannelCapability.GROUP_MEMBER_LIST,
-            BotChannelCapability.GROUP_MEMBER_DETAIL,
-            BotChannelCapability.GROUP_MEMBER_EVENTS,
-            BotChannelCapability.BOT_GROUP_MEMBERSHIP_EVENTS);
+    ONEBOT(BotChannelCapability.TEXT_MESSAGE, BotChannelCapability.IMAGE_MESSAGE, BotChannelCapability.FILE_MESSAGE,
+        BotChannelCapability.GROUP_MEMBER_LIST, BotChannelCapability.GROUP_MEMBER_DETAIL,
+        BotChannelCapability.GROUP_DISCOVERY, BotChannelCapability.GROUP_LIST,
+        BotChannelCapability.GROUP_MEMBER_EVENTS),
+    QQ_OFFICIAL(BotChannelCapability.TEXT_MESSAGE, BotChannelCapability.IMAGE_MESSAGE,
+        BotChannelCapability.FILE_MESSAGE, BotChannelCapability.MARKDOWN_MESSAGE, BotChannelCapability.GROUP_DISCOVERY,
+        BotChannelCapability.GROUP_MEMBER_LIST, BotChannelCapability.GROUP_MEMBER_DETAIL,
+        BotChannelCapability.GROUP_MEMBER_EVENTS, BotChannelCapability.BOT_GROUP_MEMBERSHIP_EVENTS);
 
     private final Set<BotChannelCapability> capabilities;
 

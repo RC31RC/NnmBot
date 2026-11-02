@@ -11,8 +11,10 @@ import jakarta.annotation.Resource;
 /**
  * 消费物品解析索引失效广播，并清理当前实例的本地索引。
  */
-@RdtQueueListener(topic = WarframeItemIndexInvalidationMessageDescriptor.TOPIC, group = WarframeItemIndexInvalidationConsumerDescriptor.GROUP)
-public class WarframeItemIndexInvalidationMessageConsumer implements RdtMessageConsumer<WarframeItemIndexInvalidationMessage> {
+@RdtQueueListener(topic = WarframeItemIndexInvalidationMessageDescriptor.TOPIC,
+    group = WarframeItemIndexInvalidationConsumerDescriptor.GROUP)
+public class WarframeItemIndexInvalidationMessageConsumer
+    implements RdtMessageConsumer<WarframeItemIndexInvalidationMessage> {
     @Resource
     private WarframeItemIndexInvalidator invalidator;
 

@@ -17,23 +17,14 @@ public class RbacStpInterface implements StpInterface {
 
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {
-        return user(loginId).getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .flatMap(role -> role.getPermissions().stream())
-                .filter(permission -> permission.isEnabled())
-                .map(permission -> permission.getCode())
-                .distinct()
-                .sorted()
-                .toList();
+        return user(loginId).getRoles().stream().filter(SysRole::isEnabled)
+            .flatMap(role -> role.getPermissions().stream()).filter(permission -> permission.isEnabled())
+            .map(permission -> permission.getCode()).distinct().sorted().toList();
     }
 
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
-        return user(loginId).getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .map(SysRole::getCode)
-                .sorted()
-                .toList();
+        return user(loginId).getRoles().stream().filter(SysRole::isEnabled).map(SysRole::getCode).sorted().toList();
     }
 
     private SysUser user(Object loginId) {

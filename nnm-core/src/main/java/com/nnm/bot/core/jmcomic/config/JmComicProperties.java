@@ -21,8 +21,7 @@ public class JmComicProperties {
     /** 是否允许执行 JM 下载任务。 */
     private boolean enabled = true;
     /** 项目工作目录下的 JM 临时下载目录。 */
-    private Path temporaryDirectory =
-            Path.of(System.getProperty("user.dir"), "data", "jmcomic");
+    private Path temporaryDirectory = Path.of(System.getProperty("user.dir"), "data", "jmcomic");
     /** 元数据请求超时。 */
     private Duration requestTimeout = Duration.ofSeconds(30);
     /** 单张图片下载超时。 */
@@ -221,12 +220,8 @@ public class JmComicProperties {
     }
 
     public void setApiDomains(List<String> apiDomains) {
-        this.apiDomains = CollUtil.isEmpty(apiDomains)
-                ? new ArrayList<>()
-                : apiDomains.stream()
-                        .filter(StrUtil::isNotBlank)
-                        .map(String::trim)
-                        .toList();
+        this.apiDomains = CollUtil.isEmpty(apiDomains) ? new ArrayList<>()
+            : apiDomains.stream().filter(StrUtil::isNotBlank).map(String::trim).toList();
     }
 
     public String getProxyHost() {
@@ -251,40 +246,34 @@ public class JmComicProperties {
             throw new IllegalStateException("nnm.jmcomic.temporary-directory must be configured");
         }
         if (ObjectUtil.isNull(this.requestTimeout) || this.requestTimeout.isNegative()
-                || this.requestTimeout.isZero()) {
+            || this.requestTimeout.isZero()) {
             throw new IllegalStateException("nnm.jmcomic.request-timeout must be positive");
         }
-        if (ObjectUtil.isNull(this.imageTimeout) || this.imageTimeout.isNegative()
-                || this.imageTimeout.isZero()) {
+        if (ObjectUtil.isNull(this.imageTimeout) || this.imageTimeout.isNegative() || this.imageTimeout.isZero()) {
             throw new IllegalStateException("nnm.jmcomic.image-timeout must be positive");
         }
-        if (ObjectUtil.isNull(this.wholeFileTimeout)
-                || this.wholeFileTimeout.isNegative()
-                || this.wholeFileTimeout.isZero()) {
+        if (ObjectUtil.isNull(this.wholeFileTimeout) || this.wholeFileTimeout.isNegative()
+            || this.wholeFileTimeout.isZero()) {
             throw new IllegalStateException("nnm.jmcomic.whole-file-timeout must be positive");
         }
         if (this.retryTimes < 0 || this.downloadThreads <= 0 || this.maxConcurrentTasks <= 0) {
             throw new IllegalStateException("nnm.jmcomic concurrency settings are invalid");
         }
-        if (this.maxPages <= 0 || this.maxDownloadBytes <= 0 || this.maxPdfBytes <= 0
-                || this.maxImagePixels <= 0 || this.maxImageWidth <= 0
-                || this.clientCacheBytes < 0) {
+        if (this.maxPages <= 0 || this.maxDownloadBytes <= 0 || this.maxPdfBytes <= 0 || this.maxImagePixels <= 0
+            || this.maxImageWidth <= 0 || this.clientCacheBytes < 0) {
             throw new IllegalStateException("nnm.jmcomic resource limits must be positive");
         }
         if (this.jpegQuality <= 0 || this.jpegQuality > 1) {
             throw new IllegalStateException("nnm.jmcomic.jpeg-quality must be in (0, 1]");
         }
         if (StrUtil.isBlank(this.proxyHost) != ObjectUtil.isNull(this.proxyPort)) {
-            throw new IllegalStateException(
-                    "nnm.jmcomic proxy-host and proxy-port must be configured together");
+            throw new IllegalStateException("nnm.jmcomic proxy-host and proxy-port must be configured together");
         }
-        if (ObjectUtil.isNotNull(this.proxyPort)
-                && (this.proxyPort <= 0 || this.proxyPort > 65535)) {
+        if (ObjectUtil.isNotNull(this.proxyPort) && (this.proxyPort <= 0 || this.proxyPort > 65535)) {
             throw new IllegalStateException("nnm.jmcomic.proxy-port is invalid");
         }
         if (StrUtil.isBlank(this.username) != StrUtil.isBlank(this.password)) {
-            throw new IllegalStateException(
-                    "nnm.jmcomic username and password must be configured together");
+            throw new IllegalStateException("nnm.jmcomic username and password must be configured together");
         }
     }
 }

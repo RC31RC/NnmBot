@@ -9,9 +9,10 @@ import io.github.rdt.spring.annotation.RdtQueueListener;
 import jakarta.annotation.Resource;
 
 /** 接收跨实例失效消息后只刷新本实例代码簿，避免再次发布同类消息。 */
-@RdtQueueListener(topic = WarframeWorldStateCodebookInvalidationMessageDescriptor.TOPIC, group = WarframeWorldStateCodebookInvalidationConsumerDescriptor.GROUP)
+@RdtQueueListener(topic = WarframeWorldStateCodebookInvalidationMessageDescriptor.TOPIC,
+    group = WarframeWorldStateCodebookInvalidationConsumerDescriptor.GROUP)
 public class WarframeWorldStateCodebookInvalidationMessageConsumer
-        implements RdtMessageConsumer<WarframeWorldStateCodebookInvalidationMessage> {
+    implements RdtMessageConsumer<WarframeWorldStateCodebookInvalidationMessage> {
 
     @Resource
     private WarframeWorldStateCodebookInvalidator invalidator;

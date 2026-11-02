@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
  * 从管理端命令配置表提供只读积分配置。
  */
 @Component
-public class DatabaseCommandCostConfigurationProvider
-        implements CommandCostConfigurationProvider {
+public class DatabaseCommandCostConfigurationProvider implements CommandCostConfigurationProvider {
 
     @Resource
     private BotCommandRepository commandRepository;
@@ -33,10 +32,7 @@ public class DatabaseCommandCostConfigurationProvider
         if (ObjectUtil.isNull(cost)) {
             return CommandCostConfiguration.free();
         }
-        return new CommandCostConfiguration(
-                cost.isEnabled(),
-                cost.getCostPoints(),
-                cost.isRewardEnabled(),
-                cost.getRewardPoints());
+        return new CommandCostConfiguration(cost.isEnabled(), cost.getCostPoints(), cost.isRewardEnabled(),
+            cost.getRewardPoints());
     }
 }

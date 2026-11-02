@@ -37,6 +37,9 @@ public class WarframeOfficialFile {
     @Column(name = "source_ref", length = 200)
     private String sourceRef;
 
+    @Column(name = "source_url", columnDefinition = "TEXT")
+    private String sourceUrl;
+
     @Column(name = "commit_sha", length = 40)
     private String commitSha;
 
@@ -45,6 +48,9 @@ public class WarframeOfficialFile {
 
     @Column(name = "candidate_source_ref", length = 200)
     private String candidateSourceRef;
+
+    @Column(name = "candidate_source_url", columnDefinition = "TEXT")
+    private String candidateSourceUrl;
 
     @Column(name = "candidate_commit_sha", length = 40)
     private String candidateCommitSha;

@@ -16,9 +16,7 @@ public class WorldStatePollingTask {
     /**
      * 拉取并发布本实例的最新世界状态；失败直接抛出，保留服务中上次成功的快照。
      */
-    @Scheduled(
-            cron = "#{@warframePollingProperties.cron}",
-            zone = "#{@warframePollingProperties.zone}")
+    @Scheduled(cron = "0 */2 * * * *", zone = "Asia/Shanghai")
     public void execute() {
         worldStateService.refresh();
     }

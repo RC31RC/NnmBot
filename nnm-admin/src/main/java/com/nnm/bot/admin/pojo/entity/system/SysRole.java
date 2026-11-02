@@ -59,24 +59,14 @@ public class SysRole {
 
     /** 角色拥有的按钮和接口权限。 */
     @ManyToMany
-    @JoinTable(
-            name = "sys_role_permission",
-            joinColumns =
-                    @JoinColumn(name = "role_id"),
-            inverseJoinColumns =
-                    @JoinColumn(name = "permission_id")
-    )
+    @JoinTable(name = "sys_role_permission", joinColumns = @JoinColumn(name = "role_id"),
+        inverseJoinColumns = @JoinColumn(name = "permission_id"))
     private Set<SysPermission> permissions = new LinkedHashSet<>();
 
     /** 角色可见的菜单集合。 */
     @ManyToMany
-    @JoinTable(
-            name = "sys_role_menu",
-            joinColumns =
-                    @JoinColumn(name = "role_id"),
-            inverseJoinColumns =
-                    @JoinColumn(name = "menu_id")
-    )
+    @JoinTable(name = "sys_role_menu", joinColumns = @JoinColumn(name = "role_id"),
+        inverseJoinColumns = @JoinColumn(name = "menu_id"))
     private Set<SysMenu> menus = new LinkedHashSet<>();
 
     /** 创建时间。 */

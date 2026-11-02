@@ -8,15 +8,15 @@ import java.util.regex.Pattern;
 final class JmPageOrder {
     private static final Pattern PART = Pattern.compile("\\d+|\\D+");
 
-    private JmPageOrder() {
-    }
+    private JmPageOrder() {}
 
     static int compare(String left, String right) {
         String[] a = left.replace('\\', '/').split("/");
         String[] b = right.replace('\\', '/').split("/");
         for (int index = 0; index < Math.min(a.length, b.length); index++) {
             int order = comparePart(a[index], b[index]);
-            if (order != 0) return order;
+            if (order != 0)
+                return order;
         }
         return Integer.compare(a.length, b.length);
     }
@@ -28,9 +28,9 @@ final class JmPageOrder {
             String x = a.group();
             String y = b.group();
             int order = Character.isDigit(x.charAt(0)) && Character.isDigit(y.charAt(0))
-                    ? new BigInteger(x).compareTo(new BigInteger(y))
-                    : x.compareToIgnoreCase(y);
-            if (order != 0) return order;
+                ? new BigInteger(x).compareTo(new BigInteger(y)) : x.compareToIgnoreCase(y);
+            if (order != 0)
+                return order;
         }
         int length = Integer.compare(left.length(), right.length());
         return length != 0 ? length : left.compareTo(right);

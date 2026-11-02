@@ -63,14 +63,6 @@ public abstract class OfficialRecord extends OfficialRow {
     @Column(name = "market_slug", length = 300)
     private String marketSlug;
 
-    /** 当前版本产品原始 JSON；保留成品嵌套字段。 */
-    @Column(name = "raw_json", nullable = false, columnDefinition = "TEXT")
-    private String rawJson;
-
-    /** 当前版本中文产品 JSON；未发布单独中文结构时为空。 */
-    @Column(name = "localized_raw_json", columnDefinition = "TEXT")
-    private String localizedRawJson;
-
     /** 是否参与运行时查询；上游删除及手工删除时整树物理删除。 */
     @Column(nullable = false)
     private boolean enabled = true;

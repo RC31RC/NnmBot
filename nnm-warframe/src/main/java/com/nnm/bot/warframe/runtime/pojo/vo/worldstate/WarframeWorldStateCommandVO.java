@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 /** 世界状态命令、管理端和订阅监听共用的展示投影。 */
-public record WarframeWorldStateCommandVO(
-        String text,
-        Map<String, Object> data,
-        List<UnresolvedReferenceVO> unresolvedReferences) {
+public record WarframeWorldStateCommandVO(String text, Map<String, Object> data,
+    List<UnresolvedReferenceVO> unresolvedReferences) {
 
     /**
      * 构造世界状态命令展示对象，并保存初始化参数。
@@ -32,7 +30,6 @@ public record WarframeWorldStateCommandVO(
     public WarframeWorldStateCommandVO {
         text = StrUtil.emptyIfNull(text).trim();
         data = MapUtil.isEmpty(data) ? Map.of() : Map.copyOf(data);
-        unresolvedReferences = unresolvedReferences == null
-                ? List.of() : List.copyOf(unresolvedReferences);
+        unresolvedReferences = unresolvedReferences == null ? List.of() : List.copyOf(unresolvedReferences);
     }
 }

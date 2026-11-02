@@ -21,7 +21,8 @@ public class OfficialBundleMapper {
      * @param definition 定义。
      * @return 单个组合包的展示条目。
      */
-    public WarframeBundleVO.EntryVO map(WarframeOfficialRecordReadDTO row, Category dataset, WarframeMaterialVO.EntryVO definition) {
+    public WarframeBundleVO.EntryVO map(WarframeOfficialRecordReadDTO row, Category dataset,
+        WarframeMaterialVO.EntryVO definition) {
         return switch (row.data()) {
             case OfficialBundleDTO value -> map(row, value, dataset, definition);
             case OfficialRewardPackDTO value -> map(row, value, dataset, definition);
@@ -38,7 +39,8 @@ public class OfficialBundleMapper {
      * @param definition 定义。
      * @return 单个组合包的展示条目。
      */
-    private WarframeBundleVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialBundleDTO value, Category dataset, WarframeMaterialVO.EntryVO definition) {
+    private WarframeBundleVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialBundleDTO value, Category dataset,
+        WarframeMaterialVO.EntryVO definition) {
         List<WarframeBundleVO.ComponentVO> components = new ArrayList<>();
         int order = 0;
         for (var item : values(value.getComponents())) {
@@ -57,7 +59,8 @@ public class OfficialBundleMapper {
      * @param definition 定义。
      * @return 单个组合包的展示条目。
      */
-    private WarframeBundleVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialRewardPackDTO value, Category dataset, WarframeMaterialVO.EntryVO definition) {
+    private WarframeBundleVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialRewardPackDTO value,
+        Category dataset, WarframeMaterialVO.EntryVO definition) {
         List<WarframeBundleVO.ComponentVO> components = new ArrayList<>();
         int order = 0;
         for (var item : values(value.getComponents())) {
@@ -67,10 +70,14 @@ public class OfficialBundleMapper {
         int roll = 0;
         for (var weights : values(value.getRarityWeightsPerRoll())) {
             List<WarframeBundleVO.WeightVO> entries = new ArrayList<>();
-            if (weights.getCommon() != null) entries.add(new WarframeBundleVO.WeightVO("COMMON", weights.getCommon()));
-            if (weights.getLegendary() != null) entries.add(new WarframeBundleVO.WeightVO("LEGENDARY", weights.getLegendary()));
-            if (weights.getRare() != null) entries.add(new WarframeBundleVO.WeightVO("RARE", weights.getRare()));
-            if (weights.getUncommon() != null) entries.add(new WarframeBundleVO.WeightVO("UNCOMMON", weights.getUncommon()));
+            if (weights.getCommon() != null)
+                entries.add(new WarframeBundleVO.WeightVO("COMMON", weights.getCommon()));
+            if (weights.getLegendary() != null)
+                entries.add(new WarframeBundleVO.WeightVO("LEGENDARY", weights.getLegendary()));
+            if (weights.getRare() != null)
+                entries.add(new WarframeBundleVO.WeightVO("RARE", weights.getRare()));
+            if (weights.getUncommon() != null)
+                entries.add(new WarframeBundleVO.WeightVO("UNCOMMON", weights.getUncommon()));
             rolls.add(new WarframeBundleVO.RollVO(roll++, entries));
         }
         return new WarframeBundleVO.EntryVO(dataset.code(), definition, components, rolls);

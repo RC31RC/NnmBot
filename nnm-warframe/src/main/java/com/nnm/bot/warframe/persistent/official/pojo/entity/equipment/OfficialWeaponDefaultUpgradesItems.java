@@ -52,5 +52,7 @@ public class OfficialWeaponDefaultUpgradesItems extends OfficialChildRow {
     private OfficialWeaponRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialWeaponDefaultUpgradesItemsItemReferencesItems> officialWeaponDefaultUpgradesItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialWeaponDefaultUpgradesItemsItemReferencesItems> officialWeaponDefaultUpgradesItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

@@ -22,6 +22,6 @@ public class ForumIdServiceImpl implements ForumIdService {
     public long next() {
         // 使用 Redis ATOMIC 序列，并以数据库已有最大 ID 为包含式下界；不依赖本 JVM 的计数器。
         long maximum = repository.findFirstProjectedByOrderByIdDesc().map(article -> article.getId()).orElse(0L);
-        return ids.nextAtLeast("warframe-forum-article-v1", Math.addExact(maximum, 1));
+        return ids.nextAtLeast("warframe-forum-article", Math.addExact(maximum, 1));
     }
 }

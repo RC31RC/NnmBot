@@ -16,13 +16,9 @@ import java.util.List;
 import java.util.Locale;
 
 /** 查看游戏 1999 相关日历数据。 */
-@BotPluginCommand(
-        code = WarframeCommandCodes.CALENDAR_1999,
-        name = "1999日历",
-        gameCode = "warframe",
-        order = 74,
-        allowRelatedAction = true)
-public final class Calendar1999Plugin extends BotPlugin {
+@BotPluginCommand(code = WarframeCommandCodes.CALENDAR_1999, name = "1999日历", gameCode = "warframe", order = 74,
+    allowRelatedAction = true)
+public final class Calendar1999Plugin extends BotPlugin<Void> {
 
     /**
      * 将业务数据转换为命令或页面所需的展示字段。
@@ -44,22 +40,17 @@ public final class Calendar1999Plugin extends BotPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(
-            CommandInvocation invocation) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments().trim().toLowerCase(Locale.ROOT);
         List<WarframeStateTranslationDetailsDTO> items = worldStateRuleService.stateTranslations().stream()
-                // 当前目录是日历任务词典，不是官方 KnownCalendarSeasons 的实时日期排期。
-                .filter(item -> contains(item.uniqueName(), "calendar1999"))
-                .filter(item -> StrUtil.isBlank(query)
-                        || contains(item.uniqueName(), query)
-                        || contains(item.displayName(), query)
-                        || contains(item.description(), query))
-                .toList();
-        return CommandResult.view("warframe.community",
-                CollUtil.isEmpty(items) ? "没有找到 1999 日历任务资料" : "1999 日历任务资料",
-                new WarframeCalendarCommandVO(query, items.stream()
-                        .map(WarframeCalendarCommandVO.CalendarEntryVO::from).toList(),
-                        "当前为静态任务资料，不包含实时日历日期排期"));
+            // 当前目录是日历任务词典，不是官方 KnownCalendarSeasons 的实时日期排期。
+            .filter(item -> contains(item.uniqueName(), "calendar1999"))
+            .filter(item -> StrUtil.isBlank(query) || contains(item.uniqueName(), query)
+                || contains(item.displayName(), query) || contains(item.description(), query))
+            .toList();
+        return CommandResult.view("warframe.community", CollUtil.isEmpty(items) ? "没有找到 1999 日历任务资料" : "1999 日历任务资料",
+            new WarframeCalendarCommandVO(query,
+                items.stream().map(WarframeCalendarCommandVO.CalendarEntryVO::from).toList(), "当前为静态任务资料，不包含实时日历日期排期"));
     }
 
     /**

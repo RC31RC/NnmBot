@@ -8,18 +8,16 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 英择谛赏金命令。 */
-@BotPluginCommand(
-        code = WarframeCommandCodes.ENTRATI, name = "英择谛", gameCode = "warframe", order = 54,
-        allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.ENTRATI, name = "英择谛", gameCode = "warframe", order = 54,
+    allowRelatedAction = true)
 public class EntratiPlugin extends AbstractWorldStateCommandPlugin {
 
     /**
      * 构造英择谛插件，并保存初始化参数。
      */
     public EntratiPlugin() {
-        super(
-                state -> WarframeWorldStateProjector.syndicate(state, "英择谛",
-                        value -> contains(value, "entrati", "deimos", "英择谛")));
+        super(state -> WarframeWorldStateProjector.syndicate(state, "英择谛",
+            value -> contains(value, "entrati", "deimos", "英择谛")));
     }
 
     /**
@@ -31,7 +29,6 @@ public class EntratiPlugin extends AbstractWorldStateCommandPlugin {
      */
     private static boolean contains(String value, String... candidates) {
         String normalized = ObjectUtil.isNull(value) ? "" : value.toLowerCase(Locale.ROOT);
-        return Arrays.stream(candidates)
-                .anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
+        return Arrays.stream(candidates).anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
     }
 }

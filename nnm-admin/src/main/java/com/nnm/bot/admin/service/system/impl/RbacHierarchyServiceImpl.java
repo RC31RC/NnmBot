@@ -25,17 +25,12 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
     private SysUserRepository userRepository;
 
     public SysUser operator(long operatorId) {
-        return this.userRepository.findWithAuthoritiesById(operatorId)
-                .filter(SysUser::isEnabled)
-                .orElseThrow(() -> new BusinessException(
-                        CommonErrorCode.AUTHENTICATION_REQUIRED,
-                        "账号不可用"
-                ));
+        return this.userRepository.findWithAuthoritiesById(operatorId).filter(SysUser::isEnabled)
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
     }
 
     public boolean canManageUser(SysUser operator, SysUser target) {
-        return !operator.getId().equals(target.getId())
-                && effectiveLevel(operator) > assignedLevel(target);
+        return !operator.getId().equals(target.getId()) && effectiveLevel(operator) > assignedLevel(target);
     }
 
     public int effectiveLevel(long userId) {
@@ -47,10 +42,7 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
             return Map.of();
         }
         return userRepository.findAllWithRolesByIdIn(userIds).stream()
-                .collect(Collectors.toUnmodifiableMap(
-                        SysUser::getId,
-                        this::assignedLevel,
-                        Math::max));
+            .collect(Collectors.toUnmodifiableMap(SysUser::getId, this::assignedLevel, Math::max));
     }
 
     public boolean canManageRole(SysUser operator, SysRole role) {
@@ -62,91 +54,56 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
     }
 
     public void checkCanManageUser(SysUser operator, SysUser target) {
-        BusinessAssert.isTrue(
-                canManageUser(operator, target),
-                CommonErrorCode.PERMISSION_DENIED,
-                "权限不足，无法操作当前用户或同级及更高级别用户"
-        );
+        BusinessAssert.isTrue(canManageUser(operator, target), CommonErrorCode.PERMISSION_DENIED,
+            "权限不足，无法操作当前用户或同级及更高级别用户");
     }
 
     public void checkCanManageRole(SysUser operator, SysRole role) {
-        BusinessAssert.isTrue(
-                canManageRole(operator, role),
-                CommonErrorCode.PERMISSION_DENIED,
-                "权限不足，无法管理同级或更高级别角色"
-        );
+        BusinessAssert.isTrue(canManageRole(operator, role), CommonErrorCode.PERMISSION_DENIED, "权限不足，无法管理同级或更高级别角色");
     }
 
     public void checkCanAssignRoles(SysUser operator, Collection<SysRole> roles) {
-        BusinessAssert.isTrue(
-                roles.stream().allMatch(role -> canAssignRole(operator, role)),
-                CommonErrorCode.PERMISSION_DENIED,
-                "不能分配未启用、同级或更高级别角色"
-        );
+        BusinessAssert.isTrue(roles.stream().allMatch(role -> canAssignRole(operator, role)),
+            CommonErrorCode.PERMISSION_DENIED, "不能分配未启用、同级或更高级别角色");
     }
 
     public void checkRequestedLevel(SysUser operator, int authorityLevel) {
-        BusinessAssert.isTrue(
-                authorityLevel >= 0 && authorityLevel < effectiveLevel(operator),
-                CommonErrorCode.PERMISSION_DENIED,
-                "角色等级必须低于当前操作者等级"
-        );
+        BusinessAssert.isTrue(authorityLevel >= 0 && authorityLevel < effectiveLevel(operator),
+            CommonErrorCode.PERMISSION_DENIED, "角色等级必须低于当前操作者等级");
     }
 
     public void checkCanAssignMenus(SysUser operator, Collection<SysMenu> menus) {
         if (isSuperAdmin(operator)) {
             return;
         }
-        Set<Long> manageableMenuIds = operator.getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .flatMap(role -> role.getMenus().stream())
-                .map(SysMenu::getId)
-                .collect(Collectors.toSet());
-        BusinessAssert.isTrue(
-                menus.stream().map(SysMenu::getId).allMatch(manageableMenuIds::contains),
-                CommonErrorCode.PERMISSION_DENIED,
-                "不能分配当前操作者未拥有的菜单"
-        );
+        Set<Long> manageableMenuIds = operator.getRoles().stream().filter(SysRole::isEnabled)
+            .flatMap(role -> role.getMenus().stream()).map(SysMenu::getId).collect(Collectors.toSet());
+        BusinessAssert.isTrue(menus.stream().map(SysMenu::getId).allMatch(manageableMenuIds::contains),
+            CommonErrorCode.PERMISSION_DENIED, "不能分配当前操作者未拥有的菜单");
     }
 
     public void checkCanAssignPermissions(SysUser operator, Collection<SysPermission> permissions) {
         if (isSuperAdmin(operator)) {
             return;
         }
-        Set<String> manageablePermissionCodes = operator.getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .flatMap(role -> role.getPermissions().stream())
-                .filter(SysPermission::isEnabled)
-                .map(SysPermission::getCode)
-                .collect(Collectors.toSet());
+        Set<String> manageablePermissionCodes =
+            operator.getRoles().stream().filter(SysRole::isEnabled).flatMap(role -> role.getPermissions().stream())
+                .filter(SysPermission::isEnabled).map(SysPermission::getCode).collect(Collectors.toSet());
         BusinessAssert.isTrue(
-                permissions.stream()
-                        .map(SysPermission::getCode)
-                        .allMatch(manageablePermissionCodes::contains),
-                CommonErrorCode.PERMISSION_DENIED,
-                "不能分配当前操作者未拥有的权限"
-        );
+            permissions.stream().map(SysPermission::getCode).allMatch(manageablePermissionCodes::contains),
+            CommonErrorCode.PERMISSION_DENIED, "不能分配当前操作者未拥有的权限");
     }
 
     private boolean isSuperAdmin(SysUser user) {
-        return user.getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .anyMatch(role -> "R_SUPER".equals(role.getCode()));
+        return user.getRoles().stream().filter(SysRole::isEnabled).anyMatch(role -> "R_SUPER".equals(role.getCode()));
     }
 
     private int effectiveLevel(SysUser user) {
-        return user.getRoles().stream()
-                .filter(SysRole::isEnabled)
-                .mapToInt(SysRole::getAuthorityLevel)
-                .max()
-                .orElse(0);
+        return user.getRoles().stream().filter(SysRole::isEnabled).mapToInt(SysRole::getAuthorityLevel).max().orElse(0);
     }
 
     private int assignedLevel(SysUser user) {
         // 已停用的高等级角色仍保护其关联账号，避免通过停用角色绕过层级约束。
-        return user.getRoles().stream()
-                .mapToInt(SysRole::getAuthorityLevel)
-                .max()
-                .orElse(0);
+        return user.getRoles().stream().mapToInt(SysRole::getAuthorityLevel).max().orElse(0);
     }
 }

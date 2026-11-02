@@ -53,8 +53,11 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialResourcesDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        if (value.getRarity() != null) attributes.add(new WarframeMaterialVO.AttributeVO("稀有度", first(value.getRarity())));
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), first(value.getProductCategory()), null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        if (value.getRarity() != null)
+            attributes.add(new WarframeMaterialVO.AttributeVO("稀有度", first(value.getRarity())));
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value),
+            first(value.getProductCategory()), null, first(value.getIcon()), first(value.getIconUrl()),
+            OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -66,7 +69,8 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialGearDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -78,8 +82,11 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialMiscDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        if (value.getRarity() != null) attributes.add(new WarframeMaterialVO.AttributeVO("稀有度", first(value.getRarity())));
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), first(value.getProductCategory()), null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        if (value.getRarity() != null)
+            attributes.add(new WarframeMaterialVO.AttributeVO("稀有度", first(value.getRarity())));
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value),
+            first(value.getProductCategory()), null, first(value.getIcon()), first(value.getIconUrl()),
+            OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -91,7 +98,8 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialCustomsDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -103,7 +111,8 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialAnimalDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -115,8 +124,10 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialDronesDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        if (value.getBinCount() != null) attributes.add(new WarframeMaterialVO.AttributeVO("数量", first(value.getBinCount())));
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        if (value.getBinCount() != null)
+            attributes.add(new WarframeMaterialVO.AttributeVO("数量", first(value.getBinCount())));
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -128,7 +139,8 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialFusionBundlesDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -140,7 +152,8 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialBoosterDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -152,7 +165,8 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialCreditBundleDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -164,7 +178,8 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialBundleDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 
     /**
@@ -176,6 +191,7 @@ public class OfficialMaterialMapper {
      */
     private WarframeMaterialVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialRewardPackDTO value) {
         List<WarframeMaterialVO.AttributeVO> attributes = new ArrayList<>();
-        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
+        return new WarframeMaterialVO.EntryVO(row.bkey(), name(row), description(value), "", null,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", null, attributes);
     }
 }

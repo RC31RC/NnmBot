@@ -25,7 +25,7 @@ import java.util.Optional;
 /** 从 bot_channel_instance 表向核心连接器提供配置。 */
 @Component
 public class DatabaseBotChannelInstanceProvider
-        implements BotChannelInstanceProvider, BotChannelInstanceIdentityResolver {
+    implements BotChannelInstanceProvider, BotChannelInstanceIdentityResolver {
 
     @Resource
     private BotTopologyStore topology;
@@ -43,7 +43,7 @@ public class DatabaseBotChannelInstanceProvider
     @Override
     public List<BotChannelInstanceRecord> findAll() {
         return topology.snapshot().instances().values().stream()
-                .sorted(Comparator.comparing(BotChannelInstanceRecord::instanceId)).toList();
+            .sorted(Comparator.comparing(BotChannelInstanceRecord::instanceId)).toList();
     }
 
     @Override
@@ -55,22 +55,19 @@ public class DatabaseBotChannelInstanceProvider
     static BotChannelInstanceRecord toRecord(BotChannelInstance instance, BotCredentialCipher credentialCipher) {
         OneBotChannelConfig oneBot = instance.getOneBotConfig();
         QqOfficialChannelConfig official = instance.getQqOfficialConfig();
-        return new BotChannelInstanceRecord(
-                instance.getPlatform(),
-                instance.getInstanceId(),
-                instance.getBotAccountId(),
-                instance.isEnabled(),
-                ObjectUtil.isNull(oneBot) ? null : oneBot.getConnectionUrl(),
-                ObjectUtil.isNull(oneBot) ? null : credentialCipher.decrypt(oneBot.getAccessToken()),
-                ObjectUtil.isNull(official) ? null : official.getAppId(),
-                ObjectUtil.isNull(official) ? null : credentialCipher.decrypt(official.getClientSecret()),
-                ObjectUtil.isNull(official) ? null : official.getTokenUrl(),
-                ObjectUtil.isNull(official) ? null : official.getApiBaseUrl(),
-                ObjectUtil.isNull(official) ? null : official.getGatewayUrl(),
-                seconds(ObjectUtil.isNull(oneBot) ? null : oneBot.getReconnectIntervalSeconds()),
-                ObjectUtil.isNull(official) ? 0L : official.getIntents(),
-                seconds(ObjectUtil.isNull(official) ? null : official.getGatewayConnectTimeoutSeconds()),
-                seconds(ObjectUtil.isNull(official) ? null : official.getReconnectDelaySeconds()));
+        return new BotChannelInstanceRecord(instance.getPlatform(), instance.getInstanceId(),
+            instance.getBotAccountId(), instance.isEnabled(),
+            ObjectUtil.isNull(oneBot) ? null : oneBot.getConnectionUrl(),
+            ObjectUtil.isNull(oneBot) ? null : credentialCipher.decrypt(oneBot.getAccessToken()),
+            ObjectUtil.isNull(official) ? null : official.getAppId(),
+            ObjectUtil.isNull(official) ? null : credentialCipher.decrypt(official.getClientSecret()),
+            ObjectUtil.isNull(official) ? null : official.getTokenUrl(),
+            ObjectUtil.isNull(official) ? null : official.getApiBaseUrl(),
+            ObjectUtil.isNull(official) ? null : official.getGatewayUrl(),
+            seconds(ObjectUtil.isNull(oneBot) ? null : oneBot.getReconnectIntervalSeconds()),
+            ObjectUtil.isNull(official) ? 0L : official.getIntents(),
+            seconds(ObjectUtil.isNull(official) ? null : official.getGatewayConnectTimeoutSeconds()),
+            seconds(ObjectUtil.isNull(official) ? null : official.getReconnectDelaySeconds()));
     }
 
     private static Duration seconds(Long value) {

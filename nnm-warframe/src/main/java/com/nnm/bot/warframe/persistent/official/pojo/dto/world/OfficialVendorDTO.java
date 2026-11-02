@@ -12,8 +12,8 @@ import lombok.Getter;
 
 /** VENDOR 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialVendorDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 是否为动态商人；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("isDynamic")
@@ -173,7 +173,7 @@ public class OfficialVendorDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ItemsItemPricesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemsItemPricesItemReferencesDTO extends OfficialObjectDTO {
         /** 物品列表的物品价格列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -315,7 +315,7 @@ public class OfficialVendorDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ItemsItemPricesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemsItemPricesDTO extends OfficialObjectDTO {
         /** 物品列表的物品价格列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -367,7 +367,7 @@ public class OfficialVendorDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -524,7 +524,7 @@ public class OfficialVendorDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 ItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemsDTO extends OfficialObjectDTO {
         /** 物品列表的是否始终出售；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("alwaysOffered")
@@ -951,7 +951,7 @@ public class OfficialVendorDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 RandomItemPricesPerBinItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RandomItemPricesPerBinItemReferencesDTO extends OfficialObjectDTO {
         /** 各货架随机价格列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1093,7 +1093,7 @@ public class OfficialVendorDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 RandomItemPricesPerBinDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RandomItemPricesPerBinDTO extends OfficialObjectDTO {
         /** 各货架随机价格列表的数量的最大值；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("count__maxValue")

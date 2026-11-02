@@ -2,9 +2,9 @@ package com.nnm.bot.warframe.persistent.official.pojo.vo.items;
 
 import java.util.List;
 
-public record WarframeMailVO(String senderKey, String sender, String titleKey, String title,
-        String bodyKey, String body, String imageReference, String iconUrl, String transmission,
-        Boolean highPriority, List<AttachmentVO> attachments, String customData, String cinematic) {
+public record WarframeMailVO(String senderKey, String sender, String titleKey, String title, String bodyKey,
+    String body, String imageReference, String iconUrl, String transmission, Boolean highPriority,
+    List<AttachmentVO> attachments, String customData, String cinematic) {
     /**
      * 构造邮件展示对象，并保存初始化参数。
      *
@@ -33,10 +33,12 @@ public record WarframeMailVO(String senderKey, String sender, String titleKey, S
      */
     public String text() {
         StringBuilder text = new StringBuilder(title == null ? "邮件" : title);
-        if (sender != null) text.append(" · ").append(sender);
-        if (body != null) text.append("\n").append(body);
+        if (sender != null)
+            text.append(" · ").append(sender);
+        if (body != null)
+            text.append("\n").append(body);
         attachments.forEach(item -> text.append("\n附件：").append(item.name())
-                .append(item.amount() == null ? " · 数量未提供" : " × " + item.amount()));
+            .append(item.amount() == null ? " · 数量未提供" : " × " + item.amount()));
         return text.toString();
     }
 

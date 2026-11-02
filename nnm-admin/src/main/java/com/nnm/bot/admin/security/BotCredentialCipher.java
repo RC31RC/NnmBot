@@ -34,9 +34,7 @@ public class BotCredentialCipher {
 
     @PostConstruct
     void initialize() {
-        this.key = new SecretKeySpec(
-                sha256(this.properties.getEncryptionKey()),
-                "AES");
+        this.key = new SecretKeySpec(sha256(this.properties.getEncryptionKey()), "AES");
     }
 
     public String encrypt(String plaintext) {
@@ -49,10 +47,7 @@ public class BotCredentialCipher {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
-            byte[] payload = ByteBuffer.allocate(iv.length + encrypted.length)
-                    .put(iv)
-                    .put(encrypted)
-                    .array();
+            byte[] payload = ByteBuffer.allocate(iv.length + encrypted.length).put(iv).put(encrypted).array();
             return PREFIX + Base64.getEncoder().encodeToString(payload);
         } catch (GeneralSecurityException exception) {
             throw new SystemException("机器人连接凭据加密失败", exception);
@@ -86,8 +81,7 @@ public class BotCredentialCipher {
 
     private static byte[] sha256(String value) {
         try {
-            return MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available", exception);
         }

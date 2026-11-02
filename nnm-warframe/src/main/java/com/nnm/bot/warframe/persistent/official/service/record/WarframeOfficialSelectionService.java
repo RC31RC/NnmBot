@@ -21,6 +21,7 @@ public interface WarframeOfficialSelectionService {
      * @return 当前独立官方记录的摘要及类型化详情组成的列表。
      */
     List<WarframeOfficialRecordReadDTO> find(Category dataset, String keyword);
+
     /**
      * 判断数据是否符合指定匹配条件。
      *

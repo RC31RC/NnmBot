@@ -15,8 +15,8 @@ public class WarframeSynthTargetServiceImpl implements WarframeSynthTargetServic
      */
     @Override
     public List<WarframeSynthTargetVO.EntryVO> find(String keyword) {
-        // The published enemy catalog has no synthesis-target/location definition.
-        // Do not infer guide data from unrelated enemy records or revive the retired community source.
+        // 已发布的敌人目录未定义结合仪式目标及位置。
+        // 不从无关敌人记录推测攻略，也不恢复已停用的社区来源。
         return List.of();
     }
 

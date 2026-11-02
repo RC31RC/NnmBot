@@ -28,17 +28,20 @@ public class WarframeTranslationServiceImpl implements WarframeTranslationServic
     public WarframeTranslationCommandVO translations(String keyword) {
         String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         var selected = catalog.records(WarframeOfficialDataDomain.LANGUAGE_STRING).stream()
-                .filter(item -> StrUtil.isBlank(query) || (item.bkey() + " " + first(((OfficialLanguageStringDTO) item.data()).getText())
-                        + " " + first(((OfficialLanguageStringDTO) item.data()).getZhText())).toLowerCase(Locale.ROOT).contains(query))
-                .limit(21).toList();
+            .filter(item -> StrUtil.isBlank(query)
+                || (item.bkey() + " " + first(((OfficialLanguageStringDTO)item.data()).getText()) + " "
+                    + first(((OfficialLanguageStringDTO)item.data()).getZhText())).toLowerCase(Locale.ROOT)
+                    .contains(query))
+            .limit(21).toList();
         var entries = new ArrayList<TranslationVO>();
         selected.stream().limit(20).forEach(item -> {
-            for (String locale : new String[]{"en", "zh"}) {
-                String text = first(locale.equals("en") ? ((OfficialLanguageStringDTO) item.data()).getText() : ((OfficialLanguageStringDTO) item.data()).getZhText());
-                if (StrUtil.isNotBlank(text)) entries.add(new TranslationVO(item.bkey(), locale, text));
+            for (String locale : new String[] {"en", "zh"}) {
+                String text = first(locale.equals("en") ? ((OfficialLanguageStringDTO)item.data()).getText()
+                    : ((OfficialLanguageStringDTO)item.data()).getZhText());
+                if (StrUtil.isNotBlank(text))
+                    entries.add(new TranslationVO(item.bkey(), locale, text));
             }
         });
-        return new WarframeTranslationCommandVO(query, entries,
-                selected.size() > 20 ? "本次展示前 20 条，请补充关键词缩小范围" : null);
+        return new WarframeTranslationCommandVO(query, entries, selected.size() > 20 ? "本次展示前 20 条，请补充关键词缩小范围" : null);
     }
 }

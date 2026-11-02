@@ -7,7 +7,7 @@ import java.time.Duration;
 
 /** 本地消费并发与重试策略，不接受消息载荷覆盖。 */
 public final class BotTopologyRefreshConsumerDescriptor extends ConsumerDescriptor {
-    public static final String GROUP = "bot-topology-v1";
+    public static final String GROUP = "bot-topology";
 
     @Override
     public String displayName() {
@@ -26,10 +26,7 @@ public final class BotTopologyRefreshConsumerDescriptor extends ConsumerDescript
 
     @Override
     public QueueOptions options() {
-        return QueueOptions.builder()
-                .maxAttempts(3)
-                .retryDelay(Duration.ofSeconds(1))
-                .visibilityTimeout(Duration.ofSeconds(5))
-                .build();
+        return QueueOptions.builder().maxAttempts(3).retryDelay(Duration.ofSeconds(1))
+            .visibilityTimeout(Duration.ofSeconds(5)).build();
     }
 }

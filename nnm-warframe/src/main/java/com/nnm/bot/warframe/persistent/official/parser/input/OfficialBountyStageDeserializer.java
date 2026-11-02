@@ -25,8 +25,8 @@ public class OfficialBountyStageDeserializer extends JsonDeserializer<OfficialBo
             return new OfficialBountyStageDTO(context.readValue(parser, OfficialBountyDTO.RewardPoolDTO.class), null);
         }
         if (parser.currentToken() == JsonToken.START_ARRAY) {
-            List<String> references = context.readValue(parser,
-                    context.getTypeFactory().constructCollectionType(List.class, String.class));
+            List<String> references =
+                context.readValue(parser, context.getTypeFactory().constructCollectionType(List.class, String.class));
             return new OfficialBountyStageDTO(null, references);
         }
         return context.reportInputMismatch(OfficialBountyStageDTO.class, "赏金阶段必须是奖励池对象或字符串引用数组");

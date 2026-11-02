@@ -25,9 +25,10 @@ public class WarframeWorldStateApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchWorldStateResult() {
-        HttpResult result = httpClient.executeGet(
-                properties.getWorldStateUrl().toString(), () -> httpExchange.fetch(properties.getLanguage()));
-        if (!result.isSuccess()) log.warn("Failed to fetch Warframe world state: {}", result.statusCode());
+        HttpResult result = httpClient.executeGet(properties.getWorldStateUrl().toString(),
+            () -> httpExchange.fetch(properties.getLanguage()));
+        if (!result.isSuccess())
+            log.warn("Failed to fetch Warframe world state: {}", result.statusCode());
         return result;
     }
 }

@@ -15,8 +15,8 @@ import lombok.Getter;
 
 /** DROP_TABLE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 启动概率；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("activationProbability")
@@ -820,7 +820,8 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, null);
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, null);
     }
 
     /**
@@ -836,7 +837,7 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 GroupsRewardsItemCandidatesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class GroupsRewardsItemCandidatesDTO extends OfficialObjectDTO {
         /** 分组列表的奖励的物品的候选项列表的图标状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("iconStatus")
@@ -933,7 +934,7 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 GroupsRewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class GroupsRewardsDTO extends OfficialObjectDTO {
         /** 分组列表的奖励的几率解析状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("chanceResolution")
@@ -1255,7 +1256,7 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 GroupsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class GroupsDTO extends OfficialObjectDTO {
         /** 分组列表的分组列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("groups")
@@ -1338,7 +1339,7 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 ResourcesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ResourcesItemReferencesDTO extends OfficialObjectDTO {
         /** 资源列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1495,7 +1496,7 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 ResourcesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ResourcesDTO extends OfficialObjectDTO {
         /** 资源列表的物品的图标状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("item__iconStatus")
@@ -1667,7 +1668,7 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 RewardsItemCandidatesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RewardsItemCandidatesDTO extends OfficialObjectDTO {
         /** 奖励的物品的候选项列表的图标状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("iconStatus")
@@ -1764,7 +1765,7 @@ public class OfficialDropTableDTO extends OfficialObjectDTO implements OfficialR
     /** 官方嵌套对象 RewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RewardsDTO extends OfficialObjectDTO {
         /** 奖励的几率解析状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("chanceResolution")

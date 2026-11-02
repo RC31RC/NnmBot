@@ -24,11 +24,14 @@ public record WarframeDucatRankingVO(List<PeriodVO> periods, int page, String no
      * @return 当前业务数据的简要说明对应的文本。
      */
     public String summary() {
-        return periods.stream().map(period -> period.name() + "（第 " + page + " 页）\n"
-                + (CollUtil.isEmpty(period.items()) ? "此页没有匹配的成交统计" : period.items().stream().map(item ->
-                        item.name() + "：" + item.ducats() + " 杜卡德金币；加权均价 " + decimal(item.weightedPrice())
-                                + " 铂金；金币/铂金 " + decimal(item.ducatsPerPlatinum()) + "；成交量 " + item.volume())
-                .collect(Collectors.joining("\n")))).collect(Collectors.joining("\n\n")) + "\n" + notice;
+        return periods.stream()
+            .map(
+                period -> period.name() + "（第 " + page + " 页）\n"
+                    + (CollUtil.isEmpty(period.items()) ? "此页没有匹配的成交统计" : period.items().stream()
+                        .map(item -> item.name() + "：" + item.ducats() + " 杜卡德金币；加权均价 " + decimal(item.weightedPrice())
+                            + " 铂金；金币/铂金 " + decimal(item.ducatsPerPlatinum()) + "；成交量 " + item.volume())
+                        .collect(Collectors.joining("\n"))))
+            .collect(Collectors.joining("\n\n")) + "\n" + notice;
     }
 
     /**
@@ -48,10 +51,12 @@ public record WarframeDucatRankingVO(List<PeriodVO> periods, int page, String no
          * @param name 当前业务对象的名称。
          * @param items 当前物品或成员列表。
          */
-        public PeriodVO { items = List.copyOf(items); }
+        public PeriodVO {
+            items = List.copyOf(items);
+        }
     }
 
     public record ItemVO(String itemId, String name, String slug, int ducats, BigDecimal weightedPrice,
-                       BigDecimal ducatsPerPlatinum, long volume, String statisticsAt) {
+        BigDecimal ducatsPerPlatinum, long volume, String statisticsAt) {
     }
 }

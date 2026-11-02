@@ -11,8 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ForumArticleRepository
-        extends JpaRepository<ForumArticle, Long>,
-        JpaSpecificationExecutor<ForumArticle> {
+    extends JpaRepository<ForumArticle, Long>, JpaSpecificationExecutor<ForumArticle> {
 
     /**
      * 判断是否已有文章使用该访问标识，比较时忽略大小写。
@@ -52,6 +51,7 @@ public interface ForumArticleRepository
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     Optional<ForumArticleDTO> findFirstProjectedByOrderByIdDesc();
+
     /**
      * 读取全部记录的非受管投影。
      *
@@ -75,6 +75,7 @@ public interface ForumArticleRepository
      * @return 包含当前页记录及总数的分页结果。
      */
     default Page<ForumArticleDTO> query(ForumArticleQuery request, Pageable pageable) {
-        return findBy(ForumArticleSpecifications.specification(request), query -> query.as(ForumArticleDTO.class).page(pageable));
+        return findBy(ForumArticleSpecifications.specification(request),
+            query -> query.as(ForumArticleDTO.class).page(pageable));
     }
 }

@@ -41,18 +41,29 @@ public class OfficialUpgradeMapper {
      * @param rank 等级。
      * @return 单个振幅晶体或升级的展示条目。
      */
-    private WarframeUpgradeVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialUpgradeDTO value, Category dataset, Integer rank) {
+    private WarframeUpgradeVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialUpgradeDTO value, Category dataset,
+        Integer rank) {
         OfficialUpgradeDTO.RanksDTO selected = null;
         for (var candidate : values(value.getRanks())) {
             Integer number = integer(candidate.getRank());
-            if (number != null && (rank == null || rank.equals(number))) selected = candidate;
+            if (number != null && (rank == null || rank.equals(number)))
+                selected = candidate;
         }
-        if (rank != null && selected == null) return null;
+        if (rank != null && selected == null)
+            return null;
         List<String> effects = new ArrayList<>();
-        if (selected != null) for (var line : values(selected.getStats())) {
-            String text = first(line.getZhText(), line.getText()); if (StrUtil.isNotBlank(text)) effects.add(text);
-        }
-        return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value), first(value.getUpgradeType(), value.getType()), first(value.getRarity()), integer(value.getBaseDrain()), first(value.getPolarity()), first(value.getCompatNameZh(), value.getCompatName(), value.getCompat()), integer(value.getFusionLimit()), selected == null ? null : integer(selected.getRank()), dataset == Category.MOD_SET ? "件" : "级", effects, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
+        if (selected != null)
+            for (var line : values(selected.getStats())) {
+                String text = first(line.getZhText(), line.getText());
+                if (StrUtil.isNotBlank(text))
+                    effects.add(text);
+            }
+        return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value),
+            first(value.getUpgradeType(), value.getType()), first(value.getRarity()), integer(value.getBaseDrain()),
+            first(value.getPolarity()), first(value.getCompatNameZh(), value.getCompatName(), value.getCompat()),
+            integer(value.getFusionLimit()), selected == null ? null : integer(selected.getRank()),
+            dataset == Category.MOD_SET ? "件" : "级", effects, first(value.getIcon()), first(value.getIconUrl()),
+            OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
     }
 
     /**
@@ -64,18 +75,27 @@ public class OfficialUpgradeMapper {
      * @param rank 等级。
      * @return 单个振幅晶体或升级的展示条目。
      */
-    private WarframeUpgradeVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialArcaneDTO value, Category dataset, Integer rank) {
+    private WarframeUpgradeVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialArcaneDTO value, Category dataset,
+        Integer rank) {
         OfficialArcaneDTO.RanksDTO selected = null;
         for (var candidate : values(value.getRanks())) {
             Integer number = integer(candidate.getRank());
-            if (number != null && (rank == null || rank.equals(number))) selected = candidate;
+            if (number != null && (rank == null || rank.equals(number)))
+                selected = candidate;
         }
-        if (rank != null && selected == null) return null;
+        if (rank != null && selected == null)
+            return null;
         List<String> effects = new ArrayList<>();
-        if (selected != null) for (var line : values(selected.getStats())) {
-            String text = first(line.getZhText(), line.getText()); if (StrUtil.isNotBlank(text)) effects.add(text);
-        }
-        return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value), "", first(value.getRarity()), null, "", "", integer(value.getFusionLimit()), selected == null ? null : integer(selected.getRank()), dataset == Category.MOD_SET ? "件" : "级", effects, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
+        if (selected != null)
+            for (var line : values(selected.getStats())) {
+                String text = first(line.getZhText(), line.getText());
+                if (StrUtil.isNotBlank(text))
+                    effects.add(text);
+            }
+        return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value), "", first(value.getRarity()),
+            null, "", "", integer(value.getFusionLimit()), selected == null ? null : integer(selected.getRank()),
+            dataset == Category.MOD_SET ? "件" : "级", effects, first(value.getIcon()), first(value.getIconUrl()),
+            OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
     }
 
     /**
@@ -87,15 +107,24 @@ public class OfficialUpgradeMapper {
      * @param rank 等级。
      * @return 单个振幅晶体或升级的展示条目。
      */
-    private WarframeUpgradeVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialModSetDTO value, Category dataset, Integer rank) {
+    private WarframeUpgradeVO.EntryVO map(WarframeOfficialRecordReadDTO row, OfficialModSetDTO value, Category dataset,
+        Integer rank) {
         OfficialModSetDTO.RanksDTO selected = null;
         for (var candidate : values(value.getRanks())) {
             Integer number = integer(candidate.getRank());
-            if (number != null && (rank == null || rank.equals(number))) selected = candidate;
+            if (number != null && (rank == null || rank.equals(number)))
+                selected = candidate;
         }
-        if (rank != null && selected == null) return null;
+        if (rank != null && selected == null)
+            return null;
         List<String> effects = new ArrayList<>();
-        if (selected != null) { String line = first(selected.getStatsZh(), selected.getStats()); if (StrUtil.isNotBlank(line)) effects.add(line); }
-        return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value), "", "", null, "", "", null, selected == null ? null : integer(selected.getRank()), dataset == Category.MOD_SET ? "件" : "级", effects, first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
+        if (selected != null) {
+            String line = first(selected.getStatsZh(), selected.getStats());
+            if (StrUtil.isNotBlank(line))
+                effects.add(line);
+        }
+        return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value), "", "", null, "", "", null,
+            selected == null ? null : integer(selected.getRank()), dataset == Category.MOD_SET ? "件" : "级", effects,
+            first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE, "ROOT_SELECTED");
     }
 }

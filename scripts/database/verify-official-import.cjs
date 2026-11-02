@@ -3,7 +3,7 @@ const path = require("node:path");
 const { withPostgres } = require("./postgres-test-cluster.cjs");
 
 withPostgres(async ({ root, apply, jdbcUrl }) => {
-  apply("docs/sql/init.sql");
+  apply("sql/init.sql");
   const source = process.env.NNM_OFFICIAL_DATA_DIRECTORY
     || path.resolve(root, "../warframe-datasource-nnm/data/latest");
   execFileSync("sh", ["mvnw", "-pl", "nnm-app", "-am", "test",

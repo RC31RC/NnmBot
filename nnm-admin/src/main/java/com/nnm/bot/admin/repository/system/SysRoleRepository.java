@@ -17,9 +17,5 @@ public interface SysRoleRepository extends JpaRepository<SysRole, Long> {
 
     boolean existsByCodeIgnoreCase(String code);
 
-    Page<SysRole> findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
-            String name,
-            String code,
-            Pageable pageable
-    );
+    Page<SysRole> findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(String name, String code, Pageable pageable);
 }

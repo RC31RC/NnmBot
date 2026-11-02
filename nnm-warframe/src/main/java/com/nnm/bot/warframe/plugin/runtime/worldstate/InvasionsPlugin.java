@@ -6,7 +6,7 @@ import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjecto
 
 /** 当前入侵命令。 */
 @BotPluginCommand(code = WarframeCommandCodes.INVASIONS, name = "入侵", gameCode = "warframe", order = 47,
-        allowRelatedAction = true)
+    allowRelatedAction = true)
 // 无 WorldStateDTO 原始表；读取官方快照的 invasions 段，静态引用表用途见 AbstractWorldStateCommandPlugin。
 public class InvasionsPlugin extends AbstractWorldStateCommandPlugin {
 

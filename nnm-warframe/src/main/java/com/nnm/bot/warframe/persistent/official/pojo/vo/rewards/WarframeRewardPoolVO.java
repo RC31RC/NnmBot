@@ -26,10 +26,11 @@ public record WarframeRewardPoolVO(String query, List<EntryVO> items, int page, 
      * @return 奖励池及奖励概率的分页视图。
      */
     public static WarframeRewardPoolVO page(String query, List<EntryVO> entries, int page) {
-        if (page < 1) throw new IllegalArgumentException("Page must be positive");
-        int from = (int) Math.min((long) (page - 1) * 12, entries.size());
-        return new WarframeRewardPoolVO(query, entries.subList(from, Math.min(from + 12, entries.size())),
-                page, Math.max(1, (int) ((entries.size() + 11L) / 12)), entries.size());
+        if (page < 1)
+            throw new IllegalArgumentException("Page must be positive");
+        int from = (int)Math.min((long)(page - 1) * 12, entries.size());
+        return new WarframeRewardPoolVO(query, entries.subList(from, Math.min(from + 12, entries.size())), page,
+            Math.max(1, (int)((entries.size() + 11L) / 12)), entries.size());
     }
 
     /**
@@ -42,7 +43,7 @@ public record WarframeRewardPoolVO(String query, List<EntryVO> items, int page, 
     }
 
     public record EntryVO(String poolKey, String poolName, Integer stage, String itemKey, String itemName,
-                        Integer count, BigDecimal probability, String rarity, boolean emptyPool,
-                        String sourceCode, String resolutionMode) {
+        Integer count, BigDecimal probability, String rarity, boolean emptyPool, String sourceCode,
+        String resolutionMode) {
     }
 }

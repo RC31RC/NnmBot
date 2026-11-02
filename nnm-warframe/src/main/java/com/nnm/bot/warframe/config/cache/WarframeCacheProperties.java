@@ -23,45 +23,63 @@ public class WarframeCacheProperties {
      *
      * @return 缓存星区对象。
      */
-    public CacheRegion getSubscriptionMemory() { return subscriptionMemory; }
+    public CacheRegion getSubscriptionMemory() {
+        return subscriptionMemory;
+    }
+
     /**
      * 读取图片索引。
      *
      * @return 缓存星区对象。
      */
-    public CacheRegion getImageIndex() { return imageIndex; }
+    public CacheRegion getImageIndex() {
+        return imageIndex;
+    }
+
     /**
      * 读取紫卡每周。
      *
      * @return 缓存星区对象。
      */
-    public CacheRegion getRivenWeekly() { return rivenWeekly; }
+    public CacheRegion getRivenWeekly() {
+        return rivenWeekly;
+    }
 
     /**
      * 读取物品解析状态索引。
      *
      * @return 缓存星区对象。
      */
-    public CacheRegion getItemResolutionIndex() { return itemResolutionIndex; }
+    public CacheRegion getItemResolutionIndex() {
+        return itemResolutionIndex;
+    }
 
     /**
      * 读取市场订单。
      *
      * @return 缓存星区对象。
      */
-    public CacheRegion getMarketOrders() { return marketOrders; }
+    public CacheRegion getMarketOrders() {
+        return marketOrders;
+    }
+
     /**
      * 读取市场拍卖。
      *
      * @return 缓存星区对象。
      */
-    public CacheRegion getMarketAuctions() { return marketAuctions; }
+    public CacheRegion getMarketAuctions() {
+        return marketAuctions;
+    }
+
     /**
      * 读取市场统计。
      *
      * @return 缓存星区对象。
      */
-    public CacheRegion getMarketStatistics() { return marketStatistics; }
+    public CacheRegion getMarketStatistics() {
+        return marketStatistics;
+    }
 
     /**
      * 读取元数据。
@@ -114,10 +132,8 @@ public class WarframeCacheProperties {
         if (region.capacity < 1) {
             throw new IllegalArgumentException(name + ".capacity must be at least 1");
         }
-        if (expiryRequired
-                && (ObjectUtil.isNull(region.expireAfterWrite)
-                || region.expireAfterWrite.isZero()
-                || region.expireAfterWrite.isNegative())) {
+        if (expiryRequired && (ObjectUtil.isNull(region.expireAfterWrite) || region.expireAfterWrite.isZero()
+            || region.expireAfterWrite.isNegative())) {
             throw new IllegalArgumentException(name + ".expire-after-write must be positive");
         }
     }

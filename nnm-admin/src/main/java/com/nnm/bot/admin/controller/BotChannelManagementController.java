@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/v1/bot-instances")
+@RequestMapping("/api/admin/bot-instances")
 public class BotChannelManagementController {
 
     @Resource
@@ -33,87 +33,61 @@ public class BotChannelManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:instance:view")
-    public ApiResponse<List<BotChannelInstanceVO>> instances(
-            @RequestBody(required = false)
-            EmptyRequest ignored) {
+    public ApiResponse<List<BotChannelInstanceVO>> instances(@RequestBody(required = false) EmptyRequest ignored) {
         return ApiResponse.ok(AdminBotChannelViewAssembler.toBotChannelInstanceVO(service.instances()));
     }
 
     @PostMapping("/onebot")
     @SaCheckPermission("bot:instance:create")
-    public ApiResponse<Long> createOneBot(
-            @Valid
-            @RequestBody
-            OneBotInstanceSaveDTO request) {
+    public ApiResponse<Long> createOneBot(@Valid @RequestBody OneBotInstanceSaveDTO request) {
         return ApiResponse.ok(service.createOneBot(request));
     }
 
     @PutMapping("/onebot/{id}")
     @SaCheckPermission("bot:instance:update")
-    public ApiResponse<Void> updateOneBot(
-            @PathVariable
-            long id,
-            @Valid
-            @RequestBody
-            OneBotInstanceSaveDTO request) {
+    public ApiResponse<Void> updateOneBot(@PathVariable long id, @Valid @RequestBody OneBotInstanceSaveDTO request) {
         service.updateOneBot(id, request);
         return ApiResponse.ok();
     }
 
     @PostMapping("/qq-official")
     @SaCheckPermission("bot:instance:create")
-    public ApiResponse<Long> createQqOfficial(
-            @Valid
-            @RequestBody
-            QqOfficialInstanceSaveDTO request) {
+    public ApiResponse<Long> createQqOfficial(@Valid @RequestBody QqOfficialInstanceSaveDTO request) {
         return ApiResponse.ok(service.createQqOfficial(request));
     }
 
     @PutMapping("/qq-official/{id}")
     @SaCheckPermission("bot:instance:update")
-    public ApiResponse<Void> updateQqOfficial(
-            @PathVariable
-            long id,
-            @Valid
-            @RequestBody
-            QqOfficialInstanceSaveDTO request) {
+    public ApiResponse<Void> updateQqOfficial(@PathVariable long id,
+        @Valid @RequestBody QqOfficialInstanceSaveDTO request) {
         service.updateQqOfficial(id, request);
         return ApiResponse.ok();
     }
 
     @DeleteMapping("/{id}")
     @SaCheckPermission("bot:instance:delete")
-    public ApiResponse<Void> delete(
-            @PathVariable
-            long id) {
+    public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);
         return ApiResponse.ok();
     }
 
     @PostMapping("/{id}/start")
     @SaCheckPermission("bot:instance:operate")
-    public ApiResponse<Void> start(
-            @PathVariable
-            long id) {
+    public ApiResponse<Void> start(@PathVariable long id) {
         service.start(id);
         return ApiResponse.ok();
     }
 
     @PostMapping("/{id}/stop")
     @SaCheckPermission("bot:instance:operate")
-    public ApiResponse<Void> stop(
-            @PathVariable
-            long id) {
+    public ApiResponse<Void> stop(@PathVariable long id) {
         service.stop(id);
         return ApiResponse.ok();
     }
 
     @PostMapping("/onebot/probe")
     @SaCheckPermission("bot:instance:probe")
-    public ApiResponse<OneBotAccountProbeVO> probeOneBot(
-            @Valid
-            @RequestBody
-            OneBotAccountProbeQuery request) {
+    public ApiResponse<OneBotAccountProbeVO> probeOneBot(@Valid @RequestBody OneBotAccountProbeQuery request) {
         return ApiResponse.ok(AdminBotChannelViewAssembler.toOneBotAccountProbeVO(service.probeOneBot(request)));
     }
 }

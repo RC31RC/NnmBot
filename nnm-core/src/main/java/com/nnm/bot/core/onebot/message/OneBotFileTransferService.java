@@ -1,5 +1,6 @@
 package com.nnm.bot.core.onebot.message;
 
+import com.nnm.bot.common.exception.SystemException;
 import java.util.Arrays;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -7,7 +8,6 @@ import cn.hutool.core.util.StrUtil;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.enums.ActionPath;
-import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.message.model.BotFile;
 import com.nnm.bot.core.onebot.config.OneBotProperties;
@@ -47,21 +47,16 @@ public class OneBotFileTransferService {
 
     private StagedFile stageLocalFile(BotFile file, long fileSize) throws IOException {
         if (file.pathBacked()) {
-            return new StagedFile(
-                    file.path().toString(), "local-path", fileSize, null);
+            return new StagedFile(file.path().toString(), "local-path", fileSize, null);
         }
-        Path directory = this.properties.getFileStagingDirectory()
-                .toAbsolutePath()
-                .normalize();
+        Path directory = this.properties.getFileStagingDirectory().toAbsolutePath().normalize();
         Files.createDirectories(directory);
-        Path temporaryFile = Files.createTempFile(
-                directory, UUID.randomUUID() + "-", safeName(file.fileName()));
+        Path temporaryFile = Files.createTempFile(directory, UUID.randomUUID() + "-", safeName(file.fileName()));
         boolean completed = false;
         try {
             Files.write(temporaryFile, file.content());
             completed = true;
-            return new StagedFile(
-                    temporaryFile.toString(), "local-path", fileSize, temporaryFile);
+            return new StagedFile(temporaryFile.toString(), "local-path", fileSize, temporaryFile);
         } finally {
             if (!completed) {
                 Files.deleteIfExists(temporaryFile);
@@ -71,29 +66,22 @@ public class OneBotFileTransferService {
 
     private StagedFile uploadStream(Bot bot, BotFile file, long fileSize) throws IOException {
         if (fileSize <= 0L) {
-            throw new BusinessException(
-                    BotChannelErrorCode.FILE_STAGING_FAILED,
-                    "OneBot 不支持发送空文件: " + file.fileName());
+            throw new SystemException(BotChannelErrorCode.FILE_STAGING_FAILED, "OneBot 不支持发送空文件: " + file.fileName());
         }
         if (fileSize > this.properties.getFileStreamMaxBytes()) {
-            throw new BusinessException(
-                    BotChannelErrorCode.FILE_STAGING_FAILED,
-                    "OneBot 分片上传文件超过限制: file=" + file.fileName()
-                            + ", size=" + fileSize
-                            + ", max=" + this.properties.getFileStreamMaxBytes());
+            throw new SystemException(BotChannelErrorCode.FILE_STAGING_FAILED, "OneBot 分片上传文件超过限制: file="
+                + file.fileName() + ", size=" + fileSize + ", max=" + this.properties.getFileStreamMaxBytes());
         }
 
         int chunkSize = this.properties.getFileStreamChunkSizeBytes();
         long totalChunksLong = (fileSize + chunkSize - 1L) / chunkSize;
         if (totalChunksLong > Integer.MAX_VALUE) {
-            throw new BusinessException(
-                    BotChannelErrorCode.FILE_STAGING_FAILED,
-                    "OneBot 分片数量超过限制: " + totalChunksLong);
+            throw new SystemException(BotChannelErrorCode.FILE_STAGING_FAILED, "OneBot 分片数量超过限制: " + totalChunksLong);
         }
 
         String streamId = UUID.randomUUID().toString();
         String remoteName = streamId + fileExtension(file.fileName());
-        int totalChunks = (int) totalChunksLong;
+        int totalChunks = (int)totalChunksLong;
         int chunkIndex = 0;
         try (InputStream input = file.openStream()) {
             byte[] buffer = new byte[chunkSize];
@@ -101,17 +89,15 @@ public class OneBotFileTransferService {
             while ((read = input.readNBytes(buffer, 0, buffer.length)) > 0) {
                 Map<String, Object> params = new LinkedHashMap<>();
                 params.put("stream_id", streamId);
-                params.put("chunk_data", Base64.getEncoder().encodeToString(
-                        read == buffer.length ? buffer : Arrays.copyOf(buffer, read)));
+                params.put("chunk_data",
+                    Base64.getEncoder().encodeToString(read == buffer.length ? buffer : Arrays.copyOf(buffer, read)));
                 params.put("chunk_index", chunkIndex);
                 params.put("total_chunks", totalChunks);
                 params.put("file_size", fileSize);
                 params.put("filename", remoteName);
-                params.put("file_retention",
-                        this.properties.fileStreamRetentionMillis());
-                this.ensureStreamSuccess(
-                        bot.customRequest(UPLOAD_FILE_STREAM, params),
-                        file, fileSize, "chunk " + chunkIndex + "/" + totalChunks);
+                params.put("file_retention", this.properties.fileStreamRetentionMillis());
+                this.ensureStreamSuccess(bot.customRequest(UPLOAD_FILE_STREAM, params), file, fileSize,
+                    "chunk " + chunkIndex + "/" + totalChunks);
                 chunkIndex++;
             }
         }
@@ -123,33 +109,22 @@ public class OneBotFileTransferService {
         this.ensureStreamSuccess(completed, file, fileSize, "complete");
         String remotePath = dataText(completed, "file_path");
         if (StrUtil.isBlank(remotePath)) {
-            throw this.streamFailure(
-                    file, fileSize, completed,
-                    "OneBot 未返回分片合并后的 file_path");
+            throw this.streamFailure(file, fileSize, completed, "OneBot 未返回分片合并后的 file_path");
         }
         return new StagedFile(remotePath, "websocket-stream", fileSize, null);
     }
 
-    private void ensureStreamSuccess(ActionData<?> result, BotFile file,
-                                     long fileSize, String phase) {
-        if (ObjectUtil.isNull(result)
-                || !"ok".equalsIgnoreCase(result.getStatus())
-                || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
-            throw this.streamFailure(
-                    file, fileSize, result,
-                    "phase=" + phase
-                            + "; 远端 OneBot 需要支持 NapCat upload_file_stream");
+    private void ensureStreamSuccess(ActionData<?> result, BotFile file, long fileSize, String phase) {
+        if (ObjectUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
+            || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
+            throw this.streamFailure(file, fileSize, result,
+                "phase=" + phase + "; 远端 OneBot 需要支持 NapCat upload_file_stream");
         }
     }
 
-    private BusinessException streamFailure(BotFile file, long fileSize,
-                                            ActionData<?> result, String detail) {
-        return new BusinessException(
-                BotChannelErrorCode.FILE_STAGING_FAILED,
-                "OneBot 远程文件分片上传失败: file=" + file.fileName()
-                        + ", size=" + fileSize
-                        + ", result=" + result
-                        + ", detail=" + detail);
+    private SystemException streamFailure(BotFile file, long fileSize, ActionData<?> result, String detail) {
+        return new SystemException(BotChannelErrorCode.FILE_STAGING_FAILED, "OneBot 远程文件分片上传失败: file=" + file.fileName()
+            + ", size=" + fileSize + ", result=" + result + ", detail=" + detail);
     }
 
     private boolean useStreamTransfer(Bot bot) {
@@ -168,9 +143,7 @@ public class OneBotFileTransferService {
             return false;
         }
         String normalized = host.toLowerCase(Locale.ROOT);
-        return "localhost".equals(normalized)
-                || "::1".equals(normalized)
-                || normalized.startsWith("127.");
+        return "localhost".equals(normalized) || "::1".equals(normalized) || normalized.startsWith("127.");
     }
 
     private static String dataText(ActionData<?> result, String name) {
@@ -194,12 +167,8 @@ public class OneBotFileTransferService {
         return safeName.substring(separator);
     }
 
-    public record StagedFile(
-            String uploadReference,
-            String transferMode,
-            long fileSize,
-            Path cleanupPath
-    ) implements AutoCloseable {
+    public record StagedFile(String uploadReference, String transferMode, long fileSize,
+        Path cleanupPath) implements AutoCloseable {
 
         @Override
         public void close() throws IOException {

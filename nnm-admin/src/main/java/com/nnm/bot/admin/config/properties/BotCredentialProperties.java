@@ -24,7 +24,7 @@ public class BotCredentialProperties {
     void validate() {
         if (StrUtil.isBlank(encryptionKey) || encryptionKey.length() < 16) {
             throw new IllegalArgumentException(
-                    "nnm.bot.credentials.encryption-key must contain at least 16 characters");
+                "nnm.bot.credentials.encryption-key must contain at least 16 characters");
         }
     }
 }

@@ -11,16 +11,12 @@ import java.util.Objects;
  * @param descriptor 插件提供的稳定命令描述
  * @param configuration 数据库加载的运行配置
  */
-public record RuntimeCommand(
-        BotPlugin plugin,
-        CommandDescriptor descriptor,
-        CommandExecutionConfiguration configuration
-) {
+public record RuntimeCommand(BotPlugin<?> plugin, CommandDescriptor descriptor,
+    CommandExecutionConfiguration configuration) {
 
     public RuntimeCommand {
         plugin = Objects.requireNonNull(plugin, "plugin must not be null");
         descriptor = Objects.requireNonNull(descriptor, "descriptor must not be null");
-        configuration = Objects.requireNonNull(
-                configuration, "configuration must not be null");
+        configuration = Objects.requireNonNull(configuration, "configuration must not be null");
     }
 }

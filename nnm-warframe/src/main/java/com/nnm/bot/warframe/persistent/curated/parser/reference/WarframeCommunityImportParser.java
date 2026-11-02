@@ -41,9 +41,9 @@ public class WarframeCommunityImportParser {
     @PostConstruct
     void initialize() {
         inputMapper = mapper.copy().disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
-                .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
-        for (CoercionInputShape shape : new CoercionInputShape[]{CoercionInputShape.Integer,
-                CoercionInputShape.Float, CoercionInputShape.Boolean}) {
+            .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
+        for (CoercionInputShape shape : new CoercionInputShape[] {CoercionInputShape.Integer, CoercionInputShape.Float,
+            CoercionInputShape.Boolean}) {
             inputMapper.coercionConfigFor(LogicalType.Textual).setCoercion(shape, CoercionAction.Fail);
         }
     }
@@ -65,7 +65,7 @@ public class WarframeCommunityImportParser {
             return rows;
         } catch (IOException exception) {
             throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT,
-                    "社区 JSON 与固定字段合同不符：" + exception.getMessage(), exception);
+                "社区 JSON 与固定字段合同不符：" + exception.getMessage(), exception);
         }
     }
 
@@ -78,9 +78,10 @@ public class WarframeCommunityImportParser {
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     private void readContainer(WarframeCommunityDataset dataset, JsonParser parser,
-                               Map<String, WarframeCommunityInputDTO> rows) throws IOException {
+        Map<String, WarframeCommunityInputDTO> rows) throws IOException {
         if (parser.currentToken() == JsonToken.START_ARRAY) {
-            while (parser.nextToken() != JsonToken.END_ARRAY) readRow(dataset, parser, null, rows);
+            while (parser.nextToken() != JsonToken.END_ARRAY)
+                readRow(dataset, parser, null, rows);
             return;
         }
         check(parser.currentToken() == JsonToken.START_OBJECT, "输入必须为业务对象、数组或稳定键字典");
@@ -88,17 +89,23 @@ public class WarframeCommunityImportParser {
             document.copyCurrentStructure(parser);
             try (JsonParser input = document.asParserOnFirstToken()) {
                 JsonToken next = input.nextToken();
-                if (next == JsonToken.END_OBJECT) return;
+                if (next == JsonToken.END_OBJECT)
+                    return;
                 String first = input.currentName();
                 if (dataset.fields().contains(first) || "key".equals(first)) {
-                    try (JsonParser row = document.asParserOnFirstToken()) { readRow(dataset, row, null, rows); }
+                    try (JsonParser row = document.asParserOnFirstToken()) {
+                        readRow(dataset, row, null, rows);
+                    }
                 } else if ("records".equals(first)) {
-                    input.nextToken(); readContainer(dataset, input, rows);
+                    input.nextToken();
+                    readContainer(dataset, input, rows);
                     check(input.nextToken() == JsonToken.END_OBJECT, "records 包装对象不能混入其他字段");
                 } else {
                     do {
                         check(input.currentToken() == JsonToken.FIELD_NAME, "字典成员必须具有稳定键");
-                        String key = input.currentName(); input.nextToken(); readRow(dataset, input, key, rows);
+                        String key = input.currentName();
+                        input.nextToken();
+                        readRow(dataset, input, key, rows);
                     } while (input.nextToken() != JsonToken.END_OBJECT);
                 }
             }
@@ -115,14 +122,15 @@ public class WarframeCommunityImportParser {
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     private void readRow(WarframeCommunityDataset dataset, JsonParser parser, String dictionaryKey,
-                         Map<String, WarframeCommunityInputDTO> rows) throws IOException {
+        Map<String, WarframeCommunityInputDTO> rows) throws IOException {
         check(parser.currentToken() == JsonToken.START_OBJECT, "社区记录必须为对象");
         try (TokenBuffer buffer = new TokenBuffer(parser)) {
             buffer.copyCurrentStructure(parser);
             String explicitKey = null;
             try (JsonParser keys = buffer.asParserOnFirstToken()) {
                 while (keys.nextToken() != JsonToken.END_OBJECT) {
-                    String field = keys.currentName(); keys.nextToken();
+                    String field = keys.currentName();
+                    keys.nextToken();
                     if ("key".equals(field)) {
                         check(keys.currentToken() == JsonToken.VALUE_STRING, "key 必须是字符串");
                         explicitKey = keys.getText();
@@ -139,31 +147,39 @@ public class WarframeCommunityImportParser {
             WarframeCommunityInputDTO value;
             try (JsonParser input = buffer.asParserOnFirstToken()) {
                 value = inputMapper.readerFor(type).with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                        .without(DeserializationFeature.ACCEPT_FLOAT_AS_INT).readValue(input);
+                    .without(DeserializationFeature.ACCEPT_FLOAT_AS_INT).readValue(input);
             }
             String naturalKey = switch (value) {
                 case WarframeCommunityRecordDTO.AliasDTO item -> {
-                    text(item.aliasName(), "aliasName", false); text(item.targetName(), "targetName", false); yield item.aliasName();
+                    text(item.aliasName(), "aliasName", false);
+                    text(item.targetName(), "targetName", false);
+                    yield item.aliasName();
                 }
                 case WarframeCommunityRecordDTO.TermDTO item -> {
-                    text(item.englishText(), "englishText", false); text(item.chineseText(), "chineseText", false);
-                    String group = item.termGroup() == null ? "" : item.termGroup(); text(group, "termGroup", true);
+                    text(item.englishText(), "englishText", false);
+                    text(item.chineseText(), "chineseText", false);
+                    String group = item.termGroup() == null ? "" : item.termGroup();
+                    text(group, "termGroup", true);
                     value = new WarframeCommunityRecordDTO.TermDTO(group, item.englishText(), item.chineseText());
                     yield group + ":" + item.englishText();
                 }
                 case WarframeCommunityRecordDTO.EssenceDTO item -> {
                     text(item.nodeName(), "nodeName", false);
-                    check(item.essenceAmount() != null && item.essenceAmount() >= 0, "essenceAmount 必须为非负整数"); yield item.nodeName();
+                    check(item.essenceAmount() != null && item.essenceAmount() >= 0, "essenceAmount 必须为非负整数");
+                    yield item.nodeName();
                 }
                 case WarframeCommunityRecordDTO.RivenAliasDTO item -> {
-                    text(item.attributeCode(), "attributeCode", false); text(item.aliasName(), "aliasName", false);
-                    check(item.attributeCode().matches("[a-z0-9_/]+(?:\\+[a-z0-9_/]+){0,2}"), "紫卡别名必须关联一至三个官方属性代码"); yield item.aliasName();
+                    text(item.attributeCode(), "attributeCode", false);
+                    text(item.aliasName(), "aliasName", false);
+                    check(item.attributeCode().matches("[a-z0-9_/]+(?:\\+[a-z0-9_/]+){0,2}"), "紫卡别名必须关联一至三个官方属性代码");
+                    yield item.aliasName();
                 }
             };
             String key = explicitKey != null ? explicitKey : dictionaryKey != null ? dictionaryKey : naturalKey;
             check(StrUtil.isNotBlank(key) && key.length() <= 500, "业务键必须非空且不超过 500 字符");
             check(rows.putIfAbsent(key, value) == null, "输入包含重复业务键：" + key);
-            BusinessAssert.isTrue(rows.size() <= properties.getMaxRecords(), WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
+            BusinessAssert.isTrue(rows.size() <= properties.getMaxRecords(),
+                WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
         }
     }
 
@@ -175,7 +191,8 @@ public class WarframeCommunityImportParser {
      * @param blankAllowed 空白允许。
      */
     private static void text(String value, String field, boolean blankAllowed) {
-        check(value != null && value.length() <= 10_000 && (blankAllowed || StrUtil.isNotBlank(value)), "字段无效：" + field);
+        check(value != null && value.length() <= 10_000 && (blankAllowed || StrUtil.isNotBlank(value)),
+            "字段无效：" + field);
     }
 
     /**

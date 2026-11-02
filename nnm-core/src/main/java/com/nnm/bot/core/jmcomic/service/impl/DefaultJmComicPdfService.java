@@ -43,16 +43,12 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
     @Override
     public Path createCompressedPdf(List<Path> imageFiles, Path outputFile) {
         if (CollUtil.isEmpty(imageFiles)) {
-            throw new BusinessException(
-                    JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
+            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
         }
-        List<Path> imagesInCallerOrder = imageFiles.stream()
-                .filter(ObjectUtil::isNotNull)
-                .toList();
+        List<Path> imagesInCallerOrder = imageFiles.stream().filter(ObjectUtil::isNotNull).toList();
         // ZIP 图片落盘名只用于隔离条目，不能覆盖调用方按原始章节、页码确定的顺序。
         if (imagesInCallerOrder.isEmpty()) {
-            throw new BusinessException(
-                    JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
+            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
         }
         if (imagesInCallerOrder.size() > this.properties.getMaxPages()) {
             throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE);
@@ -70,35 +66,27 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
             long pdfBytes = Files.size(normalizedOutput);
             if (pdfBytes > this.properties.getMaxPdfBytes()) {
                 Files.deleteIfExists(normalizedOutput);
-                throw new BusinessException(
-                        JmComicErrorCode.PDF_TOO_LARGE,
-                        "生成的 PDF 大小为 " + pdfBytes + " 字节，超过限制 "
-                                + this.properties.getMaxPdfBytes() + " 字节");
+                throw new BusinessException(JmComicErrorCode.PDF_TOO_LARGE,
+                    "生成的 PDF 大小为 " + pdfBytes + " 字节，超过限制 " + this.properties.getMaxPdfBytes() + " 字节");
             }
             return normalizedOutput;
         } catch (IOException exception) {
             deleteOutputAfterFailure(normalizedOutput, exception);
-            throw new BusinessException(
-                    JmComicErrorCode.PDF_CREATE_FAILED,
-                    "生成 JM 漫画 PDF 失败: " + normalizedOutput,
-                    exception);
+            throw new BusinessException(JmComicErrorCode.PDF_CREATE_FAILED, "生成 JM 漫画 PDF 失败: " + normalizedOutput,
+                exception);
         }
     }
 
     private void appendPage(PDDocument document, Path imageFile) throws IOException {
         ImageMetadata metadata = this.readMetadata(imageFile);
-        long pixels = (long) metadata.width() * metadata.height();
+        long pixels = (long)metadata.width() * metadata.height();
         if (pixels > this.properties.getMaxImagePixels()) {
-            throw new BusinessException(
-                    JmComicErrorCode.INVALID_IMAGE,
-                    "图片像素超过限制: " + imageFile.getFileName());
+            throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "图片像素超过限制: " + imageFile.getFileName());
         }
 
         BufferedImage source = ImageIO.read(imageFile.toFile());
         if (ObjectUtil.isNull(source)) {
-            throw new BusinessException(
-                    JmComicErrorCode.INVALID_IMAGE,
-                    "无法识别图片格式: " + imageFile.getFileName());
+            throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "无法识别图片格式: " + imageFile.getFileName());
         }
         BufferedImage compressedImage = null;
         try {
@@ -107,8 +95,8 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
             float pageHeight = pageWidth * compressedImage.getHeight() / compressedImage.getWidth();
             PDPage page = new PDPage(new PDRectangle(pageWidth, pageHeight));
             document.addPage(page);
-            PDImageXObject pdfImage = JPEGFactory.createFromImage(
-                    document, compressedImage, this.properties.getJpegQuality());
+            PDImageXObject pdfImage =
+                JPEGFactory.createFromImage(document, compressedImage, this.properties.getJpegQuality());
             try (PDPageContentStream content = new PDPageContentStream(document, page)) {
                 content.drawImage(pdfImage, 0, 0, pageWidth, pageHeight);
             }
@@ -122,21 +110,15 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
 
     private ImageMetadata readMetadata(Path imageFile) throws IOException {
         if (!Files.isRegularFile(imageFile) || !Files.isReadable(imageFile)) {
-            throw new BusinessException(
-                    JmComicErrorCode.INVALID_IMAGE,
-                    "图片文件不存在或不可读: " + imageFile);
+            throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "图片文件不存在或不可读: " + imageFile);
         }
         try (ImageInputStream input = ImageIO.createImageInputStream(imageFile.toFile())) {
             if (ObjectUtil.isNull(input)) {
-                throw new BusinessException(
-                        JmComicErrorCode.INVALID_IMAGE,
-                        "无法读取图片: " + imageFile.getFileName());
+                throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "无法读取图片: " + imageFile.getFileName());
             }
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) {
-                throw new BusinessException(
-                        JmComicErrorCode.INVALID_IMAGE,
-                        "无法识别图片格式: " + imageFile.getFileName());
+                throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "无法识别图片格式: " + imageFile.getFileName());
             }
             ImageReader reader = readers.next();
             try {
@@ -144,9 +126,7 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
                 if (width <= 0 || height <= 0) {
-                    throw new BusinessException(
-                            JmComicErrorCode.INVALID_IMAGE,
-                            "图片尺寸无效: " + imageFile.getFileName());
+                    throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "图片尺寸无效: " + imageFile.getFileName());
                 }
                 return new ImageMetadata(width, height);
             } finally {
@@ -157,22 +137,15 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
 
     private BufferedImage prepareJpegImage(BufferedImage source) {
         int targetWidth = Math.min(source.getWidth(), this.properties.getMaxImageWidth());
-        int targetHeight = Math.max(
-                1, Math.round((float) source.getHeight() * targetWidth / source.getWidth()));
-        if (source.getType() == BufferedImage.TYPE_INT_RGB
-                && source.getWidth() == targetWidth) {
+        int targetHeight = Math.max(1, Math.round((float)source.getHeight() * targetWidth / source.getWidth()));
+        if (source.getType() == BufferedImage.TYPE_INT_RGB && source.getWidth() == targetWidth) {
             return source;
         }
-        BufferedImage target = new BufferedImage(
-                targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        BufferedImage target = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = target.createGraphics();
         try {
-            graphics.setRenderingHint(
-                    RenderingHints.KEY_INTERPOLATION,
-                    RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-            graphics.setRenderingHint(
-                    RenderingHints.KEY_RENDERING,
-                    RenderingHints.VALUE_RENDER_QUALITY);
+            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             graphics.drawImage(source, 0, 0, targetWidth, targetHeight, null);
         } finally {
             graphics.dispose();

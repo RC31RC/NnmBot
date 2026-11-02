@@ -38,19 +38,23 @@ public class WarframeRivenUnrollableServiceImpl implements WarframeRivenUnrollab
         var attributes = catalog.records(WarframeOfficialDataDomain.RIVEN_ATTRIBUTE);
         for (var weapon : catalog.records(WarframeOfficialDataDomain.RIVEN_WEAPON)) {
             Set<String> groups = new HashSet<>();
-            var weaponData = (OfficialRivenWeaponDTO) weapon.data();
+            var weaponData = (OfficialRivenWeaponDTO)weapon.data();
             for (var listing : values(weaponData.getMarketListings())) {
                 String group = first(listing.getRivenType());
-                if (StrUtil.isNotEmpty(group)) groups.add(group);
+                if (StrUtil.isNotEmpty(group))
+                    groups.add(group);
             }
-            if (groups.size() != 1) continue;
+            if (groups.size() != 1)
+                continue;
             for (var attribute : attributes) {
-                var attributeData = (OfficialRivenAttributeDTO) attribute.data();
+                var attributeData = (OfficialRivenAttributeDTO)attribute.data();
                 var allowed = values(attributeData.getExclusiveTo());
-                if (CollUtil.isEmpty(allowed)) continue;
+                if (CollUtil.isEmpty(allowed))
+                    continue;
                 boolean compatible = allowed.stream().anyMatch(groups::contains);
                 if (!compatible && (selection.matches(weapon, keyword) || selection.matches(attribute, keyword))) {
-                    result.add(new EntryVO(weapon.bkey(), name(weapon), name(attribute), OFFICIAL_SOURCE_CODE, "EXCLUSIVE_TO"));
+                    result.add(new EntryVO(weapon.bkey(), name(weapon), name(attribute), OFFICIAL_SOURCE_CODE,
+                        "EXCLUSIVE_TO"));
                 }
             }
         }

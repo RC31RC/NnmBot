@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BotGroupMemberMergeRepository extends JpaRepository<BotGroupMemberMerge, Long> {
 
-    Optional<BotGroupMemberMerge> findByGroupIdAndSourceMemberId(
-            Long groupId, Long sourceMemberId);
+    Optional<BotGroupMemberMerge> findByGroupIdAndSourceMemberId(Long groupId, Long sourceMemberId);
 }
