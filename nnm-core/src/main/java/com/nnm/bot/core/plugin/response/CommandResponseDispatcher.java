@@ -1,12 +1,12 @@
 package com.nnm.bot.core.plugin.response;
 
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.plugin.response.CommandReplyRouter.Selection;
 import com.nnm.bot.common.resource.ResourceScope;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
-import com.nnm.bot.core.plugin.model.CommandView;
 import com.nnm.bot.core.plugin.model.DeliveryReport.Item;
-import com.nnm.bot.core.plugin.model.PresentationPolicy;
-import com.nnm.bot.core.plugin.model.ReplyBlock.DataView;
 import com.nnm.bot.core.plugin.model.ReplyBlock.File;
 import com.nnm.bot.core.plugin.model.ReplyBlock.Image;
 import com.nnm.bot.core.plugin.model.ReplyBlock.Text;
@@ -26,16 +26,16 @@ import com.nnm.bot.core.message.model.BotMessageReceipt;
 import com.nnm.bot.core.message.render.BotImageRenderer;
 import com.nnm.bot.core.plugin.model.CommandAttachment;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
+import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.model.PresentationPolicy;
 import com.nnm.bot.core.plugin.model.ReplyMessage;
 import com.nnm.bot.core.plugin.model.DeliveryReport;
 import com.nnm.bot.core.constant.CommandDeliveryConstants.DeliveryStatus;
 import com.nnm.bot.core.plugin.model.ReplyBlock;
 import com.nnm.bot.core.plugin.model.ResponsePlan;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
-import com.nnm.bot.core.constant.CommandPresentationConstants.ViewFormat;
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -63,9 +63,9 @@ public class CommandResponseDispatcher {
     @Resource
     private List<CommandImageCache> imageCaches = List.of();
     @Resource
-    private CommandDataTextFormatter dataTextFormatter;
-    @Resource
     private ObjectMapper objectMapper;
+    @Resource
+    private CommandDataTextFormatter dataTextFormatter;
     @Resource
     private CommandReplyRouter replyRouter;
     @Resource
@@ -74,8 +74,6 @@ public class CommandResponseDispatcher {
     private RelatedActionAppender relatedActionAppender;
     @Resource
     private ReplyProperties limits;
-    @Resource
-    private MarkdownViewRenderer markdownViews;
 
     public DeliveryReport dispatch(BotMessageContext origin, RuntimeCommand command, CommandResult result) {
         return dispatch(origin, command, result, new ResourceScope());
@@ -108,20 +106,22 @@ public class CommandResponseDispatcher {
         Throwable primary = null;
         int attempted = -1;
         try {
-            result = relatedActionAppender.append(origin, command, result);
-            resources.addAll(result.resources());
             if (!configuration.enabled())
-                throw new IllegalStateException("Command is disabled");
+                throw new BusinessException(CommandErrorCode.COMMAND_DISABLED);
             if (command != null)
-                validateViews(command, result);
+                result = relatedActionAppender.append(origin, command, result);
+            if (command != null)
+                result = renderHtmlData(command, configuration, result, resources);
+            resources.addAll(result.resources());
             selection =
                 replyRouter.select(origin, command == null ? null : command.descriptor(), configuration, result);
             target = selection.context();
             permits = selection.permits();
-            prepared = new ArrayList<>(
-                planner.compile(target, prepare(selection.plans(), command, configuration, resources, target)));
+            prepared = new ArrayList<>(planner.compile(target, prepare(selection.plans(), resources)));
+            if (command != null && prepared.size() != 1)
+                throw new SystemException(CommandErrorCode.DELIVERY_PLAN_INVALID, "一条命令结果必须编译为一条平台消息");
             if (permits.size() < prepared.size())
-                throw new IllegalStateException("Reply permits do not cover prepared messages");
+                throw new SystemException(CommandErrorCode.DELIVERY_PLAN_INVALID, "回复发送许可不足以覆盖已准备的消息");
             for (int index = 0; index < prepared.size(); index++) {
                 ResponsePlan plan = prepared.get(index);
                 replyRouter.validate(selection, command == null ? null : command.descriptor());
@@ -137,10 +137,8 @@ public class CommandResponseDispatcher {
         } catch (RuntimeException exception) {
             primary = failure = exception;
             if (prepared.isEmpty()) {
-                for (int i = 0; i < result.replies().size(); i++) {
-                    items.add(new DeliveryReport.Item(i, 0, target.botAccountId(), null, DeliveryStatus.NOT_SENT,
-                        exception.getMessage()));
-                }
+                items.add(new DeliveryReport.Item(0, 0, target.botAccountId(), null, DeliveryStatus.NOT_SENT,
+                    exception.getMessage()));
             } else {
                 for (int i = items.size(); i < prepared.size(); i++) {
                     DeliveryStatus status =
@@ -199,7 +197,7 @@ public class CommandResponseDispatcher {
         try {
             receipt = transmissions.get(index).send();
         } catch (BotMessageRejectedException rejection) {
-            PresentationPolicy presentation = configuration.presentation().resolve(target.platform(), target.scope());
+            PresentationPolicy presentation = PresentationPolicy.defaults();
             Optional<ResponsePlan> fallback = rejection.sameInstanceTextFallbackAllowed()
                 ? planner.explicitTextFallback(target, plans.get(index), presentation) : Optional.empty();
             // 后续 QQ 请求已预留较小的 msg_seq，只有末尾请求能安全申请新额度。
@@ -273,15 +271,12 @@ public class CommandResponseDispatcher {
         return new DeliveryReport.Item(plan.logicalMessage(), plan.part(), target.botAccountId(), null, status, reason);
     }
 
-    private List<ResponsePlan> prepare(List<ResponsePlan> plans, RuntimeCommand command,
-        CommandExecutionConfiguration configuration, Set<CommandAttachment> resources, BotMessageContext target) {
+    private List<ResponsePlan> prepare(List<ResponsePlan> plans, Set<CommandAttachment> resources) {
         List<ResponsePlan> prepared = new ArrayList<>();
         for (ResponsePlan plan : plans) {
             List<ReplyBlock> blocks = new ArrayList<>();
             StringBuilder text = new StringBuilder();
             for (ReplyBlock block : plan.blocks()) {
-                if (block instanceof DataView<?> view)
-                    block = compileView(command, configuration, plan, view, target);
                 if (block instanceof Text part) {
                     if (!text.isEmpty())
                         text.append('\n');
@@ -302,72 +297,50 @@ public class CommandResponseDispatcher {
             }
             flushText(blocks, text);
             prepared.add(new ResponsePlan(plan.logicalMessage(), 0, blocks, plan.actions(), plan.mentionUserId(),
-                plan.composition(), plan.viewFormat(), plan.plainMarkdown()));
+                plan.composition(), plan.plainMarkdown()));
         }
         return List.copyOf(prepared);
     }
 
-    private ReplyBlock compileView(RuntimeCommand command, CommandExecutionConfiguration configuration,
-        ResponsePlan plan, DataView<?> view, BotMessageContext target) {
-        if (command != null && command.plugin().views().stream().noneMatch(
-            declared -> declared.key().equals(view.viewKey()) && declared.formats().contains(plan.viewFormat()))) {
-            throw new IllegalStateException("Undeclared view format: " + view.viewKey() + "/" + plan.viewFormat());
-        }
-        if (plan.viewFormat() == ViewFormat.TEXT)
-            return text(view);
-        if (plan.viewFormat() == ViewFormat.SUMMARY_ONLY) {
-            if (view.summary() == null)
-                throw new IllegalStateException("Selected view has no declared summary");
-            return new ReplyBlock.Text(view.summary());
-        }
-        if (plan.viewFormat() == ViewFormat.MARKDOWN) {
-            CommandTemplate template = configuration.markdownTemplate(view.viewKey());
-            if (template == null)
-                throw new IllegalStateException("Missing Markdown view template");
-            Map<String, Object> data = displayData(view.data());
-            if (plan.plainMarkdown())
-                return new ReplyBlock.Text(markdownViews.render(template.plainText(), data, false));
-            return new ReplyBlock.Markdown(
-                BotMarkdownMessage.content(markdownViews.render(template.markdown(), data, true)),
-                markdownViews.render(template.plainText(), data, false));
+    private CommandResult renderHtmlData(RuntimeCommand command, CommandExecutionConfiguration configuration,
+        CommandResult result, Set<CommandAttachment> resources) {
+        ReplyBlock.HtmlData<?> dataBlock = result.blocks().stream().filter(ReplyBlock.HtmlData.class::isInstance)
+            .map(block -> (ReplyBlock.HtmlData<?>)block).findFirst().orElse(null);
+        if (dataBlock == null)
+            return result;
+        CommandTemplate template = configuration.template();
+        if (template == null) {
+            // 未选择 HTML 模板时仍以结构化文字保留数据，不丢弃业务结果，也不拆成多条消息。
+            String formatted = dataTextFormatter.format(dataBlock.data(), null);
+            ReplyBlock.Text text = new ReplyBlock.Text(formatted.isBlank() ? "没有可展示的数据" : formatted);
+            return result.withBlocks(result.blocks().stream()
+                .map(block -> block instanceof ReplyBlock.HtmlData<?> ? (ReplyBlock)text : block).toList());
         }
         BotImageRenderer renderer = imageRendererProvider.getIfAvailable();
-        String html = configuration.templateHtml(view.viewKey());
-        if (renderer == null || html == null)
-            throw new IllegalStateException("Selected image renderer is unavailable");
-        Map<String, Object> data = displayData(view.data());
-        try {
-            if (command != null) {
-                for (CommandImageCache cache : imageCaches) {
-                    Optional<byte[]> image = cache.renderIfSupported(command, view.viewKey(), data, renderer);
-                    if (image.isPresent())
-                        return image(image.get());
-                }
-            }
-            return image(renderer.renderHtml(html, data));
-        } catch (BotImageRenderException renderFailure) {
-            if (!configuration.presentation().resolve(target.platform(), target.scope())
-                .allowsFallback(plan.viewFormat(), ViewFormat.TEXT))
-                throw renderFailure;
-            log.warn("Declared text fallback used for view={}", view.viewKey(), renderFailure);
-            return text(view);
-        }
-    }
-
-    private void validateViews(RuntimeCommand command, CommandResult result) {
-        List<CommandView> declared = command.plugin().views();
-        for (ReplyMessage reply : result.replies()) {
-            for (ReplyBlock block : reply.blocks()) {
-                if (block instanceof DataView<?> view
-                    && declared.stream().noneMatch(candidate -> candidate.key().equals(view.viewKey()))) {
-                    throw new IllegalStateException("Undeclared view: " + view.viewKey());
-                }
+        if (renderer == null)
+            throw new SystemException(BotChannelErrorCode.IMAGE_RENDER_FAILED, "选定的图片渲染器不可用");
+        Map<String, Object> data = displayData(dataBlock.data());
+        byte[] rendered = null;
+        for (CommandImageCache cache : imageCaches) {
+            Optional<byte[]> cached = cache.renderIfSupported(command, data, renderer);
+            if (cached.isPresent()) {
+                rendered = cached.get();
+                break;
             }
         }
-    }
-
-    private ReplyBlock.Text text(DataView<?> view) {
-        return new ReplyBlock.Text(dataTextFormatter.format(view.data(), ""));
+        if (rendered == null) {
+            try {
+                rendered = renderer.renderHtml(template.html(), data);
+            } catch (BotImageRenderException failure) {
+                throw failure;
+            }
+        }
+        ReplyBlock.Image image = image(rendered);
+        validateResource(image.resource(), true);
+        resources.add(image.resource());
+        List<ReplyBlock> blocks = result.blocks().stream()
+            .map(block -> block instanceof ReplyBlock.HtmlData<?> ? (ReplyBlock)image : block).toList();
+        return new CommandResult(result.status(), blocks, result.actionContext());
     }
 
     private ReplyBlock.Image image(byte[] bytes) {

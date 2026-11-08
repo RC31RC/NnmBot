@@ -24,7 +24,7 @@ import com.nnm.bot.core.plugin.api.CommandAccessPolicy;
 import com.nnm.bot.core.plugin.model.CommandAccessDecision;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import com.nnm.bot.core.constant.SystemCommandCodes;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
 import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;

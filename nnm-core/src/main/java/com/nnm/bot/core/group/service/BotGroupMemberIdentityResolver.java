@@ -1,5 +1,7 @@
 package com.nnm.bot.core.group.service;
 
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.BotGroupErrorCode;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
@@ -82,6 +84,6 @@ public class BotGroupMemberIdentityResolver {
             return member;
         }
         return memberRepository.findById(canonicalId).filter(target -> target.getGroupId().equals(groupId))
-            .orElseThrow(() -> new IllegalStateException("成员合并目标不存在或不属于当前群组"));
+            .orElseThrow(() -> new SystemException(BotGroupErrorCode.MEMBER_MERGE_INCONSISTENT, "成员合并目标不存在或不属于当前群组"));
     }
 }

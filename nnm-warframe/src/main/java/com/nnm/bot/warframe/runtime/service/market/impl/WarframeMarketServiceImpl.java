@@ -7,6 +7,8 @@ import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketAuctionEntryDT
 import com.fasterxml.jackson.core.type.TypeReference;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.nnm.bot.warframe.runtime.rawdata.market.MarketResponseRawData;
@@ -290,7 +292,7 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
     public List<WarframeMarketItemDTO> fetchAuctionWeapons(String type) {
         String normalized = norm(type);
         if (!List.of("riven", "lich", "sister").contains(normalized)) {
-            throw new IllegalArgumentException("Unsupported auction type: " + type);
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "不支持的拍卖类型: " + type);
         }
         return cached(WarframeCacheNames.METADATA, List.of("market:auction-weapons", normalized), () -> {
             List<WarframeMarketItemDTO> items = parseCatalog(apiClient.fetchAuctionWeaponsResult(normalized));

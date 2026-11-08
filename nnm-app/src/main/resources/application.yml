@@ -8,7 +8,7 @@ server:
 spring:
   http:
     converters:
-      # API 与官方/社区解析使用同一套 Jackson 2 JsonNode，避免默认 Jackson 3 将其视为普通 Bean。
+      # 管理 API 的类型化 DTO 使用 Jackson 2 注解和反序列化器；避免 Jackson 3 忽略该合同。
       preferred-json-mapper: jackson2
   application:
     name: NnmBot
@@ -42,7 +42,7 @@ spring:
       timeout: 10s
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://127.0.0.1:5432/nnmbot?currentSchema=nnmbot,public
+    url: jdbc:postgresql://127.0.0.1:5432/nnmbot?currentSchema=nnmbot,public&reWriteBatchedInserts=true
     username: postgres
     password: root
     hikari:
@@ -58,6 +58,9 @@ spring:
     properties:
       hibernate:
         default_schema: nnmbot
+        # 官方文件按 250 条分段写入；JDBC 批处理限制单次发送与内存占用。
+        jdbc.batch_size: 50
+        order_inserts: true
         format_sql: true
         query.fail_on_pagination_over_collection_fetch: true
     show-sql: false

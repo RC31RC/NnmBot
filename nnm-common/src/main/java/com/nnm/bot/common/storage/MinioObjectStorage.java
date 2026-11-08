@@ -75,11 +75,23 @@ public class MinioObjectStorage implements ObjectStorage {
 
     @Override
     public InputStream open(String objectId) throws IOException {
+        return open(objectId, null, null);
+    }
+
+    @Override
+    public InputStream openRange(String objectId, long offset, long length) throws IOException {
+        Assert.isTrue(offset >= 0 && length > 0, "Object range must be nonempty and nonnegative");
+        return open(objectId, offset, length);
+    }
+
+    private InputStream open(String objectId, Long offset, Long length) throws IOException {
         validateId(objectId);
         acquire();
         try {
-            InputStream input = objectStorageClient
-                .getObject(GetObjectArgs.builder().bucket(properties.getBucket()).object(objectId).build());
+            var args = GetObjectArgs.builder().bucket(properties.getBucket()).object(objectId);
+            if (offset != null)
+                args.offset(offset).length(length);
+            InputStream input = objectStorageClient.getObject(args.build());
             // permit 与响应流同生命周期，不能在返回流时就释放，也不能靠 ThreadLocal 传播。
             return new FilterInputStream(input) {
                 private boolean closed;

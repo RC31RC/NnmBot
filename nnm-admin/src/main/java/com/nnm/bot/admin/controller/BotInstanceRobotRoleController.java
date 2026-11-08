@@ -7,9 +7,9 @@ import com.nnm.bot.common.response.ApiResponse;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 以机器人实例为主体维护能力角色绑定。 */
@@ -20,7 +20,7 @@ public class BotInstanceRobotRoleController {
     @Resource
     private BotRobotRoleManagementService service;
 
-    @PutMapping("/{id}/robot-roles")
+    @PostMapping("/{id}/robot-roles/update")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> assignRobotRoles(@PathVariable long id,
         @Valid @RequestBody BotInstanceRobotRoleSaveDTO request) {

@@ -110,7 +110,7 @@ public final class BoundedTaskExecutor implements AutoCloseable {
                     throw runtime;
                 if (cause instanceof Error error)
                     throw error;
-                throw new IllegalStateException("Computation failed", cause);
+                throw new SystemException(ComputationErrorCode.EXECUTION_FAILED, "Computation failed", cause);
             }
         }
     }

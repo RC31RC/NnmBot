@@ -2,6 +2,8 @@ package com.nnm.bot.warframe.persistent.official.repository.support;
 
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialIdentityDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialSummaryDTO;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
+
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -13,15 +15,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.QueryHints;
-import jakarta.persistence.QueryHint;
 import org.springframework.data.repository.NoRepositoryBean;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Stream;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -53,14 +52,6 @@ public interface OfficialMainRepository<T extends OfficialRecord>
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     Optional<T> findByMaintenanceTypeAndBkeyIgnoreCase(MaintenanceType maintenanceType, String bkey);
-
-    /**
-     * 按本地主键升序读取全部非受管投影。
-     *
-     * @return 按主键排序的只读投影流；调用方必须在事务内消费并关闭。
-     */
-    @QueryHints(@QueryHint(name = "org.hibernate.fetchSize", value = "250"))
-    Stream<OfficialSummaryDTO> findAllProjectedByOrderByIdAsc();
 
     /**
      * 读取指定维护状态的全部非受管投影。
@@ -154,6 +145,12 @@ public interface OfficialMainRepository<T extends OfficialRecord>
         Specification<T> specification = (entity, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(builder.isTrue(entity.get("enabled")));
+            // 文件级包头参与导入与审计，但不占用业务列表及分页总数。
+            predicates.add(builder.notEqual(entity.get("bkey"), METADATA_BKEY));
+            if (StrUtil.isNotBlank(request.group())) {
+                String group = request.group().trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+                predicates.add(builder.like(entity.get("bkey"), group + "/%", '\\'));
+            }
             if (StrUtil.isNotBlank(request.maintenanceType())) {
                 predicates.add(
                     builder.equal(entity.get("maintenanceType"), MaintenanceType.valueOf(request.maintenanceType())));
@@ -169,6 +166,18 @@ public interface OfficialMainRepository<T extends OfficialRecord>
         };
         return findBy(specification, query -> query.as(OfficialSummaryDTO.class).page(request.pageable()))
             .map(this::toData);
+    }
+
+    /**
+     * 统计指定维护类别的启用业务记录，排除文件级包头。
+     *
+     * @param maintenanceType 官方或自维护类别。
+     * @return 当前数据集可在管理列表中展示的记录数。
+     */
+    default long countBusinessRecords(MaintenanceType maintenanceType) {
+        return count((entity, query, builder) -> builder.and(builder.isTrue(entity.get("enabled")),
+            builder.notEqual(entity.get("bkey"), METADATA_BKEY),
+            builder.equal(entity.get("maintenanceType"), maintenanceType)));
     }
 
     private WarframeOfficialRecordDTO toData(OfficialSummaryDTO projection) {

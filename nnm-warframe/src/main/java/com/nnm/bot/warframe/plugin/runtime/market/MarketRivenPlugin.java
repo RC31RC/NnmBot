@@ -11,11 +11,16 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
+import com.nnm.bot.core.plugin.model.RelatedCommand;
+import com.nnm.bot.core.plugin.model.RelatedParameter;
+import com.nnm.bot.core.constant.CommandPresentationConstants.ParameterType;
+import com.nnm.bot.core.plugin.model.ReplyBlock;
+import com.nnm.bot.core.message.model.BotMarkdownMessage;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.pojo.vo.market.WarframeMarketAuctionVO;
 import com.nnm.bot.warframe.runtime.pojo.query.market.WarframeMarketAuctionQuery;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketItemDTO;
+import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketRivenInputDTO;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityCatalogService;
 import com.nnm.bot.warframe.persistent.official.service.upgrades.WarframeRivenAttributeService;
 import com.nnm.bot.warframe.runtime.service.market.WarframeMarketService;
@@ -31,19 +36,51 @@ import java.util.Map;
 import java.util.Set;
 
 /** 拍卖命令公共入口：按拍卖目录识别武器，将武器、词条和页码封装为查询对象。 */
-@BotPluginCommand(code = WarframeCommandCodes.MARKET_RIVEN, matchType = MatchType.PREFIX, name = "紫卡市场",
-    gameCode = "warframe", order = 64)
+@BotPluginCommand(code = WarframeCommandCodes.MARKET_RIVEN, matchType = MatchType.PREFIX)
 // 拍卖目录来自 Warframe Market API；属性取官方定义，组合别名取人工紫卡别名白名单。
-public final class MarketRivenPlugin extends BotPlugin<Void> {
-
+public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRivenInputDTO> {
     /**
-     * 将业务数据转换为命令或页面所需的展示字段。
+     * 为已解析到唯一武器的拍卖结果提供走势查询；关联目标和参数由插件维护。
      *
-     * @return 当前命令或页面需要的展示字段。
+     * @param result 已完成的拍卖结果
+     * @return 裂罅走势导航；没有唯一武器时为空
      */
     @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("warframe.market.auctions"));
+    public List<RelatedCommand> relatedCommands(CommandResult result) {
+        String weapon = result.actionContext().get("weapon.name");
+        if (StrUtil.isBlank(weapon))
+            return List.of();
+        return List.of(new RelatedCommand(WarframeCommandCodes.RIVEN_WEEKLY, "裂罅走势",
+            List.of(new RelatedCommand.Argument(new RelatedParameter("weapon", ParameterType.TEXT, 200), weapon))));
+    }
+
+    /**
+     * 取得已匹配的命令参数，供业务命令解析。
+     *
+     * @param invocation 当前命令调用
+     * @param prepared 无额外准备输入
+     * @return 已规范化的命令参数
+     */
+    @Override
+    protected WarframeMarketRivenInputDTO parse(CommandInvocation invocation, Void prepared) {
+        String input = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        if (StrUtil.isBlank(input)) {
+            return new WarframeMarketRivenInputDTO(List.of(), 0, 1, "格式：命令 武器名称 [词条] [负词条]");
+        }
+        if (input.length() > 500)
+            return new WarframeMarketRivenInputDTO(List.of(), 0, 1, "紫卡查询条件过长");
+        String[] parts = input.split("\\s+");
+        int end = parts.length;
+        int page = 1;
+        if (end > 1 && parts[end - 1].matches("\\d+")) {
+            try {
+                page = Math.max(1, Integer.parseInt(parts[end - 1]));
+            } catch (NumberFormatException ignored) {
+                page = Integer.MAX_VALUE;
+            }
+            end--;
+        }
+        return new WarframeMarketRivenInputDTO(List.of(parts), end, page, null);
     }
 
     /** 使用已采纳名称、术语和别名匹配实时拍卖武器目录。 */
@@ -66,25 +103,13 @@ public final class MarketRivenPlugin extends BotPlugin<Void> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMarketRivenInputDTO parsed) {
         String type = "riven";
-        String input = invocation.arguments() == null ? "" : invocation.arguments().trim();
-        if (StrUtil.isBlank(input)) {
-            return CommandResult.rejected("格式：命令 武器名称 [词条] [负词条]");
-        }
-        if (input.length() > 500)
-            return CommandResult.rejected("紫卡查询条件过长");
-        String[] parts = input.split("\\s+");
-        int end = parts.length;
-        int page = 1;
-        if (end > 1 && parts[end - 1].matches("\\d+")) {
-            try {
-                page = Math.max(1, Integer.parseInt(parts[end - 1]));
-            } catch (NumberFormatException ignored) {
-                page = Integer.MAX_VALUE;
-            }
-            end--;
-        }
+        if (parsed.error() != null)
+            return CommandResult.rejected(parsed.error());
+        String[] parts = parsed.tokens().toArray(String[]::new);
+        int end = parsed.end();
+        int page = parsed.page();
         List<WarframeMarketItemDTO> weapons = marketService.fetchAuctionWeapons(type);
         if (CollUtil.isEmpty(weapons)) {
             return CommandResult.text("暂时无法获取拍卖武器目录，请稍后再试");
@@ -175,8 +200,37 @@ public final class MarketRivenPlugin extends BotPlugin<Void> {
                 attributeNames.putIfAbsent(details.code(), details.effect());
             }
         });
-        return CommandResult.view("warframe.market.auctions", "市场拍卖",
-            WarframeMarketAuctionVO.from(result.get(), code -> attributeNames.getOrDefault(code, code)));
+        WarframeMarketAuctionVO display =
+            WarframeMarketAuctionVO.from(result.get(), code -> attributeNames.getOrDefault(code, code));
+        StringBuilder markdown =
+            new StringBuilder("### ").append(display.weapon()).append(" · ").append(display.pagination());
+        if (StrUtil.isNotBlank(display.filter()))
+            markdown.append("\n筛选：").append(display.filter());
+        if (StrUtil.isNotBlank(display.notice()))
+            markdown.append("\n").append(display.notice());
+        if (CollUtil.isNotEmpty(display.auctions())) {
+            WarframeMarketAuctionVO.AuctionVO first = display.auctions().getFirst();
+            if (StrUtil.isNotBlank(first.userName()) && StrUtil.isNotBlank(first.buyoutPrice()))
+                markdown.append("\n> 联系 ").append(first.userName()).append("：/w ").append(first.userName())
+                    .append(" 我想购买 ").append(display.weapon()).append(" 紫卡，报价 ").append(first.buyoutPrice());
+        }
+        int totalPages = Math.max(1,
+            (int)Math.ceil((double)result.get().auctions().total() / Math.max(1, result.get().auctions().size())));
+        List<BotMarkdownMessage.Button> buttons = new ArrayList<>();
+        String arguments = String.join(" ", parsed.tokens().subList(0, parsed.end()));
+        int currentPage = result.get().auctions().current();
+        if (currentPage > 1) {
+            buttons.add(new BotMarkdownMessage.Button("上一页（第 " + (currentPage - 1) + " 页）",
+                invocation.matchedAlias() + " " + arguments + " " + (currentPage - 1), false, 0));
+        }
+        for (int next = currentPage + 1; next <= Math.min(totalPages, currentPage + 3); next++) {
+            buttons.add(new BotMarkdownMessage.Button("第 " + next + " 页",
+                invocation.matchedAlias() + " " + arguments + " " + next, false, 0));
+        }
+        return CommandResult
+            .of(List.of(new ReplyBlock.HtmlData<>(display),
+                new ReplyBlock.Markdown(BotMarkdownMessage.content(markdown.toString()).withButtons(buttons), null)))
+            .withActionContext(Map.of("weapon.name", display.weapon()));
     }
 
     /**

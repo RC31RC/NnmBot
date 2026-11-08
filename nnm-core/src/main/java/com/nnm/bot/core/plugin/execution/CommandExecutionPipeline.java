@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.execution;
 
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.common.resource.ResourceScope;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.CommandAccessPolicy;
@@ -13,7 +15,7 @@ import com.nnm.bot.core.plugin.model.CommandMatch;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import com.nnm.bot.core.constant.SystemCommandCodes;
 import io.github.rdt.lock.RdtLock;
 import jakarta.annotation.Resource;
 import java.util.Locale;
@@ -71,7 +73,7 @@ public class CommandExecutionPipeline {
      */
     @RdtLock
     @Transactional(rollbackFor = Exception.class)
-    public CommandExecutionOutcome execute(PreparedCommand<?> prepared, ResourceScope resources) {
+    public CommandExecutionOutcome execute(PreparedCommand<?, ?> prepared, ResourceScope resources) {
         CommandMatch initial = prepared.match();
         RuntimeCommand latest = registry.command(initial.invocation().commandCode()).orElse(null);
         if (latest == null || latest.plugin() != prepared.plugin())
@@ -97,7 +99,7 @@ public class CommandExecutionPipeline {
         if (result != null)
             resources.addAll(result.resources());
         if (result == null || !result.successful()) {
-            throw new IllegalStateException("积分结算必须返回成功的命令结果");
+            throw new SystemException(CommandErrorCode.SETTLEMENT_INCONSISTENT, "积分结算必须返回成功的命令结果");
         }
         return new CommandExecutionOutcome(result, reservation);
     }

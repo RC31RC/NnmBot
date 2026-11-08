@@ -1,7 +1,6 @@
 package com.nnm.bot.admin.adapter.command;
 
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
-import java.util.Comparator;
 import cn.hutool.core.util.ObjectUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
@@ -47,15 +46,14 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         }
 
         Map<Long, List<CommandTrigger>> triggersByCommand = triggersByCommand();
-        Map<Long, List<CommandTemplate>> templatesByCommand = templatesByCommand();
+        Map<Long, CommandTemplate> templatesByCommand = templatesByCommand(commands);
         Map<String, CommandDefinition> definitions = new LinkedHashMap<>();
 
         for (BotCommand command : commands) {
             CommandExecutionConfiguration configuration =
                 new CommandExecutionConfiguration(command.isEnabled(), command.isShowInHelp(),
-                    command.getPresentation(), templatesByCommand.getOrDefault(command.getId(), List.of()),
-                    normalizedTriggers(triggersByCommand.get(command.getId())), command.getPermissionOverride(),
-                    command.getCooldownSeconds(), command.isMentionInvoker());
+                    templatesByCommand.get(command.getId()), normalizedTriggers(triggersByCommand.get(command.getId())),
+                    command.getPermissionOverride(), command.getCooldownSeconds(), command.isMentionInvoker());
             CommandDefinition definition = new CommandDefinition(command.getCode(), command.getName(),
                 command.getGameCode(), command.getDescription(), configuration);
             definitions.put(command.getCode().trim().toLowerCase(Locale.ROOT), definition);
@@ -72,24 +70,23 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         return result;
     }
 
-    private Map<Long, List<CommandExecutionConfiguration.CommandTemplate>> templatesByCommand() {
-        Map<Long, List<BotCommandTemplate>> templates = new HashMap<>();
-        for (BotCommandTemplate template : templateRepository.findAll()) {
-            if (template.isEnabled() && ObjectUtil.isNotNull(template.getCommandId())) {
-                templates.computeIfAbsent(template.getCommandId(), ignored -> new ArrayList<>()).add(template);
+    private Map<Long, CommandTemplate> templatesByCommand(List<BotCommand> commands) {
+        Map<Long, BotCommandTemplate> templates = new HashMap<>();
+        for (BotCommandTemplate template : templateRepository.findAll())
+            templates.put(template.getId(), template);
+        Map<Long, CommandTemplate> result = new HashMap<>();
+        for (BotCommand command : commands) {
+            Long templateId = command.getTemplateId();
+            if (templateId == null)
+                continue;
+            BotCommandTemplate selected = templates.get(templateId);
+            if (selected == null || !selected.isEnabled() || !command.getId().equals(selected.getCommandId())) {
+                log.warn("Ignoring invalid selected HTML template commandId={} templateId={}", command.getId(),
+                    templateId);
+                continue;
             }
+            result.put(command.getId(), new CommandTemplate(selected.getTemplateCode(), selected.getHtmlContent()));
         }
-        Map<Long, List<CommandTemplate>> result = new HashMap<>();
-        templates.forEach((commandId, items) -> {
-            items.sort(
-                Comparator.comparingInt(BotCommandTemplate::getSortOrder).thenComparing(BotCommandTemplate::getId));
-            result.put(commandId,
-                items.stream()
-                    .map(template -> new CommandExecutionConfiguration.CommandTemplate(template.getTemplateCode(),
-                        template.getViewKey(), template.getHtmlContent(), template.getMarkdownContent(),
-                        template.getPlainTextContent()))
-                    .toList());
-        });
         return result;
     }
 

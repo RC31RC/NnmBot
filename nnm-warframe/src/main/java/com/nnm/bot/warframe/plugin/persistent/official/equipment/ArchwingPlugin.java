@@ -6,9 +6,9 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
+import com.nnm.bot.warframe.persistent.official.pojo.query.equipment.WarframeEquipmentQuery;
 
-@BotPluginCommand(code = WarframeCommandCodes.ARCHWING, matchType = MatchType.PREFIX, name = "Archwing资料",
-    gameCode = "warframe", order = 64)
+@BotPluginCommand(code = WarframeCommandCodes.ARCHWING, matchType = MatchType.PREFIX)
 public final class ArchwingPlugin extends AbstractEquipmentPlugin {
     /**
      * 根据命令参数调用业务服务并组装命令结果。
@@ -18,7 +18,7 @@ public final class ArchwingPlugin extends AbstractEquipmentPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return equipment(Category.ARCHWING, "Archwing资料", invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeEquipmentQuery parsed) {
+        return equipment(Category.ARCHWING, "Archwing资料", parsed);
     }
 }

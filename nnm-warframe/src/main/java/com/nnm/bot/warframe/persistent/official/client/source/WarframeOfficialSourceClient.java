@@ -35,6 +35,10 @@ import java.util.function.Function;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest.FileEntry;
 import java.net.URI;
+import java.net.SocketException;
+import java.net.http.HttpTimeoutException;
+import javax.net.ssl.SSLException;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -126,10 +130,12 @@ public class WarframeOfficialSourceClient {
      *
      * @param version 本次操作选定的 tag 版本。
      * @param target 保存清单 gzip 原件的路径。
+     * @param failedSources 本轮快照中已发生网络连接故障的 CDN。
      * @return schema 3 发布清单。
      */
-    public WarframeOfficialManifest manifest(WarframeOfficialVersionDTO version, Path target) {
-        return fetch(version, "manifest.json.gz", target, properties.getMaxFileBytes(), validator::manifest);
+    public WarframeOfficialManifest manifest(WarframeOfficialVersionDTO version, Path target, Set<URI> failedSources) {
+        return fetch(version, "manifest.json.gz", target, properties.getMaxFileBytes(), validator::manifest,
+            failedSources);
     }
 
     /**
@@ -138,8 +144,9 @@ public class WarframeOfficialSourceClient {
      * @param version 本次操作选定的 tag 版本。
      * @param entry 清单中的压缩文件契约。
      * @param target 保存 gzip 原件的路径。
+     * @param failedSources 本轮快照中已发生网络连接故障的 CDN。
      */
-    public void download(WarframeOfficialVersionDTO version, FileEntry entry, Path target) {
+    public void download(WarframeOfficialVersionDTO version, FileEntry entry, Path target, Set<URI> failedSources) {
         validatePath(entry.path());
         BusinessAssert.isTrue(
             entry.bytes() > 0 && entry.bytes() <= properties.getMaxFileBytes() && entry.sha256() != null
@@ -148,7 +155,7 @@ public class WarframeOfficialSourceClient {
         fetch(version, entry.path(), target, entry.bytes(), file -> {
             validator.file(entry, file);
             return null;
-        });
+        }, failedSources);
     }
 
     /**
@@ -159,10 +166,11 @@ public class WarframeOfficialSourceClient {
      * @param target 保存压缩原件的目标文件。
      * @param maxBytes 压缩原件大小上限。
      * @param verify 完整性及协议校验。
+     * @param failedSources 本轮快照中已发生网络连接故障的 CDN。
      * @return 校验得到的业务结果。
      */
     private <T> T fetch(WarframeOfficialVersionDTO version, String path, Path target, long maxBytes,
-        Function<Path, T> verify) {
+        Function<Path, T> verify, Set<URI> failedSources) {
         validatePath(path);
         Path temporary = null;
         try {
@@ -177,15 +185,16 @@ public class WarframeOfficialSourceClient {
                 publish(temporary, target);
                 return value;
             }
-            List<String> urls = new ArrayList<>();
-            for (URI baseUrl : properties.getCdnBaseUrls())
-                urls.add(cdnFileUrl(baseUrl, version, path));
-            urls.add(githubContentsUrl(version, path));
+            List<URI> cdnSources = properties.getCdnBaseUrls();
             List<RuntimeException> failures = new ArrayList<>();
-            for (int index = 0; index < urls.size(); index++) {
-                String url = urls.get(index);
-                Map<String, String> headers =
-                    index == urls.size() - 1 ? githubHeaders("application/vnd.github.raw+json") : cdnHeaders();
+            for (int index = 0; index <= cdnSources.size(); index++) {
+                boolean github = index == cdnSources.size();
+                URI cdn = github ? null : cdnSources.get(index);
+                // 故障来源仅在本轮快照中停用；HTTP/摘要错误不改变后续文件的来源选择。
+                if (!github && failedSources.contains(cdn))
+                    continue;
+                String url = github ? githubContentsUrl(version, path) : cdnFileUrl(cdn, version, path);
+                Map<String, String> headers = github ? githubHeaders("application/vnd.github.raw+json") : cdnHeaders();
                 DownloadResult result = null;
                 try {
                     result = httpClient.downloadRawTo(url, headers, temporary, maxBytes);
@@ -200,8 +209,11 @@ public class WarframeOfficialSourceClient {
                     publish(temporary, target);
                     return value;
                 } catch (RuntimeException exception) {
-                    if (result != null && result.error() != null)
+                    if (result != null && result.error() != null) {
                         exception.addSuppressed(result.error());
+                        if (!github && transportFailure(result.error()) && failedSources.add(cdn))
+                            log.warn("本轮官方下载跳过故障 CDN: {}", cdn);
+                    }
                     failures.add(exception);
                     log.warn("官方压缩文件来源失败，准备切换来源: path={}, url={}", path, url, exception);
                 }
@@ -220,6 +232,21 @@ public class WarframeOfficialSourceClient {
                 }
             }
         }
+    }
+
+    /**
+     * 识别下载端已耗尽重试的连接故障，仅此类失败在本轮快照停用该 CDN。
+     *
+     * @param error HTTP 客户端返回的下载异常。
+     * @return 是否为 SSL、连接或请求超时故障。
+     */
+    private boolean transportFailure(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SSLException || cause instanceof SocketException
+                || cause instanceof HttpTimeoutException)
+                return true;
+        }
+        return false;
     }
 
     /**

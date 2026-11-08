@@ -46,9 +46,14 @@ import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.repository.BotGroupBotRepository;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import com.nnm.bot.core.group.repository.BotGroupPointTransactionRepository;
+import com.nnm.bot.core.group.repository.BotGroupMemberMergeRepository;
+import com.nnm.bot.core.group.event.BotGroupDeletingEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.nnm.bot.core.group.repository.BotGroupRepository;
 import com.nnm.bot.core.group.service.PointAccountService;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityAdapters;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,6 +85,10 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     private BotGroupMemberRepository memberRepository;
     @Resource
     private BotGroupPointTransactionRepository pointTransactionRepository;
+    @Resource
+    private BotGroupMemberMergeRepository memberMergeRepository;
+    @Resource
+    private ApplicationEventPublisher events;
     @Resource
     private PointAccountService pointAccountService;
     @Resource
@@ -210,7 +219,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         topologyInvalidator.invalidateAfterCommit();
         String code = request.code().trim().toLowerCase(Locale.ROOT);
         if (groupRepository.findByCodeIgnoreCase(code).isPresent()) {
-            throw new IllegalArgumentException("群组编码已存在");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "群组编码已存在");
         }
         BotGroup group = new BotGroup();
         group.setCode(code);
@@ -253,8 +262,13 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         topologyInvalidator.invalidateAfterCommit();
         groupRepository.lockTopology();
         group(id);
+        // 同步监听器与本次删除共享事务；任何业务模块清理失败都应整体回滚。
+        events.publishEvent(new BotGroupDeletingEvent(id));
+        pointTransactionRepository.deleteAllByGroupId(id);
+        memberMergeRepository.deleteAllByGroupId(id);
         botRepository.deleteAllByGroupId(id);
         memberRepository.deleteAllByGroupId(id);
+        memberRepository.flush();
         groupRepository.deleteById(id);
     }
 
@@ -297,7 +311,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         BotChannelInstance instance = instanceRepository.findById(request.botInstanceId())
             .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
         if (instance.getPlatform() != request.platform()) {
-            throw new IllegalArgumentException("机器人实例平台与群组绑定平台不一致");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "机器人实例平台与群组绑定平台不一致");
         }
         String scopeType = request.scopeType().trim().toUpperCase();
         String scopeKey = request.scopeKey().trim();
@@ -402,7 +416,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
             .orElseThrow(() -> new DataNotFoundException("群组成员不存在"));
         String role = request.memberRole().trim().toUpperCase();
         if (!role.equals("OWNER") && !role.equals("ADMIN") && !role.equals("MEMBER")) {
-            throw new IllegalArgumentException("群组成员角色不合法");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "群组成员角色不合法");
         }
         member.setDisplayName(trimToNull(request.displayName()));
         member.setMemberRole(role);

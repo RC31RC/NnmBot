@@ -13,6 +13,7 @@ import java.util.List;
 public class WarframeCommunityProperties {
     private int maxBytes = 4 * 1024 * 1024;
     private int maxRecords = 20_000;
+    private int maxValidationIssues = 100;
     private Duration previewTtl = Duration.ofMinutes(30);
     private Duration connectTimeout = Duration.ofSeconds(5);
     private Duration readTimeout = Duration.ofSeconds(20);
@@ -24,10 +25,10 @@ public class WarframeCommunityProperties {
      */
     @PostConstruct
     public void validate() {
-        if (maxBytes < 1 || maxBytes > 16 * 1024 * 1024 || maxRecords < 1 || maxRecords > 50_000 || invalid(previewTtl)
-            || invalid(connectTimeout) || invalid(readTimeout) || allowedHosts == null
-            || allowedHosts.stream().anyMatch(host -> host == null || !host.matches("[a-zA-Z0-9.-]+")
-                || host.startsWith(".") || host.endsWith("."))) {
+        if (maxBytes < 1 || maxBytes > 16 * 1024 * 1024 || maxRecords < 1 || maxRecords > 50_000
+            || maxValidationIssues < 1 || maxValidationIssues > 1000 || invalid(previewTtl) || invalid(connectTimeout)
+            || invalid(readTimeout) || allowedHosts == null || allowedHosts.stream().anyMatch(host -> host == null
+                || !host.matches("[a-zA-Z0-9.-]+") || host.startsWith(".") || host.endsWith("."))) {
             throw new IllegalArgumentException("Invalid nnm.warframe.community import limits or host policy");
         }
     }

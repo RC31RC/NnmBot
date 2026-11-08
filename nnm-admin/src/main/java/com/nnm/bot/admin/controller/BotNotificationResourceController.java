@@ -16,8 +16,6 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,7 +40,7 @@ public class BotNotificationResourceController {
         }
     }
 
-    @GetMapping("/{id}")
+    @PostMapping("/{id}")
     @SaCheckPermission("bot:notification:preview")
     public ResponseEntity<InputStreamResource> image(@PathVariable UUID id) throws IOException {
         long owner = StpUtil.getLoginIdAsLong();
@@ -52,7 +50,7 @@ public class BotNotificationResourceController {
             .header("X-Content-Type-Options", "nosniff").body(new InputStreamResource(resources.openOwned(owner, id)));
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @SaCheckPermission("bot:notification:upload")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         resources.deleteOwned(StpUtil.getLoginIdAsLong(), id);

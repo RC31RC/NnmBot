@@ -29,6 +29,8 @@ import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.admin.repository.system.SysUserIdentityRepository;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,13 +77,13 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
         BotChannelInstance instance = instanceRepository.findById(request.botInstanceId())
             .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
         if (instance.getPlatform() != request.platform()) {
-            throw new IllegalArgumentException("机器人实例平台与作用域平台不一致");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "机器人实例平台与作用域平台不一致");
         }
         String scopeType = request.scopeType().trim().toUpperCase();
         String scopeKey = request.scopeKey().trim();
         if (scopeRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(request.platform().name(), scopeType,
             scopeKey, instance.getId()).isPresent()) {
-            throw new IllegalArgumentException("该机器人已经配置了相同的群组作用域");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "该机器人已经配置了相同的群组作用域");
         }
         BotScope scope = new BotScope();
         scope.setPlatform(request.platform().name());
@@ -112,6 +114,8 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
         if (!scopeRepository.existsById(id)) {
             throw new DataNotFoundException("群组作用域不存在");
         }
+        memberRepository.deleteAllByScopeId(id);
+        memberRepository.flush();
         scopeRepository.deleteById(id);
     }
 
@@ -132,7 +136,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
             .orElseThrow(() -> new DataNotFoundException("群组成员不存在"));
         String role = request.memberRole().trim().toUpperCase();
         if (!role.equals("OWNER") && !role.equals("ADMIN") && !role.equals("MEMBER")) {
-            throw new IllegalArgumentException("群组成员角色不合法");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "群组成员角色不合法");
         }
         member.setMemberRole(role);
         member.setEnabled(request.enabled());

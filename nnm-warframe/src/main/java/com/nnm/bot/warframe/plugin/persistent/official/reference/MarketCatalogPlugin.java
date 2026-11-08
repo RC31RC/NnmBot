@@ -5,8 +5,7 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 
-@BotPluginCommand(code = WarframeCommandCodes.MARKET_CATALOG, matchType = MatchType.PREFIX, name = "历史 Market 商品",
-    gameCode = "warframe", order = 113)
+@BotPluginCommand(code = WarframeCommandCodes.MARKET_CATALOG, matchType = MatchType.PREFIX)
 public final class MarketCatalogPlugin extends AbstractDefinitionPlugin {
     /**
      * 取得当前独立数据文件的领域标识。

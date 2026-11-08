@@ -1,12 +1,4 @@
--- 已有本地数据库手工执行；新建数据库直接使用 init.sql，不重复执行本文件。
--- 保留 HTML 模板，补充 Markdown 展示与显式纯文本降级内容。
-ALTER TABLE nnmbot.bot_command_template ADD COLUMN markdown_content text;
-ALTER TABLE nnmbot.bot_command_template ADD COLUMN plain_text_content text;
-COMMENT ON COLUMN nnmbot.bot_command_template.markdown_content IS 'Markdown 展示模板，只允许白名单字段和列表插值';
-COMMENT ON COLUMN nnmbot.bot_command_template.plain_text_content IS 'Markdown 不可用时的显式纯文本模板';
--- 参数绑定仅引用命令声明的上下文字段，不执行自由表达式。
-ALTER TABLE nnmbot.bot_command_group_member ADD COLUMN parameter_bindings jsonb DEFAULT '{}'::jsonb NOT NULL;
-COMMENT ON COLUMN nnmbot.bot_command_group_member.parameter_bindings IS '目标参数名到来源命令白名单上下文字段的映射';
+-- 仅供临时数据库回归测试：从初始化基线移除通知表后重建，不在已有数据库自动执行。
 -- 通知先持久化再认领；提交结果未知的任务禁止自动重放平台副作用。
 CREATE TABLE nnmbot.bot_notification_job (
     id uuid PRIMARY KEY,

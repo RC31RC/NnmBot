@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.cache.watch;
 
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeWatchErrorCode;
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -108,7 +110,7 @@ public class WarframeSubscriptionEventMemory {
         read(right, now).forEach((key, expiry) -> values.merge(key, expiry, Math::max));
         if (values.size() > properties.getMaxRememberedMatches()) {
             // 不截断合并后的活跃记忆，否则合并本身会重新触发已推送通知。
-            throw new IllegalStateException("Merged subscription event memory exceeds configured capacity");
+            throw new SystemException(WarframeWatchErrorCode.MATCH_MEMORY_CAPACITY, "合并订阅事件记忆超过配置容量");
         }
         return write(values);
     }
@@ -139,11 +141,11 @@ public class WarframeSubscriptionEventMemory {
             Map<String, Long> values = objectMapper.readValue(json, new TypeReference<>() {});
             if (values == null || values.entrySet().stream()
                 .anyMatch(entry -> !entry.getKey().matches("[a-f0-9]{64}") || entry.getValue() == null)) {
-                throw new IllegalStateException("Invalid subscription event memory");
+                throw new SystemException(WarframeWatchErrorCode.MATCH_MEMORY_INVALID, "订阅事件记忆内容不合法");
             }
             return values;
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Cannot read subscription event memory", exception);
+            throw new SystemException(WarframeWatchErrorCode.MATCH_MEMORY_INVALID, "读取订阅事件记忆失败", exception);
         }
     }
 
@@ -157,7 +159,7 @@ public class WarframeSubscriptionEventMemory {
         try {
             return objectMapper.writeValueAsString(values);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Cannot serialize subscription event memory", exception);
+            throw new SystemException(WarframeWatchErrorCode.MATCH_MEMORY_INVALID, "写入订阅事件记忆失败", exception);
         }
     }
 

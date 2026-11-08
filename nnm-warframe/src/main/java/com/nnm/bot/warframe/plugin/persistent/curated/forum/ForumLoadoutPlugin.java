@@ -7,10 +7,10 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
 import com.nnm.bot.warframe.persistent.curated.config.forum.ForumProperties;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.forum.ForumArticleVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.forum.ForumLoadoutCommandDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.forum.ForumArticleLinkVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.query.forum.ForumArticleSearchQuery;
 import com.nnm.bot.warframe.persistent.curated.service.forum.ForumArticleService;
@@ -22,19 +22,20 @@ import java.util.Locale;
 /**
  * 查询管理端维护的配装文章，只返回文章地址，不把正文塞进机器人消息。
  */
-@BotPluginCommand(code = WarframeCommandCodes.FORUM_LOADOUT, matchType = MatchType.PREFIX, name = "wf配装",
-    gameCode = "warframe", order = 21)
+@BotPluginCommand(code = WarframeCommandCodes.FORUM_LOADOUT, matchType = MatchType.PREFIX)
 // wf_forum_article：按标题、分类和标签检索文章 URL；正文只保留在文章页面，不作为机器人数据返回。
-public class ForumLoadoutPlugin extends BotPlugin<Void> {
-
+public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> {
     /**
-     * 将业务数据转换为命令或页面所需的展示字段。
+     * 取得已匹配的命令参数，供业务命令解析。
      *
-     * @return 当前命令或页面需要的展示字段。
+     * @param invocation 当前命令调用
+     * @param prepared 无额外准备输入
+     * @return 已规范化的命令参数
      */
     @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("warframe.forum.articles"));
+    protected ForumLoadoutCommandDTO parse(CommandInvocation invocation, Void prepared) {
+        String input = StrUtil.trim(invocation.arguments());
+        return StrUtil.isBlank(input) ? null : new ForumLoadoutCommandDTO(input, parseQuery(input));
     }
 
     @Resource
@@ -51,16 +52,15 @@ public class ForumLoadoutPlugin extends BotPlugin<Void> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        if (StrUtil.isBlank(invocation.arguments())) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, ForumLoadoutCommandDTO parsed) {
+        if (parsed == null) {
             return CommandResult.text("wf配装命令格式：wf配装 关键词");
         }
-        ForumArticleSearchQuery query = parseQuery(invocation.arguments());
-        List<ForumArticleVO> articles = articleService.searchEnabled(query);
+        List<ForumArticleVO> articles = articleService.searchEnabled(parsed.query());
         if (CollUtil.isEmpty(articles)) {
-            return CommandResult.text("没有找到匹配的 Warframe 配装文章：" + invocation.arguments());
+            return CommandResult.text("没有找到匹配的 Warframe 配装文章：" + parsed.input());
         }
-        return CommandResult.view("warframe.forum.articles", "找到 " + articles.size() + " 篇相关配装文章",
+        return CommandResult.html("找到 " + articles.size() + " 篇相关配装文章",
             articles.stream()
                 .map(article -> new ForumArticleLinkVO(article.title(),
                     StrUtil.blankToDefault(article.category(), "未分类"), forumProperties.publicArticleUrl(article.id())))

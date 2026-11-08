@@ -8,9 +8,8 @@ import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 
 /** 通用术语可在管理端刷新；独立信条库存尚未接入，本命令不绕过审核更新。 */
-@BotPluginCommand(code = WarframeCommandCodes.UPDATE_SISTER, matchType = MatchType.EXACT, name = "更新信条",
-    gameCode = "warframe", order = 60)
-public final class UpdateSisterPlugin extends BotPlugin<Void> {
+@BotPluginCommand(code = WarframeCommandCodes.UPDATE_SISTER, matchType = MatchType.EXACT)
+public final class UpdateSisterPlugin extends BotPlugin<Void, Void> {
 
     /**
      * 根据命令参数调用业务服务并组装命令结果。
@@ -19,7 +18,7 @@ public final class UpdateSisterPlugin extends BotPlugin<Void> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, Void parsed) {
         return CommandResult
             .text("通用术语可在管理端刷新，但尚未接入独立信条库存数据源。" + "旧 term.json 请在管理端指定 DataSource 来源上传，" + "完成预览和差异选择后人工合并；此命令不执行更新。");
     }

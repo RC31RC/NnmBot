@@ -1,7 +1,7 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
-import com.nnm.bot.core.plugin.model.ReplyBlock.DataView;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.plugin.model.ReplyBlock.File;
 import com.nnm.bot.core.plugin.model.ReplyBlock.Image;
 import com.nnm.bot.core.plugin.model.ReplyBlock.Markdown;
@@ -10,7 +10,6 @@ import com.nnm.bot.core.config.ReplyProperties;
 import com.nnm.bot.core.constant.BotChannelCapability;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.constant.BotMessageConstants.PartKind;
-import com.nnm.bot.core.message.render.BotImageRenderer;
 import com.nnm.bot.core.message.sender.BotMessageSenderRouter;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
 import com.nnm.bot.core.plugin.model.CommandResult;
@@ -23,15 +22,14 @@ import com.nnm.bot.core.plugin.model.ReplyAction;
 import com.nnm.bot.core.plugin.model.ReplyBlock;
 import com.nnm.bot.core.plugin.model.ReplyMessage;
 import com.nnm.bot.core.plugin.model.ResponsePlan;
-import com.nnm.bot.core.constant.CommandPresentationConstants.ViewFormat;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import com.nnm.bot.core.message.model.BotMarkdownMessage;
 
 /** 候选评估只读元数据；所有渲染和上传都在选定实例后进行。 */
 @Component
@@ -40,18 +38,26 @@ public class ReplyPlanner {
     private BotMessageSenderRouter senders;
     @Resource
     private ReplyProperties limits;
-    @Resource
-    private ObjectProvider<BotImageRenderer> imageRendererProvider;
 
     public Optional<List<ResponsePlan>> plan(BotMessageContext context, CommandExecutionConfiguration configuration,
         CommandResult result) {
-        return plan(target(context, configuration.mentionInvoker()),
-            configuration.presentation().resolve(context.platform(), context.scope()), configuration.templates(),
-            result.replies());
+        ReplyTarget target = target(context, configuration.mentionInvoker());
+        PresentationPolicy presentation = PresentationPolicy.defaults();
+        // 在文字降级移除按钮元数据前校验总量，防止未获准账号绕过回复预算。
+        int buttonCount = result.blocks().stream().filter(Markdown.class::isInstance).map(Markdown.class::cast)
+            .mapToInt(block -> block.message().buttons().size()).sum();
+        if (buttonCount > limits.getMaxActions())
+            throw new IllegalArgumentException("Markdown action limit exceeded");
+        List<ReplyBlock> blocks = adaptMarkdownButtons(target, result.blocks(), presentation.interaction());
+        if (blocks.stream().anyMatch(ReplyBlock.HtmlData.class::isInstance))
+            throw new SystemException(CommandErrorCode.DELIVERY_PLAN_INVALID,
+                "HTML data must be rendered before reply planning");
+        ReplyMessage reply = new ReplyMessage(blocks, List.of(), CompositionPolicy.REQUIRE_SINGLE);
+        return plan(target, presentation, List.of(reply));
     }
 
     public Optional<List<ResponsePlan>> plan(ReplyTarget target, PresentationPolicy presentation,
-        List<CommandTemplate> templates, List<ReplyMessage> replies) {
+        List<ReplyMessage> replies) {
         if (replies.size() > limits.getMaxLogicalMessages()
             || replies.stream().mapToInt(reply -> reply.blocks().size()).sum() > limits.getMaxBlocks()) {
             throw new IllegalArgumentException("Reply message/block limit exceeded");
@@ -61,12 +67,12 @@ public class ReplyPlanner {
         }
         List<List<Candidate>> choices = new ArrayList<>();
         for (int index = 0; index < replies.size(); index++) {
-            List<Candidate> candidates = candidates(target, presentation, templates, replies.get(index), index);
+            List<Candidate> candidates = candidates(target, presentation, replies.get(index), index);
             if (candidates.isEmpty())
                 return Optional.empty();
             choices.add(candidates);
         }
-        // 每条消息最多只有格式与 Markdown 表示的有限组合；后缀最小条数避免贪心选择误判整组不可发。
+        // 后缀最小条数避免贪心选择误判整组不可发。
         int[] minimumRemaining = new int[choices.size() + 1];
         for (int index = choices.size() - 1; index >= 0; index--) {
             minimumRemaining[index] = minimumRemaining[index + 1]
@@ -92,53 +98,39 @@ public class ReplyPlanner {
         return Optional.of(List.copyOf(plans));
     }
 
-    private List<Candidate> candidates(ReplyTarget target, PresentationPolicy presentation,
-        List<CommandTemplate> templates, ReplyMessage reply, int index) {
+    private List<Candidate> candidates(ReplyTarget target, PresentationPolicy presentation, ReplyMessage reply,
+        int index) {
         if (reply.actions().size() > limits.getMaxActions())
             throw new IllegalArgumentException("Reply action limit exceeded");
+        int markdownButtons = reply.blocks().stream().filter(Markdown.class::isInstance).map(Markdown.class::cast)
+            .mapToInt(block -> block.message().buttons().size()).sum();
+        if (markdownButtons > limits.getMaxActions())
+            throw new IllegalArgumentException("Markdown action limit exceeded");
         InteractionPolicy interaction = presentation.interaction();
         if (interaction == InteractionPolicy.DISABLED && reply.actions().stream().anyMatch(ReplyAction::required))
             return List.of();
-        CompositionPolicy composition = reply.composition() == null ? presentation.composition() : reply.composition();
-        List<ViewFormat> formats = reply.blocks().stream().anyMatch(ReplyBlock.DataView.class::isInstance)
-            ? presentation.viewOrder().stream()
-                .filter(format -> format != ViewFormat.SUMMARY_ONLY
-                    || reply.blocks().stream().filter(ReplyBlock.DataView.class::isInstance)
-                        .map(ReplyBlock.DataView.class::cast).allMatch(view -> view.summary() != null))
-                .toList()
-            : List.of(ViewFormat.TEXT);
+        CompositionPolicy composition =
+            reply.composition() == null ? CompositionPolicy.REQUIRE_SINGLE : reply.composition();
         List<Candidate> candidates = new ArrayList<>();
-        for (ViewFormat format : formats) {
-            if (format == ViewFormat.IMAGE && (reply.blocks().stream().filter(ReplyBlock.DataView.class::isInstance)
-                .map(ReplyBlock.DataView.class::cast)
-                .anyMatch(view -> templates.stream().noneMatch(template -> template.viewKey().equals(view.viewKey())
-                    && template.html() != null && !template.html().isBlank()))
-                || imageRendererProvider.getIfAvailable() == null))
-                continue;
-            if (format == ViewFormat.MARKDOWN && reply.blocks().stream().filter(ReplyBlock.DataView.class::isInstance)
-                .map(ReplyBlock.DataView.class::cast)
-                .anyMatch(view -> templates.stream().noneMatch(template -> template.viewKey().equals(view.viewKey())
-                    && template.markdown() != null && !template.markdown().isBlank())))
-                continue;
-            // 原生 Markdown 单独可发，不代表它与相邻正文可以同条；只尝试明确的文字表示。
-            for (boolean plainMarkdown : List.of(false, true)) {
-                for (List<PlannedReplyAction> actions : actionChoices(target, reply.actions(), interaction,
-                    reply.blocks(), format)) {
-                    List<ReplyBlock> blocks = blocks(target, reply, actions, plainMarkdown);
-                    if (blocks == null
-                        || !blocks.stream().allMatch(block -> supported(target, kind(block, format, plainMarkdown))))
-                        continue;
-                    ResponsePlan plan = new ResponsePlan(index, 0, blocks, actions, target.mentionUserId(), composition,
-                        format, plainMarkdown);
-                    if (actions.stream().anyMatch(action -> action.presentation() == Presentation.NATIVE)
-                        && (plainMarkdown || !single(target, plan)))
-                        continue;
-                    Candidate candidate = new Candidate(plan, partition(target, plan).size());
-                    if (composition == CompositionPolicy.REQUIRE_SINGLE && candidate.messages() != 1)
-                        continue;
-                    if (!candidates.contains(candidate))
-                        candidates.add(candidate);
-                }
+        boolean hasMarkdown = reply.blocks().stream().anyMatch(Markdown.class::isInstance);
+        for (boolean plainMarkdown : hasMarkdown ? List.of(false, true) : List.of(false)) {
+            for (List<PlannedReplyAction> actions : actionChoices(target, reply.actions(), interaction, reply.blocks(),
+                plainMarkdown)) {
+                List<ReplyBlock> blocks = blocks(reply, actions, plainMarkdown);
+                List<PartKind> kinds = kinds(target, blocks, actions, plainMarkdown);
+                if (!kinds.stream().allMatch(kind -> supported(target, kind))
+                    || !plainMarkdown && !keyboardFits(blocks, actions))
+                    continue;
+                ResponsePlan plan =
+                    new ResponsePlan(index, 0, blocks, actions, target.mentionUserId(), composition, plainMarkdown);
+                if (actions.stream().anyMatch(action -> action.presentation() == Presentation.NATIVE)
+                    && !single(target, plan))
+                    continue;
+                Candidate candidate = new Candidate(plan, partition(target, plan).size());
+                if (composition == CompositionPolicy.REQUIRE_SINGLE && candidate.messages() != 1)
+                    continue;
+                if (!candidates.contains(candidate))
+                    candidates.add(candidate);
             }
         }
         // 稳定排序保留同等组合下的展示顺序；PREFER_SINGLE 优先完整单条，其次才按格式拆分。
@@ -158,28 +150,32 @@ public class ReplyPlanner {
     public List<ResponsePlan> compile(ReplyTarget target, List<ResponsePlan> plans) {
         List<ResponsePlan> compiled = new ArrayList<>();
         for (ResponsePlan plan : plans) {
-            if (plan.blocks().stream().anyMatch(ReplyBlock.DataView.class::isInstance)) {
-                throw new IllegalStateException("Data views must be prepared before protocol compilation");
+            if (plan.blocks().stream().anyMatch(ReplyBlock.HtmlData.class::isInstance)) {
+                throw new SystemException(CommandErrorCode.DELIVERY_PLAN_INVALID,
+                    "HTML data must be rendered before protocol compilation");
             }
-            if (!plan.blocks().stream()
-                .allMatch(block -> supported(target, kind(block, plan.viewFormat(), plan.plainMarkdown())))) {
-                throw new IllegalStateException("Selected conversation no longer supports required content");
+            if (!kinds(target, plan.blocks(), plan.actions(), plan.plainMarkdown()).stream()
+                .allMatch(kind -> supported(target, kind))) {
+                throw new SystemException(CommandErrorCode.REPLY_CAPABILITY_CHANGED,
+                    "Selected conversation no longer supports required content");
             }
             if (plan.actions().stream().anyMatch(action -> action.presentation() == Presentation.NATIVE)
                 && !single(target, plan)) {
-                throw new IllegalStateException("Selected native keyboard composition is no longer supported");
+                throw new SystemException(CommandErrorCode.REPLY_CAPABILITY_CHANGED,
+                    "Selected native keyboard composition is no longer supported");
             }
             if (single(target, plan)) {
                 compiled.add(plan);
             } else {
                 if (plan.composition() == CompositionPolicy.REQUIRE_SINGLE) {
-                    throw new IllegalStateException("Prepared content cannot be sent as one platform message");
+                    throw new SystemException(CommandErrorCode.DELIVERY_PLAN_INVALID,
+                        "Prepared content cannot be sent as one platform message");
                 }
                 List<List<ReplyBlock>> parts = partition(target, plan);
                 for (int i = 0; i < parts.size(); i++) {
                     compiled.add(new ResponsePlan(plan.logicalMessage(), i, parts.get(i),
                         i == parts.size() - 1 ? plan.actions() : List.of(), i == 0 ? plan.mentionUserId() : null,
-                        plan.composition(), plan.viewFormat(), plan.plainMarkdown()));
+                        plan.composition(), plan.plainMarkdown()));
                 }
             }
         }
@@ -202,19 +198,16 @@ public class ReplyPlanner {
         if (rejected.plainMarkdown() || presentation.interaction() == InteractionPolicy.DISABLED) {
             return Optional.empty();
         }
-        if (rejected.viewFormat() != ViewFormat.TEXT
-            && !presentation.allowsFallback(rejected.viewFormat(), ViewFormat.TEXT)) {
-            return Optional.empty();
-        }
-
         boolean hasMarkdown = false;
         List<ReplyBlock> blocks = new ArrayList<>();
         for (ReplyBlock block : rejected.blocks()) {
             if (block instanceof ReplyBlock.Text) {
                 appendText(blocks, ((ReplyBlock.Text)block).content());
-            } else if (block instanceof Markdown markdown && markdown.plainText() != null) {
+            } else if (block instanceof Markdown markdown) {
                 hasMarkdown = true;
-                appendText(blocks, markdown.plainText());
+                appendText(blocks, markdown.plainTextContent());
+                markdown.message().buttons()
+                    .forEach(button -> appendText(blocks, button.label() + "：" + button.value()));
             } else {
                 return Optional.empty();
             }
@@ -236,7 +229,7 @@ public class ReplyPlanner {
             return Optional.empty();
         }
         ResponsePlan fallback = new ResponsePlan(rejected.logicalMessage(), rejected.part(), blocks, actions,
-            rejected.mentionUserId(), rejected.composition(), ViewFormat.TEXT, true);
+            rejected.mentionUserId(), rejected.composition(), true);
         try {
             validateText(List.of(fallback));
         } catch (IllegalArgumentException overLimit) {
@@ -257,11 +250,12 @@ public class ReplyPlanner {
         if (!markdownCombinable(plan.blocks()))
             return false;
         if (plan.actions().stream().anyMatch(action -> action.presentation() == Presentation.NATIVE)) {
-            List<PartKind> kinds = new ArrayList<>(kinds(plan.blocks(), plan.viewFormat(), plan.plainMarkdown()));
-            kinds.add(PartKind.KEYBOARD);
+            List<PartKind> kinds = new ArrayList<>(kinds(target, plan.blocks(), plan.actions(), plan.plainMarkdown()));
+            if (!kinds.contains(PartKind.KEYBOARD))
+                kinds.add(PartKind.KEYBOARD);
             return target.supports(BotChannelCapability.NATIVE_KEYBOARD) && target.supportsComposition(kinds);
         }
-        return single(target, plan.blocks(), plan.viewFormat(), plan.plainMarkdown());
+        return single(target, plan.blocks(), plan.actions(), plan.plainMarkdown());
     }
 
     private boolean markdownCombinable(List<ReplyBlock> blocks) {
@@ -269,10 +263,11 @@ public class ReplyPlanner {
             .noneMatch(block -> block instanceof Markdown markdown && markdown.message().customTemplateId() != null);
     }
 
-    private boolean single(ReplyTarget target, List<ReplyBlock> blocks, ViewFormat format, boolean plainMarkdown) {
+    private boolean single(ReplyTarget target, List<ReplyBlock> blocks, List<PlannedReplyAction> actions,
+        boolean plainMarkdown) {
         if (!markdownCombinable(blocks))
             return false;
-        List<PartKind> kinds = kinds(blocks, format, plainMarkdown);
+        List<PartKind> kinds = kinds(target, blocks, actions, plainMarkdown);
         if (kinds.size() == 1)
             return true;
         return target.supportsComposition(kinds);
@@ -286,7 +281,7 @@ public class ReplyPlanner {
         for (ReplyBlock block : plan.blocks()) {
             List<ReplyBlock> combined = new ArrayList<>(current);
             combined.add(block);
-            if (!current.isEmpty() && !single(target, combined, plan.viewFormat(), plan.plainMarkdown())) {
+            if (!current.isEmpty() && !single(target, combined, List.of(), plan.plainMarkdown())) {
                 parts.add(mergeText(current));
                 current.clear();
             }
@@ -297,15 +292,12 @@ public class ReplyPlanner {
         return List.copyOf(parts);
     }
 
-    private List<ReplyBlock> blocks(ReplyTarget target, ReplyMessage reply, List<PlannedReplyAction> actions,
-        boolean plainMarkdown) {
+    private List<ReplyBlock> blocks(ReplyMessage reply, List<PlannedReplyAction> actions, boolean plainMarkdown) {
         List<ReplyBlock> blocks = new ArrayList<>();
         for (ReplyBlock block : reply.blocks()) {
-            if (block instanceof Markdown markdown
-                && (plainMarkdown || !target.supports(BotChannelCapability.MARKDOWN_MESSAGE))) {
-                if (markdown.plainText() == null)
-                    return null;
-                block = new ReplyBlock.Text(markdown.plainText());
+            if (block instanceof Markdown markdown && plainMarkdown) {
+                String text = markdown.plainTextContent();
+                block = new Markdown(BotMarkdownMessage.content(text).withButtons(markdown.message().buttons()), text);
             }
             blocks.add(block);
         }
@@ -316,17 +308,60 @@ public class ReplyPlanner {
         return mergeText(blocks);
     }
 
+    private List<ReplyBlock> adaptMarkdownButtons(ReplyTarget target, List<ReplyBlock> source,
+        InteractionPolicy interaction) {
+        List<ReplyBlock> blocks = new ArrayList<>(source.size());
+        for (ReplyBlock block : source) {
+            if (!(block instanceof Markdown markdown) || markdown.message().buttons().isEmpty()) {
+                blocks.add(block);
+                continue;
+            }
+            if (interaction == InteractionPolicy.DISABLED) {
+                blocks.add(new Markdown(markdown.message().withoutButtons(), markdown.plainText()));
+                continue;
+            }
+            boolean nativeButtons =
+                interaction == InteractionPolicy.PREFER_NATIVE && target.supports(BotChannelCapability.NATIVE_KEYBOARD)
+                    && target.supportsComposition(withKeyboard(kinds(target, source, List.of(), false)))
+                    && keyboardFits(source, List.of());
+            if (nativeButtons) {
+                blocks.add(block);
+                continue;
+            }
+            String actions = markdown.message().buttons().stream().map(button -> button.label() + "：" + button.value())
+                .reduce((left, right) -> left + "\n" + right).orElse("");
+            String content =
+                markdown.message().content() == null ? markdown.plainTextContent() : markdown.message().content();
+            String plainText = markdown.plainTextContent();
+            blocks.add(new Markdown(BotMarkdownMessage.content(content + "\n" + actions), plainText + "\n" + actions));
+        }
+        return List.copyOf(blocks);
+    }
+
+    /** QQ 按块顺延键盘行；规划时先检查整条消息，不能留到上传后才发现超过五行。 */
+    private boolean keyboardFits(List<ReplyBlock> blocks, List<PlannedReplyAction> actions) {
+        int rows = 0;
+        int count = 0;
+        for (ReplyBlock block : blocks) {
+            if (block instanceof Markdown markdown && !markdown.message().buttons().isEmpty()) {
+                rows += markdown.message().buttons().getLast().row() + 1;
+                count += markdown.message().buttons().size();
+            }
+        }
+        int nativeActions =
+            (int)actions.stream().filter(action -> action.presentation() == Presentation.NATIVE).count();
+        return rows + (nativeActions + 1) / 2 <= 5 && count + nativeActions <= 25;
+    }
+
     private List<List<PlannedReplyAction>> actionChoices(ReplyTarget target, List<ReplyAction> actions,
-        InteractionPolicy interaction, List<ReplyBlock> blocks, ViewFormat format) {
+        InteractionPolicy interaction, List<ReplyBlock> blocks, boolean plainMarkdown) {
         Presentation preferred = switch (interaction) {
             case DISABLED -> Presentation.OMITTED_DISABLED;
             case COMMAND_TEXT -> Presentation.COMMAND_TEXT;
-            case PREFER_NATIVE -> target.supports(BotChannelCapability.NATIVE_KEYBOARD) && actions.size() <= 10
-                && blocks.stream().anyMatch(block -> kind(block, format, false) == PartKind.MARKDOWN)
-                && blocks.stream()
-                    .allMatch(block -> kind(block, format, false) == PartKind.MARKDOWN
-                        || kind(block, format, false) == PartKind.TEXT) ? Presentation.NATIVE
-                            : Presentation.TEXT_FALLBACK;
+            case PREFER_NATIVE ->
+                target.supports(BotChannelCapability.NATIVE_KEYBOARD) && actions.size() <= limits.getMaxActions()
+                    && target.supportsComposition(withKeyboard(kinds(target, blocks, List.of(), plainMarkdown)))
+                        ? Presentation.NATIVE : Presentation.TEXT_FALLBACK;
         };
         List<PlannedReplyAction> complete =
             actions.stream().map(action -> new PlannedReplyAction(action, preferred)).toList();
@@ -356,27 +391,39 @@ public class ReplyPlanner {
         return List.copyOf(blocks);
     }
 
-    private List<PartKind> kinds(List<ReplyBlock> blocks, ViewFormat format, boolean plainMarkdown) {
+    private List<PartKind> kinds(ReplyTarget target, List<ReplyBlock> blocks, List<PlannedReplyAction> actions,
+        boolean plainMarkdown) {
         List<PartKind> kinds = new ArrayList<>();
         for (ReplyBlock block : blocks) {
-            PartKind kind = kind(block, format, plainMarkdown);
+            PartKind kind = kind(block, plainMarkdown);
             if (kind != PartKind.TEXT || kinds.isEmpty() || kinds.getLast() != PartKind.TEXT)
                 kinds.add(kind);
+            if (!plainMarkdown && target.supports(BotChannelCapability.NATIVE_KEYBOARD)
+                && block instanceof Markdown markdown && !markdown.message().buttons().isEmpty()
+                && (kinds.isEmpty() || kinds.getLast() != PartKind.KEYBOARD))
+                kinds.add(PartKind.KEYBOARD);
         }
+        if (actions.stream().anyMatch(action -> action.presentation() == Presentation.NATIVE)
+            && !kinds.contains(PartKind.KEYBOARD))
+            kinds.add(PartKind.KEYBOARD);
         return kinds;
     }
 
-    private PartKind kind(ReplyBlock block, ViewFormat format, boolean plainMarkdown) {
+    private List<PartKind> withKeyboard(List<PartKind> kinds) {
+        List<PartKind> result = new ArrayList<>(kinds);
+        if (!result.contains(PartKind.KEYBOARD))
+            result.add(PartKind.KEYBOARD);
+        return result;
+    }
+
+    private PartKind kind(ReplyBlock block, boolean plainMarkdown) {
         return switch (block) {
             case Text ignored -> PartKind.TEXT;
-            case DataView<?> ignored -> switch (format) {
-                case IMAGE -> PartKind.IMAGE;
-                case MARKDOWN -> plainMarkdown ? PartKind.TEXT : PartKind.MARKDOWN;
-                default -> PartKind.TEXT;
-            };
+            case ReplyBlock.HtmlData<?> ignored ->
+                throw new SystemException(CommandErrorCode.DELIVERY_PLAN_INVALID, "Unrendered HTML data");
             case Image ignored -> PartKind.IMAGE;
             case File ignored -> PartKind.FILE;
-            case Markdown ignored -> PartKind.MARKDOWN;
+            case Markdown ignored -> plainMarkdown ? PartKind.TEXT : PartKind.MARKDOWN;
         };
     }
 
@@ -420,10 +467,8 @@ public class ReplyPlanner {
             for (ReplyBlock block : plan.blocks()) {
                 chars += switch (block) {
                     case Text text -> text.content().length();
-                    case Markdown markdown ->
-                        markdown.message().content() == null ? 0 : markdown.message().content().length();
-                    case DataView<?> view -> plan.viewFormat() == ViewFormat.SUMMARY_ONLY && view.summary() != null
-                        ? view.summary().length() : 0;
+                    case Markdown markdown -> markdown.plainTextContent().length() + markdown.message().buttons()
+                        .stream().mapToInt(button -> button.label().length() + button.value().length()).sum();
                     default -> 0;
                 };
             }

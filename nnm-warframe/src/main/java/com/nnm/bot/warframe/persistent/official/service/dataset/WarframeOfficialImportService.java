@@ -6,7 +6,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOffici
 import com.nnm.bot.common.task.TaskProgressReporter;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRecordSelectionDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;
 import java.util.List;
 
 public interface WarframeOfficialImportService {
@@ -45,9 +45,9 @@ public interface WarframeOfficialImportService {
     WarframeOfficialPreviewDTO preview(String id);
 
     /**
-     * 列出当前仍可审核的官方数据预览。
+     * 列出待审核、采纳中及过期失败的官方数据预览与审计记录。
      *
-     * @return 按创建时间倒序排列的待审核预览。
+     * @return 按创建时间倒序排列的预览及失败审计记录。
      */
     List<WarframeOfficialPreviewDTO> pendingPreviews();
 
@@ -62,11 +62,13 @@ public interface WarframeOfficialImportService {
      * 对比当前数据并生成待采纳变更。
      *
      * @param id 目标记录的本地主键或协议标识。
+     * @param path 待审核的官方 JSON 文件路径。
      * @param current 从一开始的当前页码。
      * @param size 当前操作允许的数据数量。
      * @return 包含当前页记录及总数的分页结果。
      */
-    PageResult<WarframeOfficialRecordChangeDTO> changes(String id, int current, int size, String changeType);
+    PageResult<WarframeOfficialRecordChangeDTO> changes(String id, String path, int current, int size,
+        String changeType);
 
     /**
      * 按版本快照和稳定业务键读取单条记录原文。
@@ -74,15 +76,8 @@ public interface WarframeOfficialImportService {
      * @param id 审核批次标识。
      * @param path 文件相对路径。
      * @param recordKey 记录稳定业务键。
-     * @return 两个版本的原始记录。
+     * @return 当前待审核候选原文。
      */
     WarframeOfficialRawRecordDTO record(String id, String path, String recordKey);
 
-    /**
-     * 采纳已经确认的业务变更。
-     *
-     * @param id 目标记录的本地主键或协议标识。
-     * @return 游戏资料数据文件预览对象。
-     */
-    WarframeOfficialPreviewDTO apply(String id, List<WarframeOfficialRecordSelectionDTO> changes);
 }

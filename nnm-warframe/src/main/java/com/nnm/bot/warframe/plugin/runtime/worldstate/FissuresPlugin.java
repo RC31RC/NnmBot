@@ -5,8 +5,7 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 普通虚空裂隙命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.FISSURES, name = "裂隙", gameCode = "warframe", order = 48,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.FISSURES)
 // 无 WorldStateDTO 原始表；读取官方快照的 activeMissions 裂隙，静态引用表用途见 AbstractWorldStateCommandPlugin。
 public class FissuresPlugin extends AbstractWorldStateCommandPlugin {
 

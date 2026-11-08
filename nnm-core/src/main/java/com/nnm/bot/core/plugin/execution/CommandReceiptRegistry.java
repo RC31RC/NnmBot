@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.execution;
 
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.config.BotCacheProperties;
 import com.nnm.bot.core.config.CommandRoutingProperties;
 import com.nnm.bot.core.message.model.BotMessageContext;
@@ -19,6 +21,8 @@ import org.springframework.stereotype.Component;
 /** 同一连接分组的窗口、原生重放和执行认领全部保留在当前 JVM，不经过 Redis。 */
 @Component
 public class CommandReceiptRegistry implements AutoCloseable {
+    private static final int MAX_PENDING_ROUNDS_PER_FINGERPRINT = 64;
+    private static final int MAX_RECEIPTS_PER_ROUND = 64;
     private final ReentrantLock receiptsLock = new ReentrantLock();
 
     @Resource
@@ -75,8 +79,8 @@ public class CommandReceiptRegistry implements AutoCloseable {
                 }
             }
             if (selected == null) {
-                if (live.size() >= 64)
-                    throw new IllegalStateException("同一命令指纹的在途轮次超过容量");
+                if (live.size() >= MAX_PENDING_ROUNDS_PER_FINGERPRINT)
+                    throw new SystemException(CommandErrorCode.RECEIPT_CAPACITY_EXCEEDED, "同一命令指纹的在途轮次超过容量");
                 selected = UUID.randomUUID().toString();
                 live.add(selected);
             }
@@ -97,8 +101,8 @@ public class CommandReceiptRegistry implements AutoCloseable {
                 batches.put(id, batch);
             }
             if (batch.receipts.stream().noneMatch(receipt -> sameReceipt(receipt, context))) {
-                if (batch.receipts.size() >= 64)
-                    throw new IllegalStateException("同一命令轮次的回执超过容量");
+                if (batch.receipts.size() >= MAX_RECEIPTS_PER_ROUND)
+                    throw new SystemException(CommandErrorCode.RECEIPT_CAPACITY_EXCEEDED, "同一命令轮次的回执超过容量");
                 batch.receipts.add(context);
                 batch.firstReceivedAt = Math.min(batch.firstReceivedAt, context.receivedAt());
                 batch.lastReceivedAt = Math.max(batch.lastReceivedAt, context.receivedAt());

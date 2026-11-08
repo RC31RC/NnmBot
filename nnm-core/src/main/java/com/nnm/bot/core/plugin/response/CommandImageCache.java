@@ -15,6 +15,5 @@ import java.util.Optional;
  */
 public interface CommandImageCache {
 
-    Optional<byte[]> renderIfSupported(RuntimeCommand command, String viewKey, Map<String, Object> data,
-        BotImageRenderer renderer);
+    Optional<byte[]> renderIfSupported(RuntimeCommand command, Map<String, Object> data, BotImageRenderer renderer);
 }

@@ -5,8 +5,7 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 官方活动命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.EVENTS, name = "活动", gameCode = "warframe", order = 64,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.EVENTS)
 // 官方快照 events 段；奖励和节点引用由已采纳 WorldStateDTO 代码簿解析，未命中时保留未知引用。
 public class EventsPlugin extends AbstractWorldStateCommandPlugin {
     /**

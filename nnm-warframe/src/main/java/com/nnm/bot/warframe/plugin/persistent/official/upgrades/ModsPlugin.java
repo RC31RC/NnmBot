@@ -6,9 +6,9 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
+import com.nnm.bot.warframe.persistent.official.pojo.query.upgrades.WarframeUpgradeQuery;
 
-@BotPluginCommand(code = WarframeCommandCodes.MODS, matchType = MatchType.PREFIX, name = "MOD 资料",
-    gameCode = "warframe", order = 68)
+@BotPluginCommand(code = WarframeCommandCodes.MODS, matchType = MatchType.PREFIX)
 // Items Mods / Plus Upgrades、Avionics、Focus -> mod + mod_rank_stat，同文件联查。
 public final class ModsPlugin extends AbstractUpgradePlugin {
     /**
@@ -19,7 +19,7 @@ public final class ModsPlugin extends AbstractUpgradePlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return upgrade(Category.MOD, "MOD 资料", invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeUpgradeQuery parsed) {
+        return upgrade(Category.MOD, "MOD 资料", parsed);
     }
 }

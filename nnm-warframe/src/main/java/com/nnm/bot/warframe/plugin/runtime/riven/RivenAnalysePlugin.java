@@ -12,7 +12,6 @@ import com.nnm.bot.warframe.runtime.pojo.dto.riven.WarframeRivenInputDTO;
 import com.nnm.bot.warframe.runtime.constant.WarframeRivenErrorCode;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenAnalysisVO;
 import com.nnm.bot.warframe.runtime.service.riven.WarframeRivenAnalysisService;
@@ -23,19 +22,8 @@ import java.util.Locale;
 import java.util.Optional;
 
 /** 分析紫卡截图或文本。 */
-@BotPluginCommand(code = WarframeCommandCodes.RIVEN_ANALYSE, matchType = MatchType.PREFIX, name = "紫卡分析",
-    gameCode = "warframe", order = 73)
-public final class RivenAnalysePlugin extends BotPlugin<WarframeRivenInputDTO> {
-
-    /**
-     * 将业务数据转换为命令或页面所需的展示字段。
-     *
-     * @return 当前命令或页面需要的展示字段。
-     */
-    @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("warframe.riven-analysis"));
-    }
+@BotPluginCommand(code = WarframeCommandCodes.RIVEN_ANALYSE, matchType = MatchType.PREFIX)
+public final class RivenAnalysePlugin extends BotPlugin<WarframeRivenInputDTO, WarframeRivenInputDTO> {
 
     /** 平台图片/引用读取由 core 适配，不依赖具体 SDK。 */
     @Resource
@@ -70,17 +58,30 @@ public final class RivenAnalysePlugin extends BotPlugin<WarframeRivenInputDTO> {
     }
 
     /**
+     * 将事务外完成的图片识别或文字准备结果转为本次的类型化输入。
+     *
+     * @param invocation 当前调用上下文。
+     * @param prepared 已准备的文字或识别结果。
+     * @return 用于处理业务的输入。
+     */
+    @Override
+    protected WarframeRivenInputDTO parse(CommandInvocation invocation, WarframeRivenInputDTO prepared) {
+        return prepared;
+    }
+
+    /**
      * 使用已准备的文本在命令事务内分析，不再下载图片或等待 OCR。
      *
      * @param invocation 当前命令参数
-     * @param prepared 已准备且非空的紫卡输入
+     * @param prepared 机器人消息的准备输入；结构化 DTO 调用时为 null
      * @return 紫卡分析展示结果
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, WarframeRivenInputDTO prepared) {
-        WarframeRivenAnalysisVO result = prepared.recognition() == null ? rivenAnalysisService.analyze(prepared.text())
-            : rivenAnalysisService.analyze(prepared.recognition());
-        return CommandResult.view("warframe.riven-analysis", format(result), result);
+    public CommandResult handle(CommandInvocation invocation, WarframeRivenInputDTO prepared,
+        WarframeRivenInputDTO parsed) {
+        WarframeRivenAnalysisVO result = parsed.recognition() == null ? rivenAnalysisService.analyze(parsed.text())
+            : rivenAnalysisService.analyze(parsed.recognition());
+        return CommandResult.html(format(result), result);
     }
 
     /**

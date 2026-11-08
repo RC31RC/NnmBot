@@ -7,10 +7,8 @@ import com.nnm.bot.warframe.persistent.curated.pojo.dto.watch.WarframeSubscripti
 import com.nnm.bot.warframe.persistent.curated.service.watch.WarframeSubscriptionManagementService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,7 +43,7 @@ public class WarframeSubscriptionController {
      * @param request 本次新增、修改或执行操作使用的已接收参数。
      * @return 以统一接口响应包装的本次操作结果。
      */
-    @PutMapping("/{ruleId}")
+    @PostMapping("/{ruleId}/update")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> update(@PathVariable long groupId, @PathVariable long memberId, @PathVariable long ruleId,
         @Valid @RequestBody WarframeSubscriptionUpdateDTO request) {
@@ -61,7 +59,7 @@ public class WarframeSubscriptionController {
      * @param ruleId 规则标识。
      * @return 以统一接口响应包装的本次操作结果。
      */
-    @DeleteMapping("/{ruleId}")
+    @PostMapping("/{ruleId}/delete")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> delete(@PathVariable long groupId, @PathVariable long memberId,
         @PathVariable long ruleId) {

@@ -16,10 +16,8 @@ import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,14 +49,14 @@ public class BotScopeManagementController {
         return ApiResponse.ok(service.create(request));
     }
 
-    @PutMapping("/{id}")
+    @PostMapping("/{id}/update")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> update(@PathVariable long id, @Valid @RequestBody BotScopeUpdateDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @SaCheckPermission("bot:group:delete")
     public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);
@@ -72,7 +70,7 @@ public class BotScopeManagementController {
         return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeMemberVO(service.members(id)));
     }
 
-    @PutMapping("/{scopeId}/members/{memberId}")
+    @PostMapping("/{scopeId}/members/{memberId}/update")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> updateMember(@PathVariable long scopeId, @PathVariable long memberId,
         @Valid @RequestBody BotScopeMemberUpdateDTO request) {

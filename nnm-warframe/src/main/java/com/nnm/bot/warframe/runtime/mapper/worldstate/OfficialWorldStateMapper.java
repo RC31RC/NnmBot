@@ -3,6 +3,8 @@ package com.nnm.bot.warframe.runtime.mapper.worldstate;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ActiveMissionRawData;
@@ -89,13 +91,14 @@ public class OfficialWorldStateMapper {
      */
     public WorldStateDTO map(String json, String source) {
         if (StrUtil.isBlank(json)) {
-            throw new IllegalArgumentException("world state response must not be blank");
+            throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "世界状态上游响应为空");
         }
         try {
             OfficialWorldStateRawData rawData = objectMapper.readValue(json, OfficialWorldStateRawData.class);
             return map(rawData, source, json);
         } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("官方世界状态字段绑定失败：" + exception.getMessage(), exception);
+            throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED,
+                "官方世界状态字段绑定失败：" + exception.getMessage(), exception);
         }
     }
 
@@ -1002,7 +1005,7 @@ public class OfficialWorldStateMapper {
                 state.vaultTraders(), state.weeklyChallenges(), state.darkSectors()).stream()
                 .anyMatch(section -> CollUtil.isNotEmpty(section));
         if (!hasData) {
-            throw new IllegalArgumentException("world state response contains no recognized data");
+            throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "官方世界状态响应不含可识别的数据");
         }
     }
 

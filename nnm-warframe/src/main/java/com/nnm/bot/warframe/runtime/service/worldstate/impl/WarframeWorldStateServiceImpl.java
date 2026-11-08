@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
 import com.nnm.bot.common.task.TaskProgressReporter;
 import com.nnm.bot.warframe.runtime.cache.worldstate.WorldStateRuntimeSnapshot;
@@ -141,7 +142,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             HttpResult result = officialApiClient.fetchWorldStateResult();
             if (result == null || !result.isSuccess() || StrUtil.isBlank(result.body())) {
                 // 保留最近一次成功的 JVM 内存快照，由本机下一个轮询周期重试。
-                throw new SystemException("Warframe WorldStateDTO upstream unavailable");
+                throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "世界状态上游响应失败或为空");
             }
             progress.report("PARSING_WORLD_STATE", "正在解析 Warframe 世界数据");
             String source = "warframe-official";
@@ -149,7 +150,8 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             try {
                 rawData = objectMapper.readValue(result.body(), OfficialWorldStateRawData.class);
             } catch (JsonProcessingException exception) {
-                throw new IllegalArgumentException("官方世界状态字段绑定失败：" + exception.getMessage(), exception);
+                throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED,
+                    "官方世界状态字段绑定失败：" + exception.getMessage(), exception);
             }
             WorldStateDTO state =
                 cycleService.resolve(bountyCycleService.enrich(worldStateMapper.map(rawData, source, result.body())));
@@ -171,7 +173,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     private List<String> topLevelFields(String rawJson) {
         try (JsonParser parser = objectMapper.getFactory().createParser(rawJson)) {
             if (parser.nextToken() != JsonToken.START_OBJECT) {
-                throw new IllegalArgumentException("官方世界状态根输入必须为对象");
+                throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "官方世界状态根输入必须为对象");
             }
             List<String> fields = new ArrayList<>();
             while (parser.nextToken() == JsonToken.FIELD_NAME) {
@@ -181,7 +183,8 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             }
             return List.copyOf(fields);
         } catch (IOException exception) {
-            throw new IllegalArgumentException("无法读取官方世界状态字段目录", exception);
+            throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "无法读取官方世界状态字段目录",
+                exception);
         }
     }
 

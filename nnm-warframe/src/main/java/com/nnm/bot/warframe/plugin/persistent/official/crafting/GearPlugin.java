@@ -6,9 +6,9 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
+import com.nnm.bot.warframe.persistent.official.pojo.query.crafting.WarframeMaterialQuery;
 
-@BotPluginCommand(code = WarframeCommandCodes.GEAR, matchType = MatchType.PREFIX, name = "装备工具", gameCode = "warframe",
-    order = 79)
+@BotPluginCommand(code = WarframeCommandCodes.GEAR, matchType = MatchType.PREFIX)
 public final class GearPlugin extends AbstractMaterialPlugin {
     /**
      * 根据命令参数调用业务服务并组装命令结果。
@@ -18,7 +18,7 @@ public final class GearPlugin extends AbstractMaterialPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return material(Category.GEAR, "装备工具", invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMaterialQuery parsed) {
+        return material(Category.GEAR, "装备工具", parsed);
     }
 }

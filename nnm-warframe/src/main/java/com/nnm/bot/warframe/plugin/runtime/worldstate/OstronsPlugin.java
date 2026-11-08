@@ -8,8 +8,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 希图斯赏金命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.OSTRONS, name = "希图斯", gameCode = "warframe", order = 53,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.OSTRONS)
 public class OstronsPlugin extends AbstractWorldStateCommandPlugin {
 
     /**

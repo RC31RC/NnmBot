@@ -17,10 +17,8 @@ import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,21 +36,21 @@ public class RbacManagementController {
         return ApiResponse.ok(managementService.createUser(StpUtil.getLoginIdAsLong(), request));
     }
 
-    @PutMapping("/users/{userId}")
+    @PostMapping("/users/{userId}/update")
     @SaCheckPermission("system:user:update")
     public ApiResponse<Void> updateUser(@PathVariable long userId, @Valid @RequestBody UserSaveDTO request) {
         managementService.updateUser(StpUtil.getLoginIdAsLong(), userId, request);
         return ApiResponse.ok();
     }
 
-    @PutMapping("/users/{userId}/status")
+    @PostMapping("/users/{userId}/status/update")
     @SaCheckPermission("system:user:disable")
     public ApiResponse<Void> updateUserStatus(@PathVariable long userId, @Valid @RequestBody UserStatusDTO request) {
         managementService.updateUserStatus(StpUtil.getLoginIdAsLong(), userId, request);
         return ApiResponse.ok();
     }
 
-    @PutMapping("/users/{userId}/roles")
+    @PostMapping("/users/{userId}/roles/update")
     @SaCheckPermission("system:user:update")
     public ApiResponse<Void> assignUserRoles(@PathVariable long userId, @Valid @RequestBody UserRoleDTO request) {
         managementService.assignUserRoles(StpUtil.getLoginIdAsLong(), userId, request);
@@ -65,14 +63,14 @@ public class RbacManagementController {
         return ApiResponse.ok(managementService.createRole(StpUtil.getLoginIdAsLong(), request));
     }
 
-    @PutMapping("/roles/{roleId}")
+    @PostMapping("/roles/{roleId}/update")
     @SaCheckPermission("system:role:update")
     public ApiResponse<Void> updateRole(@PathVariable long roleId, @Valid @RequestBody RoleSaveDTO request) {
         managementService.updateRole(StpUtil.getLoginIdAsLong(), roleId, request);
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/roles/{roleId}")
+    @PostMapping("/roles/{roleId}/delete")
     @SaCheckPermission("system:role:delete")
     public ApiResponse<Void> deleteRole(@PathVariable long roleId) {
         managementService.deleteRole(StpUtil.getLoginIdAsLong(), roleId);
@@ -87,7 +85,7 @@ public class RbacManagementController {
             AdminSystemViewAssembler.toRoleGrantVO(managementService.roleGrants(StpUtil.getLoginIdAsLong(), roleId)));
     }
 
-    @PutMapping("/roles/{roleId}/grants")
+    @PostMapping("/roles/{roleId}/grants/update")
     @SaCheckPermission("system:role:assign")
     public ApiResponse<Void> assignRoleGrants(@PathVariable long roleId, @Valid @RequestBody RoleGrantSaveDTO request) {
         managementService.assignRoleGrants(StpUtil.getLoginIdAsLong(), roleId, request);
@@ -100,14 +98,14 @@ public class RbacManagementController {
         return ApiResponse.ok(managementService.createMenu(request));
     }
 
-    @PutMapping("/menus/{menuId}")
+    @PostMapping("/menus/{menuId}/update")
     @SaCheckPermission("system:menu:update")
     public ApiResponse<Void> updateMenu(@PathVariable long menuId, @Valid @RequestBody MenuSaveDTO request) {
         managementService.updateMenu(menuId, request);
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/menus/{menuId}")
+    @PostMapping("/menus/{menuId}/delete")
     @SaCheckPermission("system:menu:delete")
     public ApiResponse<Void> deleteMenu(@PathVariable long menuId) {
         managementService.deleteMenu(menuId);
@@ -120,7 +118,7 @@ public class RbacManagementController {
         return ApiResponse.ok(managementService.createPermission(request));
     }
 
-    @PutMapping("/permissions/{permissionId}")
+    @PostMapping("/permissions/{permissionId}/update")
     @SaCheckPermission("system:menu:update")
     public ApiResponse<Void> updatePermission(@PathVariable long permissionId,
         @Valid @RequestBody PermissionSaveDTO request) {
@@ -128,7 +126,7 @@ public class RbacManagementController {
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/permissions/{permissionId}")
+    @PostMapping("/permissions/{permissionId}/delete")
     @SaCheckPermission("system:menu:delete")
     public ApiResponse<Void> deletePermission(@PathVariable long permissionId) {
         managementService.deletePermission(permissionId);

@@ -18,10 +18,9 @@ import jakarta.annotation.Resource;
 import java.util.List;
 
 /** 查看当前群成员自己的 Warframe 蹲任务规则。 */
-@BotPluginCommand(code = WarframeCommandCodes.WATCH_LIST, matchType = MatchType.EXACT, name = "蹲任务",
-    gameCode = "warframe", order = 77, allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.WATCH_LIST, matchType = MatchType.EXACT)
 // 只读取当前群组成员自己的 wf_group_watch_rule，不暴露同群其他成员的规则。
-public final class WatchListPlugin extends BotPlugin<Void> {
+public final class WatchListPlugin extends BotPlugin<Void, Void> {
 
     @Resource
     private BotGroupCommandContextResolver groupResolver;
@@ -38,7 +37,7 @@ public final class WatchListPlugin extends BotPlugin<Void> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, Void parsed) {
         Optional<BotGroupCommandContext> group = groupResolver.resolve(invocation.context());
         if (group.isEmpty()) {
             return CommandResult.rejected("蹲任务只能在已绑定逻辑群组的群聊中使用");

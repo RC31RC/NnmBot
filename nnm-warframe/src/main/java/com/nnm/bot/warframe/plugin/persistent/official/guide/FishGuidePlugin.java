@@ -6,7 +6,7 @@ import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
+import com.nnm.bot.warframe.persistent.official.pojo.query.guide.WarframeGuideQuery;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.guide.WarframeGuideVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.guide.WarframeGuideVO.FishVO;
@@ -19,18 +19,12 @@ import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@BotPluginCommand(code = WarframeCommandCodes.FISH_GUIDE, matchType = MatchType.PREFIX, name = "鱼类攻略",
-    gameCode = "warframe", order = 74)
+@BotPluginCommand(code = WarframeCommandCodes.FISH_GUIDE, matchType = MatchType.PREFIX)
 public final class FishGuidePlugin extends AbstractGuidePlugin {
 
-    /**
-     * 将业务数据转换为命令或页面所需的展示字段。
-     *
-     * @return 当前命令或页面需要的展示字段。
-     */
     @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("warframe.guide"));
+    protected boolean supportsLayers() {
+        return false;
     }
 
     @Resource
@@ -44,14 +38,10 @@ public final class FishGuidePlugin extends AbstractGuidePlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        Query query;
-        try {
-            query = query(invocation.arguments(), false);
-        } catch (IllegalArgumentException exception) {
-            return CommandResult.rejected(exception.getMessage());
-        }
-        WarframeGuideVO<FishVO> display = guideService.fish(query.keyword(), query.world(), query.page());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeGuideQuery parsed) {
+        if (parsed.error() != null)
+            return CommandResult.rejected(parsed.error());
+        WarframeGuideVO<FishVO> display = guideService.fish(parsed.keyword(), parsed.world(), parsed.page());
         StringBuilder text = new StringBuilder("鱼类攻略：").append(display.pagination());
         for (FishVO fish : display.items()) {
             text.append("\n\n").append(fish.name()).append(" · ").append(WarframeGuideVO.worldName(fish.world()))
@@ -71,7 +61,7 @@ public final class FishGuidePlugin extends AbstractGuidePlugin {
         }
         if (CollUtil.isEmpty(display.items()))
             text.append("\n没有找到匹配的鱼类攻略");
-        return CommandResult.view("warframe.guide", text.toString(), display);
+        return CommandResult.html(text.toString(), display);
     }
 
     /**

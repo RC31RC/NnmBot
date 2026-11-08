@@ -1,6 +1,8 @@
 package com.nnm.bot.warframe.persistent.official.repository.support;
 
 import cn.hutool.core.collection.CollUtil;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.FieldState;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -304,7 +306,7 @@ public class OfficialTableRelations {
                 yield value;
             }
             case ARRAY -> new ArrayList<>();
-            default -> throw new IllegalStateException("未知官方持久化字段形状：" + state);
+            default -> throw new SystemException(OfficialDataErrorCode.FIELD_STATE_INVALID, "未知官方持久化字段形状：" + state);
         };
     }
 
@@ -319,7 +321,10 @@ public class OfficialTableRelations {
     private void attach(SchemaField field, List<Long> parentIds, Map<Long, Object> parents, Type parentType) {
         if (field.relation() != null) {
             RowModel child = models.table(field.relation());
-            List<OfficialRelationRowDTO> rows = select(child, parentIds);
+            // 缺失或 null 的集合没有子行；先过滤父项，避免稀疏资料每批查询所有空子表。
+            List<Long> presentIds = parentIds.stream()
+                .filter(id -> relationTarget(parents.get(id), parentType, field.path()).container() != null).toList();
+            List<OfficialRelationRowDTO> rows = presentIds.isEmpty() ? List.of() : select(child, presentIds);
             if (!rows.isEmpty()) {
                 OfficialRelationRowDTO firstRow = rows.getFirst();
                 RelationTarget firstTarget = relationTarget(parents.get(firstRow.parentId()), parentType, field.path());
@@ -332,7 +337,8 @@ public class OfficialTableRelations {
                     else if (target.container() instanceof Map<?, ?> map)
                         putMap(map, (String)row.get("memberKey"), value);
                     else
-                        throw new IllegalStateException("官方子表找不到父集合：" + field.path());
+                        throw new SystemException(OfficialDataErrorCode.RELATION_INCONSISTENT,
+                            "官方子表找不到父集合：" + field.path());
                 }
             }
         }
@@ -344,9 +350,14 @@ public class OfficialTableRelations {
         Object container = parent;
         Type fieldType = parentType;
         for (String segment : path) {
+            // 赏金阶段有奖励池对象和字符串引用数组两种协议形状；后者没有对象子字段。
+            if (container instanceof OfficialBountyStageDTO stage && stage.rewardPool() == null)
+                return new RelationTarget(null, Object.class);
             container = unwrap(container);
+            if (container == null)
+                return new RelationTarget(null, Object.class);
             if (!(container instanceof OfficialObjectDTO object)) {
-                throw new IllegalStateException("官方详情关系路径无效：" + path);
+                throw new SystemException(OfficialDataErrorCode.RELATION_INCONSISTENT, "官方详情关系路径无效：" + path);
             }
             Field property = OfficialObjectFields.field(object.getClass(), segment);
             fieldType = property.getGenericType();

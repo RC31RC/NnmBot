@@ -1,13 +1,11 @@
 package com.nnm.bot.core.qqofficial.gateway;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.constant.CommandExecutionConstants.CommandIngressResult;
 import java.util.Optional;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.exception.BusinessException;
@@ -22,6 +20,9 @@ import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.plugin.execution.CommandIngressService;
 import com.nnm.bot.core.qqofficial.api.QqOfficialApiClient;
+import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayFrameDTO;
+import com.nnm.bot.core.qqofficial.message.dto.QqOfficialGatewayEventDTO;
+import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.core.qqofficial.api.QqOfficialTokenClient;
 import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
 import com.nnm.bot.core.qqofficial.discovery.QqOfficialObservedScopeStore;
@@ -213,7 +214,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             this.connection = new QqOfficialConnection(instance.appId(), instance.clientSecret(), instance.tokenUrl(),
                 instance.apiBaseUrl(), instance.gatewayUrl());
             this.tokenClient = new QqOfficialTokenClient(httpClient, this.connection);
-            this.apiClient = new QqOfficialApiClient(httpClient, objectMapper, tokenClient, this.connection, ownership);
+            this.apiClient = new QqOfficialApiClient(httpClient, tokenClient, this.connection, ownership);
             // 协议调度交给 JDK 管理，不能占用业务并发许可后再向同一执行器提交业务。
             this.webSocketClient =
                 java.net.http.HttpClient.newBuilder().connectTimeout(instance.gatewayConnectTimeout()).build();
@@ -276,7 +277,8 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             try {
                 if (ready || !accepts(socket))
                     return;
-                failAndReconnect(socket, new IllegalStateException("Gateway READY timeout"));
+                failAndReconnect(socket,
+                    new SystemException(BotChannelErrorCode.GATEWAY_READY_TIMEOUT, "QQ Gateway READY timeout"));
             } finally {
                 connectionLock.unlock();
             }
@@ -417,22 +419,23 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
                 return;
             boolean protocolHandled = false;
             try {
-                JsonNode root = objectMapper.readTree(payload);
-                int op = root.path("op").asInt(-1);
-                JsonNode data = root.path("d");
-                String eventType = root.path("t").asText("");
+                QqOfficialGatewayFrameDTO root = objectMapper.readValue(payload, QqOfficialGatewayFrameDTO.class);
+                int op = root.op() == null ? -1 : root.op();
+                Object data = root.data();
+                String eventType = root.t() == null ? "" : root.t();
                 connectionLock.lock();
                 try {
                     if (!accepts(socket))
                         return;
-                    if (root.hasNonNull("s")) {
-                        sequence = root.get("s").asInt();
-                    }
+                    if (root.s() != null)
+                        sequence = root.s();
                     switch (op) {
-                        case HELLO -> handleHello(socket, data);
+                        case HELLO ->
+                            handleHello(socket, objectMapper.convertValue(data, QqOfficialGatewayEventDTO.class));
                         case DISPATCH -> {
                             if ("READY".equals(eventType)) {
-                                sessionId = data.path("session_id").asText(null);
+                                sessionId =
+                                    objectMapper.convertValue(data, QqOfficialGatewayEventDTO.class).sessionId();
                             }
                             if ("READY".equals(eventType) || "RESUMED".equals(eventType)) {
                                 ready = true;
@@ -443,7 +446,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
                         case HEARTBEAT_ACK -> awaitingHeartbeatAck.set(false);
                         case RECONNECT -> scheduleReconnect();
                         case INVALID_SESSION -> {
-                            if (!data.asBoolean(false)) {
+                            if (!Boolean.TRUE.equals(data)) {
                                 sessionId = null;
                                 sequence = null;
                                 tokenClient.clear();
@@ -476,10 +479,11 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             }
         }
 
-        private void handleHello(WebSocket socket, JsonNode data) {
-            long interval = Math.max(1000L, data.path("heartbeat_interval").asLong(45000L));
+        private void handleHello(WebSocket socket, QqOfficialGatewayEventDTO data) {
+            long interval =
+                Math.max(1000L, data == null || data.heartbeatInterval() == null ? 45000L : data.heartbeatInterval());
             String token = tokenClient.getAccessToken();
-            JsonNode payload = StrUtil.isNotBlank(sessionId) && ObjectUtil.isNotNull(sequence)
+            String payload = StrUtil.isNotBlank(sessionId) && ObjectUtil.isNotNull(sequence)
                 ? QqOfficialGatewayPayloads.resume(objectMapper, token, sessionId, sequence)
                 : QqOfficialGatewayPayloads.identify(objectMapper, token, instance.intents());
             if (!accepts(socket))
@@ -487,7 +491,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             cancel(heartbeat);
             awaitingHeartbeatAck.set(false);
             // JDK WebSocket 不允许同时存在多个未完成的文本发送。
-            socket.sendText(payload.toString(), true).whenComplete((ignored, failure) -> {
+            socket.sendText(payload, true).whenComplete((ignored, failure) -> {
                 connectionLock.lock();
                 try {
                     if (!accepts(socket))
@@ -509,12 +513,13 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
                 if (!accepts(socket))
                     return;
                 if (!awaitingHeartbeatAck.compareAndSet(false, true)) {
-                    channelRegistry.failed(channelKey, new IllegalStateException("Gateway heartbeat ACK timeout"));
+                    channelRegistry.failed(channelKey, new SystemException(
+                        BotChannelErrorCode.GATEWAY_HEARTBEAT_TIMEOUT, "QQ Gateway heartbeat ACK timeout"));
                     scheduleReconnect();
                     return;
                 }
                 if (!socket.isOutputClosed() && !socket.isInputClosed()) {
-                    socket.sendText(QqOfficialGatewayPayloads.heartbeat(objectMapper, sequence).toString(), true)
+                    socket.sendText(QqOfficialGatewayPayloads.heartbeat(objectMapper, sequence), true)
                         .whenComplete((ignored, failure) -> {
                             if (failure != null)
                                 failAndReconnect(socket, failure);
@@ -540,8 +545,13 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
         /**
          * 同步内存匹配后非等待接纳；辅助事件独立有界，不能让业务容量阻塞协议回调。
          */
-        private void handleDispatch(WebSocket socket, String eventType, JsonNode data) {
-            String messageId = data.path("id").asText("");
+        private void handleDispatch(WebSocket socket, String eventType, Object data) throws Exception {
+            if (!eventType.contains("MESSAGE_CREATE") && !isObservedEvent(eventType))
+                return;
+            QqOfficialGatewayEventDTO event = objectMapper.convertValue(data, QqOfficialGatewayEventDTO.class);
+            if (event == null)
+                return;
+            String messageId = event.id() == null ? "" : event.id();
             long receivedAt = System.currentTimeMillis();
             if (eventType.contains("MESSAGE_CREATE")) {
                 log.info("QQ official message received instance={} type={} messageId={}", instance.instanceId(),
@@ -550,8 +560,8 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
                 log.debug("QQ official event received instance={} type={} messageId={}", instance.instanceId(),
                     eventType, messageId);
             }
-            Optional<BotMessageContext> context =
-                QqOfficialMessageContextFactory.from(instance.botAccountId(), eventType, data);
+            Optional<BotMessageContext> context = QqOfficialMessageContextFactory.from(instance.botAccountId(),
+                eventType, event, objectMapper.writeValueAsString(data));
             context.ifPresent(value -> {
                 CommandIngressResult result = commandIngressProvider.getObject()
                     .accept(value.withReceivedAt(receivedAt), () -> socket == webSocket && ownership.getAsBoolean());
@@ -560,19 +570,16 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             });
             // 先完成命令接纳，辅助事件拒绝/失败不能改变已接管结果；不在协议线程做外部 I/O。
             if (isObservedEvent(eventType)) {
-                ObjectNode observation = objectMapper.createObjectNode();
-                for (String field : new String[] {"group_openid", "member_openid", "member_name", "nickname",
-                    "member_role", "role"}) {
-                    String value = data.path(field).asText("");
-                    if (value.length() > 4096)
-                        throw new IllegalArgumentException("QQ observation field is too large: " + field);
-                    observation.put(field, value);
+                for (String value : new String[] {event.groupOpenid(), event.memberOpenid(), event.memberName(),
+                    event.nickname(), event.memberRole(), event.role()}) {
+                    if (value != null && value.length() > 4096)
+                        throw new SystemException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 群成员事件字段超过协议允许长度");
                 }
                 eventExecutor.execute(() -> {
                     if (socket != webSocket || !ownership.getAsBoolean())
                         return;
-                    observeDispatch(eventType, observation);
-                    dispatchMemberEvent(eventType, observation);
+                    observeDispatch(eventType, event);
+                    dispatchMemberEvent(eventType, event);
                 });
             }
         }
@@ -585,7 +592,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             };
         }
 
-        private void observeDispatch(String eventType, JsonNode data) {
+        private void observeDispatch(String eventType, QqOfficialGatewayEventDTO data) {
             if (observedScopeStoreProvider == null) {
                 return;
             }
@@ -593,38 +600,36 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             if (store == null) {
                 return;
             }
-            String groupOpenid = text(data, "group_openid");
+            String groupOpenid = text(data.groupOpenid());
             switch (eventType) {
                 case "GROUP_ADD_ROBOT", "GROUP_MESSAGE_CREATE", "GROUP_AT_MESSAGE_CREATE" ->
                     store.observeGroup(instance.botAccountId(), groupOpenid);
                 case "GROUP_DEL_ROBOT" -> store.deactivateGroup(instance.botAccountId(), groupOpenid);
                 case "GROUP_MEMBER_ADD" ->
-                    store.observeMember(instance.botAccountId(), groupOpenid, text(data, "member_openid"),
-                        text(data, "member_name", "nickname"), text(data, "member_role", "role"));
+                    store.observeMember(instance.botAccountId(), groupOpenid, text(data.memberOpenid()),
+                        text(data.memberName(), data.nickname()), text(data.memberRole(), data.role()));
                 case "GROUP_MEMBER_REMOVE" ->
-                    store.removeMember(instance.botAccountId(), groupOpenid, text(data, "member_openid"));
+                    store.removeMember(instance.botAccountId(), groupOpenid, text(data.memberOpenid()));
                 default -> {
                 }
             }
         }
 
-        private String text(JsonNode node, String... fields) {
-            for (String field : fields) {
-                String value = node.path(field).asText("");
-                if (StrUtil.isNotBlank(value)) {
+        private String text(String... values) {
+            for (String value : values) {
+                if (StrUtil.isNotBlank(value))
                     return value;
-                }
             }
             return null;
         }
 
-        private void dispatchMemberEvent(String eventType, JsonNode data) {
+        private void dispatchMemberEvent(String eventType, QqOfficialGatewayEventDTO data) {
             if (memberEventSinkProvider == null
                 || !("GROUP_MEMBER_ADD".equals(eventType) || "GROUP_MEMBER_REMOVE".equals(eventType))) {
                 return;
             }
-            String groupOpenid = text(data, "group_openid");
-            String memberOpenid = text(data, "member_openid");
+            String groupOpenid = text(data.groupOpenid());
+            String memberOpenid = text(data.memberOpenid());
             if (groupOpenid == null || memberOpenid == null) {
                 return;
             }

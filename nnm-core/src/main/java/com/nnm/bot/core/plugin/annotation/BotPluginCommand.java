@@ -22,27 +22,10 @@ import java.lang.annotation.Target;
 @Component
 public @interface BotPluginCommand {
 
-    /** 稳定且全局唯一的命令编码。 */
+    /** 稳定且全局唯一的命令编码；名称、业务域和排序由模块命令目录统一声明。 */
     String code();
 
     /** 命令匹配方式。 */
     MatchType matchType() default MatchType.EXACT;
 
-    /** 默认显示名称。 */
-    String name();
-
-    /** 所属业务域或游戏编码。 */
-    String gameCode();
-
-    /** 展示和前缀匹配优先级。 */
-    int order() default 0;
-
-    /**
-     * 是否允许管理端把该命令作为关联导航的无参入口展示。
-     *
-     * <p>
-     * 命令能精确匹配不等于它适合作为导航入口；例如状态修改命令可能同样使用 {@link MatchType#EXACT}，但不应被结果页附加为可填入动作。
-     * </p>
-     */
-    boolean allowRelatedAction() default false;
 }

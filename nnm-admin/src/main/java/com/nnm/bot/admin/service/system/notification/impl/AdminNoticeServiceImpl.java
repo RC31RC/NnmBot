@@ -1,9 +1,9 @@
 package com.nnm.bot.admin.service.system.notification.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.admin.config.AdminNoticeProperties;
+import com.nnm.bot.admin.pojo.dto.system.notification.AdminTaskPreviewMetadataDTO;
 import com.nnm.bot.admin.pojo.dto.system.notification.AdminNoticePublishDTO;
 import com.nnm.bot.admin.pojo.entity.system.AdminNotice;
 import com.nnm.bot.admin.pojo.entity.system.SysUser;
@@ -31,6 +31,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 public class AdminNoticeServiceImpl implements AdminNoticeService {
+    private static final String OFFICIAL_APPLY_TASK = "WARFRAME_OFFICIAL_APPLY:";
+    private static final String OFFICIAL_REFRESH_ALL_TASK = "WARFRAME_OFFICIAL_REFRESH_ALL:";
+    private static final String OFFICIAL_REFRESH_TASK = "WARFRAME_OFFICIAL_REFRESH:";
     @Resource
     private AdminNoticeRepository notices;
     @Resource
@@ -96,10 +99,10 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
         if (event.status() != AdminTaskStatus.COMPLETED && event.status() != AdminTaskStatus.FAILED
             && event.status() != AdminTaskStatus.CANCELLED)
             return;
-        JsonNode result = event.result() == null ? mapper.nullNode() : mapper.valueToTree(event.result());
-        String previewId = text(result, "id");
-        String dataset = text(result, "dataset");
-        String expires = text(result, "expiresAt");
+        AdminTaskPreviewMetadataDTO result = previewMetadata(event.result());
+        String previewId = text(result.id());
+        String dataset = text(result.dataset());
+        String expires = text(result.expiresAt());
         Instant now = Instant.now();
         Instant expiresAt = now.plus(properties.getTaskHistoryRetention());
         if (previewId != null && expires != null) {
@@ -119,7 +122,7 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
             String sourceKey = "task:" + event.taskId() + ":" + user.getId();
             if (notices.existsBySourceKey(sourceKey))
                 continue;
-            AdminNotice notice = base(user.getId(), event.taskType(), event.message(), now, expiresAt);
+            AdminNotice notice = base(user.getId(), taskTitle(event.taskType()), event.message(), now, expiresAt);
             notice.setSourceKey(sourceKey);
             notice.setRequiredPermission(permission);
             notice.setTaskId(event.taskId().toString());
@@ -156,6 +159,16 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
             value.getCreatedAt(), value.getExpiresAt());
     }
 
+    private static String taskTitle(String type) {
+        if (type.startsWith(OFFICIAL_APPLY_TASK))
+            return "Warframe 官方 JSON 采纳入库";
+        if (type.startsWith(OFFICIAL_REFRESH_ALL_TASK))
+            return "Warframe 官方数据全量刷新";
+        if (type.startsWith(OFFICIAL_REFRESH_TASK))
+            return "Warframe 官方数据单文件刷新";
+        return type;
+    }
+
     private static AdminNotice base(long recipientId, String title, String content, Instant now, Instant expiresAt) {
         AdminNotice notice = new AdminNotice();
         notice.setId(UUID.randomUUID().toString());
@@ -178,8 +191,19 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
                 .anyMatch(grant -> grant.isEnabled() && permission.equals(grant.getCode())));
     }
 
-    private static String text(JsonNode node, String field) {
-        String value = node.path(field).asText("").trim();
-        return value.isEmpty() ? null : value;
+    private AdminTaskPreviewMetadataDTO previewMetadata(Object value) {
+        if (value == null)
+            return new AdminTaskPreviewMetadataDTO(null, null, null);
+        try {
+            return mapper.convertValue(value, AdminTaskPreviewMetadataDTO.class);
+        } catch (IllegalArgumentException exception) {
+            // 非预览类任务可能返回标量或列表，不能因此影响任务终态通知。
+            log.debug("任务结果没有预览元信息", exception);
+            return new AdminTaskPreviewMetadataDTO(null, null, null);
+        }
+    }
+
+    private static String text(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

@@ -5,8 +5,7 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 
-@BotPluginCommand(code = WarframeCommandCodes.EVENT_RULES, matchType = MatchType.PREFIX, name = "活动显示规则",
-    gameCode = "warframe", order = 123)
+@BotPluginCommand(code = WarframeCommandCodes.EVENT_RULES, matchType = MatchType.PREFIX)
 public final class EventRulesPlugin extends AbstractDefinitionPlugin {
     /**
      * 取得当前独立数据文件的领域标识。

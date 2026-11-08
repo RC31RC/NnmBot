@@ -492,6 +492,15 @@ public class HttpClient {
                 .body(body).retrieve().toEntity(String.class));
     }
 
+    /** 删除远端资源，不自动重试以免重复执行带副作用的请求。 */
+    public HttpResult delete(String url, Map<String, String> headers) {
+        String requestUrl = requireUrl(url);
+        HttpHeaders requestHeaders = requestHeaders(toHttpHeaders(headers));
+        logRequest("DELETE", requestUrl, null);
+        return executeTextResult("DELETE", requestUrl, () -> restClient.delete().uri(requestUrl)
+            .headers(httpHeaders -> copyHeaders(requestHeaders, httpHeaders)).retrieve().toEntity(String.class));
+    }
+
     /**
      * 发送原始字节 PUT。预签名上传不自动重试，避免网络结果不明确时重复写入同一分片。
      */

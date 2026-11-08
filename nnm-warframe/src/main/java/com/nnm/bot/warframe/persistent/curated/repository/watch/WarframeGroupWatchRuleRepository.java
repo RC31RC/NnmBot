@@ -11,6 +11,13 @@ import java.util.Optional;
 public interface WarframeGroupWatchRuleRepository extends JpaRepository<WarframeGroupWatchRule, Long> {
 
     /**
+     * 删除群组下全部订阅及其事件记忆。
+     *
+     * @param groupId 正在删除的逻辑群组主键。
+     */
+    void deleteAllByGroupId(Long groupId);
+
+    /**
      * 按规则主键、群组和成员定位待维护的订阅规则。
      *
      * @param id 目标记录的本地主键。

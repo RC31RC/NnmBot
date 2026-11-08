@@ -6,9 +6,11 @@ import java.util.UUID;
 
 /** 官方刷新入口的实时冲突快照。 */
 public record WarframeOfficialRefreshConflictDTO(List<TaskDTO> tasks, List<PreviewDTO> previews) {
-    public record TaskDTO(UUID taskId, String productPath, String ref, String status, Instant updatedAt) {
+    public record TaskDTO(UUID taskId, String productPath, String ref, String operation, String status,
+        Instant updatedAt) {
     }
 
-    public record PreviewDTO(String id, String productPath, String ref, Instant createdAt, Instant expiresAt) {
+    public record PreviewDTO(String id, String productPath, String ref, String status, Instant createdAt,
+        Instant expiresAt) {
     }
 }

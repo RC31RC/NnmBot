@@ -34,10 +34,13 @@ public class WarframeOfficialImportProperties {
     private long maxVersionResponseBytes = 1024 * 1024;
     private long maxFileBytes = 20_000_000L;
     private Duration previewTtl = Duration.ofMinutes(30);
+    private Duration failedRetention = Duration.ofHours(24);
     private Duration activeTaskRetention = Duration.ofHours(3);
     private int maxPendingPreviews = 128;
-    private int retainedSnapshots = 2;
     private Duration staleStagingTtl = Duration.ofDays(1);
+    private Duration applyPollInterval = Duration.ofSeconds(5);
+    private Duration applyLeaseTtl = Duration.ofMinutes(30);
+    private int maxApplyAttempts = 3;
 
     /**
      * 校验当前配置或输入是否满足业务约束。
@@ -57,10 +60,12 @@ public class WarframeOfficialImportProperties {
             || StrUtil.isBlank(stagingDirectory.toString()) || maxFiles < 1 || maxFiles > 1024 || maxTagPages < 1
             || maxTagPages > 100 || maxVersionResponseBytes < 1 || maxVersionResponseBytes > 16 * 1024 * 1024L
             || maxFileBytes < 1 || maxFileBytes > 20_000_000L || maxPendingPreviews < 1 || maxPendingPreviews > maxFiles
-            || retainedSnapshots < 1 || retainedSnapshots > 10 || staleStagingTtl == null
-            || staleStagingTtl.compareTo(Duration.ofHours(1)) < 0 || previewTtl == null || previewTtl.isNegative()
-            || previewTtl.isZero() || activeTaskRetention == null || activeTaskRetention.isNegative()
-            || activeTaskRetention.isZero()) {
+            || staleStagingTtl == null || staleStagingTtl.compareTo(Duration.ofHours(1)) < 0
+            || applyPollInterval == null || applyPollInterval.isNegative() || applyPollInterval.isZero()
+            || applyLeaseTtl == null || applyLeaseTtl.compareTo(Duration.ofMinutes(1)) < 0 || maxApplyAttempts < 1
+            || maxApplyAttempts > 100 || previewTtl == null || previewTtl.isNegative() || previewTtl.isZero()
+            || failedRetention == null || failedRetention.isNegative() || failedRetention.isZero()
+            || activeTaskRetention == null || activeTaskRetention.isNegative() || activeTaskRetention.isZero()) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.dataset configuration");
         }
     }

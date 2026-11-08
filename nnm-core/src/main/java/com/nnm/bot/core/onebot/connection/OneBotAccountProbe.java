@@ -3,10 +3,12 @@ package com.nnm.bot.core.onebot.connection;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants;
+import com.nnm.bot.core.onebot.connection.dto.OneBotLoginProbeDTO;
+import com.nnm.bot.core.onebot.connection.dto.OneBotLoginProbeRequestDTO;
 import com.nnm.bot.core.onebot.config.OneBotProperties;
 import jakarta.annotation.Resource;
 import org.springframework.http.HttpHeaders;
@@ -76,17 +78,16 @@ public class OneBotAccountProbe {
     }
 
     String accountId(String payload, String expectedEcho) throws IOException {
-        JsonNode response = this.objectMapper.readTree(payload);
-        if (!expectedEcho.equals(response.path("echo").asText())) {
+        OneBotLoginProbeDTO response = this.objectMapper.readValue(payload, OneBotLoginProbeDTO.class);
+        if (!expectedEcho.equals(response.echo())) {
             return null;
         }
-        if (!OneBotProtocolConstants.STATUS_OK
-            .equalsIgnoreCase(response.path(OneBotProtocolConstants.FIELD_STATUS).asText())) {
-            throw new OneBotAccountProbeException("OneBot " + OneBotProtocolConstants.ACTION_GET_LOGIN_INFO
-                + " 调用失败，retcode=" + response.path(OneBotProtocolConstants.FIELD_RETCODE).asText());
+        if (!OneBotProtocolConstants.STATUS_OK.equalsIgnoreCase(response.status())) {
+            throw new OneBotAccountProbeException(
+                "OneBot " + OneBotProtocolConstants.ACTION_GET_LOGIN_INFO + " 调用失败，retcode=" + response.retcode());
         }
-        String accountId = response.path(OneBotProtocolConstants.FIELD_DATA).path(OneBotProtocolConstants.FIELD_USER_ID)
-            .asText().trim();
+        String accountId =
+            response.data() == null || response.data().userId() == null ? "" : response.data().userId().trim();
         try {
             if (Long.parseLong(accountId) <= 0L) {
                 throw new NumberFormatException("account id must be positive");
@@ -113,10 +114,8 @@ public class OneBotAccountProbe {
         @Override
         public void afterConnectionEstablished(WebSocketSession session) throws Exception {
             sessionRef.set(session);
-            ObjectNode request = OneBotAccountProbe.this.objectMapper.createObjectNode()
-                .put(OneBotProtocolConstants.FIELD_ACTION, OneBotProtocolConstants.ACTION_GET_LOGIN_INFO)
-                .put(OneBotProtocolConstants.FIELD_ECHO, echo);
-            request.set(OneBotProtocolConstants.FIELD_PARAMS, OneBotAccountProbe.this.objectMapper.createObjectNode());
+            OneBotLoginProbeRequestDTO request = new OneBotLoginProbeRequestDTO(
+                OneBotProtocolConstants.ACTION_GET_LOGIN_INFO, new OneBotLoginProbeRequestDTO.EmptyParamsDTO(), echo);
             session.sendMessage(new TextMessage(OneBotAccountProbe.this.objectMapper.writeValueAsString(request)));
         }
 
@@ -140,22 +139,29 @@ public class OneBotAccountProbe {
         @Override
         public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
             if (!result.isDone()) {
-                result.completeExceptionally(new IllegalStateException("OneBot WebSocket 已关闭: " + status));
+                result.completeExceptionally(new OneBotAccountProbeException("OneBot WebSocket 已关闭: " + status));
             }
         }
     }
 
     private static URI websocketUri(String connectionUrl) {
         if (StrUtil.isBlank(connectionUrl)) {
-            throw new IllegalArgumentException("OneBot WebSocket 地址不能为空");
+            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot WebSocket 地址不能为空");
         }
-        URI uri = URI.create(connectionUrl.trim());
+        URI uri;
+        try {
+            uri = URI.create(connectionUrl.trim());
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot WebSocket 地址格式不合法",
+                exception);
+        }
         if (!OneBotProtocolConstants.WS_SCHEME.equalsIgnoreCase(uri.getScheme())
             && !OneBotProtocolConstants.WSS_SCHEME.equalsIgnoreCase(uri.getScheme())) {
-            throw new IllegalArgumentException("OneBot WebSocket 地址必须使用 ws 或 wss 协议");
+            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
+                "OneBot WebSocket 地址必须使用 ws 或 wss 协议");
         }
         if (ObjectUtil.isNull(uri.getHost())) {
-            throw new IllegalArgumentException("OneBot WebSocket 地址缺少有效主机名");
+            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot WebSocket 地址缺少有效主机名");
         }
         return uri;
     }

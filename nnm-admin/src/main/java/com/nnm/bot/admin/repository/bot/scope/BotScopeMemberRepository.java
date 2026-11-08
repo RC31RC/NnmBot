@@ -12,5 +12,7 @@ public interface BotScopeMemberRepository extends JpaRepository<BotScopeMember, 
 
     long countByScopeId(Long scopeId);
 
+    void deleteAllByScopeId(Long scopeId);
+
     Optional<BotScopeMember> findByScopeIdAndPlatformUserId(Long scopeId, String platformUserId);
 }

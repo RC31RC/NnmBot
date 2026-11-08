@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.record;
 
 import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialDatasetOverviewVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialRecordVO;
 import com.nnm.bot.warframe.persistent.official.pojo.query.WarframeOfficialRecordQuery;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialFormFieldVO;
@@ -15,6 +16,14 @@ public interface WarframeOfficialDataQueryService {
      * @return 官方记录及其类型化详情的管理视图。
      */
     WarframeOfficialRecordVO detail(long id);
+
+    /**
+     * 读取单个文件的采纳状态与文件级元数据。
+     *
+     * @param domain 官方数据领域代码。
+     * @return 排除文件级记录后的数量及只读元数据。
+     */
+    WarframeOfficialDatasetOverviewVO overview(String domain);
 
     /**
      * 按查询条件筛选官方数据记录并返回分页结果。

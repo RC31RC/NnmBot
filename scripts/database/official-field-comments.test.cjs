@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
+const { generateOfficialFormLabels } = require('./generate-official-form-labels.cjs');
 const { test } = require('node:test');
 const { officialFieldMeaning } = require('./official-field-comments.cjs');
 const root = path.resolve(__dirname, '../..');
@@ -38,4 +40,21 @@ test('所有七十一个官方文件及生成式子表字段都有明确中文�
     }
   }
   assert.ok(fields > 1000);
+});
+
+test('所有表单中文标签与官方模型生成结果同步', () => {
+  const contract = JSON.parse(fs.readFileSync(path.join(root,
+    'nnm-warframe/src/main/resources/warframe/official-models.json'), 'utf8'));
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'nnmbot-form-labels-'));
+  try {
+    fs.mkdirSync(path.join(temporary, 'nnm-warframe/src/main/resources/warframe'), { recursive: true });
+    const labels = generateOfficialFormLabels(temporary, contract.models);
+    const saved = JSON.parse(fs.readFileSync(path.join(root,
+      'nnm-warframe/src/main/resources/warframe/official-form-labels.json'), 'utf8'));
+    assert.deepEqual(saved, labels);
+    assert.equal(Object.keys(saved).length, 71);
+    assert.ok(Object.values(saved).reduce((count, fields) => count + Object.keys(fields).length, 0) > 1000);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 });

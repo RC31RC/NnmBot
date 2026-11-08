@@ -1,5 +1,7 @@
 package com.nnm.bot.core.group.service;
 
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.domain.BotGroupMemberMerge;
 import com.nnm.bot.core.group.port.BotGroupMemberMergeHandler;
@@ -30,10 +32,10 @@ public class BotGroupMemberMergeService {
     @Transactional
     public BotGroupMember merge(long groupId, BotGroupMember target, BotGroupMember source) {
         if (target.getId() == null || source.getId() == null || target.getId().equals(source.getId())) {
-            throw new IllegalArgumentException("成员合并必须提供两个不同的持久成员");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "成员合并必须提供两个不同的持久成员");
         }
         if (!Long.valueOf(groupId).equals(target.getGroupId()) || !Long.valueOf(groupId).equals(source.getGroupId())) {
-            throw new IllegalArgumentException("只能合并同一逻辑群组的成员");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "只能合并同一逻辑群组的成员");
         }
 
         BotGroupMember lockedTarget = load(groupId, target.getId());
@@ -70,14 +72,14 @@ public class BotGroupMemberMergeService {
         return memberRepository.findByIdAndGroupId(memberId, groupId)
             .or(() -> memberRepository.findById(memberId)
                 .filter(member -> Long.valueOf(groupId).equals(member.getGroupId())))
-            .orElseThrow(() -> new IllegalStateException("群组成员不存在: " + memberId));
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "群组成员不存在: " + memberId));
     }
 
     private void ensureCompatible(BotGroupMember target, BotGroupMember source) {
         if (conflicts(target.getQqId(), source.getQqId())
             || conflicts(target.getMemberOpenid(), source.getMemberOpenid())
             || conflicts(target.getKookId(), source.getKookId())) {
-            throw new IllegalArgumentException("成员存在冲突的平台身份，不能自动合并");
+            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "成员存在冲突的平台身份，不能自动合并");
         }
     }
 

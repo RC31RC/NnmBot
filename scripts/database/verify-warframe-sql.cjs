@@ -48,13 +48,18 @@ withPostgres(async cluster => {
       AND col_description(c.oid,a.attnum) IS NULL`), "0",
   "Every business column needs a comment");
 
+  assert.equal(query(`SELECT count(*) FROM information_schema.columns
+    WHERE table_schema='nnmbot' AND table_name='bot_command' AND column_name='presentation'`), "0",
+  "Command presentation is compiled by backend adapters, not stored as admin policy");
+  assert.equal(query(`SELECT count(*) FROM nnmbot.sys_menu WHERE name='BotCommandGroups'`), "0",
+  "Backend-owned related navigation has no management page");
   for (const [table, columns] of [
-    ["bot_command_template", ["html_content", "markdown_content", "plain_text_content"]],
-    ["bot_command_group_member", ["parameter_bindings"]],
+    ["bot_command_template", ["html_content", "template_code", "command_id"]],
     ["bot_notification_job", ["owner_id", "request", "resources", "scheduled_at", "status", "report"]],
     ["wf_official_weapon_root", ["bkey", "maintenance_type"]],
     ["wf_official_dataset_file", ["source_url", "candidate_source_url"]],
-    ["wf_official_dataset_batch", ["change_object_key"]],
+    ["wf_official_dataset_batch", ["change_object_key", "applying_at"]],
+    ["wf_official_dataset_staging", ["id", "manifest_json", "product_path", "created_at"]],
     ["wf_community_alias", ["record_key", "alias_name", "target_name"]],
     ["wf_community_riven_alias", ["attribute_code", "alias_name"]],
     ["wf_official_relic_states_entries_rewards_items", ["id", "bkey", "sort_order"]]
@@ -90,8 +95,11 @@ withPostgres(async cluster => {
   assert.equal(query(`SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid
     JOIN pg_namespace n ON n.oid=t.relnamespace WHERE c.contype='f' AND n.nspname='nnmbot'
       AND t.relname IN (${officialTreeTables})`), "0", "Official trees use direct logical bkey associations without database foreign keys");
+  const officialMetadataTables = ["wf_official_dataset_batch", "wf_official_dataset_file",
+    "wf_official_dataset_head", "wf_official_dataset_staging", "wf_official_apply_file", "wf_official_rebuild_marker"];
   assert.equal(query("SELECT count(*) FROM information_schema.tables WHERE table_schema='nnmbot' AND table_name LIKE 'wf_official_%'"),
-    String(officialModels.models.length + 4), "Official model and dataset tables use the official prefix");
+    String(officialModels.models.length + officialMetadataTables.length),
+    "Official model and dataset tables use the official prefix");
   assert.equal(query("SELECT count(*) FROM information_schema.tables WHERE table_schema='nnmbot' AND table_name LIKE 'wf_community_%'"), "7",
     "Manual community tables remain isolated and use their source prefix");
   assert.equal(query("SELECT count(*) FROM information_schema.tables WHERE table_schema='nnmbot' AND table_name='wf_arbitration_schedule'"), "0",
@@ -112,14 +120,21 @@ withPostgres(async cluster => {
       `Baseline must not contain personal/runtime data: ${table}`);
   }
   for (const [template, code] of [
-    ["wf-relics-luxe-v1", "relics"], ["wf-warframes-luxe-v1", "warframes"],
-    ["wf-riven-weekly-luxe-v1", "riven-weekly"]
+    ["wf-relics-luxe", "relics"], ["wf-warframes-luxe", "warframes"],
+    ["wf-riven-weekly-luxe", "riven-weekly"]
   ]) {
     assert.equal(query(`SELECT count(*) FROM nnmbot.bot_command_template template
       JOIN nnmbot.bot_command command ON command.id=template.command_id
       WHERE template.template_code=${quote(template)} AND command.code=${quote(code)}
         AND NOT template.enabled`), "1", `${template}: bound to its command and opt-in`);
   }
+  assert.equal(query(`SELECT count(*) FROM nnmbot.bot_command command
+    JOIN nnmbot.bot_command_template template ON template.id=command.template_id
+    WHERE command.code='market-riven' AND template.template_code='warframe-market-riven'
+      AND template.command_id=command.id AND template.enabled`), "1", "market-riven selects one enabled HTML candidate");
+  assert.equal(query(`SELECT count(*) FROM pg_tables WHERE schemaname='nnmbot'
+    AND tablename IN ('bot_command_group', 'bot_command_group_member')`), "0",
+  "Developer-owned related commands must not create association tables");
   console.log(`PASS tables=${tables.length}, comments, official trees and community whitelist`);
 
   assert.equal(query(`SELECT count(*) FROM pg_tables WHERE schemaname='nnmbot'
@@ -144,26 +159,27 @@ withPostgres(async cluster => {
   query(`BEGIN;
     INSERT INTO nnmbot.wf_official_dataset_batch
       (id, source_ref, commit_sha, build_id, manifest_json, preview_json, change_object_key,
-       baseline_hash, parser_contract_version, status, created_at, expires_at)
+       parser_contract_version, status, created_at, expires_at)
     SELECT 'sql-baseline-' || lower(status), 'test', repeat('0', 40), 'test', '{}', '{}',
-      'test/' || lower(status) || '/changes.json', repeat('0', 64), 1, status,
+      'test/' || lower(status) || '/changes.json', 1, status,
       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour'
     FROM (VALUES ('PENDING'), ('APPLIED'), ('EXPIRED'), ('ARCHIVED')) AS batch(status);
     ROLLBACK;`);
+  assert.equal(query(`SELECT count(*) FROM information_schema.columns WHERE table_schema='nnmbot'
+    AND ((table_name='wf_official_dataset_batch' AND column_name='baseline_hash')
+      OR (table_name='wf_official_apply_file' AND column_name='expected_hash'))`), "0",
+  "Official approval no longer stores a database content fingerprint");
   console.log("PASS merged baseline: retired tables/menu absent, source URLs, object-storage metadata and batch lifecycle");
 
   // 在本脚本自己的临时数据库验证手工补充入口，不接触应用配置或开发者数据库。
   const htmlBefore = query(`SELECT md5(string_agg(id::text || ':' || html_content, ',' ORDER BY id))
     FROM nnmbot.bot_command_template`);
-  query(`DROP TABLE nnmbot.bot_notification_job;
-    ALTER TABLE nnmbot.bot_command_template DROP COLUMN markdown_content;
-    ALTER TABLE nnmbot.bot_command_template DROP COLUMN plain_text_content;
-    ALTER TABLE nnmbot.bot_command_group_member DROP COLUMN parameter_bindings;`);
+  query(`DROP TABLE nnmbot.bot_notification_job;`);
   apply("nnm-app/src/test/resources/db/notification-and-presentation.sql");
   assert.equal(query(`SELECT md5(string_agg(id::text || ':' || html_content, ',' ORDER BY id))
     FROM nnmbot.bot_command_template`), htmlBefore, "Manual schema supplement must preserve HTML templates");
   assert.equal(query("SELECT count(*) FROM nnmbot.bot_notification_job"), "0");
-  console.log("PASS manual notification/presentation supplement, existing HTML preserved");
+  console.log("PASS notification supplement and existing HTML preserved");
 
   if (hibernate) {
     execFileSync("sh", ["mvnw", "-pl", "nnm-app", "-am", "test",

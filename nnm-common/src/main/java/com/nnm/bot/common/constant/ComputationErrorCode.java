@@ -14,7 +14,8 @@ public enum ComputationErrorCode implements ErrorCode {
     WAIT_TIMEOUT(50411, "等待计算结果超时", HttpStatus.GATEWAY_TIMEOUT),
     INTERRUPTED(50312, "等待计算结果被中断", HttpStatus.SERVICE_UNAVAILABLE),
     INPUT_TOO_LARGE(41310, "计算输入超过限制", HttpStatus.CONTENT_TOO_LARGE),
-    RESULT_TOO_LARGE(41311, "计算结果超过限制", HttpStatus.CONTENT_TOO_LARGE);
+    RESULT_TOO_LARGE(41311, "计算结果超过限制", HttpStatus.CONTENT_TOO_LARGE),
+    EXECUTION_FAILED(50010, "计算任务执行失败，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final int code;
     private final String message;

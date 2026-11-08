@@ -1,7 +1,6 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.core.constant.CommandPresentationConstants.ParameterType;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketOrderPageDTO;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.constant.MatchType;
@@ -9,9 +8,6 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
-import com.nnm.bot.core.plugin.model.RelatedParameter;
-import java.util.Map;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketItemDTO;
@@ -34,39 +30,19 @@ import java.util.stream.Collectors;
 
 /** 市场命令入口：解析语法和物品别名，将查询对象交给统一 Market Service。 */
 @Slf4j
-@BotPluginCommand(code = WarframeCommandCodes.MARKET, matchType = MatchType.PREFIX, name = "市场",
-    allowRelatedAction = true, gameCode = "warframe", order = 20)
+@BotPluginCommand(code = WarframeCommandCodes.MARKET, matchType = MatchType.PREFIX)
 // 订单来自 Warframe Market API；商品身份从官方目录与人工别名/术语白名单解析。
-public class MarketPlugin extends BotPlugin<Void> {
-
+public class MarketPlugin extends BotPlugin<Void, WarframeMarketOrderQuery> {
     /**
-     * 声明市场关联动作需要保留的查询上下文键。
+     * 取得已匹配的命令参数，供业务命令解析。
      *
-     * @return 按当前条件筛选或转换后的数据集合。
+     * @param invocation 当前命令调用
+     * @param prepared 无额外准备输入
+     * @return 已规范化的命令参数
      */
     @Override
-    public Set<String> actionContextKeys() {
-        return Set.of("item.name", "item.marketSlug");
-    }
-
-    /**
-     * 声明市场关联查询支持的参数及其展示信息。
-     *
-     * @return 按当前条件筛选或转换后的数据集合。
-     */
-    @Override
-    public List<RelatedParameter> relatedParameters() {
-        return List.of(new RelatedParameter("item", ParameterType.TOKEN, 200));
-    }
-
-    /**
-     * 将业务数据转换为命令或页面所需的展示字段。
-     *
-     * @return 当前命令或页面需要的展示字段。
-     */
-    @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("warframe.market.orders"));
+    protected WarframeMarketOrderQuery parse(CommandInvocation invocation, Void prepared) {
+        return parseQuery(invocation.arguments());
     }
 
     private static final Set<String> PLATFORMS = Set.of("pc", "ps4", "xbox", "switch", "mobile");
@@ -85,8 +61,8 @@ public class MarketPlugin extends BotPlugin<Void> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        WarframeMarketOrderQuery query = parseQuery(invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMarketOrderQuery parsed) {
+        WarframeMarketOrderQuery query = parsed;
         if (StrUtil.isBlank(query.itemInput())) {
             return CommandResult.rejected("格式：wm [满级] [买家|卖家] [平台] 物品名称 [页码]");
         }
@@ -107,10 +83,7 @@ public class MarketPlugin extends BotPlugin<Void> {
         }
         WarframeMarketOrderPageDTO data = result.get();
         // Service 保留完整查询能力；WM 不将百科详情和重复订单视图交给发送渠道。
-        return CommandResult.view("warframe.market.orders", "市场订单", WarframeMarketOrderVO.from(data))
-            .withActionContext(resolution.found() && !resolution.ambiguous() ? Map.of("item.name",
-                StrUtil.firstNonBlank(resolution.item().getLocalizedName(), resolution.item().getOfficialName()),
-                "item.marketSlug", slug) : Map.of());
+        return CommandResult.html("市场订单", WarframeMarketOrderVO.from(data));
     }
 
     /**

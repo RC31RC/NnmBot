@@ -6,9 +6,9 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
+import com.nnm.bot.warframe.persistent.official.pojo.query.equipment.WarframeEquipmentQuery;
 
-@BotPluginCommand(code = WarframeCommandCodes.WEAPONS, matchType = MatchType.PREFIX, name = "武器资料",
-    gameCode = "warframe", order = 65)
+@BotPluginCommand(code = WarframeCommandCodes.WEAPONS, matchType = MatchType.PREFIX)
 public final class WeaponsPlugin extends AbstractEquipmentPlugin {
     /**
      * 根据命令参数调用业务服务并组装命令结果。
@@ -18,7 +18,7 @@ public final class WeaponsPlugin extends AbstractEquipmentPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return equipment(Category.WEAPON, "武器资料", invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeEquipmentQuery parsed) {
+        return equipment(Category.WEAPON, "武器资料", parsed);
     }
 }

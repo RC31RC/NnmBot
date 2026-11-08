@@ -12,6 +12,8 @@ import com.nnm.bot.admin.pojo.dto.bot.notification.BotNotificationPreviewDTO;
 import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
 import com.nnm.bot.admin.service.bot.notification.BotGroupNotificationService;
 import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.common.task.TaskProgressReporter;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.mq.message.notification.GroupNotificationMessage;
@@ -89,7 +91,8 @@ public class BotGroupNotificationServiceImpl implements BotGroupNotificationServ
                         case Text ignored -> "TEXT";
                         case Image ignored -> "IMAGE";
                         case Markdown ignored -> "MARKDOWN";
-                        default -> throw new IllegalStateException("Unsupported notification preview block");
+                        default -> throw new SystemException(CommandErrorCode.DELIVERY_PLAN_INVALID,
+                            "Unsupported notification preview block");
                     }).toList(), plan.text(),
                     plan.actions().stream()
                         .map(action -> new BotNotificationPreviewDTO.ActionDTO(action.action().label(),

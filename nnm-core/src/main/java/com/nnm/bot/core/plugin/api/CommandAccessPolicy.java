@@ -5,7 +5,7 @@ import com.nnm.bot.core.constant.BotPlatform;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandAccessDecision;
 import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import com.nnm.bot.core.constant.SystemCommandCodes;
 import java.util.Locale;
 
 /**

@@ -34,17 +34,14 @@ import com.nnm.bot.common.task.AdminTaskSubmission;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
-import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/api/admin/bot-groups")
@@ -99,7 +96,7 @@ public class BotGroupManagementController {
             .toBotNotificationJobVO(notificationJobs.submit(StpUtil.getLoginIdAsLong(), request)));
     }
 
-    @GetMapping("/notifications")
+    @PostMapping("/notifications/query")
     @SaCheckPermission("bot:notification:send")
     public ApiResponse<List<BotNotificationJobVO>> notificationJobs() {
         return ApiResponse.ok(AdminBotNotificationViewAssembler
@@ -135,14 +132,14 @@ public class BotGroupManagementController {
             .ok(AdminBotGroupViewAssembler.toBotGroupBindingPreviewVO(service.previewGroupUpdate(id, request)));
     }
 
-    @PutMapping("/{id}")
+    @PostMapping("/{id}/update")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> update(@PathVariable long id, @Valid @RequestBody BotGroupUpdateDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @SaCheckPermission("bot:group:delete")
     public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);
@@ -172,14 +169,14 @@ public class BotGroupManagementController {
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/{id}/bots/{bindingId}")
+    @PostMapping("/{id}/bots/{bindingId}/delete")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> unbindBot(@PathVariable long id, @PathVariable long bindingId) {
         service.unbindBot(id, bindingId);
         return ApiResponse.ok();
     }
 
-    @PutMapping("/{id}/bots/{bindingId}")
+    @PostMapping("/{id}/bots/{bindingId}/update")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> updateBot(@PathVariable long id, @PathVariable long bindingId,
         @Valid @RequestBody BotGroupBotUpdateDTO request) {
@@ -194,7 +191,7 @@ public class BotGroupManagementController {
         return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupMemberVO(service.members(id)));
     }
 
-    @PutMapping("/{groupId}/members/{memberId}")
+    @PostMapping("/{groupId}/members/{memberId}/update")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> updateMember(@PathVariable long groupId, @PathVariable long memberId,
         @Valid @RequestBody BotGroupMemberUpdateDTO request) {
@@ -202,7 +199,7 @@ public class BotGroupManagementController {
         return ApiResponse.ok();
     }
 
-    @PutMapping("/{groupId}/members/{memberId}/points")
+    @PostMapping("/{groupId}/members/{memberId}/points/update")
     @SaCheckPermission("bot:group:update")
     public ApiResponse<Void> updateMemberPoints(@PathVariable long groupId, @PathVariable long memberId,
         @Valid @RequestBody BotGroupMemberPointsUpdateDTO request) {

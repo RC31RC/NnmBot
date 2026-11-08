@@ -5,8 +5,7 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 全局增益命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.GLOBAL_UPGRADES, name = "全局增益", gameCode = "warframe", order = 65,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.GLOBAL_UPGRADES)
 // 官方快照 globalUpgrades 段；升级类型和运算类型由 WorldStateDTO 代码簿解析，当前不新增业务表。
 public class GlobalUpgradesPlugin extends AbstractWorldStateCommandPlugin {
     /**

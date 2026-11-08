@@ -7,8 +7,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 扎里曼坚守者赏金命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.HOLDFASTS, name = "扎里曼赏金", gameCode = "warframe", order = 62,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.HOLDFASTS)
 // 官方快照 syndicateMissions；过滤 The Holdfasts 集团。任务文本/奖励引用由 WorldStateDTO 代码簿及社区数据补全。
 public class HoldfastsPlugin extends AbstractWorldStateCommandPlugin {
     /**

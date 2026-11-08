@@ -28,10 +28,6 @@ public class BotCommandTemplate {
     @Column(name = "template_code", nullable = false, unique = true, length = 80)
     private String templateCode;
 
-    /** 对应插件声明的数据视图，禁止将不同数据契约的模板互换。 */
-    @Column(name = "view_key", nullable = false, length = 80)
-    private String viewKey;
-
     /** 模板显示名称。 */
     @Column(nullable = false, length = 100)
     private String name;
@@ -47,14 +43,6 @@ public class BotCommandTemplate {
     /** 使用 Thymeleaf 表达式的完整 HTML 内容。 */
     @Column(name = "html_content", nullable = false, columnDefinition = "TEXT")
     private String htmlContent;
-
-    /** 独立 Markdown 展示模板；{{field}} 插值及 {{#items}} 循环。 */
-    @Column(name = "markdown_content", columnDefinition = "TEXT")
-    private String markdownContent;
-
-    /** Markdown 的显式纯文字降级模板。 */
-    @Column(name = "plain_text_content", columnDefinition = "TEXT")
-    private String plainTextContent;
 
     /** 是否允许命令引用该模板。 */
     @Column(nullable = false)

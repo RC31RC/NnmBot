@@ -1,16 +1,20 @@
-# PostgreSQL 初始化与手工修复
+# PostgreSQL 初始化
 
 `init.sql` 是当前开发基线，业务对象显式位于 `nnmbot` schema。Hibernate 使用 `ddl-auto: validate`；应用不自动建表、改表、运行迁移或删除旧表。
 
 ## 开发库
 
-数据库名和 schema 均为 `nnmbot`。新建空库时由开发者手工执行 `init.sql`；已有数据库不为更新模板或单个表而重放整份初始化脚本。开发阶段可直接调整基线；额外手工修复按 `01_*.sql`、`02_*.sql` 维护，不引入 Flyway 或新旧双写。
+新库只需运行 `init.sql`：已包含管理员通知表及权限、官方审核批次的 `PENDING/APPLYING/PARTIAL_FAILED/APPLIED/EXPIRED/ARCHIVED` 状态、命令 HTML 候选模板/单选 `template_id`、紫卡市场模板；关联命令由插件代码声明，不建立关联表。空库由开发者手工执行一次 `init.sql`，之后由 Hibernate `ddl-auto: validate` 校验；应用不会自动建表、改表或执行 SQL。
 
-当前基线已合并本轮 01～03：移除 Warframe 补充数据菜单、持久化官方文件当前与候选来源地址、将官方记录原始 JSON 与预览差异移至对象存储。71 个官方主表只保留结构化字段，预览批次通过 `change_object_key` 引用字段级差异文件。已执行这些脚本的开发库无需重复执行；已合并脚本已移除，后续手工修复从 `01_*.sql` 重新编号。退役社区导入表与仲裁运行表也不再纳入初始化基线。
+**已经有数据的开发库不能再次执行 `init.sql`**：初始化脚本的建表和插入会与现有数据冲突。以前执行过 01、02 的旧库如缺少 `bot_command.template_id`，需先备份、确认数据保留方案，再单独人工同步该列和旧模板字段；不要将这份完整初始化脚本当作补丁执行。需要保留已有数据时，先确认保留方案，再手工同步数据库；不要在已有库重放初始化脚本。
+
+旧库的 01～04 手工修复已执行；这些临时脚本已清除。今后新库仅执行包含现行结构的 `init.sql`，现有库不要重放初始化脚本。
 
 数据段为普通 INSERT，可使用 psql、DataGrip、DBeaver 或 JDBC 脚本执行器。不要仅选中半条 INSERT。需要转换新的 PostgreSQL dump 时使用 `scripts/database/convert-postgres-copy-init.cjs`；不要用字符串替换处理 COPY 协议。
 
 每张表和每个字段写明 COMMENT，约束/索引上方说明业务目的。官方模型和所有生成式关系表使用 `wf_official_*`，社区人工资料使用 `wf_community_*`。来源类别与维护状态分开，官方自维护记录仍在官方模型表中。
+
+群组级联约束、官方批次失败重试期限及对象回收标记均已归入 `init.sql`，不再保留本轮 01、02 临时脚本。
 
 ## 验证
 
@@ -19,9 +23,10 @@ node scripts/database/verify-warframe-sql.cjs --hibernate
 node scripts/database/verify-bounty-sql.cjs
 node scripts/database/verify-worldstate-command-sql.cjs
 node scripts/database/verify-bot-reply-routing.cjs
+node scripts/database/verify-group-cascade.cjs
 ```
 
-检查器只创建临时 PostgreSQL cluster/database，结束后清理，不读取应用数据库连接。可用 `PG_BIN` 指定二进制目录。Hibernate 检查只启动映射，不启动应用、Redis 或业务任务。
+检查器在临时 PostgreSQL 中验证当前初始化基线；只创建临时 cluster/database，结束后清理，不读取应用数据库连接。可用 `PG_BIN` 指定二进制目录。Hibernate 检查只启动映射，不启动应用、Redis 或业务任务。
 
 初始化包含当前命令、菜单、权限及 HTML 模板，但不作为运行时已导入官方数据或实机发送的证明。模板读取 VO 的字段，数据库只保存 HTML 和 URL/占位符，不保存图片二进制。附件由 VaultS3 管理；对象引用和生命周期见对应论坛服务。
 

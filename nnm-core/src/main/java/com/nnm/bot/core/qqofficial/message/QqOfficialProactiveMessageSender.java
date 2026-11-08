@@ -62,7 +62,9 @@ public class QqOfficialProactiveMessageSender implements BotProactiveMessageSend
         if (!qualified(target)) {
             throw new BotMessageNotSentException("QQ 主动群消息未通过账号和群组资格登记");
         }
-        if (parts.stream().anyMatch(BotMessagePart.Keyboard.class::isInstance)
+        if (parts.stream()
+            .anyMatch(part -> part instanceof BotMessagePart.Keyboard
+                || part instanceof BotMessagePart.Markdown markdown && !markdown.message().buttons().isEmpty())
             && !replyProperties.keyboardAllowed(target.botAccountId(), BotMessageScope.GROUP)) {
             throw new BotMessageNotSentException("QQ 原生键盘资格已变化，尚未发送");
         }

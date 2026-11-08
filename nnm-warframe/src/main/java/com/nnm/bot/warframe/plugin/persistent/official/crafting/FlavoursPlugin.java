@@ -6,9 +6,9 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
+import com.nnm.bot.warframe.persistent.official.pojo.query.crafting.WarframeMaterialQuery;
 
-@BotPluginCommand(code = WarframeCommandCodes.FLAVOURS, matchType = MatchType.PREFIX, name = "展示风格",
-    gameCode = "warframe", order = 88)
+@BotPluginCommand(code = WarframeCommandCodes.FLAVOURS, matchType = MatchType.PREFIX)
 public final class FlavoursPlugin extends AbstractMaterialPlugin {
     /**
      * 根据命令参数调用业务服务并组装命令结果。
@@ -18,7 +18,7 @@ public final class FlavoursPlugin extends AbstractMaterialPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return material(Category.FLAVOUR, "展示风格", invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMaterialQuery parsed) {
+        return material(Category.FLAVOUR, "展示风格", parsed);
     }
 }

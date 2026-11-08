@@ -1,6 +1,8 @@
 package com.nnm.bot.core.group.service;
 
 import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
+import com.nnm.bot.core.constant.GroupPointConstants.PointErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 import cn.hutool.core.util.ObjectUtil;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.model.CommandCostConfiguration;
@@ -92,10 +94,10 @@ public class GroupCommandCostGuard implements CommandCostGuard {
         }
         BotGroupCommandContext groupContext = groupContextResolver.resolve(context).orElse(null);
         if (ObjectUtil.isNull(groupContext)) {
-            throw new IllegalStateException("命令执行完成，但逻辑群组已不可用");
+            throw new BusinessException(PointErrorCode.GROUP_UNAVAILABLE, "命令执行完成，但逻辑群组已不可用");
         }
         BotGroupMember member = memberIdentityResolver.findOrCreateForWrite(groupContext.group().getId(), context)
-            .orElseThrow(() -> new IllegalStateException("命令执行完成，但群组成员已不存在"));
+            .orElseThrow(() -> new BusinessException(PointErrorCode.ACCOUNT_UNAVAILABLE, "命令执行完成，但群组成员已不存在"));
         PointChangeResult change =
             pointAccountService.earn(commandPointPolicy.rewardOperation(groupContext.group().getId(), member.getId(),
                 descriptor, reservation.rewardPoints(), reservation.rewardReference()));

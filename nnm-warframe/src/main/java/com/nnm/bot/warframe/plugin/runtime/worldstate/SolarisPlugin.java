@@ -8,8 +8,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 索拉里斯联合赏金命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.SOLARIS, name = "索拉里斯", gameCode = "warframe", order = 55,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.SOLARIS)
 public class SolarisPlugin extends AbstractWorldStateCommandPlugin {
 
     /**

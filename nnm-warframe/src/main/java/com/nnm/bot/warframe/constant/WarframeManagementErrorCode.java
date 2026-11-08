@@ -26,6 +26,7 @@ public enum WarframeManagementErrorCode implements ErrorCode {
     DATASET_REFRESH_BLOCKED(409, "已有冲突的官方任务或待审核预览", HttpStatus.CONFLICT),
     DATASET_PREVIEW_CAPACITY(409, "待审核官方快照已达到容量上限，请先完成审核或等待预览过期", HttpStatus.CONFLICT),
     DATASET_PREVIEW_NOT_FOUND(404, "官方数据预览不存在或已过期", HttpStatus.NOT_FOUND),
+    DATASET_RETRY_EXPIRED(410, "失败数据已过保留期，请重新拉取失败文件", HttpStatus.GONE),
     DATASET_PREVIEW_CONFLICT(409, "官方数据基线已变化，请重新生成预览", HttpStatus.CONFLICT),
     OFFICIAL_CONVERSION_CONFIRM_REQUIRED(400, "请先确认将官方记录转为自维护整树", HttpStatus.BAD_REQUEST),
     SELF_MAINTAINED_OVERWRITE_CONFIRM_REQUIRED(40931, "同身份自维护整树已存在，请确认覆盖", HttpStatus.CONFLICT),

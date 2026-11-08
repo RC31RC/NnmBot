@@ -1,8 +1,5 @@
 package com.nnm.bot.admin.pojo.entity.bot.command;
 
-import com.nnm.bot.core.plugin.model.PresentationPolicy;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -51,10 +48,9 @@ public class BotCommand {
     @Column(name = "show_in_help", nullable = false)
     private boolean showInHelp = true;
 
-    /** 展示偏好、组合约束与交互策略，不控制必要内容是否发送。 */
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "presentation", nullable = false, columnDefinition = "jsonb")
-    private PresentationPolicy presentation = PresentationPolicy.defaults();
+    /** 当前命令选用的 HTML 图片模板；候选模板通过模板表的 command_id 归属。 */
+    @Column(name = "template_id")
+    private Long templateId;
 
     /** 覆盖插件默认权限的系统权限码。 */
     @Column(name = "permission_override", length = 100)

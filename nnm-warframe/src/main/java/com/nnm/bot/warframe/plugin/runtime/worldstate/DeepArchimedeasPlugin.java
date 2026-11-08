@@ -5,8 +5,7 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 深层科研命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.DEEP_ARCHIMEDEAS, name = "深层科研", gameCode = "warframe", order = 59,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.DEEP_ARCHIMEDEAS)
 // 数据源：官方 WorldStateDTO.Conquests，按 CT_LAB 过滤；当前不落业务表，原始科研条件保留在 JVM 快照。
 // WorldStateDTO 代码簿/补充数据用于解析节点、任务类型和未知术语；参考 warframe-worldstate-parser、warframe-info-api。
 public class DeepArchimedeasPlugin extends AbstractWorldStateCommandPlugin {

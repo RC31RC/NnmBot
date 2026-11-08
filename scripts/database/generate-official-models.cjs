@@ -395,6 +395,7 @@ fs.writeFileSync(path.join(resources, 'official-models.json'), JSON.stringify({ 
 const sqlPath = path.join(root, 'sql/init.sql');
 const baseline = fs.readFileSync(sqlPath, 'utf8');
 fs.writeFileSync(sqlPath, baseline.replace(/-- BEGIN GENERATED OFFICIAL MODELS[\s\S]*?-- END GENERATED OFFICIAL MODELS/, sql.join('\n')));
+require('./generate-official-form-labels.cjs').generateOfficialFormLabels(root, models);
 const inputs = require('./generate-official-inputs.cjs').generateOfficialInputs(root, models);
 console.log('Generated ' + inputs + ' typed official JSON inputs.');
 console.log('Generated ' + models.length + ' typed relation entities; SQL baseline updated.');

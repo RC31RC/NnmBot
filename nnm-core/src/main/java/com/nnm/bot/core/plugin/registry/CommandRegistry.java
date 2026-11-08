@@ -9,6 +9,11 @@ import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
+import com.nnm.bot.core.plugin.api.CommandCatalog;
+import com.nnm.bot.core.plugin.api.CommandSpecification;
+import com.nnm.bot.core.plugin.model.CommandMetadata;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.plugin.api.CommandConfigurationProvider;
 import com.nnm.bot.core.plugin.model.CommandDefinition;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
@@ -46,7 +51,9 @@ public class CommandRegistry {
     private final ReentrantLock refreshLock = new ReentrantLock();
 
     @Resource
-    private List<BotPlugin<?>> botPlugins;
+    private List<BotPlugin<?, ?>> botPlugins;
+    @Resource
+    private List<CommandCatalog> catalogs;
     @Resource
     private ObjectProvider<CommandConfigurationProvider> configurationProvider;
 
@@ -123,21 +130,21 @@ public class CommandRegistry {
         return snapshot.commands();
     }
 
-    public List<BotPlugin<?>> plugins() {
+    public List<BotPlugin<?, ?>> plugins() {
         return snapshot.commands().stream().map(RuntimeCommand::plugin).toList();
     }
 
     /**
      * 返回所有静态插件实现，管理端可用它检查数据库命令配置是否完整。
      */
-    public List<BotPlugin<?>> allPlugins() {
+    public List<BotPlugin<?, ?>> allPlugins() {
         return botPlugins.stream().filter(Objects::nonNull)
-            .sorted(Comparator.comparingInt((BotPlugin<?> plugin) -> metadata(plugin).order())
+            .sorted(Comparator.comparingInt((BotPlugin<?, ?> plugin) -> metadata(plugin).order())
                 .thenComparing(plugin -> normalize(metadata(plugin).code())))
             .toList();
     }
 
-    public Optional<BotPlugin<?>> plugin(String code) {
+    public Optional<BotPlugin<?, ?>> plugin(String code) {
         if (ObjectUtil.isNull(code)) {
             return Optional.empty();
         }
@@ -149,14 +156,28 @@ public class CommandRegistry {
     /**
      * 返回插件声明的稳定元数据，供管理端展示和运行时注册使用。
      */
-    public BotPluginCommand metadata(BotPlugin<?> plugin) {
+    public CommandMetadata metadata(BotPlugin<?, ?> plugin) {
         Objects.requireNonNull(plugin, "plugin must not be null");
-        BotPluginCommand metadata = AnnotationUtils.findAnnotation(plugin.getClass(), BotPluginCommand.class);
-        if (ObjectUtil.isNull(metadata)) {
-            throw new IllegalStateException(
-                "BotPlugin<?> must be annotated with @BotPluginCommand: " + plugin.getClass().getName());
+        BotPluginCommand annotation = AnnotationUtils.findAnnotation(plugin.getClass(), BotPluginCommand.class);
+        if (annotation == null)
+            throw new SystemException(CommandErrorCode.COMMAND_CONFIGURATION_INVALID,
+                "BotPlugin 缺少 @BotPluginCommand：" + plugin.getClass().getName());
+        String code = requireText(annotation.code(), "plugin code");
+        CommandCatalog owner = null;
+        for (CommandCatalog catalog : catalogs) {
+            if (!catalog.entries().containsKey(code))
+                continue;
+            if (owner != null)
+                throw new SystemException(CommandErrorCode.COMMAND_CONFIGURATION_INVALID, "命令目录编码重复：" + code);
+            owner = catalog;
         }
-        return metadata;
+        if (owner == null)
+            throw new SystemException(CommandErrorCode.COMMAND_CONFIGURATION_INVALID, "命令缺少目录声明：" + code);
+        CommandSpecification definition = owner.entries().get(code);
+        if (definition == null || !code.equals(definition.code()))
+            throw new SystemException(CommandErrorCode.COMMAND_CONFIGURATION_INVALID, "目录索引与命令定义编码不一致：" + code);
+        return new CommandMetadata(code, requireText(definition.displayName(), "plugin name"),
+            requireText(owner.gameCode(), "plugin gameCode"), annotation.matchType(), definition.order());
     }
 
     public List<CommandDescriptor> descriptors() {
@@ -176,12 +197,12 @@ public class CommandRegistry {
 
     private Snapshot buildSnapshot() {
         Objects.requireNonNull(this.botPlugins, "botPlugins must not be null");
-        Map<String, BotPlugin<?>> pluginsByCode = new LinkedHashMap<>();
+        Map<String, BotPlugin<?, ?>> pluginsByCode = new LinkedHashMap<>();
         this.botPlugins.stream().filter(Objects::nonNull)
-            .sorted(Comparator.comparingInt((BotPlugin<?> plugin) -> metadata(plugin).order())
+            .sorted(Comparator.comparingInt((BotPlugin<?, ?> plugin) -> metadata(plugin).order())
                 .thenComparing(plugin -> normalize(metadata(plugin).code())))
             .forEach(plugin -> registerPlugin(pluginsByCode, plugin));
-        log.info("Discovered {} BotPlugin<?> implementations: {}", pluginsByCode.size(), pluginsByCode.keySet());
+        log.info("Discovered {} BotPlugin implementations: {}", pluginsByCode.size(), pluginsByCode.keySet());
 
         CommandConfigurationProvider provider = this.configurationProvider.getIfAvailable();
         Map<String, CommandDefinition> definitions =
@@ -203,8 +224,8 @@ public class CommandRegistry {
         Map<String, Lookup> exactCommands = new HashMap<>();
         List<Lookup> prefixCommands = new ArrayList<>();
 
-        for (Entry<String, BotPlugin<?>> entry : pluginsByCode.entrySet()) {
-            BotPlugin<?> plugin = entry.getValue();
+        for (Entry<String, BotPlugin<?, ?>> entry : pluginsByCode.entrySet()) {
+            BotPlugin<?, ?> plugin = entry.getValue();
             CommandDefinition definition = definitionsByCode.remove(entry.getKey());
             if (ObjectUtil.isNull(definition)) {
                 // 插件是稳定实现，数据库只负责覆盖可变配置；未配置时使用安全默认值。
@@ -240,18 +261,18 @@ public class CommandRegistry {
             List.copyOf(prefixCommands));
     }
 
-    private CommandDefinition defaultDefinition(BotPlugin<?> plugin) {
-        BotPluginCommand metadata = metadata(plugin);
+    private CommandDefinition defaultDefinition(BotPlugin<?, ?> plugin) {
+        CommandMetadata metadata = metadata(plugin);
         String code = requireText(metadata.code(), "plugin code");
         String name = requireText(metadata.name(), "plugin name");
         String gameCode = requireText(metadata.gameCode(), "plugin gameCode");
         return new CommandDefinition(code, name, gameCode, "", CommandExecutionConfiguration.disabledDefaults());
     }
 
-    private void registerPlugin(Map<String, BotPlugin<?>> plugins, BotPlugin<?> plugin) {
-        BotPluginCommand metadata = metadata(plugin);
+    private void registerPlugin(Map<String, BotPlugin<?, ?>> plugins, BotPlugin<?, ?> plugin) {
+        CommandMetadata metadata = metadata(plugin);
         String code = requireText(metadata.code(), "plugin code");
-        BotPlugin<?> previous = plugins.put(normalize(code), plugin);
+        BotPlugin<?, ?> previous = plugins.put(normalize(code), plugin);
         if (ObjectUtil.isNotNull(previous)) {
             throw new IllegalStateException("Duplicate bot command code [%s]: %s / %s".formatted(code,
                 previous.getClass().getName(), plugin.getClass().getName()));

@@ -27,25 +27,27 @@ public sealed interface BotMessagePart {
     record Keyboard(List<Button> buttons) implements BotMessagePart {
         public Keyboard {
             buttons = List.copyOf(buttons);
-            if (buttons.isEmpty() || buttons.size() > 10)
-                throw new IllegalArgumentException("Keyboard requires 1–10 buttons");
+            if (buttons.isEmpty() || buttons.size() > 25)
+                throw new IllegalArgumentException("Keyboard requires 1–25 buttons");
         }
     }
 
-    record Button(String label, String value, boolean link) {
+    record Button(String label, String value, boolean link, int row) {
         public Button {
             Objects.requireNonNull(label, "label");
             Objects.requireNonNull(value, "value");
-            if (label.isBlank() || label.length() > 80 || value.isBlank() || value.length() > 2048
+            if (label.isBlank() || label.length() > 80 || value.isBlank() || value.length() > 2048 || row < 0 || row > 4
                 || label.chars().anyMatch(Character::isISOControl) || value.chars().anyMatch(Character::isISOControl)) {
                 throw new IllegalArgumentException("Invalid keyboard button");
             }
         }
     }
 
-    record Markdown(BotMarkdownMessage message) implements BotMessagePart {
+    record Markdown(BotMarkdownMessage message, String plainText) implements BotMessagePart {
         public Markdown {
             Objects.requireNonNull(message, "message");
+            if (plainText == null)
+                plainText = message.plainTextContent();
         }
     }
 }

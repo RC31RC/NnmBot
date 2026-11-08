@@ -11,7 +11,7 @@ import java.util.Objects;
  * @param descriptor 插件提供的稳定命令描述
  * @param configuration 数据库加载的运行配置
  */
-public record RuntimeCommand(BotPlugin<?> plugin, CommandDescriptor descriptor,
+public record RuntimeCommand(BotPlugin<?, ?> plugin, CommandDescriptor descriptor,
     CommandExecutionConfiguration configuration) {
 
     public RuntimeCommand {

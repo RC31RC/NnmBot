@@ -6,7 +6,8 @@ import java.util.List;
 /** 单个 JSON 文件审核预览；不把尚未迁移的业务域标成结构化入库完成。 */
 public record WarframeOfficialPreviewDTO(String id, WarframeOfficialVersionDTO version, String buildId,
     String baselineId, String status, Instant expiresAt, long totalBytes, int addedRecords, int changedRecords,
-    int removedRecords, List<String> unmappedPaths, List<FileChangeDTO> files) {
+    int removedRecords, List<String> unmappedPaths, List<FileChangeDTO> files, String applyError,
+    Instant retryExpiresAt) {
     /**
      * 构造数据文件预览传输对象，并保存初始化参数。
      *
@@ -22,6 +23,8 @@ public record WarframeOfficialPreviewDTO(String id, WarframeOfficialVersionDTO v
      * @param removedRecords 移除的记录。
      * @param unmappedPaths 未映射路径集合。
      * @param files 文件集合。
+     * @param retryExpiresAt 失败原件与差异的保留截止时间；到期须重新拉取。
+     * @param applyError 审批部分失败时可持久读取的原因。
      */
     public WarframeOfficialPreviewDTO {
         files = List.copyOf(files);
@@ -29,6 +32,6 @@ public record WarframeOfficialPreviewDTO(String id, WarframeOfficialVersionDTO v
     }
 
     public record FileChangeDTO(String path, String sha256, long bytes, Long recordCount, String changeType,
-        String baselineSha256) {
+        String baselineSha256, int addedRecords, int changedRecords, int removedRecords) {
     }
 }

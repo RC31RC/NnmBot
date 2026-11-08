@@ -7,8 +7,7 @@ import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 
 /** 查询 45 至 99 杜卡德金币物品的市场成交性价比。 */
-@BotPluginCommand(code = WarframeCommandCodes.SILVER_TRASH, matchType = MatchType.PREFIX, name = "银垃圾",
-    gameCode = "warframe", order = 70)
+@BotPluginCommand(code = WarframeCommandCodes.SILVER_TRASH, matchType = MatchType.PREFIX)
 public final class SilverTrashPlugin extends AbstractDucatsPlugin {
 
     /**
@@ -19,7 +18,7 @@ public final class SilverTrashPlugin extends AbstractDucatsPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return ranking(false, invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, String parsed) {
+        return ranking(false, parsed);
     }
 }

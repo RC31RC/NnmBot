@@ -14,10 +14,8 @@ import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,7 +41,7 @@ public class BotChannelManagementController {
         return ApiResponse.ok(service.createOneBot(request));
     }
 
-    @PutMapping("/onebot/{id}")
+    @PostMapping("/onebot/{id}/update")
     @SaCheckPermission("bot:instance:update")
     public ApiResponse<Void> updateOneBot(@PathVariable long id, @Valid @RequestBody OneBotInstanceSaveDTO request) {
         service.updateOneBot(id, request);
@@ -56,7 +54,7 @@ public class BotChannelManagementController {
         return ApiResponse.ok(service.createQqOfficial(request));
     }
 
-    @PutMapping("/qq-official/{id}")
+    @PostMapping("/qq-official/{id}/update")
     @SaCheckPermission("bot:instance:update")
     public ApiResponse<Void> updateQqOfficial(@PathVariable long id,
         @Valid @RequestBody QqOfficialInstanceSaveDTO request) {
@@ -64,7 +62,7 @@ public class BotChannelManagementController {
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @SaCheckPermission("bot:instance:delete")
     public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);

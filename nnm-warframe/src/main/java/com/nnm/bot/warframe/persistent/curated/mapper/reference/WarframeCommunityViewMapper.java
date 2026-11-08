@@ -9,6 +9,7 @@ import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommuni
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityPreviewPageVO;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityImportIssueVO;
 
 /** 冻结的社区预览快照只作为 DTO 流转，前端只接收分页 VO。 */
 public final class WarframeCommunityViewMapper {
@@ -31,7 +32,7 @@ public final class WarframeCommunityViewMapper {
      */
     public static WarframeCommunityPendingPreviewVO pending(WarframeCommunityPendingPreviewDTO value) {
         return new WarframeCommunityPendingPreviewVO(value.id(), value.dataset(), value.createdAt(), value.expiresAt(),
-            value.inputCount(), value.addedCount(), value.changedCount());
+            value.inputCount(), value.addedCount(), value.changedCount(), value.invalidCount());
     }
 
     public static WarframeCommunityPreviewPageVO preview(WarframeCommunityPreviewPageDTO value) {
@@ -44,7 +45,11 @@ public final class WarframeCommunityViewMapper {
                 operation.value(), operation.baselineId(), operation.baselineVersion(), fields);
         }).toList();
         return new WarframeCommunityPreviewPageVO(value.id(), value.dataset(), value.createdAt(), value.expiresAt(),
-            value.inputCount(), value.addedCount(), value.changedCount(),
+            value.inputCount(), value.addedCount(), value.changedCount(), value.invalidCount(),
+            value.issues().stream()
+                .map(issue -> new WarframeCommunityImportIssueVO(issue.recordNumber(), issue.key(), issue.field(),
+                    issue.message()))
+                .toList(),
             PageResult.of(records, operations.current(), operations.size(), operations.total()));
     }
 }

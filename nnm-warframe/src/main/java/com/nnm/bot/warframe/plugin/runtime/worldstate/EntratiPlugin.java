@@ -8,8 +8,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 英择谛赏金命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.ENTRATI, name = "英择谛", gameCode = "warframe", order = 54,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.ENTRATI)
 public class EntratiPlugin extends AbstractWorldStateCommandPlugin {
 
     /**

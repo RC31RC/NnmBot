@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public interface BotGroupPointTransactionRepository extends JpaRepository<BotGroupPointTransaction, Long> {
 
+    void deleteAllByGroupId(Long groupId);
+
     Optional<BotGroupPointTransaction> findByIdempotencyKey(String idempotencyKey);
 
     boolean existsByIdempotencyKey(String idempotencyKey);

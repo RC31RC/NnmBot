@@ -55,11 +55,19 @@ public class QqOfficialMessageSender implements BotMessageSender {
 
     @Override
     public boolean supportsComposition(BotMessageContext context, List<PartKind> parts) {
+        boolean keyboardAllowed = !parts.contains(PartKind.KEYBOARD)
+            || replyProperties.keyboardAllowed(context.botAccountId(), context.scope());
+        // QQ 媒体消息携带一张图片；Markdown 降为正文，按钮仍可编码为同一请求的键盘。
+        if (parts.contains(PartKind.IMAGE))
+            return context.nativeSource(QqOfficialMessageSource.class).supportsMedia() && keyboardAllowed
+                && parts.stream()
+                    .allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.IMAGE || kind == PartKind.MARKDOWN
+                        || kind == PartKind.KEYBOARD)
+                && parts.stream().filter(kind -> kind == PartKind.IMAGE).count() == 1;
         if (parts.contains(PartKind.KEYBOARD) || parts.contains(PartKind.MARKDOWN)) {
             return parts.stream()
                 .allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.MARKDOWN || kind == PartKind.KEYBOARD)
-                && (!parts.contains(PartKind.KEYBOARD)
-                    || replyProperties.keyboardAllowed(context.botAccountId(), context.scope()));
+                && keyboardAllowed;
         }
         return context.nativeSource(QqOfficialMessageSource.class).supportsMedia()
             && (parts.equals(List.of(PartKind.IMAGE)) || parts.equals(List.of(PartKind.TEXT, PartKind.IMAGE))
@@ -69,7 +77,9 @@ public class QqOfficialMessageSender implements BotMessageSender {
     @Override
     public PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
         BotMessageSendPermit permit) {
-        if (blocks.stream().anyMatch(BotMessagePart.Keyboard.class::isInstance)
+        if (blocks.stream()
+            .anyMatch(part -> part instanceof BotMessagePart.Keyboard
+                || part instanceof BotMessagePart.Markdown markdown && !markdown.message().buttons().isEmpty())
             && !replyProperties.keyboardAllowed(context.botAccountId(), context.scope())) {
             throw new BotMessageNotSentException("QQ 原生键盘资格已变化，尚未发送");
         }

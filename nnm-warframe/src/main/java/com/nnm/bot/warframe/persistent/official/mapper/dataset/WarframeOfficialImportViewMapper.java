@@ -38,19 +38,22 @@ public final class WarframeOfficialImportViewMapper {
         return new WarframeOfficialPreviewVO(value.id(), version(value.version()), value.buildId(), value.baselineId(),
             value.status(), value.expiresAt(), value.totalBytes(), value.addedRecords(), value.changedRecords(),
             value.removedRecords(), value.unmappedPaths(),
-            value.files().stream().map(file -> new WarframeOfficialPreviewVO.FileChangeVO(file.path(), file.sha256(),
-                file.bytes(), file.recordCount(), file.changeType())).toList());
+            value.files().stream()
+                .map(file -> new WarframeOfficialPreviewVO.FileChangeVO(file.path(), file.sha256(), file.bytes(),
+                    file.recordCount(), file.changeType(), file.addedRecords(), file.changedRecords(),
+                    file.removedRecords()))
+                .toList(),
+            value.applyError(), value.retryExpiresAt());
     }
 
     /**
      * 将按需读取的原始记录转换为管理端展示合同。
      *
      * @param value 原始版本记录。
-     * @return 前后两个版本的原文。
+     * @return 当前待审核候选的原文。
      */
     public static WarframeOfficialRawRecordVO record(WarframeOfficialRawRecordDTO value) {
-        return new WarframeOfficialRawRecordVO(value.previousJson(), value.incomingJson(),
-            value.previousLocalizedJson(), value.incomingLocalizedJson());
+        return new WarframeOfficialRawRecordVO(value.incomingJson(), value.incomingLocalizedJson());
     }
 
     /**
@@ -63,7 +66,6 @@ public final class WarframeOfficialImportViewMapper {
         return PageResult.of(
             page.records().stream()
                 .map(value -> new WarframeOfficialRecordChangeVO(value.path(), value.recordKey(), value.displayName(),
-                    value.changeType(),
                     value.fieldChanges().stream().map(field -> new WarframeOfficialFieldChangeVO(field.pointer(),
                         field.previousJson(), field.incomingJson())).toList()))
                 .toList(),

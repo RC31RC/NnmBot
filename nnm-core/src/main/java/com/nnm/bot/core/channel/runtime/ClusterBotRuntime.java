@@ -25,6 +25,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -60,6 +62,8 @@ public class ClusterBotRuntime implements NodeIdentityListener {
 
     private final Map<String, OwnedConnection> owned = new HashMap<>();
     private final Map<String, Lease> affinities = new HashMap<>();
+    // 这些值只用于本 JVM 的等待与重试；使用单调时间，避免系统校时改变退避时长。
+    private LongSupplier monotonicNanos = System::nanoTime;
     private final Map<String, Long> componentStartedAt = new HashMap<>();
     private final Map<String, Long> componentUnhealthySince = new HashMap<>();
     private final Map<String, Long> componentBackoffUntil = new HashMap<>();
@@ -233,14 +237,14 @@ public class ClusterBotRuntime implements NodeIdentityListener {
         Optional<Lease> acquired = leases.acquire("bot-affinity:" + name, rdt.instanceId(), properties.ownerLease());
         acquired.ifPresent(lease -> {
             affinities.put(name, lease);
-            componentStartedAt.putIfAbsent(name, System.currentTimeMillis());
+            componentStartedAt.putIfAbsent(name, monotonicNanos.getAsLong());
         });
         return acquired.orElse(null);
     }
 
     private void reconcileComponentHealth(Map<String, BotChannelInstanceRecord> eligible,
         Map<String, String> placement) {
-        long now = System.currentTimeMillis();
+        long now = monotonicNanos.getAsLong();
         Map<String, List<OwnedConnection>> localComponents = owned.values().stream().collect(java.util.stream.Collectors
             .groupingBy(connection -> componentName(connection.record(), placement, connection.affinityName())));
         for (Entry<String, List<OwnedConnection>> entry : localComponents.entrySet()) {
@@ -260,22 +264,22 @@ public class ClusterBotRuntime implements NodeIdentityListener {
                 continue;
             }
             long started = componentStartedAt.computeIfAbsent(component, ignored -> now);
-            if (now - started < properties.componentStartupGrace().toMillis()) {
+            if (now - started < properties.componentStartupGrace().toNanos()) {
                 continue;
             }
             long unhealthySince = componentUnhealthySince.computeIfAbsent(component, ignored -> now);
-            if (now - unhealthySince < properties.componentFailureThreshold().toMillis()) {
+            if (now - unhealthySince < properties.componentFailureThreshold().toNanos()) {
                 continue;
             }
             log.warn(
                 "All connections in component {} have been unavailable for {} ms; " + "releasing the whole component",
-                component, now - unhealthySince);
+                component, TimeUnit.NANOSECONDS.toMillis(now - unhealthySince));
             stopComponent(component);
             BotConnectionPlacementCoordinator coordinator =
                 placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
             if (coordinator != null)
                 coordinator.clearApproval(component);
-            componentBackoffUntil.put(component, now + properties.componentFailoverBackoff().toMillis());
+            componentBackoffUntil.put(component, now + properties.componentFailoverBackoff().toNanos());
             componentUnhealthySince.remove(component);
             componentStartedAt.remove(component);
         }
@@ -283,21 +287,22 @@ public class ClusterBotRuntime implements NodeIdentityListener {
 
     private void startEligible(Map<String, BotChannelInstanceRecord> eligible, Map<String, String> placement,
         Map<String, String> targets) {
-        long now = System.currentTimeMillis();
+        long now = monotonicNanos.getAsLong();
         for (BotChannelInstanceRecord record : eligible.values().stream()
             .sorted(Comparator.comparing(BotChannelInstanceRecord::instanceId)).toList()) {
+            Long retryAt = startRetryUntil.get(record.instanceId());
             if (owned.containsKey(record.instanceId())) {
-                if (startRetryUntil.containsKey(record.instanceId())
-                    && now >= startRetryUntil.get(record.instanceId())) {
+                if (retryAt != null && now - retryAt >= 0) {
                     retryStart(record, now);
                 }
                 continue;
             }
-            if (now < startRetryUntil.getOrDefault(record.instanceId(), 0L)) {
+            if (retryAt != null && now - retryAt < 0) {
                 continue;
             }
             String affinityName = placement.get(record.instanceId());
-            if (affinityName != null && now < componentBackoffUntil.getOrDefault(affinityName, 0L)) {
+            Long backoffUntil = componentBackoffUntil.get(affinityName);
+            if (backoffUntil != null && now - backoffUntil < 0) {
                 continue;
             }
             String target = targets.get(affinityName);
@@ -328,7 +333,7 @@ public class ClusterBotRuntime implements NodeIdentityListener {
             if (connection != null)
                 registry.find(key(record)).ifPresent(snapshot -> stateStore.startFailed(record.instanceId(),
                     connection.lease(), connection.affinity(), snapshot));
-            startRetryUntil.put(record.instanceId(), now + properties.componentFailoverBackoff().toMillis());
+            startRetryUntil.put(record.instanceId(), now + properties.componentFailoverBackoff().toNanos());
             throw exception;
         }
     }

@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.Instant;
 
-/** 每个官方文件的采纳版本状态；原始 JSON 字节保存在按内容寻址的对象存储。 */
+/** 每个官方 JSON 文件的采纳与候选版本状态；仅待审候选原文暂存在对象存储。 */
 @Getter
 @Setter
 @Entity

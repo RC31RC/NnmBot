@@ -1,105 +1,88 @@
 package com.nnm.bot.core.qqofficial.message;
 
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.nnm.bot.core.constant.QqOfficialChatType;
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.message.model.BotMessageReference;
-import com.nnm.bot.core.constant.BotMessageConstants.ReferenceKind;
-import com.nnm.bot.core.message.model.BotIncomingAttachment;
 import com.nnm.bot.core.constant.BotMessageConstants.BotIncomingAttachmentType;
+import com.nnm.bot.core.constant.BotMessageConstants.ReferenceKind;
 import com.nnm.bot.core.constant.BotMessageScope;
 import com.nnm.bot.core.constant.BotPlatform;
-
+import com.nnm.bot.core.constant.QqOfficialChatType;
+import com.nnm.bot.core.message.model.BotIncomingAttachment;
+import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.message.model.BotMessageReference;
+import com.nnm.bot.core.qqofficial.message.dto.QqOfficialGatewayEventDTO;
+import com.nnm.bot.core.qqofficial.message.dto.QqOfficialGatewayEventDTO.AttachmentDTO;
+import com.nnm.bot.core.qqofficial.message.dto.QqOfficialGatewayEventDTO.ReferencedMessageDTO;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.time.OffsetDateTime;
-import java.time.Instant;
 
-/**
- * 将 QQ 官方 Gateway 消息事件转换为平台无关上下文。
- *
- * <p>
- * 非消息事件或缺少发送者、会话标识的事件返回空结果，由 Gateway 继续维护连接， 不进入命令链。
- * </p>
- */
+/** 将类型化 QQ Gateway 事件转换为平台无关上下文；原始 JSON 用于源协议追踪。 */
 public final class QqOfficialMessageContextFactory {
-
-    /** 平台引用消息类型，仅用于协议结构识别。 */
     private static final int REFERENCE_MESSAGE_TYPE = 103;
 
     private QqOfficialMessageContextFactory() {}
 
-    /**
-     * 解析支持的消息事件，并移除机器人自身的 at 标记。
-     */
-    public static Optional<BotMessageContext> from(String appId, String eventType, JsonNode event) {
+    public static Optional<BotMessageContext> from(String appId, String eventType, QqOfficialGatewayEventDTO event,
+        String rawJson) {
         QqOfficialChatType chatType = chatType(eventType);
-        if (ObjectUtil.isNull(chatType) || ObjectUtil.isNull(event)) {
+        if (chatType == null || event == null)
             return Optional.empty();
-        }
-
+        var author = event.author();
         String senderId = switch (chatType) {
-            case C2C -> text(event.path("author"), "user_openid");
-            case GROUP -> firstText(event.path("author"), "member_openid", "user_openid");
-            case CHANNEL, DIRECT -> text(event.path("author"), "id");
+            case C2C -> author == null ? null : text(author.userOpenid());
+            case GROUP -> author == null ? null : firstText(author.memberOpenid(), author.userOpenid());
+            case CHANNEL, DIRECT -> author == null ? null : text(author.id());
         };
         String targetId = switch (chatType) {
             case C2C -> senderId;
-            case GROUP -> text(event, "group_openid");
-            case CHANNEL -> text(event, "channel_id");
-            case DIRECT -> text(event, "guild_id");
+            case GROUP -> text(event.groupOpenid());
+            case CHANNEL -> text(event.channelId());
+            case DIRECT -> text(event.guildId());
         };
-        String messageId = text(event, "id");
-        String content = normalizeContent(event.path("content").asText(""), appId);
-        if (isBlank(appId) || isBlank(senderId) || isBlank(targetId) || isBlank(messageId)) {
+        String messageId = text(event.id());
+        if (StrUtil.isBlank(appId) || senderId == null || targetId == null || messageId == null)
             return Optional.empty();
-        }
-
+        String content = normalizeContent(event.content() == null ? "" : event.content(), appId);
         BotMessageScope scope = switch (chatType) {
             case GROUP -> BotMessageScope.GROUP;
             case CHANNEL -> BotMessageScope.CHANNEL;
             case C2C, DIRECT -> BotMessageScope.PRIVATE;
         };
-        return Optional
-            .of(BotMessageContext
-                .of(BotPlatform.QQ_OFFICIAL, scope, appId, senderId, targetId, messageId, event.toString(), content,
-                    new QqOfficialMessageSource(eventType, chatType, targetId, messageId, appId, event.toString(),
-                        timestamp(event)),
-                    attachments(event))
-                .withReference(reference(event), index(event, "msg_idx")));
+        String timestamp = text(event.timestamp());
+        return Optional.of(BotMessageContext
+            .of(BotPlatform.QQ_OFFICIAL, scope, appId, senderId, targetId, messageId, rawJson, content,
+                new QqOfficialMessageSource(eventType, chatType, targetId, messageId, appId, rawJson,
+                    timestamp == null ? null : OffsetDateTime.parse(timestamp).toInstant()),
+                attachments(event))
+            .withReference(reference(event), index(event, "msg_idx")));
     }
 
-    /** 解析 QQ 引用索引和当前事件直接携带的原附件，不递归读取嵌套引用。 */
-    static BotMessageReference reference(JsonNode event) {
-        JsonNode elements = event.path("msg_elements");
+    static BotMessageReference reference(QqOfficialGatewayEventDTO event) {
         String id = index(event, "ref_msg_idx");
-        JsonNode element = elements.isArray() && !elements.isEmpty() ? elements.get(0) : null;
-        if (id == null && event.path("message_type").asInt() == REFERENCE_MESSAGE_TYPE && element != null) {
-            id = text(element, "msg_idx");
-        }
+        ReferencedMessageDTO element =
+            event.msgElements() == null || event.msgElements().isEmpty() ? null : event.msgElements().getFirst();
+        if (id == null && Integer.valueOf(REFERENCE_MESSAGE_TYPE).equals(event.messageType()) && element != null)
+            id = text(element.msgIdx());
         if (id != null) {
-            // 有索引时只采用与目标一致或未另标索引的元素，避免混用其他消息的图片。
             List<BotIncomingAttachment> referenced =
-                element != null && (text(element, "msg_idx") == null || id.equals(text(element, "msg_idx")))
-                    ? attachments(element) : List.of();
+                element != null && (text(element.msgIdx()) == null || id.equals(text(element.msgIdx())))
+                    ? attachments(element.attachments()) : List.of();
             return new BotMessageReference(ReferenceKind.REFERENCE_INDEX, id, referenced);
         }
-        id = text(event.path("message_reference"), "message_id");
-        return id == null ? null : new BotMessageReference(ReferenceKind.MESSAGE_ID, id, List.of());
+        String messageId = event.messageReference() == null ? null : text(event.messageReference().messageId());
+        return messageId == null ? null : new BotMessageReference(ReferenceKind.MESSAGE_ID, messageId, List.of());
     }
 
-    /** 精确读取 ext 的键，普通消息 ID 与 REFIDX 不互换。 */
-    private static String index(JsonNode event, String key) {
-        JsonNode ext = event.path("message_scene").path("ext");
-        if (!ext.isArray())
+    private static String index(QqOfficialGatewayEventDTO event, String key) {
+        List<String> ext = event.messageScene() == null ? null : event.messageScene().ext();
+        if (ext == null)
             return null;
-        for (JsonNode value : ext) {
-            String entry = value.asText("");
+        for (String entry : ext) {
+            if (entry == null)
+                continue;
             int separator = entry.indexOf('=');
             if (separator > 0 && key.equals(entry.substring(0, separator).trim())) {
                 String id = entry.substring(separator + 1).trim();
@@ -108,11 +91,6 @@ public final class QqOfficialMessageContextFactory {
             }
         }
         return null;
-    }
-
-    private static Instant timestamp(JsonNode event) {
-        String timestamp = text(event, "timestamp");
-        return timestamp == null ? null : OffsetDateTime.parse(timestamp).toInstant();
     }
 
     static QqOfficialChatType chatType(String eventType) {
@@ -125,45 +103,44 @@ public final class QqOfficialMessageContextFactory {
         };
     }
 
-    private static String firstText(JsonNode node, String... fields) {
-        for (String field : fields) {
-            String value = text(node, field);
-            if (!isBlank(value)) {
+    private static String text(String value) {
+        return StrUtil.isBlank(value) ? null : value;
+    }
+
+    private static String firstText(String... values) {
+        for (String value : values) {
+            if (text(value) != null)
                 return value;
-            }
         }
         return null;
     }
 
-    private static String text(JsonNode node, String field) {
-        String value = node.path(field).asText("");
-        return isBlank(value) ? null : value;
-    }
-
     private static String normalizeContent(String content, String appId) {
-        if (isBlank(content) || isBlank(appId)) {
+        if (StrUtil.isBlank(content) || StrUtil.isBlank(appId))
             return content;
-        }
         return content.replace("<@!" + appId + ">", "").replace("<@" + appId + ">", "");
     }
 
-    /** 提取当前消息或原消息查询结果的附件摘要，不下载内容或展开嵌套引用。 */
-    public static List<BotIncomingAttachment> attachments(JsonNode event) {
-        JsonNode attachmentNodes = event.path("attachments");
-        if (!attachmentNodes.isArray()) {
+    public static List<BotIncomingAttachment> attachments(QqOfficialGatewayEventDTO event) {
+        return event == null ? List.of() : attachments(event.attachments());
+    }
+
+    private static List<BotIncomingAttachment> attachments(List<AttachmentDTO> nodes) {
+        if (nodes == null)
             return List.of();
-        }
         List<BotIncomingAttachment> attachments = new ArrayList<>();
-        for (JsonNode node : attachmentNodes) {
-            String contentType = firstText(node, "content_type", "mime_type", "mime");
-            String fileName = firstText(node, "filename", "file_name", "name");
-            String url = firstText(node, "url", "download_url");
-            String fileId = firstText(node, "id", "file_id");
-            String type = firstText(node, "type", "content_type");
+        for (AttachmentDTO node : nodes) {
+            if (node == null)
+                continue;
+            String contentType = firstText(node.contentType(), node.mimeType(), node.mime());
+            String fileName = firstText(node.filename(), node.fileName(), node.name());
+            String url = firstText(node.url(), node.downloadUrl());
+            String fileId = firstText(node.id(), node.fileId());
+            String type = firstText(node.type(), node.contentType());
             BotIncomingAttachmentType attachmentType =
                 isImage(type, contentType, fileName) ? BotIncomingAttachmentType.IMAGE : BotIncomingAttachmentType.FILE;
             attachments.add(new BotIncomingAttachment(attachmentType, fileName, contentType, url, fileId,
-                positiveLong(node, "size", "file_size"), positiveInt(node, "width"), positiveInt(node, "height"),
+                positiveLong(node.size(), node.fileSize()), positiveInt(node.width()), positiveInt(node.height()),
                 Map.of("platformType", type == null ? "unknown" : type)));
         }
         return List.copyOf(attachments);
@@ -175,19 +152,24 @@ public final class QqOfficialMessageContextFactory {
             || (fileName != null && contentTypeFromName(fileName) != null);
     }
 
-    private static Long positiveLong(JsonNode node, String... fields) {
+    private static Long positiveLong(String... fields) {
         for (String field : fields) {
-            long value = node.path(field).asLong(0);
-            if (value > 0) {
-                return value;
+            if (field == null)
+                continue;
+            try {
+                long value = Long.parseLong(field);
+                if (value > 0)
+                    return value;
+            } catch (NumberFormatException ignored) {
+                // 上游附件大小并非可靠数字；其它字段仍应正常处理。
             }
         }
         return null;
     }
 
-    private static Integer positiveInt(JsonNode node, String field) {
-        long value = node.path(field).asLong(0);
-        return value > 0 && value <= Integer.MAX_VALUE ? (int)value : null;
+    private static Integer positiveInt(String field) {
+        Long value = positiveLong(field);
+        return value != null && value <= Integer.MAX_VALUE ? value.intValue() : null;
     }
 
     private static String contentTypeFromName(String fileName) {
@@ -201,9 +183,5 @@ public final class QqOfficialMessageContextFactory {
         if (lower.endsWith(".gif"))
             return "image/gif";
         return null;
-    }
-
-    private static boolean isBlank(String value) {
-        return StrUtil.isBlank(value);
     }
 }

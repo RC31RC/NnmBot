@@ -20,7 +20,7 @@ import java.util.Map;
  * 命令结构化数据的通用文字排版器。
  *
  * <p>
- * {@code CommandResult.data} 是所有命令共用的已处理展示数据。该类只负责 将它排版成文字，不参与业务解析，也不为 WorldStateDTO 或市场命令提供特殊协议。
+ * 命令返回的 HTML 数据是已处理的展示对象。该类只负责将它排版成文字，不参与业务解析，也不为 WorldStateDTO 或市场命令提供特殊协议。
  * </p>
  */
 @Component

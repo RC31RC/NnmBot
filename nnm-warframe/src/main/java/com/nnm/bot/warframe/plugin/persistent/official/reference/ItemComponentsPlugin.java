@@ -4,10 +4,10 @@ import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.warframe.persistent.official.pojo.query.reference.WarframeItemRelationQuery;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 
-@BotPluginCommand(code = WarframeCommandCodes.ITEM_COMPONENTS, matchType = MatchType.PREFIX, name = "物品组件",
-    gameCode = "warframe", order = 83)
+@BotPluginCommand(code = WarframeCommandCodes.ITEM_COMPONENTS, matchType = MatchType.PREFIX)
 public final class ItemComponentsPlugin extends AbstractItemRelationPlugin {
     /**
      * 根据命令参数调用业务服务并组装命令结果。
@@ -17,7 +17,7 @@ public final class ItemComponentsPlugin extends AbstractItemRelationPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return relations(invocation.arguments(), true);
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeItemRelationQuery parsed) {
+        return relations(parsed, true);
     }
 }

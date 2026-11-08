@@ -8,24 +8,12 @@ import java.util.List;
 import java.io.IOException;
 import java.util.Set;
 import java.util.Map;
+import java.util.UUID;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ChangeType;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFilteredChangesDTO;
 
-/** 官方数据审批及数据库基线边界。 */
+/** 官方数据审批及分类事务边界。 */
 public interface WarframeOfficialApprovalService {
-    /**
-     * 计算当前已采纳内容的稳定指纹，供审批基线核对。
-     *
-     * @return 当前内容的稳定校验摘要。
-     */
-    String fingerprint();
-
-    /**
-     * 计算指定官方文件的审批指纹；单文件任务不依赖无关文件的变更。
-     *
-     * @param paths 审核的文件路径。
-     * @return 对应文件的基线指纹。
-     */
-    String fingerprint(Set<String> paths);
-
     /**
      * 返回本次需要与数据库当前内容逐记录比对的官方文件路径；不能仅凭文件摘要跳过。
      *
@@ -56,19 +44,18 @@ public interface WarframeOfficialApprovalService {
         Consumer<WarframeOfficialRecordChangeDTO> consumer) throws IOException;
 
     /**
-     * 采纳已经确认的业务变更。
+     * 在单独事务中采纳该文件下一个未完成的变更分类。
      *
-     * @param batchId 当前冻结导入批次的标识。
-     * @param incoming 本次输入。
-     * @param files 文件集合。
-     * @param selectedIdentities 本次选中采纳的记录身份。
-     * @param selectedPaths 本次选中记录所属的官方文件路径。
-     * @param remainingPaths 当前仍有待审核差异的官方文件路径。
-     * @param remainingChangeObjectKey 过滤后剩余差异对象键。
-     * @param remainingCounts 过滤后剩余差异计数。
-     * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
+     * @param jobId 文件工作项标识。
+     * @param ownerToken 本次认领的所有者令牌。
+     * @param incoming 文件记录来源，可重复按类别读取。
+     * @param file 待入库文件摘要。
+     * @param plan 待保留差异及文件版本计划。
+     * @param approvedKeys 从冻结预览读出的各分类已批准业务键。
+     * @return 该文件的全部分类是否已提交。
+     * @throws IOException 读取候选记录失败时抛出，当前分类事务回滚。
      */
-    void apply(String batchId, WarframeOfficialRecordSource incoming, List<OfficialFileDigestDTO> files,
-        Set<String> selectedIdentities, Set<String> selectedPaths, Set<String> remainingPaths,
-        String remainingChangeObjectKey, Map<String, Integer> remainingCounts) throws IOException;
+    boolean applyNextCategory(UUID jobId, UUID ownerToken, WarframeOfficialRecordSource incoming,
+        OfficialFileDigestDTO file, OfficialFilteredChangesDTO plan, Map<ChangeType, Set<String>> approvedKeys)
+        throws IOException;
 }

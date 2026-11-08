@@ -54,7 +54,7 @@ public class ProactiveReplyDispatcher {
             for (UUID id : content.resourceIds())
                 attachments.put(id, resources.materialize(manifest, id));
             return planner
-                .plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP), List.of(),
+                .plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP),
                     content.replies(attachments::get))
                 .map(plans -> planner.compile(capabilities, plans)).orElse(List.of());
         } catch (RuntimeException exception) {
@@ -95,7 +95,7 @@ public class ProactiveReplyDispatcher {
                 attachments.put(id, resources.materialize(manifest, id));
             ReplyTarget capabilities = senders.target(target);
             plans = planner
-                .plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP), List.of(),
+                .plan(capabilities, content.presentation().resolve(target.platform(), BotMessageScope.GROUP),
                     content.replies(attachments::get))
                 .map(selected -> planner.compile(capabilities, selected))
                 .orElseThrow(() -> new BotMessageNotSentException("目标能力已变化，通知无法完整发送"));

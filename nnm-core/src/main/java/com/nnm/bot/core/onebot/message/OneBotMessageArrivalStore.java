@@ -1,6 +1,8 @@
 package com.nnm.bot.core.onebot.message;
 
 import com.nnm.bot.core.config.BotCacheProperties;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -30,7 +32,8 @@ public class OneBotMessageArrivalStore {
     public long receivedAt(String sessionId, String accountId, String messageId) {
         Long receivedAt = arrivals.peek(new Key(sessionId, accountId, messageId));
         if (receivedAt == null) {
-            throw new IllegalStateException("OneBot arrival timestamp missing or expired");
+            throw new SystemException(BotChannelErrorCode.MESSAGE_ARRIVAL_EXPIRED,
+                "OneBot arrival timestamp missing or expired");
         }
         return receivedAt;
     }

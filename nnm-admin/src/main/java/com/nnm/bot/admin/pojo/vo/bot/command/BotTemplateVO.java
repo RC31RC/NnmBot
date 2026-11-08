@@ -2,14 +2,12 @@ package com.nnm.bot.admin.pojo.vo.bot.command;
 
 import java.time.LocalDateTime;
 
-/** 数据库 HTML 模板展示对象。 */
+/** HTML 图片模板展示对象。 */
 public record BotTemplateVO(
     /** 模板主键。 */
     Long id,
     /** 模板稳定编码。 */
     String templateCode,
-    /** 模板适用的数据视图键。 */
-    String viewKey,
     /** 模板名称。 */
     String name,
     /** 所属命令主键。 */
@@ -17,7 +15,7 @@ public record BotTemplateVO(
     /** 模板在命令下的排序。 */
     int sortOrder,
     /** 完整 HTML 内容。 */
-    String htmlContent, String markdownContent, String plainTextContent,
+    String htmlContent,
     /** 是否启用。 */
     boolean enabled,
     /** 引用该模板的命令数量。 */

@@ -19,7 +19,6 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,7 +38,7 @@ public class BotCommandManagementController {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandVO(service.commands()));
     }
 
-    @PutMapping("/{code}")
+    @PostMapping("/{code}/update")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> update(@PathVariable String code, @Valid @RequestBody BotCommandSaveDTO request) {
         service.update(code, request);
@@ -53,7 +52,7 @@ public class BotCommandManagementController {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandRoleVO(service.roles(code)));
     }
 
-    @PutMapping("/{code}/robot-roles")
+    @PostMapping("/{code}/robot-roles/update")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> updateRoles(@PathVariable String code, @Valid @RequestBody BotCommandRoleSaveDTO request) {
         service.updateRoles(code, request);
@@ -68,7 +67,7 @@ public class BotCommandManagementController {
         return ApiResponse.ok(service.systemRoleIds(code));
     }
 
-    @PutMapping("/{code}/system-roles")
+    @PostMapping("/{code}/system-roles/update")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> updateSystemRoles(@PathVariable String code,
         @Valid @RequestBody BotCommandSystemRoleSaveDTO request) {
@@ -83,7 +82,7 @@ public class BotCommandManagementController {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandCostVO(service.cost(code)));
     }
 
-    @PutMapping("/{code}/cost")
+    @PostMapping("/{code}/cost/update")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> updateCost(@PathVariable String code, @Valid @RequestBody BotCommandCostSaveDTO request) {
         service.updateCost(code, request);

@@ -144,7 +144,7 @@ CREATE TABLE nnmbot.bot_command (
     description character varying(255),
     enabled boolean DEFAULT true NOT NULL,
     show_in_help boolean DEFAULT true NOT NULL,
-    presentation jsonb DEFAULT '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}'::jsonb NOT NULL,
+    template_id bigint,
     permission_override character varying(100),
     group_role_required character varying(20),
     cooldown_seconds bigint DEFAULT 0 NOT NULL,
@@ -152,8 +152,7 @@ CREATE TABLE nnmbot.bot_command (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT ck_bot_command_cooldown CHECK ((cooldown_seconds >= 0)),
-    CONSTRAINT ck_bot_command_group_role CHECK (((group_role_required IS NULL) OR ((group_role_required)::text = ANY (ARRAY[('OWNER'::character varying)::text, ('ADMIN'::character varying)::text])))),
-    CONSTRAINT ck_bot_command_presentation CHECK (jsonb_typeof(presentation) = 'object')
+    CONSTRAINT ck_bot_command_group_role CHECK (((group_role_required IS NULL) OR ((group_role_required)::text = ANY (ARRAY[('OWNER'::character varying)::text, ('ADMIN'::character varying)::text]))))
 );
 
 
@@ -162,27 +161,8 @@ CREATE TABLE nnmbot.bot_command (
 --
 
 COMMENT ON TABLE nnmbot.bot_command IS '机器人命令的可变管理配置';
+COMMENT ON COLUMN nnmbot.bot_command.template_id IS '命令当前选中的 HTML 图片模板主键；可维护多个候选模板但仅选一个';
 
--- 关联命令组是人工维护的展示导航关系，不参与命令匹配、权限或执行。
--- 成员按组内编码唯一，组整体使用 version 做管理端乐观并发校验。
-CREATE TABLE nnmbot.bot_command_group (
-    id bigint NOT NULL,
-    code character varying(80) NOT NULL,
-    name character varying(100) NOT NULL,
-    enabled boolean DEFAULT true NOT NULL,
-    version integer DEFAULT 0 NOT NULL,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-COMMENT ON TABLE nnmbot.bot_command_group IS '机器人命令的人工关联导航组';
-COMMENT ON COLUMN nnmbot.bot_command_group.id IS '关联命令组主键';
-COMMENT ON COLUMN nnmbot.bot_command_group.code IS '关联命令组稳定编码';
-COMMENT ON COLUMN nnmbot.bot_command_group.name IS '关联命令组显示名称';
-COMMENT ON COLUMN nnmbot.bot_command_group.enabled IS '是否启用关联导航';
-COMMENT ON COLUMN nnmbot.bot_command_group.version IS '管理端乐观并发版本';
-COMMENT ON COLUMN nnmbot.bot_command_group.created_at IS '创建时间';
-COMMENT ON COLUMN nnmbot.bot_command_group.updated_at IS '最后更新时间';
 
 -- 通知先持久化再认领；提交结果未知的任务禁止自动重放平台副作用。
 CREATE TABLE nnmbot.bot_notification_job (
@@ -220,22 +200,6 @@ CREATE INDEX idx_bot_notification_job_owner ON nnmbot.bot_notification_job (owne
 -- 扫描超时执行任务和过期历史，避免全表遍历。
 CREATE INDEX idx_bot_notification_job_updated ON nnmbot.bot_notification_job (status, updated_at);
 
-CREATE TABLE nnmbot.bot_command_group_member (
-    id bigint NOT NULL,
-    group_id bigint NOT NULL,
-    command_code character varying(80) NOT NULL,
-    title character varying(100) NOT NULL,
-    sort_order integer DEFAULT 0 NOT NULL,
-    parameter_bindings jsonb DEFAULT '{}'::jsonb NOT NULL
-);
-
-COMMENT ON TABLE nnmbot.bot_command_group_member IS '机器人命令关联导航组成员';
-COMMENT ON COLUMN nnmbot.bot_command_group_member.id IS '关联命令组成员主键';
-COMMENT ON COLUMN nnmbot.bot_command_group_member.group_id IS '所属关联命令组主键';
-COMMENT ON COLUMN nnmbot.bot_command_group_member.command_code IS '引用的稳定命令编码，不复制触发词';
-COMMENT ON COLUMN nnmbot.bot_command_group_member.title IS '动作显示标题';
-COMMENT ON COLUMN nnmbot.bot_command_group_member.sort_order IS '组内展示顺序';
-COMMENT ON COLUMN nnmbot.bot_command_group_member.parameter_bindings IS '目标参数名到来源命令白名单上下文字段的映射，不保存任意命令模板';
 
 
 --
@@ -288,10 +252,9 @@ COMMENT ON COLUMN nnmbot.bot_command.show_in_help IS '是否显示在帮助菜�
 
 
 --
--- Name: COLUMN bot_command.presentation; Type: COMMENT; Schema: nnmbot; Owner: -
+-- 命令交互形式由后端按渠道能力编排，不保存前端展示策略。
 --
 
-COMMENT ON COLUMN nnmbot.bot_command.presentation IS '视图偏好顺序、消息组合约束和交互策略；不决定必要内容是否投递';
 
 
 --
@@ -529,23 +492,6 @@ CREATE SEQUENCE nnmbot.bot_command_id_seq
 
 ALTER SEQUENCE nnmbot.bot_command_id_seq OWNED BY nnmbot.bot_command.id;
 
-CREATE SEQUENCE nnmbot.bot_command_group_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-ALTER SEQUENCE nnmbot.bot_command_group_id_seq OWNED BY nnmbot.bot_command_group.id;
-
-CREATE SEQUENCE nnmbot.bot_command_group_member_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-ALTER SEQUENCE nnmbot.bot_command_group_member_id_seq OWNED BY nnmbot.bot_command_group_member.id;
 
 
 --
@@ -671,13 +617,10 @@ ALTER SEQUENCE nnmbot.bot_command_role_id_seq OWNED BY nnmbot.bot_command_role.i
 CREATE TABLE nnmbot.bot_command_template (
     id bigint NOT NULL,
     template_code character varying(80) NOT NULL,
-    view_key character varying(80) NOT NULL,
     name character varying(100) NOT NULL,
     command_id bigint,
     sort_order integer DEFAULT 0 NOT NULL,
     html_content text NOT NULL,
-    markdown_content text,
-    plain_text_content text,
     enabled boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -688,9 +631,7 @@ CREATE TABLE nnmbot.bot_command_template (
 -- Name: TABLE bot_command_template; Type: COMMENT; Schema: nnmbot; Owner: -
 --
 
-COMMENT ON TABLE nnmbot.bot_command_template IS '机器人数据视图模板，保留 HTML 图片并支持 Markdown 与显式纯文本';
-COMMENT ON COLUMN nnmbot.bot_command_template.markdown_content IS 'Markdown 展示模板，只允许白名单字段和列表插值';
-COMMENT ON COLUMN nnmbot.bot_command_template.plain_text_content IS 'Markdown 不可用时的显式纯文本模板';
+COMMENT ON TABLE nnmbot.bot_command_template IS '机器人 HTML 图片模板候选集；各命令仅选择一个用于渲染';
 
 
 --
@@ -706,7 +647,6 @@ COMMENT ON COLUMN nnmbot.bot_command_template.id IS 'HTML 模板主键';
 
 COMMENT ON COLUMN nnmbot.bot_command_template.template_code IS '模板业务编码';
 
-COMMENT ON COLUMN nnmbot.bot_command_template.view_key IS '插件声明的数据视图键，HTML 模板只能渲染对应的数据契约';
 
 
 --
@@ -727,7 +667,7 @@ COMMENT ON COLUMN nnmbot.bot_command_template.command_id IS '所属命令主键�
 -- Name: COLUMN bot_command_template.sort_order; Type: COMMENT; Schema: nnmbot; Owner: -
 --
 
-COMMENT ON COLUMN nnmbot.bot_command_template.sort_order IS '同一命令下模板的默认渲染和展示顺序';
+COMMENT ON COLUMN nnmbot.bot_command_template.sort_order IS '同一命令下 HTML 候选模板的展示顺序';
 
 
 --
@@ -2680,7 +2620,7 @@ COMMENT ON COLUMN nnmbot.wf_group_watch_rule.id IS '蹲任务规则主键';
 -- Name: COLUMN wf_group_watch_rule.group_id; Type: COMMENT; Schema: nnmbot; Owner: -
 --
 
-COMMENT ON COLUMN nnmbot.wf_group_watch_rule.group_id IS '逻辑群组主键，使用应用层逻辑关联';
+COMMENT ON COLUMN nnmbot.wf_group_watch_rule.group_id IS '所属逻辑群组主键，群组删除时级联清理';
 
 
 --
@@ -2778,9 +2718,6 @@ ALTER TABLE ONLY nnmbot.bot_channel_instance ALTER COLUMN id SET DEFAULT nextval
 
 ALTER TABLE ONLY nnmbot.bot_command ALTER COLUMN id SET DEFAULT nextval('nnmbot.bot_command_id_seq'::regclass);
 
-ALTER TABLE ONLY nnmbot.bot_command_group ALTER COLUMN id SET DEFAULT nextval('nnmbot.bot_command_group_id_seq'::regclass);
-
-ALTER TABLE ONLY nnmbot.bot_command_group_member ALTER COLUMN id SET DEFAULT nextval('nnmbot.bot_command_group_member_id_seq'::regclass);
 
 
 --
@@ -2955,135 +2892,135 @@ ALTER TABLE ONLY nnmbot.wf_group_watch_rule ALTER COLUMN id SET DEFAULT nextval(
 -- Data for Name: bot_command; Type: TABLE DATA; Schema: nnmbot; Owner: -
 --
 
-INSERT INTO nnmbot.bot_command (id, code, name, game_code, description, enabled, show_in_help, presentation, permission_override, group_role_required, cooldown_seconds, mention_invoker, created_at, updated_at) VALUES
-('5', 'wiki', 'Wiki', 'warframe', '返回 Warframe 物品对应的灰机 Wiki 链接', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('6', 'forum-loadout', 'wf配装', 'warframe', '模糊查询 Warframe 论坛配装文章并返回文章地址', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('9', 'alerts', '警报', 'warframe', '查看当前警报', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('10', 'sorties', '突击', 'warframe', '查看当前突击', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('11', 'archon-hunts', '执刑官猎杀', 'warframe', '查看当前执刑官猎杀', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('12', 'void-trader', '奸商', 'warframe', '查看奸商行踪和商品', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('13', 'arbitration-table', '仲裁表', 'warframe', '查看仲裁轮换表', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('14', 'daily-deals', '每日特惠', 'warframe', '查看每日特惠', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('15', 'invasions', '入侵', 'warframe', '查看当前入侵', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('16', 'fissures', '裂隙', 'warframe', '查看普通裂隙', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('17', 'void-storms', '九重天裂隙', 'warframe', '查看九重天裂隙', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('18', 'steel-fissures', '钢铁裂隙', 'warframe', '查看钢铁路径裂隙', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('19', 'steel-path', '钢铁奖励', 'warframe', '查看钢铁路径奖励', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('20', 'cycles', '平原', 'warframe', '查看各个开放世界周期', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('21', 'ostrons', '希图斯', 'warframe', '查看希图斯赏金任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('22', 'entrati', '英择谛', 'warframe', '查看英择谛赏金任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('23', 'solaris', '索拉里斯', 'warframe', '查看索拉里斯联合赏金任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('25', 'nightwave', '电波', 'warframe', '查看电波任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('27', 'translation', '翻译', 'warframe', '查询 Warframe 翻译', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('30', 'liches', '赤毒', 'warframe', '查询赤毒相关数据', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('31', 'sisters', '信条', 'warframe', '查询信条相关数据', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('32', 'perrin-sequence', '佩兰数列', 'warframe', '查询佩兰数列和信条武器', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('33', 'gold-trash', '金垃圾', 'warframe', '查询金垃圾推荐', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('34', 'silver-trash', '银垃圾', 'warframe', '查询银垃圾推荐', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('35', 'relics', '遗物', 'warframe', '查询遗物信息', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('36', 'riven-analyse', '紫卡分析', 'warframe', '分析紫卡截图或文本', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('37', 'calendar-1999', '1999日历', 'warframe', '查看 1999 日历', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('38', 'conclave', '竞技场', 'warframe', '查看当前 Conclave 挑战', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('39', 'subscribe', '订阅', 'warframe', '订阅 Warframe 事件通知', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('40', 'unsubscribe', '取消订阅', 'warframe', '取消 Warframe 事件通知订阅', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('46', 'watch-list', '蹲任务', 'warframe', '查看当前成员的 Warframe 蹲任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-29 00:00:00', '2026-09-29 00:00:00'),
-('41', 'update-market-items', '更新WM物品', 'warframe', '更新 Warframe Market 物品数据', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('42', 'update-market-riven', '更新WM紫卡', 'warframe', '更新 Warframe Market 紫卡数据', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('43', 'update-sister', '更新信条', 'warframe', '更新信条和赤毒武器数据', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('44', 'update-translation', '更新翻译', 'warframe', '更新 Warframe 翻译数据', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('2', 'help', '帮助', 'system', '查看命令菜单', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-22 02:36:11.812122'),
-('3', 'sign-in', '签到', 'system', '每日签到并返回签到后的群组积分', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-23 16:07:54.491956'),
-('4', 'bind', '绑定', 'system', '绑定当前群组成员的 QQ 号', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-23 16:07:54.491956'),
-('8', 'arbitration', '仲裁', 'warframe', '查看当前仲裁任务', 't', 't', '{"viewOrder":["IMAGE","TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-26 11:10:09.495834'),
-('24', 'duviri-cycle', '双衍王境', 'warframe', '查看双衍王境轮换', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-26 16:18:27.212129'),
-('45', 'jm', 'JM 下载', 'system', '下载指定 JM 漫画并返回压缩 PDF', 'f', 'f', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '30', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('1', 'status', '状态', 'system', '查看机器人运行状态', 't', 't', '{"viewOrder":["IMAGE","TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-23 10:38:54.042272'),
-('7', 'market', '市场', 'warframe', '查询 Warframe Market 实时订单', 't', 't', '{"viewOrder":["IMAGE","TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('29', 'riven-market', '紫卡市场查询', 'warframe', '已合并至 market-riven；保留历史配置，不再注册独立插件', 'f', 'f', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('28', 'market-riven', '紫卡市场', 'warframe', '查询紫卡拍卖，支持正负词条和尾部页码，每页最多 10 条；zk/wr/wmr/rm 共用此命令', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('47', 'news', '新闻', 'warframe', '查看官方新闻与链接', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('48', 'flash-sales', '促销', 'warframe', '查看当前促销商品和价格', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('49', 'persistent-enemies', '小小黑', 'warframe', '查看持续敌人的血量和最近发现地点', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('50', 'syndicate-missions', '集团任务', 'warframe', '查看全部集团任务和赏金', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('51', 'construction-progress', '舰队建造', 'warframe', '查看巨人战舰和利刃豺狼建造进度', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('52', 'simaris', '西玛里斯', 'warframe', '查看公共研究目标，非玩家个人每日扫描任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('53', 'sentient-outposts', '先遣舰', 'warframe', '查看先遣舰当前节点', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('54', 'clan-initiative', '氏族周任务', 'warframe', '查看氏族每周奖励和积分门槛', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('55', 'circuit-normal', '普通回环', 'warframe', '查看当前普通回环战甲奖励选项', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('56', 'circuit-hard', '灵化轮换', 'warframe', '查看当前钢铁之路回环灵化奖励选项', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('57', 'calendar', '实时日历', 'warframe', '查看官方 KnownCalendarSeasons 日期排期', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('58', 'vault-trader', '宝库商人', 'warframe', '查看 Prime 宝库商人库存', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('59', 'timestamp', '世界时间', 'warframe', '查看当前世界状态快照时间', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('60', 'archimedeas', '科研', 'warframe', '查看全部科研任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('61', 'deep-archimedeas', '深层科研', 'warframe', '查看 CT_LAB 科研任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('62', 'hex-archimedeas', '时光科研', 'warframe', '查看 CT_HEX 科研任务', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('63', 'descents', '深层下降', 'warframe', '查看当前深层下降轮换', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('64', 'cavia', '科维兽', 'warframe', '查看科维兽赏金', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('65', 'holdfasts', '坚守者', 'warframe', '查看扎里曼坚守者赏金', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('66', 'hex-bounties', '六人组赏金', 'warframe', '查看六人组赏金', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('67', 'events', '活动目标', 'warframe', '查看官方限时活动目标', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('68', 'global-upgrades', '全局增益', 'warframe', '查看当前全局增益', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('69', 'today-arbitration', '今日仲裁', 'warframe', '按上海自然日查看已缓存的仲裁排期', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('70', 'efficient-arbitration', '高效仲裁', 'warframe', '按 NyxBot 星球、任务、阵营规则筛选仲裁排期', 't', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('71', 'abilities', '技能资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('72', 'achievements', '成就定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('73', 'animals', '捕获动物', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('74', 'arcane-guides', '奥术攻略', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('75', 'arcanes', '奥术资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('76', 'archon-shards', '源力石', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('77', 'archwing', 'Archwing资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('78', 'booster-packs', '随机礼包', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('79', 'boosters', '增幅器', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('80', 'bounty-definitions', '赏金定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('81', 'bundles', '礼包内容', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('82', 'challenges', '挑战定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('83', 'codex-fighters', 'Frame Fighter 碎片', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('84', 'codex-lore', '图鉴故事碎片', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('85', 'codex-objects', '图鉴物件', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('86', 'codex-songs', '图鉴歌曲', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('87', 'companions', '同伴资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('88', 'conclave-rules', '武形秘仪规则', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('89', 'credit-bundles', '信用点礼包', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('90', 'customs', '外观资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('91', 'drones', '无人机资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('92', 'email-items', '邮件定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('93', 'enemies', '敌人资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('94', 'event-rules', '活动显示规则', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('95', 'fish', '鱼类物品', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('96', 'fish-guide', '鱼类攻略', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('97', 'flavours', '展示风格', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('98', 'fusion-bundles', '融合包', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('99', 'gear', '装备工具', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('100', 'intrinsics', '内源之力', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('101', 'item-components', '物品组件', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('102', 'item-drops', '物品掉落', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('103', 'keys', '钥匙链', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('104', 'legacy-items', '历史物品目录', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('105', 'map-features', '开放世界地图标注', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('106', 'market-catalog', '历史 Market 商品', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('107', 'misc', '杂项资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('108', 'mod-sets', 'MOD 套装', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('109', 'mods', 'MOD 资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('110', 'nightwave-definitions', '电波静态定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('111', 'quests', '任务资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('112', 'recipes', '制作配方', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('113', 'resources', '资源资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('114', 'reward-pools', '奖励池', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('115', 'riven-attributes', '历史紫卡属性编码', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('116', 'riven-definitions', '紫卡属性与挑战', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('118', 'riven-unrollables', '紫卡不可洗属性', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('119', 'riven-weekly', '紫卡周成交统计', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('120', 'steel-path-catalog', '钢铁奖励目录', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('121', 'synth-targets', '合成目标地点', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('122', 'systems', '星系定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('123', 'tilesets', '场景定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('124', 'tutorials', '教程', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('125', 'update-liches', '更新赤毒', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('126', 'update-perrin-sequence', '更新终幕', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('127', 'vendor-definitions', '商人静态定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('128', 'virtuals', '虚拟实体', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('129', 'warframes', '战甲资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('130', 'weapons', '武器资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '{"viewOrder":["TEXT"],"composition":"PREFER_SINGLE","interaction":"COMMAND_TEXT"}', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139');
+INSERT INTO nnmbot.bot_command (id, code, name, game_code, description, enabled, show_in_help, template_id, permission_override, group_role_required, cooldown_seconds, mention_invoker, created_at, updated_at) VALUES
+('5', 'wiki', 'Wiki', 'warframe', '返回 Warframe 物品对应的灰机 Wiki 链接', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('6', 'forum-loadout', 'wf配装', 'warframe', '模糊查询 Warframe 论坛配装文章并返回文章地址', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('9', 'alerts', '警报', 'warframe', '查看当前警报', 't', 't', '5', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('10', 'sorties', '突击', 'warframe', '查看当前突击', 't', 't', '6', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('11', 'archon-hunts', '执刑官猎杀', 'warframe', '查看当前执刑官猎杀', 't', 't', '7', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('12', 'void-trader', '奸商', 'warframe', '查看奸商行踪和商品', 't', 't', '8', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('13', 'arbitration-table', '仲裁表', 'warframe', '查看仲裁轮换表', 't', 't', '9', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('14', 'daily-deals', '每日特惠', 'warframe', '查看每日特惠', 't', 't', '10', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('15', 'invasions', '入侵', 'warframe', '查看当前入侵', 't', 't', '11', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('16', 'fissures', '裂隙', 'warframe', '查看普通裂隙', 't', 't', '12', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('17', 'void-storms', '九重天裂隙', 'warframe', '查看九重天裂隙', 't', 't', '13', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('18', 'steel-fissures', '钢铁裂隙', 'warframe', '查看钢铁路径裂隙', 't', 't', '14', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('19', 'steel-path', '钢铁奖励', 'warframe', '查看钢铁路径奖励', 't', 't', '15', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('20', 'cycles', '平原', 'warframe', '查看各个开放世界周期', 't', 't', '16', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('21', 'ostrons', '希图斯', 'warframe', '查看希图斯赏金任务', 't', 't', '17', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('22', 'entrati', '英择谛', 'warframe', '查看英择谛赏金任务', 't', 't', '18', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('23', 'solaris', '索拉里斯', 'warframe', '查看索拉里斯联合赏金任务', 't', 't', '19', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('25', 'nightwave', '电波', 'warframe', '查看电波任务', 't', 't', '21', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('27', 'translation', '翻译', 'warframe', '查询 Warframe 翻译', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('30', 'liches', '赤毒', 'warframe', '查询赤毒相关数据', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('31', 'sisters', '信条', 'warframe', '查询信条相关数据', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('32', 'perrin-sequence', '佩兰数列', 'warframe', '查询佩兰数列和信条武器', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('33', 'gold-trash', '金垃圾', 'warframe', '查询金垃圾推荐', 't', 't', '26', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('34', 'silver-trash', '银垃圾', 'warframe', '查询银垃圾推荐', 't', 't', '27', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('35', 'relics', '遗物', 'warframe', '查询遗物信息', 't', 't', '25', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('36', 'riven-analyse', '紫卡分析', 'warframe', '分析紫卡截图或文本', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('37', 'calendar-1999', '1999日历', 'warframe', '查看 1999 日历', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('38', 'conclave', '竞技场', 'warframe', '查看当前 Conclave 挑战', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('39', 'subscribe', '订阅', 'warframe', '订阅 Warframe 事件通知', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('40', 'unsubscribe', '取消订阅', 'warframe', '取消 Warframe 事件通知订阅', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('46', 'watch-list', '蹲任务', 'warframe', '查看当前成员的 Warframe 蹲任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-29 00:00:00', '2026-09-29 00:00:00'),
+('41', 'update-market-items', '更新WM物品', 'warframe', '更新 Warframe Market 物品数据', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('42', 'update-market-riven', '更新WM紫卡', 'warframe', '更新 Warframe Market 紫卡数据', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('43', 'update-sister', '更新信条', 'warframe', '更新信条和赤毒武器数据', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('44', 'update-translation', '更新翻译', 'warframe', '更新 Warframe 翻译数据', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('2', 'help', '帮助', 'system', '查看命令菜单', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-22 02:36:11.812122'),
+('3', 'sign-in', '签到', 'system', '每日签到并返回签到后的群组积分', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-23 16:07:54.491956'),
+('4', 'bind', '绑定', 'system', '绑定当前群组成员的 QQ 号', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-23 16:07:54.491956'),
+('8', 'arbitration', '仲裁', 'warframe', '查看当前仲裁任务', 't', 't', '4', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-26 11:10:09.495834'),
+('24', 'duviri-cycle', '双衍王境', 'warframe', '查看双衍王境轮换', 't', 't', '20', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-26 16:18:27.212129'),
+('45', 'jm', 'JM 下载', 'system', '下载指定 JM 漫画并返回压缩 PDF', 'f', 'f', NULL, NULL, NULL, '30', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('1', 'status', '状态', 'system', '查看机器人运行状态', 't', 't', '1', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-08-23 10:38:54.042272'),
+('7', 'market', '市场', 'warframe', '查询 Warframe Market 实时订单', 't', 't', '3', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('29', 'riven-market', '紫卡市场查询', 'warframe', '已合并至 market-riven；保留历史配置，不再注册独立插件', 'f', 'f', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('28', 'market-riven', '紫卡市场', 'warframe', '查询紫卡拍卖，支持正负词条和尾部页码，每页最多 10 条；zk/wr/wmr/rm 共用此命令', 't', 't', '31', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('47', 'news', '新闻', 'warframe', '查看官方新闻与链接', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('48', 'flash-sales', '促销', 'warframe', '查看当前促销商品和价格', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('49', 'persistent-enemies', '小小黑', 'warframe', '查看持续敌人的血量和最近发现地点', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('50', 'syndicate-missions', '集团任务', 'warframe', '查看全部集团任务和赏金', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('51', 'construction-progress', '舰队建造', 'warframe', '查看巨人战舰和利刃豺狼建造进度', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('52', 'simaris', '西玛里斯', 'warframe', '查看公共研究目标，非玩家个人每日扫描任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('53', 'sentient-outposts', '先遣舰', 'warframe', '查看先遣舰当前节点', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('54', 'clan-initiative', '氏族周任务', 'warframe', '查看氏族每周奖励和积分门槛', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('55', 'circuit-normal', '普通回环', 'warframe', '查看当前普通回环战甲奖励选项', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('56', 'circuit-hard', '灵化轮换', 'warframe', '查看当前钢铁之路回环灵化奖励选项', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('57', 'calendar', '实时日历', 'warframe', '查看官方 KnownCalendarSeasons 日期排期', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('58', 'vault-trader', '宝库商人', 'warframe', '查看 Prime 宝库商人库存', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('59', 'timestamp', '世界时间', 'warframe', '查看当前世界状态快照时间', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('60', 'archimedeas', '科研', 'warframe', '查看全部科研任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('61', 'deep-archimedeas', '深层科研', 'warframe', '查看 CT_LAB 科研任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('62', 'hex-archimedeas', '时光科研', 'warframe', '查看 CT_HEX 科研任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('63', 'descents', '深层下降', 'warframe', '查看当前深层下降轮换', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('64', 'cavia', '科维兽', 'warframe', '查看科维兽赏金', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('65', 'holdfasts', '坚守者', 'warframe', '查看扎里曼坚守者赏金', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('66', 'hex-bounties', '六人组赏金', 'warframe', '查看六人组赏金', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('67', 'events', '活动目标', 'warframe', '查看官方限时活动目标', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('68', 'global-upgrades', '全局增益', 'warframe', '查看当前全局增益', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('69', 'today-arbitration', '今日仲裁', 'warframe', '按上海自然日查看已缓存的仲裁排期', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('70', 'efficient-arbitration', '高效仲裁', 'warframe', '按 NyxBot 星球、任务、阵营规则筛选仲裁排期', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('71', 'abilities', '技能资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('72', 'achievements', '成就定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('73', 'animals', '捕获动物', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('74', 'arcane-guides', '奥术攻略', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('75', 'arcanes', '奥术资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('76', 'archon-shards', '源力石', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('77', 'archwing', 'Archwing资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('78', 'booster-packs', '随机礼包', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('79', 'boosters', '增幅器', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('80', 'bounty-definitions', '赏金定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('81', 'bundles', '礼包内容', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('82', 'challenges', '挑战定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('83', 'codex-fighters', 'Frame Fighter 碎片', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('84', 'codex-lore', '图鉴故事碎片', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('85', 'codex-objects', '图鉴物件', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('86', 'codex-songs', '图鉴歌曲', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('87', 'companions', '同伴资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('88', 'conclave-rules', '武形秘仪规则', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('89', 'credit-bundles', '信用点礼包', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('90', 'customs', '外观资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('91', 'drones', '无人机资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('92', 'email-items', '邮件定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('93', 'enemies', '敌人资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('94', 'event-rules', '活动显示规则', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('95', 'fish', '鱼类物品', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('96', 'fish-guide', '鱼类攻略', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('97', 'flavours', '展示风格', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('98', 'fusion-bundles', '融合包', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('99', 'gear', '装备工具', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('100', 'intrinsics', '内源之力', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('101', 'item-components', '物品组件', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('102', 'item-drops', '物品掉落', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('103', 'keys', '钥匙链', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('104', 'legacy-items', '历史物品目录', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('105', 'map-features', '开放世界地图标注', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('106', 'market-catalog', '历史 Market 商品', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('107', 'misc', '杂项资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('108', 'mod-sets', 'MOD 套装', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('109', 'mods', 'MOD 资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('110', 'nightwave-definitions', '电波静态定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('111', 'quests', '任务资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('112', 'recipes', '制作配方', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('113', 'resources', '资源资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('114', 'reward-pools', '奖励池', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('115', 'riven-attributes', '历史紫卡属性编码', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('116', 'riven-definitions', '紫卡属性与挑战', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('118', 'riven-unrollables', '紫卡不可洗属性', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('119', 'riven-weekly', '紫卡周成交统计', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '30', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('120', 'steel-path-catalog', '钢铁奖励目录', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('121', 'synth-targets', '合成目标地点', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('122', 'systems', '星系定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('123', 'tilesets', '场景定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('124', 'tutorials', '教程', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('125', 'update-liches', '更新赤毒', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('126', 'update-perrin-sequence', '更新终幕', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('127', 'vendor-definitions', '商人静态定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('128', 'virtuals', '虚拟实体', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('129', 'warframes', '战甲资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '29', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('130', 'weapons', '武器资料', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139');
 
 
 --
@@ -3452,12 +3389,12 @@ INSERT INTO nnmbot.bot_command_robot_role (id, command_id, robot_role_id) VALUES
 -- Empty data set: nnmbot.bot_command_role
 
 
---
+
 -- Data for Name: bot_command_template; Type: TABLE DATA; Schema: nnmbot; Owner: -
 --
 
-INSERT INTO nnmbot.bot_command_template (id, template_code, view_key, name, command_id, sort_order, html_content, enabled, created_at, updated_at) VALUES
-('2', 'warframe-world-state', 'warframe.world-state', 'Warframe 世界状态卡片', NULL, '0', '
+INSERT INTO nnmbot.bot_command_template (id, template_code, name, command_id, sort_order, html_content, enabled, created_at, updated_at) VALUES
+('2', 'warframe-world-state', 'Warframe 世界状态卡片', NULL, '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3483,7 +3420,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('4', 'warframe-world-state-arbitration', 'warframe.world-state', 'Warframe 世界状态卡片 - 仲裁', '8', '0', '
+('4', 'warframe-world-state-arbitration', 'Warframe 世界状态卡片 - 仲裁', '8', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3509,7 +3446,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('3', 'warframe-market-orders', 'warframe.market.orders', 'Warframe Market 订单卡片', '7', '0', '
+('3', 'warframe-market-orders', 'Warframe Market 订单卡片', '7', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3537,7 +3474,7 @@ h1{font-size:30px;line-height:1.25;margin:0}.sub{color:#657386;font-size:15px;ma
 </div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('5', 'warframe-world-state-alerts', 'warframe.world-state', 'Warframe 世界状态卡片 - 警报', '9', '0', '
+('5', 'warframe-world-state-alerts', 'Warframe 世界状态卡片 - 警报', '9', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3563,7 +3500,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('6', 'warframe-world-state-sorties', 'warframe.world-state', 'Warframe 世界状态卡片 - 突击', '10', '0', '
+('6', 'warframe-world-state-sorties', 'Warframe 世界状态卡片 - 突击', '10', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3589,7 +3526,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('28', 'wf-relics-luxe', 'warframe.relics', 'Warframe 遗物 · 虚空琉光', '35', '200', '
+('28', 'wf-relics-luxe', 'Warframe 遗物 · 虚空琉光', '35', '200', '
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -3681,7 +3618,7 @@ footer { position: relative; padding: 15px 32px; background: rgba(21,38,46,.9); 
 <footer><span th:text="${pagination}"></span><span>WARFRAME · 虚空档案</span></footer>
 </main></body></html>
 ', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('29', 'wf-warframes-luxe', 'warframe.equipment', 'Warframe 战甲 · 云境档案', '129', '200', '
+('29', 'wf-warframes-luxe', 'Warframe 战甲 · 云境档案', '129', '200', '
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -3767,7 +3704,7 @@ footer { display: flex; justify-content: space-between; gap: 15px; padding: 15px
 <footer><span th:text="${page + ''/'' + totalPages + '' 页，共 '' + totalCount + '' 条''}"></span><span>WARFRAME · 装备档案</span></footer>
 </main></body></html>
 ', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('30', 'wf-riven-weekly-luxe', 'warframe.riven-weekly', 'Warframe 紫卡周统计 · 星市行情', '119', '200', '
+('30', 'wf-riven-weekly-luxe', 'Warframe 紫卡周统计 · 星市行情', '119', '200', '
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -3849,7 +3786,7 @@ footer { position: relative; display: flex; justify-content: space-between; gap:
 </div><footer><span th:text="${pagination}"></span><span>WARFRAME · 市场档案</span></footer>
 </main></body></html>
 ', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('7', 'warframe-world-state-archon-hunts', 'warframe.world-state', 'Warframe 世界状态卡片 - 执刑官猎杀', '11', '0', '
+('7', 'warframe-world-state-archon-hunts', 'Warframe 世界状态卡片 - 执刑官猎杀', '11', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3875,7 +3812,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('8', 'warframe-world-state-void-trader', 'warframe.world-state', 'Warframe 世界状态卡片 - 奸商', '12', '0', '
+('8', 'warframe-world-state-void-trader', 'Warframe 世界状态卡片 - 奸商', '12', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3901,7 +3838,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('9', 'warframe-world-state-arbitration-table', 'warframe.world-state', 'Warframe 世界状态卡片 - 仲裁表', '13', '0', '
+('9', 'warframe-world-state-arbitration-table', 'Warframe 世界状态卡片 - 仲裁表', '13', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3927,7 +3864,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('10', 'warframe-world-state-daily-deals', 'warframe.world-state', 'Warframe 世界状态卡片 - 每日特惠', '14', '0', '
+('10', 'warframe-world-state-daily-deals', 'Warframe 世界状态卡片 - 每日特惠', '14', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3953,7 +3890,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('11', 'warframe-world-state-invasions', 'warframe.world-state', 'Warframe 世界状态卡片 - 入侵', '15', '0', '
+('11', 'warframe-world-state-invasions', 'Warframe 世界状态卡片 - 入侵', '15', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -3979,7 +3916,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('12', 'warframe-world-state-fissures', 'warframe.world-state', 'Warframe 世界状态卡片 - 裂隙', '16', '0', '
+('12', 'warframe-world-state-fissures', 'Warframe 世界状态卡片 - 裂隙', '16', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4005,7 +3942,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('13', 'warframe-world-state-void-storms', 'warframe.world-state', 'Warframe 世界状态卡片 - 九重天裂隙', '17', '0', '
+('13', 'warframe-world-state-void-storms', 'Warframe 世界状态卡片 - 九重天裂隙', '17', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4031,7 +3968,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('14', 'warframe-world-state-steel-fissures', 'warframe.world-state', 'Warframe 世界状态卡片 - 钢铁裂隙', '18', '0', '
+('14', 'warframe-world-state-steel-fissures', 'Warframe 世界状态卡片 - 钢铁裂隙', '18', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4057,7 +3994,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('15', 'warframe-world-state-steel-path', 'warframe.world-state', 'Warframe 世界状态卡片 - 钢铁奖励', '19', '0', '
+('15', 'warframe-world-state-steel-path', 'Warframe 世界状态卡片 - 钢铁奖励', '19', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4083,7 +4020,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('16', 'warframe-world-state-cycles', 'warframe.world-state', 'Warframe 世界状态卡片 - 平原', '20', '0', '
+('16', 'warframe-world-state-cycles', 'Warframe 世界状态卡片 - 平原', '20', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4109,7 +4046,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('17', 'warframe-world-state-ostrons', 'warframe.world-state', 'Warframe 世界状态卡片 - 希图斯', '21', '0', '
+('17', 'warframe-world-state-ostrons', 'Warframe 世界状态卡片 - 希图斯', '21', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4135,7 +4072,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('18', 'warframe-world-state-entrati', 'warframe.world-state', 'Warframe 世界状态卡片 - 英择谛', '22', '0', '
+('18', 'warframe-world-state-entrati', 'Warframe 世界状态卡片 - 英择谛', '22', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4161,7 +4098,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('19', 'warframe-world-state-solaris', 'warframe.world-state', 'Warframe 世界状态卡片 - 索拉里斯', '23', '0', '
+('19', 'warframe-world-state-solaris', 'Warframe 世界状态卡片 - 索拉里斯', '23', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4187,7 +4124,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('20', 'warframe-world-state-duviri-cycle', 'warframe.world-state', 'Warframe 世界状态卡片 - 双衍王境', '24', '0', '
+('20', 'warframe-world-state-duviri-cycle', 'Warframe 世界状态卡片 - 双衍王境', '24', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4213,7 +4150,7 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('21', 'warframe-world-state-nightwave', 'warframe.world-state', 'Warframe 世界状态卡片 - 电波', '25', '0', '
+('21', 'warframe-world-state-nightwave', 'Warframe 世界状态卡片 - 电波', '25', '0', '
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><style>
@@ -4239,14 +4176,14 @@ h1{font-size:30px;line-height:1.25;margin:0 0 8px}.meta{color:#657386;font-size:
 <div class="foot">更新时间：<span th:text="${updatedAt}">-</span></div>
 </section></body></html>
 ', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('23', 'market-orders', 'warframe.market.orders', '市场报价卡片', NULL, '0', '<!doctype html><html><head><meta charset="UTF-8"><style>
+('23', 'market-orders', '市场报价卡片', NULL, '0', '<!doctype html><html><head><meta charset="UTF-8"><style>
 body{font-family:"Noto Sans SC",sans-serif;background:#f5f7fb;color:#172033;margin:0;padding:28px}
 .panel{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:24px}
 h1{font-size:28px;margin:0}.sub{color:#667085;margin:8px 0 20px}.price{font-size:24px;font-weight:700;color:#13795b}
 </style></head><body><div class="panel"><h1 th:text="${itemName}"></h1>
 <div class="sub" th:text="${itemDescription}"></div><div class="price" th:text="${lowestSellPrice}"></div>
 <div class="sub">参考中位价：<span th:text="${medianPrice}"></span></div></div></body></html>', 't', '2026-08-22 02:36:12.53981', '2026-08-22 02:36:12.53981'),
-('1', 'status', 'system.status', '运行状态卡片', '1', '0', '<!doctype html><html><head><meta charset="UTF-8"><style>
+('1', 'status', '运行状态卡片', '1', '0', '<!doctype html><html><head><meta charset="UTF-8"><style>
 body{font-family:"Noto Sans SC",sans-serif;background:#f5f7fb;color:#172033;margin:0;padding:28px}
 .panel{background:#fff;border:1px solid #dfe5ef;border-radius:12px;padding:24px}
 h1{font-size:28px;margin:0 0 20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -4258,7 +4195,7 @@ h1{font-size:28px;margin:0 0 20px}.grid{display:grid;grid-template-columns:1fr 1
 <div class="item"><div class="label">运行时长</div><div class="value" th:text="${uptime}"></div></div>
 <div class="item"><div class="label">内存</div><div class="value" th:text="${memory}"></div></div></div>
 </div></body></html>', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('24', 'arbitrations', 'warframe.world-state', '仲裁轮换卡片', '8', '0', '<!doctype html><html><head><meta charset="UTF-8"><style>
+('24', 'arbitrations', '仲裁轮换卡片', '8', '0', '<!doctype html><html><head><meta charset="UTF-8"><style>
 body{font-family:"Noto Sans SC",sans-serif;background:#f5f7fb;color:#172033;margin:0;padding:28px}
 h1{font-size:28px;margin:0 0 18px}.item{padding:12px 0;border-bottom:1px solid #dfe5ef}
 .node{font-size:18px;font-weight:700}.meta,.notice{color:#475467;margin-top:8px;overflow-wrap:anywhere}
@@ -4271,7 +4208,7 @@ h1{font-size:28px;margin:0 0 18px}.item{padding:12px 0;border-bottom:1px solid #
 <div class="meta" th:if="${item[''essence'']}" th:text="${item[''essence'']}"></div></div>
 <div class="notice" th:if="${!#lists.isEmpty(unresolvedReferences)}">未解析数据：<span th:text="${unresolvedReferences}"></span></div>
 </body></html>', 't', '2026-08-22 02:36:12.53981', '2026-09-28 15:57:12.652567'),
-('25', 'wf-relics-compact', 'warframe.relics', 'Warframe 遗物明细', '35', '100', '
+('25', 'wf-relics-compact', 'Warframe 遗物明细', '35', '100', '
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -4329,7 +4266,7 @@ tr { page-break-inside: avoid; }
 <footer><span th:text="${pagination}"></span></footer>
 </main></body></html>
 ', 't', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('26', 'wf-gold-trash-compact', 'warframe.relics', 'Warframe 金色遗物奖励', '33', '100', '
+('26', 'wf-gold-trash-compact', 'Warframe 金色遗物奖励', '33', '100', '
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -4371,7 +4308,7 @@ tr { page-break-inside: avoid; }
 <footer><span th:text="${pagination}"></span></footer>
 </main></body></html>
 ', 't', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('27', 'wf-silver-trash-compact', 'warframe.relics', 'Warframe 银色遗物奖励', '34', '100', '
+('27', 'wf-silver-trash-compact', 'Warframe 银色遗物奖励', '34', '100', '
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -4413,6 +4350,34 @@ tr { page-break-inside: avoid; }
 <footer><span th:text="${pagination}"></span></footer>
 </main></body></html>
 ', 't', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139');
+
+
+-- 紫卡市场命令选用的图片模板；Markdown 正文和分页按钮由插件提供，模板只渲染拍卖列表。
+INSERT INTO nnmbot.bot_command_template
+    (id, template_code, name, command_id, sort_order, html_content, enabled, created_at, updated_at)
+VALUES (31, 'warframe-market-riven', '紫卡市场拍卖卡片', 28, 0, '
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}body{margin:0;padding:20px;background:#faf5ff;font:16px "Noto Sans SC",sans-serif;color:#25394a}
+.panel{width:100%;max-width:760px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px #22112a18}
+header{background:linear-gradient(110deg,#302039,#645078);color:#fff;padding:20px}
+header strong{font-size:28px;letter-spacing:2px;color:#f5aaff}header p{margin:8px 0 0;color:#ecd8f5;overflow-wrap:anywhere}
+.item{padding:12px 18px;border-bottom:1px solid #e8e2ec}.item:nth-child(even){background:#f8f5fa}
+.line{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.line>span{min-width:0;overflow-wrap:anywhere}
+.name{font-size:18px;font-weight:700;color:#356375}.seller{text-align:right;color:#466779;max-width:45%}
+.price{font-weight:700;color:#b83c84;text-align:right}.detail{margin-top:5px;color:#65727a;font-size:13px;overflow-wrap:anywhere}
+.stats{margin-top:5px;color:#098f87;font-size:14px;overflow-wrap:anywhere}.stats.negative{color:#b44945}
+footer{padding:12px 18px;color:#687684;font-size:14px;overflow-wrap:anywhere}
+</style></head><body><div class="panel">
+<header><strong>RIVENS MARKET</strong><p th:text="${weapon}">武器</p></header>
+<div class="item" th:each="auction : ${auctions}">
+<div class="line"><span class="name" th:text="${auction[''name'']}">紫卡</span><span class="seller" th:text="${auction[''userName'']}">玩家</span></div>
+<div class="line"><span class="detail" th:text="${auction[''specifications'']}">规格</span><span class="price" th:text="${auction[''buyoutPrice''] == null ? ''一口价未提供'' : ''一口价 '' + auction[''buyoutPrice'']}">一口价</span></div>
+<div class="stats" th:each="stat : ${auction[''attributes'']}" th:classappend="${#strings.startsWith(stat, ''负面'') ? ''negative'' : ''''}" th:text="${stat}">词条</div>
+<div class="detail"><span th:text="${auction[''status'']}">状态</span> · 起拍 <span th:text="${auction[''startingPrice''] == null ? ''未提供'' : auction[''startingPrice'']}"></span> / 最高出价 <span th:text="${auction[''topBid''] == null ? ''未提供'' : auction[''topBid'']}"></span></div>
+</div><footer><span th:text="${pagination}">分页</span> <span th:text="${notice}"></span></footer>
+</div></body></html>
+', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
 
 
 --
@@ -4598,8 +4563,7 @@ INSERT INTO nnmbot.sys_menu (id, parent_id, name, path, component, title, icon, 
 ('84', '80', 'WarframeData', 'data', '/warframe/data', 'menus.warframe.data', 'ri:database-2-line', '292', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('86', '80', 'WarframeForumPublish', 'forum/publish', '/warframe/forum/publish', 'menus.warframe.forumPublish', NULL, '2942', 'f', 'f', 't', 'f', 't', 'f', 'f', NULL, '/warframe/forum', NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('87', '80', 'WarframeForumManageDetail', 'forum/manage-detail/:id', '/warframe/forum/detail', 'menus.warframe.forumDetail', NULL, '2941', 'f', 'f', 't', 'f', 't', 'f', 'f', NULL, '/warframe/forum', NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('88', '5', 'BotNotificationEditor', 'notification', '/bot/notification', 'menus.bot.notification', 'ri:notification-3-line', '285', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-10-21 00:00:00', '2026-10-21 00:00:00'),
-('89', '5', 'BotCommandGroups', 'command-groups', '/bot/command-group', 'menus.bot.commandGroups', 'ri:links-line', '286', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-10-21 00:00:00', '2026-10-21 00:00:00');
+('88', '5', 'BotNotificationEditor', 'notification', '/bot/notification', 'menus.bot.notification', 'ri:notification-3-line', '285', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-10-21 00:00:00', '2026-10-21 00:00:00');
 
 
 --
@@ -4667,8 +4631,6 @@ INSERT INTO nnmbot.sys_permission (id, code, name, type, menu_id, enabled, creat
 ('55', 'bot:notification:preview', '预览群组通知', 'BUTTON', '88', 't', '2026-10-21 00:00:00', '2026-10-21 00:00:00'),
 ('56', 'bot:notification:upload', '上传通知图片', 'BUTTON', '88', 't', '2026-10-21 00:00:00', '2026-10-21 00:00:00'),
 ('57', 'bot:notification:send', '发送群组通知', 'BUTTON', '88', 't', '2026-10-21 00:00:00', '2026-10-21 00:00:00'),
-('58', 'bot:command-group:view', '查看关联命令组', 'BUTTON', '89', 't', '2026-10-21 00:00:00', '2026-10-21 00:00:00'),
-('59', 'bot:command-group:update', '修改关联命令组', 'BUTTON', '89', 't', '2026-10-21 00:00:00', '2026-10-21 00:00:00'),
 -- 官方数据手工删除及转自维护使用独立权限，避免混用只读或刷新权限。
 ('60', 'warframe:game:update', '维护 Warframe 官方与自维护整树', 'BUTTON', '84', 't', '2026-10-21 00:00:00', '2026-10-21 00:00:00');
 
@@ -4856,9 +4818,7 @@ INSERT INTO nnmbot.sys_role_menu (role_id, menu_id) VALUES
 ('1', '87'),
 ('2', '87'),
 ('1', '88'),
-('2', '88'),
-('1', '89'),
-('2', '89');
+('2', '88');
 
 
 --
@@ -4963,11 +4923,7 @@ INSERT INTO nnmbot.sys_role_permission (role_id, permission_id) VALUES
 ('1', '57'),
 ('2', '55'),
 ('2', '56'),
-('2', '57'),
-('1', '58'),
-('1', '59'),
-('2', '58'),
-('2', '59');
+('2', '57');
 
 
 --
@@ -4997,10 +4953,6 @@ SELECT pg_catalog.setval('nnmbot.bot_command_cost_id_seq', 1, false);
 
 SELECT pg_catalog.setval('nnmbot.bot_command_id_seq', 130, true);
 
--- 关联命令组表为空时仍显式保留序列状态，后续管理端创建直接使用数据库默认值。
-SELECT pg_catalog.setval('nnmbot.bot_command_group_id_seq', 1, false);
-
-SELECT pg_catalog.setval('nnmbot.bot_command_group_member_id_seq', 1, false);
 
 
 --
@@ -5021,7 +4973,7 @@ SELECT pg_catalog.setval('nnmbot.bot_command_role_id_seq', 1, false);
 -- Name: bot_command_template_id_seq; Type: SEQUENCE SET; Schema: nnmbot; Owner: -
 --
 
-SELECT pg_catalog.setval('nnmbot.bot_command_template_id_seq', 30, true);
+SELECT pg_catalog.setval('nnmbot.bot_command_template_id_seq', 31, true);
 
 
 --
@@ -5176,24 +5128,6 @@ ALTER TABLE ONLY nnmbot.bot_command_cost
 ALTER TABLE ONLY nnmbot.bot_command
     ADD CONSTRAINT bot_command_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY nnmbot.bot_command_group
-    ADD CONSTRAINT bot_command_group_pkey PRIMARY KEY (id);
-
-ALTER TABLE ONLY nnmbot.bot_command_group
-    ADD CONSTRAINT bot_command_group_code_key UNIQUE (code);
-
-ALTER TABLE ONLY nnmbot.bot_command_group_member
-    ADD CONSTRAINT bot_command_group_member_pkey PRIMARY KEY (id);
-
-ALTER TABLE ONLY nnmbot.bot_command_group_member
-    ADD CONSTRAINT uq_bot_command_group_member_command UNIQUE (command_code);
-
-ALTER TABLE ONLY nnmbot.bot_command_group_member
-    ADD CONSTRAINT fk_bot_command_group_member_group FOREIGN KEY (group_id)
-    REFERENCES nnmbot.bot_command_group(id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY nnmbot.bot_command_group_member
-    ADD CONSTRAINT ck_bot_command_group_member_order CHECK (sort_order >= 0);
 
 
 --
@@ -5623,8 +5557,6 @@ CREATE INDEX idx_bot_command_cost_enabled ON nnmbot.bot_command_cost USING btree
 
 CREATE INDEX idx_bot_command_game ON nnmbot.bot_command USING btree (game_code);
 
-CREATE INDEX idx_bot_command_group_member_group_order
-    ON nnmbot.bot_command_group_member USING btree (group_id, sort_order, id);
 
 
 --
@@ -6205,22 +6137,31 @@ CREATE TABLE nnmbot.wf_official_dataset_batch (
     -- 冻结记录差异的对象存储键，由 UUID 定位而非写入业务记录。
     change_object_key character varying(300) NOT NULL,
     baseline_id character varying(36),
-    baseline_hash character varying(64) NOT NULL,
+    -- 一次审批冻结选择与准备结果；分类事务在此基础上继续。
+    apply_selection_json text,
+    apply_plan_json text,
+    apply_error text,
+    -- 首次失败后原件最多保留一个固定周期，人工重试不续期。
+    retry_expires_at timestamp with time zone,
+    -- 失败审计记录与对象清理分离，避免每轮任务重复遍历已删除的对象。
+    objects_released_at timestamp with time zone,
     parser_contract_version integer NOT NULL,
     status character varying(16) NOT NULL,
+    applying_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
     expires_at timestamp with time zone NOT NULL,
     -- 审核、过期与归档状态与官方批次生命周期保持一致；失败下载不得创建批次。
-    CONSTRAINT ck_wf_dataset_batch_status CHECK (status IN ('PENDING', 'APPLIED', 'EXPIRED', 'ARCHIVED')),
-    -- 完整 commit 和记录基线摘要用于阻止跨版本混包及过期审核。
+    CONSTRAINT ck_wf_dataset_batch_status CHECK (status IN ('PENDING', 'APPLYING', 'PARTIAL_FAILED', 'APPLIED', 'EXPIRED', 'ARCHIVED')),
+    -- 只有持久化采纳运行态允许携带进度心跳，避免遗留批次永远无法恢复。
+    CONSTRAINT ck_wf_dataset_batch_applying CHECK ((status = 'APPLYING') = (applying_at IS NOT NULL)),
+    -- 完整 commit 用于阻止跨版本混包。
     CONSTRAINT ck_wf_dataset_batch_commit CHECK (commit_sha ~ '^[a-f0-9]{40}$'),
-    CONSTRAINT ck_wf_dataset_batch_hash CHECK (baseline_hash ~ '^[a-f0-9]{64}$'),
     -- adapter 版本变更需重新预览，待审核有效期必须为正。
     CONSTRAINT ck_wf_dataset_batch_expiry CHECK (expires_at > created_at AND parser_contract_version > 0)
 );
-COMMENT ON TABLE nnmbot.wf_official_dataset_batch IS '固定 tag 的逐文件审核批次、冻结差异和审核状态';
+COMMENT ON TABLE nnmbot.wf_official_dataset_batch IS '固定 tag 的逐文件审核批次、冻结差异、失败保留期与对象回收状态';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.id IS '预览 UUID 和采纳幂等键';
-COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.source_ref IS '管理员选择的固定 data- 前缀 tag';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.source_ref IS '管理员选择的固定 UTC 秒级 yyyyMMddHHmmss tag';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.commit_sha IS '本批次 tag 解析到的源 commit 审计值';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.build_id IS '成品发布器构建标识';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.manifest_json IS '完整成品发布清单，不传播内部采集出处';
@@ -6228,14 +6169,38 @@ COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.product_path IS '单文件预
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.preview_json IS '文件及记录变更数量、未映射路径等审核摘要';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.change_object_key IS '对象存储中字段级记录差异文件的稳定 key';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.baseline_id IS '生成预览时的生效批次 UUID；首次导入为空';
-COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.baseline_hash IS '预览时数据库记录指纹，阻止覆盖预览后的人工变动';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.apply_selection_json IS '一次审批冻结的全部记录与分类选择；断电后按同一选择继续未完成文件';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.apply_plan_json IS '已验证选择的剩余差异对象与计数；写入前必须完成准备';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.apply_error IS '不可重试或达到上限后的失败摘要，已提交文件不会回滚';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.retry_expires_at IS '首次入库失败后可重试及保留原件的截止时间，重试不延长';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.objects_released_at IS '候选原件及差异已完成回收的时间，失败审计及文件错误仍保留';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.parser_contract_version IS '生成预览时的官方 JSON 解析契约版本，变更后须重新预览';
-COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.status IS 'PENDING 待审核，APPLIED 已采纳且保留，EXPIRED 预览过期，ARCHIVED 历史元数据归档';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.applying_at IS '采纳进度心跳；进程失联后结合文件锁与 head 行锁恢复';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.status IS 'PENDING 待审核，APPLYING 采纳中，PARTIAL_FAILED 部分文件失败，APPLIED 已采纳且保留，EXPIRED 预览过期，ARCHIVED 历史元数据归档';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.created_at IS '完整校验结束的绝对时间';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_batch.expires_at IS '待审核截止绝对时间；已采纳快照不受此限制';
 -- 按状态和有效期定位待审核批次，不扫描对象内容。
 CREATE INDEX idx_wf_dataset_batch_pending ON nnmbot.wf_official_dataset_batch (status, expires_at);
 COMMENT ON INDEX nnmbot.idx_wf_dataset_batch_pending IS '定位待审核和过期批次';
+-- 只扫描采纳进度超时的批次，不按所有历史预览逐一判断。
+CREATE INDEX idx_wf_dataset_batch_applying ON nnmbot.wf_official_dataset_batch (status, applying_at);
+COMMENT ON INDEX nnmbot.idx_wf_dataset_batch_applying IS '定位需恢复的失联采纳批次';
+
+-- 在首次写入对象存储前记录尝试，处理进程断电留下的无批次冻结对象。
+CREATE TABLE nnmbot.wf_official_dataset_staging (
+    id character varying(36) PRIMARY KEY,
+    manifest_json text NOT NULL,
+    product_path character varying(260),
+    created_at timestamp with time zone NOT NULL
+);
+COMMENT ON TABLE nnmbot.wf_official_dataset_staging IS '尚未发布预览的对象存储上传账本，供过期任务恢复与回收';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_staging.id IS '本轮预览 UUID，与对象存储差异前缀一致';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_staging.manifest_json IS '待上传文件的完整 manifest，恢复时按摘要定位冻结对象';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_staging.product_path IS '单文件路径；NULL 表示全量候选';
+COMMENT ON COLUMN nnmbot.wf_official_dataset_staging.created_at IS '创建尝试的绝对时刻，用于过期回收';
+-- 只扫描超时上传，避免每次回收全表。
+CREATE INDEX idx_wf_dataset_staging_created ON nnmbot.wf_official_dataset_staging (created_at);
+COMMENT ON INDEX nnmbot.idx_wf_dataset_staging_created IS '定位失联的冻结对象上传账本';
 
 -- 单例生效指针，采纳通过 SELECT FOR UPDATE 持锁直到数据库事务提交。
 CREATE TABLE nnmbot.wf_official_dataset_head (
@@ -6336,6 +6301,44 @@ COMMENT ON COLUMN nnmbot.wf_official_dataset_file.parser_contract_version IS '�
 COMMENT ON COLUMN nnmbot.wf_official_dataset_file.adopted_at IS '当前文件版本最后一次事务采纳时间';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_file.checked_at IS '候选文件最后一次完成契约校验的时间';
 -- END GENERATED NNM DATASET FILE ENTITY
+
+-- 审批只提交一次选择；文件工作项跨实例领取，同文件各变更类型分别提交事务。
+CREATE TABLE nnmbot.wf_official_apply_file (
+    id uuid PRIMARY KEY,
+    batch_id character varying(36) NOT NULL REFERENCES nnmbot.wf_official_dataset_batch(id) ON DELETE CASCADE,
+    product_path character varying(260) NOT NULL REFERENCES nnmbot.wf_official_dataset_file(product_path),
+    -- 同一个文件只有一个持有者；三类变更按完成标记分别提交和重试。
+    status character varying(16) NOT NULL,
+    added_done boolean NOT NULL DEFAULT false,
+    changed_done boolean NOT NULL DEFAULT false,
+    removed_done boolean NOT NULL DEFAULT false,
+    owner_token uuid,
+    lease_until timestamp with time zone,
+    attempts integer NOT NULL DEFAULT 0,
+    error text,
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT uq_wf_official_apply_file UNIQUE (batch_id, product_path),
+    CONSTRAINT ck_wf_official_apply_file_status CHECK (status IN ('READY', 'RUNNING', 'DONE', 'FAILED')),
+    CONSTRAINT ck_wf_official_apply_file_claim CHECK ((status = 'RUNNING') = (owner_token IS NOT NULL AND lease_until IS NOT NULL))
+);
+COMMENT ON TABLE nnmbot.wf_official_apply_file IS '一次审批的逐文件入库工作项；同一文件的新增、修改、删除逐事务串行';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.id IS '工作项 UUID，用于跨实例唯一认领';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.batch_id IS '唯一关联的已冻结审核批次';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.product_path IS '本工作项独占的官方 JSON 路径';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.status IS 'READY 待认领、RUNNING 文件执行中、DONE 完成、FAILED 不可自动重试';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.added_done IS '新增分类事务已经提交';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.changed_done IS '修改分类事务已经提交';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.removed_done IS '删除分类事务已经提交';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.owner_token IS '本次认领 UUID，防止失联实例继续提交';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.lease_until IS '本次文件执行者最迟续租时间，超时先经数据库锁确认再认领';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.attempts IS '文件执行尝试次数';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.error IS '不可重试失败的原因摘要';
+COMMENT ON COLUMN nnmbot.wf_official_apply_file.updated_at IS '工作项最后一次提交或续租的时间';
+-- 各节点按状态及租约定位可认领的工作项，不扫描完整历史。
+CREATE INDEX idx_wf_official_apply_file_due ON nnmbot.wf_official_apply_file (status, lease_until, updated_at);
+COMMENT ON INDEX nnmbot.idx_wf_official_apply_file_due IS '定位待执行或失联的逐文件审批工作项';
+
+
 
 -- BEGIN GENERATED OFFICIAL MODELS
 -- 独立主表共享主键分配序列，无跨 JSON 总父表。
@@ -24409,7 +24412,27 @@ INSERT INTO nnmbot.sys_permission (id, code, name, type, menu_id, enabled, creat
 VALUES (61, 'system:notification:view', '查看个人管理通知', 'BUTTON', 90, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
        (62, 'system:notification:publish', '发布管理通知', 'BUTTON', 90, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 -- 公告发布只授予 R_SUPER；R_ADMIN 仅能查看个人消息，不授予发布页面。
-INSERT INTO nnmbot.sys_role_menu(role_id, menu_id) VALUES (1, 90);
-INSERT INTO nnmbot.sys_role_permission(role_id, permission_id) VALUES (1, 61), (1, 62), (2, 61);
+INSERT INTO nnmbot.sys_role_menu (role_id, menu_id) VALUES
+(1, 90);
+INSERT INTO nnmbot.sys_role_permission (role_id, permission_id) VALUES
+(1, 61),
+(1, 62),
+(2, 61);
 SELECT pg_catalog.setval('nnmbot.sys_menu_id_seq', GREATEST((SELECT MAX(id) FROM nnmbot.sys_menu), 90), true);
 SELECT pg_catalog.setval('nnmbot.sys_permission_id_seq', GREATEST((SELECT MAX(id) FROM nnmbot.sys_permission), 62), true);
+
+-- 群组私有数据随逻辑群组删除，防止绕过服务或异常路径留下悬挂关系。
+ALTER TABLE nnmbot.bot_group_bot ADD CONSTRAINT fk_bot_group_bot_group
+    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
+ALTER TABLE nnmbot.bot_group_member ADD CONSTRAINT fk_bot_group_member_group
+    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
+ALTER TABLE nnmbot.bot_group_point_transaction ADD CONSTRAINT fk_bot_group_point_transaction_group
+    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
+ALTER TABLE nnmbot.bot_group_member_merge ADD CONSTRAINT fk_bot_group_member_merge_group
+    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
+-- 订阅与事件记忆只属于其群组，不在群组删除后继续保留。
+ALTER TABLE nnmbot.wf_group_watch_rule ADD CONSTRAINT fk_wf_group_watch_rule_group
+    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
+-- 平台作用域删除时清理成员绑定，后台系统用户及机器人实例继续独立存在。
+ALTER TABLE nnmbot.bot_scope_member ADD CONSTRAINT fk_bot_scope_member_scope
+    FOREIGN KEY (scope_id) REFERENCES nnmbot.bot_scope(id) ON DELETE CASCADE;

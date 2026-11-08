@@ -16,20 +16,11 @@ public sealed interface ReplyBlock {
         }
     }
 
-    /** 保留 DTO 类型；集合递归快照，DTO 自身由生产者保证不可变。 */
-    record DataView<T>(String viewKey, T data, String summary) implements ReplyBlock {
+    /** 待用当前命令选定的 HTML 模板渲染的数据；DTO 自身由生产者保证不可变。 */
+    record HtmlData<T>(T data) implements ReplyBlock {
         @SuppressWarnings("unchecked")
-        public DataView {
-            if (viewKey == null || !viewKey.matches("[a-z][a-z0-9_.-]{0,79}")) {
-                throw new IllegalArgumentException("Invalid viewKey");
-            }
+        public HtmlData {
             data = (T)snapshot(Objects.requireNonNull(data, "data"));
-            if (summary != null) {
-                summary = summary.strip();
-                if (summary.isEmpty() || summary.length() > 4000 || summary.chars().anyMatch(Character::isISOControl)) {
-                    throw new IllegalArgumentException("Invalid view summary");
-                }
-            }
         }
     }
 
@@ -48,6 +39,15 @@ public sealed interface ReplyBlock {
             if (plainText != null && plainText.isBlank()) {
                 throw new IllegalArgumentException("Declared Markdown fallback must be nonempty");
             }
+            if (message.customTemplateId() != null && plainText == null) {
+                throw new IllegalArgumentException("Custom Markdown templates require a plain-text fallback");
+            }
+        }
+
+        public String plainTextContent() {
+            if (plainText != null)
+                return plainText;
+            return message.plainTextContent();
         }
     }
 
@@ -70,7 +70,7 @@ public sealed interface ReplyBlock {
         if (value instanceof Collection<?> collection)
             return collection.stream().map(ReplyBlock::snapshot).toList();
         if (value != null && value.getClass().isArray()) {
-            throw new IllegalArgumentException("Use immutable lists instead of arrays in view data");
+            throw new IllegalArgumentException("Use immutable lists instead of arrays in HTML data");
         }
         return value;
     }

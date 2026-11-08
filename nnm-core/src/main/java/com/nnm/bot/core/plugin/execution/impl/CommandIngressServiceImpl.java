@@ -13,7 +13,10 @@ import com.nnm.bot.core.config.CommandRoutingProperties;
 import com.nnm.bot.core.message.model.BotIncomingAttachment;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.execution.CommandDispatcher;
+import com.nnm.bot.core.plugin.execution.CommandCall;
 import com.nnm.bot.core.constant.CommandExecutionConstants.CommandIngressResult;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.core.plugin.execution.CommandIngressService;
 import com.nnm.bot.core.plugin.model.CommandMatch;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
@@ -126,7 +129,7 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
             }
             PendingCommand task = new PendingCommand(match, connectionValid, bytes);
             if (!queue.offer(task)) {
-                throw new IllegalStateException("命令队列与准入容量状态不一致");
+                throw new SystemException(CommandErrorCode.INGRESS_STATE_INVALID, "命令队列与准入容量状态不一致");
             }
             pending.add(task);
             waiting++;
@@ -142,7 +145,7 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
             if (accepting)
                 return;
             if (dispatchThread != null && dispatchThread.isAlive()) {
-                throw new IllegalStateException("上一个命令派发器尚未停止");
+                throw new SystemException(CommandErrorCode.INGRESS_STATE_INVALID, "上一个命令派发器尚未停止");
             }
             stopping = false;
             accepting = true;
@@ -171,6 +174,9 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
+        } catch (RuntimeException failure) {
+            log.error("命令派发线程异常退出", failure);
+            throw failure;
         } finally {
             withStateLock(() -> {
                 accepting = false;
@@ -192,8 +198,13 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
                 outcome = IngressEvent.CONNECTION_INVALID;
                 return;
             }
-            dispatcher.dispatch(task.match);
+            dispatcher.dispatch(CommandCall.text(task.match));
             outcome = IngressEvent.COMPLETED;
+        } catch (RuntimeException failure) {
+            // 线程池可能将任务异常留在 Future 中；入口负责记录，不能在这里补发机器人回复。
+            log.error("命令执行任务失败 command={} messageId={}", task.match.invocation().commandCode(),
+                task.match.invocation().context().messageId(), failure);
+            throw failure;
         } finally {
             long elapsed = System.nanoTime() - started;
             // 容量归还不依赖指标记录成功；执行异常直接向任务边界传播。
@@ -271,7 +282,7 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("等待命令任务结束时被中断", interrupted);
+            throw new SystemException(CommandErrorCode.INGRESS_INTERRUPTED, "等待命令任务结束时被中断", interrupted);
         } finally {
             cancelWaiting();
             if (worker != null)
@@ -307,6 +318,8 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
             return registry.match(context).orElse(null);
         } catch (RuntimeException failure) {
             event(IngressEvent.MATCH_FAILED);
+            log.error("命令匹配失败 platform={} account={} messageId={}", context.platform(), context.botAccountId(),
+                context.messageId(), failure);
             throw failure;
         }
     }
@@ -334,7 +347,7 @@ public class CommandIngressServiceImpl implements CommandIngressService, SmartLi
             case REJECTED_CAPACITY -> IngressEvent.REJECTED_CAPACITY;
             case REJECTED_SHUTDOWN -> IngressEvent.REJECTED_SHUTDOWN;
             case REJECTED_TOO_LARGE -> IngressEvent.REJECTED_TOO_LARGE;
-            default -> throw new IllegalArgumentException("非拒绝状态不能登记为入口拒绝");
+            default -> throw new SystemException(CommandErrorCode.INGRESS_STATE_INVALID, "非拒绝状态不能登记为入口拒绝: " + result);
         });
         log.debug("Command ingress rejected platform={} account={} messageId={} command={} reason={}",
             context.platform(), context.botAccountId(), context.messageId(),

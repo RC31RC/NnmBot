@@ -4,8 +4,7 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
-@BotPluginCommand(code = WarframeCommandCodes.CONSTRUCTION_PROGRESS, name = "舰队建造", gameCode = "warframe", order = 80,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.CONSTRUCTION_PROGRESS)
 // 官方 ProjectPct；参考 parser/ConstructionProgress，无静态业务表。
 public class ConstructionProgressPlugin extends AbstractWorldStateCommandPlugin {
     /**

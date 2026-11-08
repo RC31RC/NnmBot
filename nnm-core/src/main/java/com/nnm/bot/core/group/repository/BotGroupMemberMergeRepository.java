@@ -6,5 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BotGroupMemberMergeRepository extends JpaRepository<BotGroupMemberMerge, Long> {
 
+    void deleteAllByGroupId(Long groupId);
+
     Optional<BotGroupMemberMerge> findByGroupIdAndSourceMemberId(Long groupId, Long sourceMemberId);
 }

@@ -114,21 +114,6 @@ public interface OfficialRecordPersistenceService {
     List<WarframeOfficialRecordDTO> findDataByIds(Collection<Long> ids);
 
     /**
-     * 计算已采纳记录的内容指纹，用于校验审批基线。
-     *
-     * @return 计算已采纳记录的内容指纹，用于校验审批基线对应的文本。
-     */
-    String contentFingerprint();
-
-    /**
-     * 计算指定文件主表及官方详情子树的内容指纹，避免独立文件审核相互阻塞。
-     *
-     * @param paths 待校验的官方文件路径。
-     * @return 这些文件当前记录的稳定指纹。
-     */
-    String contentFingerprint(Collection<String> paths);
-
-    /**
      * 读取上游维护记录的稳定业务身份。
      *
      * @param paths 待处理文件的路径集合。

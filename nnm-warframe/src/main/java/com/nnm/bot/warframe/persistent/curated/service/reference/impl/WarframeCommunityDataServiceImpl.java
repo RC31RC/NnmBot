@@ -163,7 +163,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         var dataset = WarframeCommunityDataset.parse(code);
         BusinessAssert.isTrue(json != null && json.getBytes(StandardCharsets.UTF_8).length <= properties.getMaxBytes(),
             WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
-        Map<String, WarframeCommunityInputDTO> incoming = importParser.parse(dataset, json);
+        var parsed = importParser.parse(dataset, json);
+        Map<String, WarframeCommunityInputDTO> incoming = parsed.records();
         List<WarframeCommunityOperationDTO> operations = new ArrayList<>();
         // 输入只产生新增或修改；提前确定字段顺序，避免每条记录重复排序。
         List<String> fieldsToCompare = dataset.fields().stream().sorted().toList();
@@ -191,9 +192,10 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         }
         Instant now = Instant.now();
         WarframeCommunityPreviewDTO preview = new WarframeCommunityPreviewDTO(UUID.randomUUID().toString(), code, now,
-            now.plus(properties.getPreviewTtl()), incoming.size(),
+            now.plus(properties.getPreviewTtl()), parsed.inputCount(),
             (int)operations.stream().filter(item -> item.type().equals("ADDED")).count(),
-            (int)operations.stream().filter(item -> item.type().equals("CHANGED")).count(), List.copyOf(operations));
+            (int)operations.stream().filter(item -> item.type().equals("CHANGED")).count(), parsed.invalidCount(),
+            parsed.issues(), List.copyOf(operations));
         // 预览按 ID 隔离：新的上传或远端拉取不得覆盖仍待审核的任务结果。
         // 同一数据集的索引读写通过数据库行锁串行化；预览正文仍独立按 ID 过期。
         // uploadPreview/pullPreview 在同一 Bean 内调用 preview，显式事务保证锁跨入口生效。
@@ -323,7 +325,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         int limit = Math.max(1, Math.min(100, size));
         int start = (int)Math.min((page - 1L) * limit, preview.operations().size());
         return new WarframeCommunityPreviewPageDTO(id, code, preview.createdAt(), preview.expiresAt(),
-            preview.inputCount(), preview.addedCount(), preview.changedCount(),
+            preview.inputCount(), preview.addedCount(), preview.changedCount(), preview.invalidCount(),
+            preview.issues(),
             PageResult.of(preview.operations().subList(start, Math.min(start + limit, preview.operations().size())),
                 page, limit, preview.operations().size()));
     }
@@ -382,6 +385,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             return new WarframeCommunityApplyVO(request.previewId(), receipt.get().getAppliedCount());
         }
         WarframeCommunityPreviewDTO preview = requirePreview(dataset, request.previewId());
+        BusinessAssert.isTrue(preview.invalidCount() == 0, WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT,
+            "导入内容包含无效记录，请修正后重新生成预览");
         List<WarframeCommunityOperationDTO> selected = preview.operations().stream()
             .filter(operation -> request.selectedOperationIds().contains(operation.id())).toList();
         BusinessAssert.isTrue(selected.size() == request.selectedOperationIds().size(),

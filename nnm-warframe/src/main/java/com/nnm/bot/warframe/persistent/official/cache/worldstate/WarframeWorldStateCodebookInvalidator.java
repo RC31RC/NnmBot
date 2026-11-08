@@ -26,7 +26,14 @@ public class WarframeWorldStateCodebookInvalidator {
      * 在当前事务成功提交后刷新相关缓存。
      */
     public void invalidateAfterCommit() {
-        afterCommitExecutor.execute(this::invalidateNow);
+        // 提交后缓存失效失败不能把已提交的文件事务误报为失败；定时刷新和 MQ 消费可重试。
+        afterCommitExecutor.execute(() -> {
+            try {
+                invalidateNow();
+            } catch (RuntimeException exception) {
+                log.warn("官方数据已提交，世界状态代码簿刷新失败；等待定时重试: {}", exception.toString());
+            }
+        });
     }
 
     /**

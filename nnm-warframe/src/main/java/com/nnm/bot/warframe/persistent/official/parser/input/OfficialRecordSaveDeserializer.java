@@ -25,7 +25,7 @@ public class OfficialRecordSaveDeserializer extends JsonDeserializer<WarframeOff
     public WarframeOfficialRecordSaveDTO deserialize(JsonParser parser, DeserializationContext context)
         throws IOException {
         String domain = null;
-        String bkey = null;
+        String group = null;
         boolean confirmed = false;
         boolean replace = false;
         try (TokenBuffer data = new TokenBuffer(parser)) {
@@ -35,7 +35,7 @@ public class OfficialRecordSaveDeserializer extends JsonDeserializer<WarframeOff
                 parser.nextToken();
                 switch (field) {
                     case "domain" -> domain = parser.getValueAsString();
-                    case "bkey" -> bkey = parser.getValueAsString();
+                    case "group" -> group = parser.getValueAsString();
                     case "confirmed" -> confirmed = parser.getBooleanValue();
                     case "replaceExisting" -> replace = parser.getBooleanValue();
                     case "data" -> {
@@ -54,7 +54,7 @@ public class OfficialRecordSaveDeserializer extends JsonDeserializer<WarframeOff
                 value = WarframeOfficialInputParser.parseCurrentValue((ObjectMapper)parser.getCodec(),
                     WarframeOfficialDataDomain.fromCode(domain), input);
             }
-            return new WarframeOfficialRecordSaveDTO(domain, bkey, value, confirmed, replace);
+            return new WarframeOfficialRecordSaveDTO(domain, value, confirmed, replace, group);
         }
     }
 }

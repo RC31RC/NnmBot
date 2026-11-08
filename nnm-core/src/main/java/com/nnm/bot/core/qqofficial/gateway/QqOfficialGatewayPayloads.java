@@ -1,33 +1,36 @@
 package com.nnm.bot.core.qqofficial.gateway;
 
-import cn.hutool.core.util.ObjectUtil;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayPayloadDTO;
+import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayPayloadDTO.IdentifyDTO;
+import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayPayloadDTO.ResumeDTO;
 
+/** 以固定协议 DTO 构造 Gateway 请求，心跳 d 的 null 和数字保留原协议形状。 */
 final class QqOfficialGatewayPayloads {
-
     private QqOfficialGatewayPayloads() {}
 
-    static ObjectNode identify(ObjectMapper objectMapper, String token, long intents) {
-        ObjectNode data = objectMapper.createObjectNode().put("token", "QQBot " + token).put("intents", intents);
-        data.set("shard", objectMapper.createArrayNode().add(0).add(1));
-        return objectMapper.createObjectNode().put("op", 2).set("d", data);
+    static String identify(ObjectMapper objectMapper, String token, long intents) {
+        return serialize(objectMapper,
+            new QqOfficialGatewayPayloadDTO<>(2, new IdentifyDTO("QQBot " + token, intents, new int[] {0, 1})));
     }
 
-    static ObjectNode resume(ObjectMapper objectMapper, String token, String sessionId, int sequence) {
-        ObjectNode data = objectMapper.createObjectNode().put("token", "QQBot " + token).put("session_id", sessionId)
-            .put("seq", sequence);
-        return objectMapper.createObjectNode().put("op", 6).set("d", data);
+    static String resume(ObjectMapper objectMapper, String token, String sessionId, int sequence) {
+        return serialize(objectMapper,
+            new QqOfficialGatewayPayloadDTO<>(6, new ResumeDTO("QQBot " + token, sessionId, sequence)));
     }
 
-    static ObjectNode heartbeat(ObjectMapper objectMapper, Integer sequence) {
-        ObjectNode payload = objectMapper.createObjectNode().put("op", 1);
-        if (ObjectUtil.isNull(sequence)) {
-            payload.putNull("d");
-        } else {
-            payload.put("d", sequence);
+    static String heartbeat(ObjectMapper objectMapper, Integer sequence) {
+        return serialize(objectMapper, new QqOfficialGatewayPayloadDTO<>(1, sequence));
+    }
+
+    private static String serialize(ObjectMapper objectMapper, QqOfficialGatewayPayloadDTO<?> payload) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "QQ Gateway 请求序列化失败", exception);
         }
-        return payload;
     }
 }

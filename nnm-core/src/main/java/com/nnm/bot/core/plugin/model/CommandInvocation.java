@@ -1,11 +1,11 @@
 package com.nnm.bot.core.plugin.model;
 
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.message.model.BotIncomingAttachment;
 import com.nnm.bot.core.message.model.BotMessageReference;
 import java.util.List;
-
-import java.util.Objects;
 
 /**
  * 注册表完成命令匹配后传给插件的稳定调用参数。
@@ -18,10 +18,13 @@ import java.util.Objects;
 public record CommandInvocation(BotMessageContext context, String commandCode, String matchedAlias, String arguments) {
 
     public CommandInvocation {
-        context = Objects.requireNonNull(context, "context must not be null");
-        commandCode = requireText(commandCode, "commandCode");
-        matchedAlias = requireText(matchedAlias, "matchedAlias");
-        arguments = Objects.requireNonNullElse(arguments, "").trim();
+        // 编码与别名只能来自已校验的命令注册表；缺失是内部匹配链路故障，不是用户参数错误。
+        if (context == null) {
+            throw new SystemException(CommandErrorCode.MATCH_RESULT_INVALID, "命令匹配结果缺少消息上下文");
+        }
+        commandCode = requireText(commandCode, "命令编码");
+        matchedAlias = requireText(matchedAlias, "命中别名");
+        arguments = arguments == null ? "" : arguments.trim();
     }
 
     /** 返回本条消息的附件元数据，不执行下载。 */
@@ -35,9 +38,9 @@ public record CommandInvocation(BotMessageContext context, String commandCode, S
     }
 
     private static String requireText(String value, String field) {
-        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
-        if (normalized.isEmpty()) {
-            throw new IllegalArgumentException(field + " must not be blank");
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isBlank()) {
+            throw new SystemException(CommandErrorCode.MATCH_RESULT_INVALID, "命令匹配结果缺少" + field);
         }
         return normalized;
     }

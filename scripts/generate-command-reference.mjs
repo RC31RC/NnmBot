@@ -63,10 +63,10 @@ const testByCode = new Map(Object.entries({
   'riven-unrollables': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/persistent/official/upgrades/RivenUnrollablesPluginTest.java'],
   'riven-weekly': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/riven/RivenWeeklyPluginTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/riven/WarframeRivenWeeklyServiceTest.java'],
   'riven-analyse': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/riven/RivenAnalysePluginTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/riven/impl/WarframeRivenOcrServiceImplTest.java'],
-  'arbitration': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandHandlerTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationRefreshServiceImplTest.java'],
-  'today-arbitration': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandHandlerTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java'],
-  'efficient-arbitration': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandHandlerTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java'],
-  'arbitration-table': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandHandlerTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java'],
+  'arbitration': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandPluginTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationRefreshServiceImplTest.java'],
+  'today-arbitration': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandPluginTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java'],
+  'efficient-arbitration': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandPluginTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java'],
+  'arbitration-table': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/runtime/arbitration/ArbitrationCommandPluginTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/runtime/service/arbitration/impl/WarframeArbitrationServiceImplTest.java'],
   'forum-loadout': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/persistent/curated/forum/ForumLoadoutPluginTest.java', 'nnm-warframe/src/test/java/com/nnm/bot/warframe/persistent/curated/service/forum/impl/ForumArticleServiceImplTest.java'],
   'wiki': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/persistent/official/reference/WikiPluginTest.java'],
   'watch-list': ['nnm-warframe/src/test/java/com/nnm/bot/warframe/plugin/persistent/curated/watch/WatchListPluginTest.java'],
@@ -308,12 +308,16 @@ function outputDescription(command) {
   const pluginPath = pluginFile(command);
   let source = '';
   try { source = fs.readFileSync(pluginPath, 'utf8'); } catch {}
-  const viewKey = source.match(/CommandView\.[\w]+\("([^"]+)"\)/)?.[1];
-  if (viewKey) return `结构化 viewKey ${viewKey}；允许的文本/图片/Markdown 输出由插件声明，实际选择由管理端命令 presentation/template 配置。`;
-  if (command.plugin.includes('/plugin/runtime/worldstate/') || command.plugin.includes('/plugin/runtime/arbitration/')) {
-    return '运行时视图由继承插件声明；机器人能力、启用状态及 presentation/template 以管理端配置为准。';
+  if (command.code === 'market-riven') {
+    return '一份拍卖 HTML 数据加 Markdown 正文、上一页和最多三个后续页按钮；选中 HTML 模板时渠道合成单条消息，未选时结构化文字回退。QQ 使用图片素材引用保留 Markdown 样式，素材失败则明确退为一条富媒体纯文本；键盘需账号资格，OneBot 保留一次按钮文字。';
   }
-  return 'CommandResult 文本或结构化视图；实际文本/图片/Markdown 组合由管理端 bot_command presentation/template 配置，不由稳定命令码决定。';
+  if (/new ReplyBlock\.HtmlData|CommandResult\.html\(/.test(source)) {
+    return '插件返回有序内容及至多一份 HTML 数据；命令选中 HTML 模板时渲染为图片，未选时回退为结构化文字。渠道必须编译为单条消息；如有 Markdown 正文及按钮，由插件生成。';
+  }
+  if (command.plugin.includes('/plugin/runtime/worldstate/') || command.plugin.includes('/plugin/runtime/arbitration/')) {
+    return '继承插件生成有序 CommandResult；可选 HTML 模板由管理端单选，渠道必须编译为单条消息。';
+  }
+  return '插件生成有序 CommandResult 内容；可选 HTML 模板由管理端单选，如有 Markdown 正文及按钮，由插件生成；渠道必须编译为单条消息。';
 }
 
 function testLinks(command) {
@@ -374,7 +378,7 @@ let document = `# NnmBot 命令输入与返回参考
 - 除明确列为人工白名单的命令外，\`WarframeCommandCatalog.Category\` 作为静态命令查询分类。静态资料读各 JSON 的独立主表和必要子表；同一自然身份优先选择完整 SELF_MAINTAINED 根树，没有才取 OFFICIAL 根树，不把两棵树的子孙逐行拼接。
 - 四类纯自维护资料为物品别名、术语、仲裁精华、紫卡别名/组合规则。它们不属于静态官方包；上传、人工 JSON 和用户配置 URL 需先预览，选中的新增/修改项一个事务提交，不产生上游删除。
 - 缺失字段显示未提供或按领域返回空集合；未知 WorldState 引用保留原始键并标记未解析。不能将无数据解释为游戏内不存在，也不能从退役社区来源猜值。
-- 图像、文本、Markdown 等能力来自每个 Plugin 的 \`views()\` / viewKey；选用的 presentation 与模板以管理端配置为准。表中不把某一种格式伪称为每个实例当前启用的输出。
+- 每个 Plugin 组装有序 \`CommandResult\` 内容，HTML 数据至多一份；管理端单选 HTML 模板，交互偏好和渠道资格决定按钮表现。渠道无法组合为单条时拒绝，不拆分命令回复。
 - 输出 VO 是展示合同，不向用户暴露 JPA 实体、数据库内部 ID、官方审核原文或未经确认的字段推导。
 
 ## 代表性输入与返回

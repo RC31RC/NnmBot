@@ -1,11 +1,12 @@
 package com.nnm.bot.warframe.runtime.cache.worldstate;
 
-import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateErrorCode;
 import com.nnm.bot.core.message.render.BotImageRenderer;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
-import com.nnm.bot.core.constant.CommandPresentationConstants.ViewFormat;
+import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
 import com.nnm.bot.core.plugin.response.CommandImageCache;
 import com.nnm.bot.warframe.constant.WarframeCacheNames;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
@@ -57,24 +58,19 @@ public class WorldStateCommandImageCache implements CommandImageCache {
      * 渲染条件支持。
      *
      * @param command 命令。
-     * @param viewKey 展示数据键。
      * @param data 当前操作的数据。
      * @param renderer 渲染器。
      * @return 匹配的业务结果；没有有效数据时为空。
      */
     @Override
-    public Optional<byte[]> renderIfSupported(RuntimeCommand command, String viewKey, Map<String, Object> data,
+    public Optional<byte[]> renderIfSupported(RuntimeCommand command, Map<String, Object> data,
         BotImageRenderer renderer) {
-        if (!WarframeViewKeys.WORLD_STATE.equals(viewKey) || command.plugin().views().stream()
-            .noneMatch(view -> view.key().equals(viewKey) && view.formats().contains(ViewFormat.IMAGE))) {
-            return Optional.empty();
-        }
-        String templateHtml = command.configuration().templateHtml(viewKey);
-        if (StrUtil.isBlank(templateHtml)) {
+        CommandTemplate template = command.configuration().template();
+        if (template == null) {
             return Optional.empty();
         }
 
-        ImageCacheKey key = cacheKey(command.descriptor().code(), templateHtml, data);
+        ImageCacheKey key = cacheKey(command.descriptor().code(), template.html(), data);
         Cache cache = requireCache();
         byte[] cached = cache.get(key, byte[].class);
         if (cached != null) {
@@ -93,7 +89,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
                 created.complete(copy(rechecked));
                 return Optional.of(copy(rechecked));
             }
-            byte[] rendered = Objects.requireNonNull(renderer.renderHtml(templateHtml, data),
+            byte[] rendered = Objects.requireNonNull(renderer.renderHtml(template.html(), data),
                 "world state image renderer returned null");
             byte[] cacheValue = copy(rendered);
             cache.put(key, cacheValue);
@@ -144,7 +140,8 @@ public class WorldStateCommandImageCache implements CommandImageCache {
         try {
             return objectMapper.writeValueAsString(stableValue(data));
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("failed to hash world state image data", exception);
+            throw new SystemException(WarframeWorldStateErrorCode.IMAGE_CACHE_SERIALIZATION_FAILED,
+                "failed to hash world state image data", exception);
         }
     }
 

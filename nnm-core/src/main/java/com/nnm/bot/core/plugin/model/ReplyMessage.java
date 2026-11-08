@@ -4,9 +4,8 @@ import com.nnm.bot.core.constant.CommandPresentationConstants.CompositionPolicy;
 
 import java.util.List;
 
-/** null composition 表示采用命令策略；显式约束不能被后台配置放宽。 */
-public record ReplyMessage(List<ReplyBlock> blocks, List<ReplyAction> actions, CompositionPolicy composition,
-    boolean relatedActions) {
+/** 通知等多逻辑消息使用的渠道内容；命令结果不经过此多消息模型。 */
+public record ReplyMessage(List<ReplyBlock> blocks, List<ReplyAction> actions, CompositionPolicy composition) {
     public ReplyMessage {
         blocks = List.copyOf(blocks);
         actions = List.copyOf(actions);
@@ -15,6 +14,6 @@ public record ReplyMessage(List<ReplyBlock> blocks, List<ReplyAction> actions, C
     }
 
     public static ReplyMessage content(List<ReplyBlock> blocks) {
-        return new ReplyMessage(blocks, List.of(), null, false);
+        return new ReplyMessage(blocks, List.of(), null);
     }
 }

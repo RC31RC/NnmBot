@@ -13,7 +13,7 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandExecutionContext;
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot.Binding;
 import com.nnm.bot.core.plugin.model.CommandMatch;
-import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import com.nnm.bot.core.constant.SystemCommandCodes;
 import jakarta.annotation.Resource;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

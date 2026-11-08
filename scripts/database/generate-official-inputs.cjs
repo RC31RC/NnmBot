@@ -59,6 +59,11 @@ function generateOfficialInputs(root, models) {
           const values = keys.filter(key => properties.has(key)).map(key => properties.get(key));
           return values.length ? 'OfficialInputText.first(' + values.join(', ') + ')' : 'null';
         });
+        if (model.domain === 'LANGUAGE_STRING') {
+          // 语言条目可能是整封邮件；检索列只存短摘要，原文仍在独立 TEXT 列中。
+          expressions[0] = 'OfficialInputText.firstWithin(OfficialDataConstants.RECORD_NAME_MAX_LENGTH, text, key)';
+          expressions[1] = 'OfficialInputText.firstWithin(OfficialDataConstants.RECORD_NAME_MAX_LENGTH, zhText)';
+        }
         methods.push(methodComment('提取本记录的常用检索字段，不携带 JPA 受管状态。', {}, '名称、分类和说明等检索摘要；上游缺省字段保持为空。', '        '), '        @Override', '        public OfficialRecordHeaderDTO header() {',
           '            return new OfficialRecordHeaderDTO(' + expressions.join(', ') + ');', '        }', '');
         const identityKeys = ['recordKey', 'uniqueName', 'nodeKey', 'poolId', 'id', 'slug'];
@@ -108,6 +113,7 @@ function generateOfficialInputs(root, models) {
     if (body.includes('OfficialInputText.')) imports.push('com.nnm.bot.warframe.persistent.official.parser.input.OfficialInputText');
     if (body.includes('Void')) imports.push('com.fasterxml.jackson.databind.annotation.JsonDeserialize',
       'com.nnm.bot.warframe.persistent.official.parser.input.OfficialNullDeserializer');
+    if (model.domain === 'LANGUAGE_STRING') imports.push('com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants');
     if (body.includes('OfficialBountyStageDTO')) imports.push('com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialBountyStageDTO');
     if (body.includes('BigDecimal')) imports.push('java.math.BigDecimal');
     if (body.includes('List<')) imports.push('java.util.List');

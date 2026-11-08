@@ -1,6 +1,8 @@
 package com.nnm.bot.warframe.runtime.service.riven.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.util.WarframeNameNormalizer;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenWeaponDTO;
@@ -65,7 +67,7 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
     @Override
     public WarframeRivenWeeklyVO find(String platform, String query, Boolean rerolled, int page) {
         if (!properties.getSources().containsKey(platform) || page < 1) {
-            throw new IllegalArgumentException("Invalid weekly Riven platform or page");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "无效的裂罅周统计平台或页码");
         }
         Snapshot snapshot = snapshot(platform);
         String keyword = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);

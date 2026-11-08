@@ -5,8 +5,7 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 当前警报命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.ALERTS, name = "警报", gameCode = "warframe", order = 40,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.ALERTS)
 // 无 WorldStateDTO 原始表；读取官方快照的 alerts 段，静态引用表用途见 AbstractWorldStateCommandPlugin。
 public class AlertsPlugin extends AbstractWorldStateCommandPlugin {
 

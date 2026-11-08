@@ -33,14 +33,16 @@ import com.nnm.bot.admin.service.bot.command.BotCommandManagementService;
 import com.nnm.bot.admin.validation.command.BotCommandPresentationValidator;
 import com.nnm.bot.core.constant.CommandBoundaryPolicy;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.PresentationPolicy;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
+import com.nnm.bot.core.plugin.model.CommandMetadata;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.plugin.model.RuntimeCommand;
 import com.nnm.bot.admin.repository.bot.role.BotRobotRoleRepository;
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.exception.DataNotFoundException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,7 +88,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
             commandRepository.findAll().stream().collect(Collectors.toMap(command -> normalize(command.getCode()),
                 command -> command, (left, right) -> right, LinkedHashMap::new));
         Map<String,
-            BotPlugin<?>> plugins = commandRegistry.allPlugins().stream()
+            BotPlugin<?, ?>> plugins = commandRegistry.allPlugins().stream()
                 .collect(Collectors.toMap(plugin -> normalize(commandRegistry.metadata(plugin).code()),
                     plugin -> plugin, (left, right) -> left, LinkedHashMap::new));
         Set<String> codes = new LinkedHashSet<>(plugins.keySet());
@@ -100,12 +102,10 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void update(String code, BotCommandSaveDTO request) {
-        PresentationPolicy presentation =
-            BusinessAssert.notNull(request.presentation(), CommonErrorCode.PARAM_INVALID, "命令展示策略不能为空");
-        BotPlugin<?> plugin =
-            commandRegistry.plugin(code).orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
+        BotPlugin<?, ?> plugin =
+            commandRegistry.plugin(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
         CommandDescriptor descriptor = commandRegistry.command(code).map(RuntimeCommand::descriptor).orElseGet(() -> {
-            BotPluginCommand metadata = commandRegistry.metadata(plugin);
+            CommandMetadata metadata = commandRegistry.metadata(plugin);
             return new CommandDescriptor(metadata.code(), metadata.name(), List.of(), "", "", metadata.matchType(),
                 metadata.order());
         });
@@ -116,34 +116,24 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         command.setDescription(valueOr(request.description(), descriptor.description()));
         command.setEnabled(Boolean.TRUE.equals(request.enabled()));
         command.setShowInHelp(Boolean.TRUE.equals(request.showInHelp()));
-        command.setPresentation(presentation);
         command.setCooldownSeconds(
             Math.max(0, ObjectUtil.isNull(request.cooldownSeconds()) ? 0 : request.cooldownSeconds()));
         command.setMentionInvoker(Boolean.TRUE.equals(request.mentionInvoker()));
         command.setPermissionOverride(request.permissionOverride());
         command.setGroupRoleRequired(normalizeGroupRole(request.groupRoleRequired()));
         BotCommand saved = commandRepository.save(command);
-        updateTemplates(saved, request.templateIds(), presentation, plugin);
-
-        aliasRepository.deleteAllByCommandId(saved.getId());
-        aliasRepository.flush();
+        updateTemplateSelection(saved, request.templateId());
+        commandRepository.save(saved);
 
         Map<String, BotCommandTriggerSaveDTO> triggers = normalizeTriggers(request.triggers());
-        for (BotCommandTriggerSaveDTO trigger : triggers.values()) {
-            BotCommandAlias item = new BotCommandAlias();
-            item.setCommandId(saved.getId());
-            item.setAliasName(trigger.name().trim());
-            item.setBoundaryPolicy(trigger.boundaryPolicy());
-            aliasRepository.save(item);
-        }
-        aliasRepository.flush();
+        synchronizeTriggers(saved.getId(), triggers);
         commandRegistry.refreshAfterCommit();
     }
 
     @Override
     public List<BotCommandRoleDTO> roles(String code) {
-        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
+        BotCommand command =
+            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
         Map<Long, BotCommandRobotRole> assigned = commandRoleRepository.findAllByCommandId(command.getId()).stream()
             .collect(Collectors.toMap(BotCommandRobotRole::getRobotRoleId, item -> item));
         return roleRepository.findAll().stream().sorted(Comparator.comparing(BotRobotRole::getCode))
@@ -155,27 +145,36 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void updateRoles(String code, BotCommandRoleSaveDTO request) {
-        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
+        BotCommand command =
+            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
         Map<Long, BotRobotRole> roles = roleRepository.findAllById(request.roleIds()).stream()
             .collect(Collectors.toMap(BotRobotRole::getId, item -> item));
         if (roles.size() != request.roleIds().size()) {
-            throw new IllegalArgumentException("命令角色包含不存在的角色");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "命令角色包含不存在的角色");
         }
-        commandRoleRepository.deleteAllByCommandId(command.getId());
-        commandRoleRepository.flush();
+        List<BotCommandRobotRole> current = commandRoleRepository.findAllByCommandId(command.getId());
+        Set<Long> currentIds = current.stream().map(BotCommandRobotRole::getRobotRoleId).collect(Collectors.toSet());
+        List<BotCommandRobotRole> removed =
+            current.stream().filter(binding -> !roles.containsKey(binding.getRobotRoleId())).toList();
+        if (!removed.isEmpty())
+            commandRoleRepository.deleteAll(removed);
+        List<BotCommandRobotRole> added = new ArrayList<>();
         for (Long roleId : request.roleIds()) {
+            if (currentIds.contains(roleId))
+                continue;
             BotCommandRobotRole binding = new BotCommandRobotRole();
             binding.setCommandId(command.getId());
             binding.setRobotRoleId(roleId);
-            commandRoleRepository.save(binding);
+            added.add(binding);
         }
+        if (!added.isEmpty())
+            commandRoleRepository.saveAll(added);
     }
 
     @Override
     public List<Long> systemRoleIds(String code) {
-        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
+        BotCommand command =
+            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
         return systemRoleBindingRepository.findAllByCommandId(command.getId()).stream().map(BotCommandRole::getRoleId)
             .distinct().toList();
     }
@@ -183,29 +182,69 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void updateSystemRoles(String code, BotCommandSystemRoleSaveDTO request) {
-        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
+        BotCommand command =
+            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
         List<Long> roleIds =
             CollUtil.isEmpty(request.roleIds()) ? List.of() : request.roleIds().stream().distinct().toList();
         Map<Long, SysRole> roles =
             systemRoleRepository.findAllById(roleIds).stream().collect(Collectors.toMap(SysRole::getId, item -> item));
         if (roles.size() != roleIds.size()) {
-            throw new IllegalArgumentException("命令系统角色包含不存在的角色");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "命令系统角色包含不存在的角色");
         }
-        systemRoleBindingRepository.deleteAllByCommandId(command.getId());
-        systemRoleBindingRepository.flush();
+        List<BotCommandRole> current = systemRoleBindingRepository.findAllByCommandId(command.getId());
+        Set<Long> currentIds = current.stream().map(BotCommandRole::getRoleId).collect(Collectors.toSet());
+        List<BotCommandRole> removed =
+            current.stream().filter(binding -> !roles.containsKey(binding.getRoleId())).toList();
+        if (!removed.isEmpty())
+            systemRoleBindingRepository.deleteAll(removed);
+        List<BotCommandRole> added = new ArrayList<>();
         for (Long roleId : roleIds) {
+            if (currentIds.contains(roleId))
+                continue;
             BotCommandRole binding = new BotCommandRole();
             binding.setCommandId(command.getId());
             binding.setRoleId(roleId);
-            systemRoleBindingRepository.save(binding);
+            added.add(binding);
         }
+        if (!added.isEmpty())
+            systemRoleBindingRepository.saveAll(added);
+    }
+
+    private void synchronizeTriggers(long commandId, Map<String, BotCommandTriggerSaveDTO> target) {
+        List<BotCommandAlias> current = aliasRepository.findAllByCommandId(commandId);
+        Map<String, BotCommandAlias> retained = new LinkedHashMap<>();
+        List<BotCommandAlias> removed = new ArrayList<>();
+        for (BotCommandAlias alias : current) {
+            String key = normalize(alias.getAliasName());
+            if (!target.containsKey(key) || retained.putIfAbsent(key, alias) != null)
+                removed.add(alias);
+        }
+        if (!removed.isEmpty()) {
+            aliasRepository.deleteAll(removed);
+            aliasRepository.flush();
+        }
+        List<BotCommandAlias> writing = new ArrayList<>();
+        target.forEach((key, trigger) -> {
+            BotCommandAlias alias = retained.get(key);
+            if (alias == null) {
+                alias = new BotCommandAlias();
+                alias.setCommandId(commandId);
+            } else if (alias.getAliasName().equals(trigger.name())
+                && alias.getBoundaryPolicy() == trigger.boundaryPolicy()) {
+                return;
+            }
+            alias.setAliasName(trigger.name());
+            alias.setBoundaryPolicy(trigger.boundaryPolicy());
+            writing.add(alias);
+        });
+        if (!writing.isEmpty())
+            aliasRepository.saveAllAndFlush(writing);
     }
 
     @Override
     public BotCommandCostDTO cost(String code) {
-        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
+        BotCommand command =
+            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElse(null);
         return new BotCommandCostDTO(command.getCode(), ObjectUtil.isNull(cost) ? 0 : cost.getCostPoints(),
             ObjectUtil.isNotNull(cost) && cost.isEnabled(), ObjectUtil.isNull(cost) ? 0 : cost.getRewardPoints(),
@@ -215,8 +254,8 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void updateCost(String code, BotCommandCostSaveDTO request) {
-        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
-            .orElseThrow(() -> new IllegalArgumentException("Unknown command: " + code));
+        BotCommand command =
+            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElseGet(BotCommandCost::new);
         cost.setCommandId(command.getId());
         cost.setCostPoints(request.costPoints());
@@ -226,37 +265,18 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         costRepository.save(cost);
     }
 
-    private void updateTemplates(BotCommand command, Collection<Long> requestedIds, PresentationPolicy presentation,
-        BotPlugin<?> plugin) {
-        List<Long> templateIds = CollUtil.isEmpty(requestedIds) ? List.of()
-            : requestedIds.stream().filter(ObjectUtil::isNotNull).distinct().toList();
-        Map<Long, BotCommandTemplate> selected = templateRepository.findAllById(templateIds).stream()
-            .collect(Collectors.toMap(BotCommandTemplate::getId, item -> item));
-        if (selected.size() != templateIds.size()) {
-            throw new IllegalArgumentException("命令模板包含不存在的模板");
+    private void updateTemplateSelection(BotCommand command, Long templateId) {
+        if (templateId == null) {
+            command.setTemplateId(null);
+            return;
         }
-        presentationValidator.validate(plugin.views(), presentation, List.copyOf(selected.values()));
-        if (selected.values().stream().anyMatch(template -> ObjectUtil.isNotNull(template.getCommandId())
-            && !template.getCommandId().equals(command.getId()))) {
-            throw new IllegalArgumentException("命令模板已归属于其他命令");
-        }
-
-        List<BotCommandTemplate> current =
-            templateRepository.findAllByCommandIdOrderBySortOrderAscIdAsc(command.getId());
-        for (BotCommandTemplate template : current) {
-            if (!selected.containsKey(template.getId())) {
-                template.setCommandId(null);
-                template.setSortOrder(0);
-            }
-        }
-        for (int index = 0; index < templateIds.size(); index++) {
-            BotCommandTemplate template = selected.get(templateIds.get(index));
-            template.setCommandId(command.getId());
-            template.setSortOrder(index);
-        }
-        templateRepository.saveAll(new ArrayList<>(current));
-        templateRepository.saveAll(selected.values());
-        templateRepository.flush();
+        BotCommandTemplate template =
+            templateRepository.findById(templateId).orElseThrow(() -> new DataNotFoundException("命令模板不存在"));
+        BusinessAssert.isTrue(command.getId() != null && command.getId().equals(template.getCommandId()),
+            CommonErrorCode.PARAM_INVALID, "只能选择归属于当前命令的 HTML 模板");
+        BusinessAssert.isTrue(template.isEnabled(), CommonErrorCode.PARAM_INVALID, "不能选择已停用的 HTML 模板");
+        presentationValidator.validate(List.of(template));
+        command.setTemplateId(template.getId());
     }
 
     private Map<String, BotCommandTriggerSaveDTO> normalizeTriggers(Collection<BotCommandTriggerSaveDTO> triggers) {
@@ -276,32 +296,25 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         return Collections.unmodifiableMap(normalized);
     }
 
-    private BotCommandDTO toItem(BotPlugin<?> plugin, BotCommand command) {
-        BotPluginCommand metadata = ObjectUtil.isNull(plugin) ? null : commandRegistry.metadata(plugin);
+    private BotCommandDTO toItem(BotPlugin<?, ?> plugin, BotCommand command) {
+        CommandMetadata metadata = ObjectUtil.isNull(plugin) ? null : commandRegistry.metadata(plugin);
         String code = ObjectUtil.isNull(command) ? metadata.code() : command.getCode();
         String gameCode = gameCode(command, plugin, code);
         List<BotCommandTriggerDTO> triggers = ObjectUtil.isNull(command) ? List.of()
             : aliasRepository.findAllByCommandId(command.getId()).stream()
                 .sorted(Comparator.comparing(BotCommandAlias::getId))
                 .map(alias -> new BotCommandTriggerDTO(alias.getAliasName(), alias.getBoundaryPolicy())).toList();
-        List<BotCommandTemplate> templates = ObjectUtil.isNull(command) ? List.of()
-            : templateRepository.findAllByCommandIdOrderBySortOrderAscIdAsc(command.getId());
         return new BotCommandDTO(ObjectUtil.isNull(command) ? null : command.getId(), ObjectUtil.isNull(command), code,
             ObjectUtil.isNull(command) ? metadata.name() : command.getName(), gameCode,
             ObjectUtil.isNull(command) ? "" : command.getDescription(), metadata == null ? null : metadata.matchType(),
             ObjectUtil.isNull(command) ? false : command.isEnabled(),
-            ObjectUtil.isNull(command) ? false : command.isShowInHelp(),
-            ObjectUtil.isNull(command) ? PresentationPolicy.defaults() : command.getPresentation(),
-            plugin == null ? List.of() : plugin.views(), metadata != null && metadata.allowRelatedAction(),
-            plugin == null ? List.of() : plugin.relatedParameters(),
-            plugin == null ? Set.of() : plugin.actionContextKeys(), triggers,
+            ObjectUtil.isNull(command) ? false : command.isShowInHelp(), triggers,
             ObjectUtil.isNull(command) ? 0 : command.getCooldownSeconds(),
             ObjectUtil.isNotNull(command) && command.isMentionInvoker(),
             ObjectUtil.isNull(command) || ObjectUtil.isNull(command.getPermissionOverride()) ? ""
                 : command.getPermissionOverride(),
             ObjectUtil.isNull(command) ? null : command.getGroupRoleRequired(),
-            templates.stream().map(BotCommandTemplate::getId).toList(),
-            templates.stream().map(BotCommandTemplate::getTemplateCode).toList(),
+            ObjectUtil.isNull(command) ? null : command.getTemplateId(),
             ObjectUtil.isNull(command) ? null : command.getCreatedAt(),
             ObjectUtil.isNull(command) ? null : command.getUpdatedAt());
     }
@@ -330,12 +343,12 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         }
         String normalized = role.trim().toUpperCase(Locale.ROOT);
         if (!Set.of("OWNER", "ADMIN").contains(normalized)) {
-            throw new IllegalArgumentException("群组角色要求只能是 OWNER 或 ADMIN");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "群组角色要求只能是 OWNER 或 ADMIN");
         }
         return normalized;
     }
 
-    private String gameCode(BotCommand command, BotPlugin<?> plugin, String descriptorCode) {
+    private String gameCode(BotCommand command, BotPlugin<?, ?> plugin, String descriptorCode) {
         if (ObjectUtil.isNotNull(plugin)) {
             return commandRegistry.metadata(plugin).gameCode();
         }

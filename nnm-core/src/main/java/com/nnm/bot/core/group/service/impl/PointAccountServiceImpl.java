@@ -1,10 +1,14 @@
 package com.nnm.bot.core.group.service.impl;
 
 import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
+import com.nnm.bot.core.constant.GroupPointConstants.PointErrorCode;
+import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.core.constant.GroupPointConstants.LockPurpose;
 import com.nnm.bot.core.group.service.CanonicalMemberResolver;
 
 import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.domain.BotGroupPointTransaction;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
@@ -81,9 +85,9 @@ public class PointAccountServiceImpl implements PointAccountService {
         lockManager.lock(
             LockKey.forOperation(PointAccountServiceImpl.class, LockPurpose.REFUND.key(), originalIdempotencyKey));
         BotGroupPointTransaction original = transactionRepository.findByIdempotencyKey(originalIdempotencyKey)
-            .orElseThrow(() -> new IllegalStateException("原积分扣费流水不存在"));
+            .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "原积分扣费流水不存在"));
         if (!TransactionType.COMMAND_COST.name().equals(original.getTransactionType()) || original.getAmount() >= 0) {
-            throw new IllegalArgumentException("只有命令扣费流水允许退款");
+            throw new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "只有命令扣费流水允许退款");
         }
         String refundKey = "REFUND:" + original.getId();
         if (existsByIdempotencyKey(refundKey)) {
@@ -92,7 +96,7 @@ public class PointAccountServiceImpl implements PointAccountService {
         long memberId = canonicalMemberId(original.getGroupId(), original.getMemberId());
         lockManager.lock(LockKey.forResource(BotGroupMember.class, memberId));
         BotGroupMember member = memberRepository.findByIdAndGroupId(memberId, original.getGroupId())
-            .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
+            .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "退款流水存在，但对应的积分账户已不存在"));
         long refund = Math.abs(original.getAmount());
         member.setPoints(Math.addExact(member.getPoints(), refund));
         member.setTotalSpent(Math.max(0, member.getTotalSpent() - refund));
@@ -118,19 +122,19 @@ public class PointAccountServiceImpl implements PointAccountService {
     public PointChangeResult adjust(long groupId, long memberId, long targetPoints, String idempotencyKey,
         String description) {
         if (groupId <= 0 || memberId <= 0) {
-            throw new IllegalArgumentException("积分账户标识必须为正数");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "积分账户标识必须为正数");
         }
         memberId = canonicalMemberId(groupId, memberId);
         lockManager.lock(LockKey.forResource(BotGroupMember.class, memberId));
         if (targetPoints < 0) {
-            throw new IllegalArgumentException("积分余额不能为负数");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "积分余额不能为负数");
         }
         String normalizedIdempotencyKey = requireText(idempotencyKey, "idempotencyKey");
         if (existsByIdempotencyKey(normalizedIdempotencyKey)) {
             return repeated(normalizedIdempotencyKey, groupId, memberId);
         }
         BotGroupMember member = memberRepository.findByIdAndGroupId(memberId, groupId)
-            .orElseThrow(() -> new IllegalStateException("积分账户不存在"));
+            .orElseThrow(() -> new BusinessException(PointErrorCode.ACCOUNT_NOT_FOUND));
         long amount = Math.subtractExact(targetPoints, member.getPoints());
         if (amount == 0) {
             return PointChangeResult.applied(snapshot(member), null);
@@ -163,8 +167,11 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     private BotGroupMember lockedMember(PointOperation operation) {
         // 不使用命令入口的余额和启用状态；行锁一直持有到事务提交，避免方法锁提前释放。
-        return memberRepository.findByIdAndGroupId(operation.memberId(), operation.groupId())
-            .filter(BotGroupMember::isEnabled).orElseThrow(() -> new IllegalStateException("积分账户不存在"));
+        BotGroupMember member = memberRepository.findByIdAndGroupId(operation.memberId(), operation.groupId())
+            .orElseThrow(() -> new BusinessException(PointErrorCode.ACCOUNT_NOT_FOUND));
+        if (!member.isEnabled())
+            throw new BusinessException(PointErrorCode.ACCOUNT_UNAVAILABLE);
+        return member;
     }
 
     private PointOperation canonical(PointOperation operation) {
@@ -200,16 +207,15 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     private String requireText(String value, String field) {
         if (StrUtil.isBlank(value)) {
-            throw new IllegalArgumentException(field + "不能为空");
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, field + "不能为空");
         }
         return value.trim();
     }
 
     private PointChangeResult repeated(String idempotencyKey, long groupId, long memberId) {
         BotGroupPointTransaction transaction = transactionRepository.findByIdempotencyKey(idempotencyKey)
-            .orElseThrow(() -> new IllegalStateException("幂等流水不存在"));
-        return PointChangeResult.repeated(
-            balance(groupId, memberId).orElseThrow(() -> new IllegalStateException("幂等流水存在，但积分账户不存在")),
-            transaction.getId());
+            .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "幂等流水不存在"));
+        return PointChangeResult.repeated(balance(groupId, memberId).orElseThrow(
+            () -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "幂等流水存在，但积分账户不存在")), transaction.getId());
     }
 }

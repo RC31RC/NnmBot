@@ -5,8 +5,7 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 
-@BotPluginCommand(code = WarframeCommandCodes.CODEX_SONGS, matchType = MatchType.PREFIX, name = "图鉴歌曲",
-    gameCode = "warframe", order = 105)
+@BotPluginCommand(code = WarframeCommandCodes.CODEX_SONGS, matchType = MatchType.PREFIX)
 public final class CodexSongsPlugin extends AbstractDefinitionPlugin {
     /**
      * 取得当前独立数据文件的领域标识。

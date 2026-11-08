@@ -6,9 +6,9 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
+import com.nnm.bot.warframe.persistent.official.pojo.query.crafting.WarframeMaterialQuery;
 
-@BotPluginCommand(code = WarframeCommandCodes.FISH, matchType = MatchType.PREFIX, name = "鱼类物品", gameCode = "warframe",
-    order = 78)
+@BotPluginCommand(code = WarframeCommandCodes.FISH, matchType = MatchType.PREFIX)
 public final class FishPlugin extends AbstractMaterialPlugin {
     /**
      * 根据命令参数调用业务服务并组装命令结果。
@@ -18,7 +18,7 @@ public final class FishPlugin extends AbstractMaterialPlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        return material(Category.FISH, "鱼类物品", invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMaterialQuery parsed) {
+        return material(Category.FISH, "鱼类物品", parsed);
     }
 }

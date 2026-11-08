@@ -1,6 +1,8 @@
 package com.nnm.bot.warframe.runtime.service.market.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.market.OfficialMarketItemDTO;
@@ -86,13 +88,13 @@ public class WarframeMarketDucatsServiceImpl implements WarframeMarketDucatsServ
                 objectMapper.getTypeFactory().constructParametricType(MarketResponseRawData.class, Void.class));
             var payload = root.getPayload();
             if (payload == null || payload.getPreviousHour() == null || payload.getPreviousDay() == null) {
-                throw new IllegalStateException("杜卡德统计缺少小时或日统计分区");
+                throw new SystemException(MarketErrorCode.RESPONSE_INVALID, "杜卡德统计缺少小时或日统计分区");
             }
             List<RawPeriod> result =
                 List.of(period("上一小时", payload.getPreviousHour()), period("上一日", payload.getPreviousDay()));
             return Optional.of(List.copyOf(result));
         } catch (IOException exception) {
-            throw new IllegalStateException("Invalid market ducats response", exception);
+            throw new SystemException(MarketErrorCode.RESPONSE_INVALID, "杜卡德统计响应无法解析", exception);
         }
     }
 

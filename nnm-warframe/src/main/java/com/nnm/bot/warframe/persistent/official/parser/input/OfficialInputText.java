@@ -10,6 +10,22 @@ public final class OfficialInputText {
     private OfficialInputText() {}
 
     /**
+     * 选取满足检索列长度预算的首个文本；超长原文仍保存在独立的 TEXT 字段。
+     *
+     * @param maxLength 检索列允许的最大字符数。
+     * @param values 按优先顺序排列的候选文本。
+     * @return 首个不超过检索列长度预算的非空文本，否则为空。
+     */
+    public static String firstWithin(int maxLength, Object... values) {
+        for (Object value : values) {
+            String text = value instanceof String string ? string : null;
+            if (StrUtil.isNotBlank(text) && text.length() <= maxLength)
+                return text;
+        }
+        return null;
+    }
+
+    /**
      * 按名称回退顺序取得首个非空白文本，仅接受文本或明确的数值分支。
      *
      * @param values 按优先顺序排列的候选名称或业务键。

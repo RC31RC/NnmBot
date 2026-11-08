@@ -1,6 +1,7 @@
 package com.nnm.bot.core.channel.runtime;
 
 import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
 import com.nnm.bot.core.channel.topology.BotTopologyLoader;
@@ -120,7 +121,8 @@ public class BotConnectionPlacementCoordinator {
         String target = owners.stream().filter(owner -> component.equals(owner.instanceId())).findFirst()
             .orElse(owners.getFirst()).lease().owner();
         Lease targetIdentity = leases.find("node:" + target)
-            .orElseThrow(() -> new IllegalStateException("迁移目标节点身份租约已失效，请刷新后重试: " + target));
+            .orElseThrow(() -> new BusinessException(BotChannelErrorCode.CONNECTION_TARGET_LEASE_EXPIRED,
+                "迁移目标节点身份租约已失效，请刷新后重试: " + target));
         List<Move> moves = owners.stream().filter(owner -> !target.equals(owner.lease().owner()))
             .map(owner -> new Move(owner.instanceId(), owner.lease().owner(), target)).toList();
         return new Transfer(component, members, targetIdentity, moves, owners);

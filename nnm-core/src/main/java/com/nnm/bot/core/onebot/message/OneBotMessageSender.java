@@ -53,7 +53,8 @@ public class OneBotMessageSender implements BotMessageSender {
 
     @Override
     public boolean supportsComposition(BotMessageContext context, List<PartKind> parts) {
-        return !parts.isEmpty() && parts.stream().allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.IMAGE);
+        return !parts.isEmpty() && parts.stream()
+            .allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.IMAGE || kind == PartKind.MARKDOWN);
     }
 
     @Override
@@ -79,6 +80,13 @@ public class OneBotMessageSender implements BotMessageSender {
                     } catch (IOException failure) {
                         throw new SystemException(BotChannelErrorCode.FILE_STAGING_FAILED, "读取待发送图片失败", failure);
                     }
+                }
+                case BotMessagePart.Markdown markdown -> {
+                    String text = markdown.plainText();
+                    if (!text.isBlank())
+                        message.text(escapeText(text));
+                    markdown.message().buttons()
+                        .forEach(button -> message.text(escapeText("\n" + button.label() + "：" + button.value())));
                 }
                 default ->
                     throw new BotChannelCapabilityException(platform(), BotChannelCapability.IMAGE_MESSAGE, "非法顺序图文内容");

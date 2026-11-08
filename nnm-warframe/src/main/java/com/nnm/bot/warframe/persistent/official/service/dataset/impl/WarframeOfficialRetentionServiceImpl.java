@@ -1,27 +1,34 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStatus;
-import com.nnm.bot.warframe.storage.WarframeOfficialSnapshotStore;
-import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialRetentionService;
-import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest.FileEntry;
-import java.util.stream.Stream;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.IMPORT_HEAD_ID;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
-import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
+import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ApplyFileStatus;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStatus;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFilteredChangesDTO;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest;
+import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest.FileEntry;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialRefreshStaging;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialApplyFileRepository;
 import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportBatchRepository;
 import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportHeadRepository;
-import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialFileRepository;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialRefreshStagingRepository;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialApplyStateService;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialRetentionService;
+import com.nnm.bot.warframe.storage.WarframeOfficialSnapshotStore;
 import io.github.rdt.lock.DistributedLockManager;
 import io.github.rdt.lock.LockKey;
 import io.github.rdt.lock.RdtLock;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,9 +36,14 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/** 在导入元数据互斥作用域内回收快照；不能按对象年龄误删旧的生效版本。 */
+/** 在元数据互斥范围回收已采纳原文；仅待审候选需要保留原件。 */
 @Service
 public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRetentionService {
     @Resource
@@ -39,13 +51,17 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
     @Resource
     private WarframeOfficialImportBatchRepository batches;
     @Resource
+    private WarframeOfficialRefreshStagingRepository staging;
+    @Resource
+    private WarframeOfficialApplyFileRepository jobs;
+    @Resource
+    private WarframeOfficialApplyStateService state;
+    @Resource
     private WarframeOfficialImportHeadRepository heads;
     @Resource
     private WarframeOfficialSnapshotStore objects;
     @Resource
     private ObjectMapper objectMapper;
-    @Resource
-    private WarframeOfficialFileRepository datasetFiles;
     @Resource
     private DistributedLockManager lockManager;
 
@@ -72,38 +88,126 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
 
     private void cleanupExpiredLocked() {
         Instant now = Instant.now();
-        String head = heads.findById(1).map(value -> value.getBatchId()).orElse(null);
+        // 先锁住失败批次完成过期状态迁移；重试会锁同一行，避免回收与重试同时发生。
+        for (WarframeOfficialImportBatch batch : batches.findAll()) {
+            if (ImportStatus.PARTIAL_FAILED.name().equals(batch.getStatus())
+                && (batch.getRetryExpiresAt() == null || !batch.getRetryExpiresAt().isAfter(now)))
+                state.expireFailure(batch.getId());
+        }
+        String head = heads.findById(IMPORT_HEAD_ID).map(value -> value.getBatchId()).orElse(null);
         List<WarframeOfficialImportBatch> all = batches.findAll();
-        Set<String> retained = new HashSet<>();
-        if (head != null)
-            retained.add(head);
-        all.stream().filter(batch -> ImportStatus.APPLIED.name().equals(batch.getStatus()))
-            .sorted(Comparator.comparing(WarframeOfficialImportBatch::getCreatedAt).reversed())
-            .limit(properties.getRetainedSnapshots()).forEach(batch -> retained.add(batch.getId()));
-        all.stream()
-            .filter(batch -> ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(now))
-            .forEach(batch -> retained.add(batch.getId()));
-        Set<String> referenced = new HashSet<>();
-        all.stream().filter(batch -> retained.contains(batch.getId()))
-            .forEach(batch -> batchFiles(batch).forEach(file -> referenced.add(identity(file))));
-        retainAdoptedAndPendingBaselines(referenced, all, now);
+        Set<String> referenced = referencedFiles(all, staging.findAll(), null, Instant.now());
         for (WarframeOfficialImportBatch batch : all) {
-            if (retained.contains(batch.getId()))
+            String status = batch.getStatus();
+            if (ImportStatus.PENDING.name().equals(status) && batch.getExpiresAt().isAfter(now))
                 continue;
-            // 已归档批次也会重试回收，以处理上次对象存储删除失败。
-            if (ImportStatus.PENDING.name().equals(batch.getStatus()))
+            if (ImportStatus.APPLYING.name().equals(status) || ImportStatus.PARTIAL_FAILED.name().equals(status)) {
+                if (batch.getApplyPlanJson() != null) {
+                    Set<String> unfinished = unfinishedPaths(batch);
+                    objects.deleteUnusedChangeGroups(batch.getChangeObjectKey(), unfinished);
+                    objects.deleteUnusedChangeGroups(planKey(batch), unfinished);
+                }
+                deleteUnreferencedFiles(batch, referenced);
+                continue;
+            }
+            if (ImportStatus.APPLIED.name().equals(status) && batch.getId().equals(head)) {
+                objects.deleteAbandonedChanges(batch.getId());
+                deleteUnreferencedFiles(batch, referenced);
+                continue;
+            }
+            boolean failedAudit = ImportStatus.EXPIRED.name().equals(status) && batch.getRetryExpiresAt() != null;
+            if (failedAudit && batch.getObjectsReleasedAt() != null)
+                continue;
+            if (ImportStatus.PENDING.name().equals(status))
                 batch.setStatus(ImportStatus.EXPIRED.name());
-            else if (ImportStatus.APPLIED.name().equals(batch.getStatus()))
+            else if (ImportStatus.APPLIED.name().equals(status))
                 batch.setStatus(ImportStatus.ARCHIVED.name());
             batches.save(batch);
-            for (FileEntry file : batchFiles(batch)) {
-                if (!referenced.contains(identity(file)))
-                    objects.delete(file);
+            deleteUnreferencedFiles(batch, referenced);
+            // 本批次的原始和过滤后差异都使用独占前缀；异常时下一轮继续回收。
+            objects.deleteAbandonedChanges(batch.getId());
+            if (failedAudit) {
+                batch.setObjectsReleasedAt(Instant.now());
+                batches.save(batch);
+            } else {
+                batches.deleteById(batch.getId());
             }
-            objects.deleteChanges(batch.getChangeObjectKey());
-            batches.deleteById(batch.getId());
         }
         removeAbandonedStaging(now.minus(properties.getStaleStagingTtl()));
+    }
+
+    /**
+     * 逐文件回收未被审核、执行或上传引用的原件。
+     *
+     * @param batch 待清理批次。
+     * @param referenced 跨批次及上传仍需保留的文件身份。
+     */
+    private void deleteUnreferencedFiles(WarframeOfficialImportBatch batch, Set<String> referenced) {
+        for (FileEntry file : batchFiles(batch)) {
+            if (!referenced.contains(identity(file)))
+                objects.delete(file);
+        }
+    }
+
+    /**
+     * 冻结后只保留非 DONE 工作项所需原件；未选中的差异须重新拉取。
+     *
+     * @param batch 正在采纳或部分失败的批次。
+     * @return 后续还会恢复原件和读取差异的文件路径。
+     */
+    private Set<String> unfinishedPaths(WarframeOfficialImportBatch batch) {
+        Set<String> paths = new HashSet<>();
+        jobs.findAllByBatchId(batch.getId()).stream()
+            .filter(job -> !ApplyFileStatus.DONE.name().equals(job.getStatus()))
+            .forEach(job -> paths.add(job.getProductPath()));
+        return paths;
+    }
+
+    /**
+     * 取得本批次过滤后的独占差异对象键。
+     *
+     * @param batch 已完成差异准备的批次。
+     * @return 过滤后差异的对象前缀。
+     */
+    private String planKey(WarframeOfficialImportBatch batch) {
+        try {
+            return Objects.requireNonNull(
+                objectMapper.readValue(batch.getApplyPlanJson(), OfficialFilteredChangesDTO.class).objectKey());
+        } catch (JsonProcessingException | NullPointerException exception) {
+            throw new SystemException(OfficialApprovalErrorCode.SAVED_SNAPSHOT_CORRUPTED,
+                "官方审批差异计划无法读取: " + batch.getId(), exception);
+        }
+    }
+
+    /**
+     * 统一计算正在使用的文件身份，供定时清理及失败上传回收共同使用。
+     *
+     * @param all 全部批次。
+     * @param uploads 仍在上传的账本。
+     * @param excludedStaging 当前需要丢弃的上传账本标识。
+     * @param now 当前时间。
+     * @return 全局仍需保留的原件身份。
+     */
+    private Set<String> referencedFiles(List<WarframeOfficialImportBatch> all,
+        List<WarframeOfficialRefreshStaging> uploads, String excludedStaging, Instant now) {
+        Set<String> referenced = new HashSet<>();
+        for (WarframeOfficialImportBatch batch : all) {
+            Set<String> needed;
+            if (ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(now)
+                || ImportStatus.APPLYING.name().equals(batch.getStatus()) && batch.getApplyPlanJson() == null
+                || ImportStatus.PARTIAL_FAILED.name().equals(batch.getStatus()) && batch.getApplyPlanJson() == null)
+                needed = batchFiles(batch).stream().map(FileEntry::path).collect(Collectors.toSet());
+            else if (ImportStatus.APPLYING.name().equals(batch.getStatus())
+                || ImportStatus.PARTIAL_FAILED.name().equals(batch.getStatus()))
+                needed = unfinishedPaths(batch);
+            else
+                continue;
+            batchFiles(batch).stream().filter(file -> needed.contains(file.path()))
+                .forEach(file -> referenced.add(identity(file)));
+        }
+        uploads.stream().filter(work -> !work.getId().equals(excludedStaging))
+            .forEach(work -> stagedFiles(work).forEach(file -> referenced.add(identity(file))));
+        return referenced;
     }
 
     /**
@@ -111,11 +215,8 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
      *
      * @param failed 失败。
      */
-    public void discardUnreferenced(WarframeOfficialManifest failed, Set<String> selectedPaths) {
-        Set<String> referenced = new HashSet<>();
-        List<WarframeOfficialImportBatch> all = batches.findAll();
-        all.forEach(batch -> batchFiles(batch).forEach(file -> referenced.add(identity(file))));
-        retainAdoptedAndPendingBaselines(referenced, all, Instant.now());
+    public void discardUnreferenced(WarframeOfficialManifest failed, Set<String> selectedPaths, String stagingId) {
+        Set<String> referenced = referencedFiles(batches.findAll(), staging.findAll(), stagingId, Instant.now());
         for (FileEntry file : failed.files().stream().filter(file -> selectedPaths.contains(file.path())).toList()) {
             if (!referenced.contains(identity(file)))
                 objects.delete(file);
@@ -123,61 +224,57 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
     }
 
     /**
-     * 丢弃指定的待审核批次并清理其独占对象。
+     * 仅归档数据库状态；不能在全局准入锁内删除 MinIO 对象。
      *
-     * @param batch 待丢弃的审核批次。
+     * @param batchId 待丢弃的审核批次标识。
      */
-    public void discardBatch(WarframeOfficialImportBatch batch) {
-        batch.setStatus(ImportStatus.ARCHIVED.name());
-        batches.save(batch);
-        List<WarframeOfficialImportBatch> remaining =
-            batches.findAll().stream().filter(value -> !value.getId().equals(batch.getId())).toList();
-        Set<String> referenced = new HashSet<>();
-        remaining.forEach(value -> batchFiles(value).forEach(file -> referenced.add(identity(file))));
-        retainAdoptedAndPendingBaselines(referenced, remaining, Instant.now());
-        for (FileEntry file : batchFiles(batch)) {
-            if (!referenced.contains(identity(file)))
-                objects.delete(file);
+    @Override
+    @Transactional
+    public void archiveBatch(String batchId) {
+        archiveBatches(List.of(batchId));
+    }
+
+    /**
+     * 一笔短事务归档待审批次，耗时对象清理由定时任务完成。
+     *
+     * @param batchIds 本次重启涉及的预览批次标识。
+     */
+    @Override
+    @Transactional
+    public void archiveBatches(List<String> batchIds) {
+        if (batchIds.isEmpty())
+            return;
+        heads.findFirstById(IMPORT_HEAD_ID).orElseThrow(
+            () -> new SystemException(OfficialApprovalErrorCode.APPLY_STATE_INCONSISTENT, "官方数据指针未初始化，请更新 init.sql"));
+        List<WarframeOfficialImportBatch> toArchive = batches.findAllById(batchIds);
+        BusinessAssert.isTrue(
+            toArchive.size() == batchIds.size() && toArchive.stream()
+                .allMatch(batch -> (ImportStatus.PENDING.name().equals(batch.getStatus())
+                    || ImportStatus.PARTIAL_FAILED.name().equals(batch.getStatus()))),
+            WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
+        toArchive.forEach(batch -> batch.setStatus(ImportStatus.ARCHIVED.name()));
+        batches.saveAllAndFlush(toArchive);
+    }
+
+    /**
+     * 仅从上传账本中提取该次尝试引用的候选文件。
+     *
+     * @param work 尚未完成的上传账本。
+     * @return 本次尝试选定的文件。
+     */
+    private List<FileEntry> stagedFiles(WarframeOfficialRefreshStaging work) {
+        try {
+            return objectMapper.readValue(work.getManifestJson(), WarframeOfficialManifest.class).files().stream()
+                .filter(file -> work.getProductPath() == null || work.getProductPath().equals(file.path())).toList();
+        } catch (JsonProcessingException exception) {
+            throw new SystemException(OfficialApprovalErrorCode.SAVED_SNAPSHOT_CORRUPTED,
+                "暂存官方数据清单无法读取: " + work.getId(), exception);
         }
-        objects.deleteChanges(batch.getChangeObjectKey());
-        batches.delete(batch);
     }
 
     private List<FileEntry> batchFiles(WarframeOfficialImportBatch batch) {
         return manifest(batch).files().stream()
             .filter(file -> batch.getProductPath() == null || batch.getProductPath().equals(file.path())).toList();
-    }
-
-    /**
-     * 部分文件采纳时，最新批次的 manifest 不等于所有文件的当前生效版本。
-     *
-     * @param referenced 当前不能清理的对象身份集合。
-     * @param all 全部仍存活的批次。
-     * @param now 当前时间，用于判断待审核批次是否有效。
-     */
-    private void retainAdoptedAndPendingBaselines(Set<String> referenced, List<WarframeOfficialImportBatch> all,
-        Instant now) {
-        datasetFiles.findAll().forEach(file -> {
-            if (file.getAdoptedSha256() != null) {
-                referenced.add(file.getAdoptedSha256() + "/" + file.getProductPath());
-            }
-        });
-        all.stream()
-            .filter(batch -> ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(now))
-            .forEach(batch -> {
-                try {
-                    WarframeOfficialPreviewDTO preview =
-                        objectMapper.readValue(batch.getPreviewJson(), WarframeOfficialPreviewDTO.class);
-                    preview.files().forEach(file -> {
-                        if (file.baselineSha256() != null) {
-                            referenced.add(file.baselineSha256() + "/" + file.path());
-                        }
-                    });
-                } catch (JsonProcessingException exception) {
-                    throw new IllegalStateException("Cannot read pending preview baseline: " + batch.getId(),
-                        exception);
-                }
-            });
     }
 
     /**
@@ -190,8 +287,8 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
         try {
             return objectMapper.readValue(batch.getManifestJson(), WarframeOfficialManifest.class);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException(
-                "Cannot collect dataset objects from a corrupt saved manifest: " + batch.getId(), exception);
+            throw new SystemException(OfficialApprovalErrorCode.SAVED_SNAPSHOT_CORRUPTED,
+                "已保存的官方数据清单无法读取: " + batch.getId(), exception);
         }
     }
 
@@ -226,7 +323,7 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
                 }
             }
         } catch (IOException exception) {
-            throw new IllegalStateException("Cannot clean abandoned official dataset staging", exception);
+            throw new SystemException(CommonErrorCode.RESOURCE_CLEANUP_FAILED, "清理过期官方数据暂存失败", exception);
         }
     }
 }

@@ -1,16 +1,14 @@
 package com.nnm.bot.core.group.service;
 
 import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
-import com.nnm.bot.core.plugin.model.ReplyBlock.DataView;
 import java.nio.charset.StandardCharsets;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.core.plugin.model.ReplyBlock;
-import com.nnm.bot.core.plugin.model.ReplyMessage;
 import com.nnm.bot.core.plugin.model.PointCommandDisplay;
-import com.nnm.bot.core.plugin.system.SystemCommandCodes;
+import com.nnm.bot.core.constant.SystemCommandCodes;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -60,26 +58,23 @@ public class CommandPointPolicy {
         PointCommandDisplay data =
             new PointCommandDisplay(balance.points(), balance.totalEarned(), balance.totalSpent());
         String text = change.applied() ? "签到成功，当前积分：" + balance.points() : "今天已经签到，当前积分：" + balance.points();
-        ArrayList<ReplyMessage> replies = new ArrayList<>(result.replies());
-        if (replies.isEmpty())
-            throw new IllegalStateException("Sign-in result requires a balance view");
-        ReplyMessage reply = replies.getFirst();
-        ArrayList<ReplyBlock> blocks = new ArrayList<>(reply.blocks());
+        ArrayList<ReplyBlock> blocks = new ArrayList<>(result.blocks());
         if (blocks.getFirst() instanceof ReplyBlock.Text)
             blocks.set(0, new ReplyBlock.Text(text));
         else
             blocks.addFirst(new ReplyBlock.Text(text));
+        int htmlDataIndex = -1;
         for (int i = 0; i < blocks.size(); i++) {
-            if (blocks.get(i) instanceof DataView<?> view && view.data() instanceof PointCommandDisplay) {
-                blocks.set(i, new ReplyBlock.DataView<>(view.viewKey(), data, view.summary()));
+            if (blocks.get(i) instanceof ReplyBlock.HtmlData<?>) {
+                htmlDataIndex = i;
+                break;
             }
         }
-        if (blocks.stream()
-            .noneMatch(block -> block instanceof DataView<?> view && view.data() instanceof PointCommandDisplay)) {
-            blocks.add(new ReplyBlock.DataView<>("system.points", data, null));
-        }
-        replies.set(0, new ReplyMessage(blocks, reply.actions(), reply.composition(), reply.relatedActions()));
-        return result.withReplies(replies);
+        if (htmlDataIndex < 0)
+            blocks.add(new ReplyBlock.HtmlData<>(data));
+        else
+            blocks.set(htmlDataIndex, new ReplyBlock.HtmlData<>(data));
+        return new CommandResult(result.status(), blocks, result.actionContext());
     }
 
     private String messageIdempotencyKey(TransactionType type, BotMessageContext context, CommandDescriptor descriptor,

@@ -2,12 +2,25 @@ package com.nnm.bot.warframe.plugin.runtime.market;
 
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
+import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.runtime.service.market.WarframeMarketDucatsService;
 import jakarta.annotation.Resource;
 import java.util.regex.Pattern;
 
-abstract class AbstractDucatsPlugin extends BotPlugin<Void> {
+abstract class AbstractDucatsPlugin extends BotPlugin<Void, String> {
+    /**
+     * 取得已匹配的命令参数，供业务命令解析。
+     *
+     * @param invocation 当前命令调用
+     * @param prepared 无额外准备输入
+     * @return 已规范化的命令参数
+     */
+    @Override
+    protected String parse(CommandInvocation invocation, Void prepared) {
+        return invocation.arguments() == null ? "" : invocation.arguments().trim();
+    }
+
     private static final Pattern PAGE = Pattern.compile("(?:^|\\s)--page(?:\\s+|=)([0-9]+)$");
     private static final Pattern INVALID_PAGE = Pattern.compile("(?:^|\\s)--page(?:\\s|=|$)");
 

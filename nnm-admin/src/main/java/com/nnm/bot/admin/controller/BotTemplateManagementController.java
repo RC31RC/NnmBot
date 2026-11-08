@@ -10,10 +10,8 @@ import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.web.EmptyRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,14 +37,14 @@ public class BotTemplateManagementController {
         return ApiResponse.ok(service.create(request));
     }
 
-    @PutMapping("/{id}")
+    @PostMapping("/{id}/update")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> update(@PathVariable long id, @Valid @RequestBody BotTemplateSaveDTO request) {
         service.update(id, request);
         return ApiResponse.ok();
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     @SaCheckPermission("bot:command:update")
     public ApiResponse<Void> delete(@PathVariable long id) {
         service.delete(id);

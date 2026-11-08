@@ -3,11 +3,12 @@ package com.nnm.bot.core.qqofficial.api;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
+import com.nnm.bot.core.qqofficial.api.dto.QqOfficialTokenDTO;
+import com.nnm.bot.core.qqofficial.api.dto.QqOfficialTokenRequestDTO;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -39,15 +40,15 @@ public class QqOfficialTokenClient {
                 return accessToken;
             }
 
-            JsonNode json = httpClient.postJson(connection.tokenUrl(),
-                Map.of("appId", connection.appId(), "clientSecret", connection.clientSecret()), Map.of(),
-                JsonNode.class);
-            String token = text(json, "access_token");
-            if (ObjectUtil.isNull(token)) {
+            QqOfficialTokenDTO response = httpClient.postJson(connection.tokenUrl(),
+                new QqOfficialTokenRequestDTO(connection.appId(), connection.clientSecret()), Map.of(),
+                QqOfficialTokenDTO.class);
+            String token = response == null ? null : response.accessToken();
+            if (StrUtil.isBlank(token)) {
                 throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID,
                     "QQ 官方机器人 Token 响应缺少 access_token");
             }
-            long expiresIn = json.path("expires_in").asLong(DEFAULT_EXPIRES_IN_SECONDS);
+            long expiresIn = response.expiresIn() == null ? DEFAULT_EXPIRES_IN_SECONDS : response.expiresIn();
             accessToken = token;
             expiresAt = Instant.now().plusSeconds(Math.max(60, expiresIn));
             return token;
@@ -66,8 +67,4 @@ public class QqOfficialTokenClient {
         }
     }
 
-    static String text(JsonNode node, String field) {
-        JsonNode value = ObjectUtil.isNull(node) ? null : node.get(field);
-        return ObjectUtil.isNull(value) || value.isNull() || StrUtil.isBlank(value.asText()) ? null : value.asText();
-    }
 }

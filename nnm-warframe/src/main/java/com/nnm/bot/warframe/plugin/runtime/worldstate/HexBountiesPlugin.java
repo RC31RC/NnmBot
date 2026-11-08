@@ -7,8 +7,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /** 1999 霍瓦尼亚六人组赏金命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.HEX_BOUNTIES, name = "1999赏金", gameCode = "warframe", order = 63,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.HEX_BOUNTIES)
 // 官方快照 syndicateMissions；过滤 The Hex 集团。任务文本/奖励引用由 WorldStateDTO 代码簿及社区数据补全。
 public class HexBountiesPlugin extends AbstractWorldStateCommandPlugin {
     /**

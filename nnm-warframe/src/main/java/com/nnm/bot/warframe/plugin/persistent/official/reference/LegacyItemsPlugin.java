@@ -5,8 +5,7 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 
-@BotPluginCommand(code = WarframeCommandCodes.LEGACY_ITEMS, matchType = MatchType.PREFIX, name = "历史物品目录",
-    gameCode = "warframe", order = 110)
+@BotPluginCommand(code = WarframeCommandCodes.LEGACY_ITEMS, matchType = MatchType.PREFIX)
 public final class LegacyItemsPlugin extends AbstractDefinitionPlugin {
     /**
      * 取得当前独立数据文件的领域标识。

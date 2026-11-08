@@ -5,8 +5,7 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 钢铁路径奖励命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.STEEL_PATH, name = "钢铁奖励", gameCode = "warframe", order = 51,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.STEEL_PATH)
 // 无 WorldStateDTO 原始表；读取官方快照的 steelPath 段，静态引用表用途见 AbstractWorldStateCommandPlugin。
 public class SteelPathPlugin extends AbstractWorldStateCommandPlugin {
 

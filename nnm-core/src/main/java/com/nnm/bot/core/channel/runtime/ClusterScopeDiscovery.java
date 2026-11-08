@@ -1,5 +1,7 @@
 package com.nnm.bot.core.channel.runtime;
 
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.BotChannelErrorCode;
 import java.util.Optional;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelKey;
@@ -69,7 +71,8 @@ public class ClusterScopeDiscovery {
                 Thread.sleep(Math.min(250, properties.taskPollInterval().toMillis()));
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
-                throw new IllegalStateException("Group discovery interrupted", exception);
+                throw new SystemException(BotChannelErrorCode.SCOPE_DISCOVERY_INTERRUPTED,
+                    "Group discovery interrupted", exception);
             }
         }
         return BotScopeDiscoveryResult.unsupported("机器人所属节点未在时限内响应，请稍后重试");

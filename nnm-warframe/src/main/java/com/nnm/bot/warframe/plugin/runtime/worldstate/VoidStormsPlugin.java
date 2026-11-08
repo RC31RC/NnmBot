@@ -5,8 +5,7 @@ import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 九重天裂隙命令。 */
-@BotPluginCommand(code = WarframeCommandCodes.VOID_STORMS, name = "九重天裂隙", gameCode = "warframe", order = 49,
-    allowRelatedAction = true)
+@BotPluginCommand(code = WarframeCommandCodes.VOID_STORMS)
 // 无 WorldStateDTO 原始表；读取官方快照的 activeMissions 九重天裂隙，静态引用表用途见 AbstractWorldStateCommandPlugin。
 public class VoidStormsPlugin extends AbstractWorldStateCommandPlugin {
 

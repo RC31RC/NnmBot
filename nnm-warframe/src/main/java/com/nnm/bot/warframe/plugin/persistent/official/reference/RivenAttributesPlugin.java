@@ -5,8 +5,7 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 
-@BotPluginCommand(code = WarframeCommandCodes.RIVEN_ATTRIBUTES, matchType = MatchType.PREFIX, name = "历史紫卡属性编码",
-    gameCode = "warframe", order = 111)
+@BotPluginCommand(code = WarframeCommandCodes.RIVEN_ATTRIBUTES, matchType = MatchType.PREFIX)
 public final class RivenAttributesPlugin extends AbstractDefinitionPlugin {
     /**
      * 取得当前独立数据文件的领域标识。

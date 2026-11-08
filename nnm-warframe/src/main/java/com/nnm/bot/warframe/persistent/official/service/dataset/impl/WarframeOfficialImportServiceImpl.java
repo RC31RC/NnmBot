@@ -18,6 +18,8 @@ import com.nnm.bot.warframe.persistent.official.client.source.WarframeOfficialSo
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialRefreshStaging;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialRefreshStagingRepository;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialFile;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportHead;
@@ -37,6 +39,10 @@ import com.nnm.bot.warframe.persistent.official.client.source.WarframeOfficialSn
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialSnapshotDTO;
 import com.nnm.bot.warframe.storage.WarframeOfficialSnapshotStore;
 import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialImportService;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialPreviewPublicationService;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.IMPORT_HEAD_ID;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStage;
 import io.github.rdt.lock.DistributedLockManager;
 import io.github.rdt.lock.LockKey;
 import io.github.rdt.lock.RdtLock;
@@ -46,6 +52,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -56,7 +63,10 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOffici
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialImportRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRecordSelectionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFilteredChangesDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialChangeCountsDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;
 import java.util.HashSet;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -76,6 +86,8 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
     @Resource
     private WarframeOfficialImportBatchRepository batches;
     @Resource
+    private WarframeOfficialRefreshStagingRepository staging;
+    @Resource
     private WarframeOfficialFileRepository datasetFiles;
     @Resource
     private WarframeOfficialImportHeadRepository heads;
@@ -87,6 +99,8 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
     private WarframeOfficialSnapshotParser snapshotParser;
     @Resource
     private WarframeOfficialApprovalService approval;
+    @Resource
+    private WarframeOfficialPreviewPublicationService publication;
 
     /**
      * 列出可选的官方数据版本。
@@ -131,8 +145,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
     private WarframeOfficialPreviewDTO refreshFiles(String ref, String productPath, Set<String> selectedPaths,
         TaskProgressReporter reporter) {
         lockManager.lockAll(selectedPaths.stream().map(WarframeOfficialImportServiceImpl::datasetLock).toList());
-        String baseline = heads.findById(1).map(WarframeOfficialImportHead::getBatchId).orElse(null);
-        String baselineHash = productPath == null ? approval.fingerprint() : approval.fingerprint(selectedPaths);
+        String baseline = heads.findById(IMPORT_HEAD_ID).map(WarframeOfficialImportHead::getBatchId).orElse(null);
         String selectedRef = ref;
         if (StrUtil.isBlank(selectedRef)) {
             List<WarframeOfficialVersionDTO> versions = client.versions();
@@ -142,19 +155,31 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
         WarframeOfficialPreviewDTO completed = null;
         WarframeOfficialManifest downloaded = null;
         String previewId = UUID.randomUUID().toString();
+        long downloadStarted = System.nanoTime();
         try (WarframeOfficialSnapshotDTO snapshot = downloader.download(selectedRef, reporter, selectedPaths)) {
+            log.info("官方刷新文件下载阶段完成: files={}, elapsedMs={}", selectedPaths.size(),
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - downloadStarted));
+            long previewStarted = System.nanoTime();
             downloaded = snapshot.manifest();
+            // 在第一次写入对象存储前建立持久化账本，进程失联后仍可按 TTL 定位遗留文件。
+            WarframeOfficialRefreshStaging work = new WarframeOfficialRefreshStaging();
+            work.setId(previewId);
+            work.setManifestJson(objectMapper.writeValueAsString(snapshot.manifest()));
+            work.setProductPath(productPath);
+            work.setCreatedAt(Instant.now());
+            staging.saveAndFlush(work);
             List<OfficialFileDigestDTO> fileStates = snapshotParser.parseFileDigests(snapshot.manifest()).stream()
                 .filter(file -> selectedPaths.contains(file.path())).toList();
             Set<String> paths = approval.comparePaths(fileStates);
             // 下载器已经用 manifest hash 校验本次选定的全部文件。
             WarframeOfficialRecordSource incoming = snapshotParser.recordSource(snapshot.directory(), paths);
-            Map<String, Integer> changeCounts = objects.putChanges(previewId, consumer -> {
+            OfficialChangeCountsDTO changeCounts = objects.putChanges(previewId, consumer -> {
                 if (CollUtil.isNotEmpty(paths))
                     approval.changes(incoming, paths, consumer);
             }, snapshot.directory());
-            BusinessAssert.equals(productPath == null ? approval.fingerprint() : approval.fingerprint(selectedPaths),
-                baselineHash, WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT, "下载期间官方记录已变化，请重新生成预览");
+            log.info("官方刷新差异生成阶段完成: paths={}, elapsedMs={}", paths.size(),
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - previewStarted));
+            long publicationStarted = System.nanoTime();
             lockManager.lock(METADATA_LOCK);
             retention.prepareRefresh();
             for (FileEntry file : snapshot.manifest().files()) {
@@ -171,7 +196,6 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             batch.setManifestJson(objectMapper.writeValueAsString(snapshot.manifest()));
             batch.setProductPath(productPath);
             batch.setBaselineId(baseline);
-            batch.setBaselineHash(baselineHash);
             batch.setParserContractVersion(WarframeOfficialSnapshotParser.CONTRACT_VERSION);
             batch.setCreatedAt(Instant.now());
             batch.setExpiresAt(batch.getCreatedAt().plus(properties.getPreviewTtl()));
@@ -179,12 +203,13 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             WarframeOfficialPreviewDTO preview = buildPreview(batch, snapshot.manifest(), changeCounts);
             batch.setPreviewJson(objectMapper.writeValueAsString(preview));
             // 只有下载、结构、snapshotParser 和对象存储全部成功后才发布待审核批次。
-            approval.stageCandidates(snapshot.version().ref(), snapshot.version().commit(),
-                snapshot.manifest().buildId(), fileStates);
             // 取消申请必须在发布预览前得到一次检查，避免取消后仍发布待审核对象。
-            reporter.report("PREVIEW", "准备发布审核预览", 0, 0);
-            batches.save(batch);
+            reporter.report(ImportStage.PREVIEW.name(), "准备发布审核预览", 0, 0);
+            publication.publish(batch, fileStates);
+            log.info("官方刷新对象上传及预览发布完成: files={}, elapsedMs={}", selectedPaths.size(),
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - publicationStarted));
             completed = preview;
+            staging.deleteById(previewId);
             return preview;
         } catch (IOException | RuntimeException exception) {
             if (completed != null) {
@@ -199,7 +224,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             if (downloaded != null) {
                 try {
                     lockManager.lock(METADATA_LOCK);
-                    retention.discardUnreferenced(downloaded, selectedPaths);
+                    retention.discardUnreferenced(downloaded, selectedPaths, previewId);
                 } catch (RuntimeException cleanup) {
                     exception.addSuppressed(cleanup);
                 }
@@ -227,21 +252,31 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
                 objectMapper.readValue(batch.getPreviewJson(), WarframeOfficialPreviewDTO.class);
             return new WarframeOfficialPreviewDTO(stored.id(), stored.version(), stored.buildId(), stored.baselineId(),
                 batch.getStatus(), stored.expiresAt(), stored.totalBytes(), stored.addedRecords(),
-                stored.changedRecords(), stored.removedRecords(), stored.unmappedPaths(), stored.files());
+                stored.changedRecords(), stored.removedRecords(), stored.unmappedPaths(), stored.files(),
+                batch.getApplyError(), batch.getRetryExpiresAt());
         } catch (JsonProcessingException exception) {
             throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "已保存预览损坏", exception);
         }
     }
 
     /**
-     * 列出尚未过期的待审核预览。
+     * 列出有效待审核预览、采纳中批次及过期失败审计。
      *
-     * @return 按创建时间倒序排列的待审核预览。
+     * @return 按创建时间倒序排列的预览及失败审计记录。
      */
     @Override
     public List<WarframeOfficialPreviewDTO> pendingPreviews() {
-        return batches.findAllByStatusAndExpiresAtAfterOrderByCreatedAtDesc(ImportStatus.PENDING.name(), Instant.now())
-            .stream().map(this::preview).toList();
+        return Stream
+            .concat(batches
+                .findAllByStatusAndExpiresAtAfterOrderByCreatedAtDesc(ImportStatus.PENDING.name(), Instant.now())
+                .stream(),
+                Stream.concat(batches.findAllByStatusOrderByCreatedAtDesc(ImportStatus.APPLYING.name()).stream(),
+                    Stream.concat(
+                        batches.findAllByStatusOrderByCreatedAtDesc(ImportStatus.PARTIAL_FAILED.name()).stream(),
+                        batches.findAllByStatusOrderByCreatedAtDesc(ImportStatus.EXPIRED.name()).stream()
+                            .filter(batch -> batch.getRetryExpiresAt() != null))))
+            .sorted(Comparator.comparing(WarframeOfficialImportBatch::getCreatedAt).reversed()).map(this::preview)
+            .toList();
     }
 
     /**
@@ -250,51 +285,56 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
      * @param id 审核批次标识。
      */
     @Override
-    @RdtLock
     public void discard(String id) {
-        WarframeOfficialImportBatch initial = requireBatch(id);
-        BusinessAssert.isTrue(ImportStatus.PENDING.name().equals(initial.getStatus()),
-            WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
-        Set<String> paths = manifest(initial).files().stream()
-            .filter(file -> initial.getProductPath() == null || initial.getProductPath().equals(file.path()))
-            .map(FileEntry::path).collect(Collectors.toSet());
-        lockManager.lockAll(paths.stream().map(WarframeOfficialImportServiceImpl::datasetLock).toList());
-        lockManager.lock(METADATA_LOCK);
         WarframeOfficialImportBatch batch = requireBatch(id);
-        BusinessAssert.isTrue(ImportStatus.PENDING.name().equals(batch.getStatus()),
+        BusinessAssert.isTrue(
+            ImportStatus.PENDING.name().equals(batch.getStatus())
+                || ImportStatus.PARTIAL_FAILED.name().equals(batch.getStatus()),
             WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
-        retention.discardBatch(batch);
+        retention.archiveBatch(id);
     }
 
     /**
      * 对比当前数据并生成待采纳变更。
      *
      * @param id 目标记录的本地主键或协议标识。
+     * @param path 待审核的官方 JSON 文件路径。
      * @param current 从一开始的当前页码。
      * @param size 当前操作允许的数据数量。
      * @return 包含当前页记录及总数的分页结果。
      */
     @Override
-    public PageResult<WarframeOfficialRecordChangeDTO> changes(String id, int current, int size, String changeType) {
+    public PageResult<WarframeOfficialRecordChangeDTO> changes(String id, String path, int current, int size,
+        String changeType) {
+        BusinessAssert.isTrue(Set.of("ADDED", "CHANGED", "REMOVED").contains(changeType),
+            WarframeManagementErrorCode.DATASET_INVALID, "变更分类不合法");
         WarframeOfficialImportBatch batch = requireBatch(id);
+        BusinessAssert.isTrue(
+            ImportStatus.PENDING.name().equals(batch.getStatus()) && WarframeOfficialDataDomain.fromPath(path) != null
+                && manifest(batch).files().stream().anyMatch(file -> path.equals(file.path()))
+                && (batch.getProductPath() == null || batch.getProductPath().equals(path)),
+            WarframeManagementErrorCode.DATASET_INVALID, "所选文件不属于待审核预览");
         try {
-            return objects.changes(batch.getChangeObjectKey(), current, size, changeType);
+            return objects.changes(batch.getChangeObjectKey(), path, current, size, changeType);
         } catch (IOException exception) {
             throw unavailable(exception);
         }
     }
 
     /**
-     * 仅在用户查看详情时从两个仍保留的版本文件流式读取完整记录。
+     * 仅在用户查看详情时从待审核候选文件读取完整记录。
      *
      * @param id 审核批次标识。
      * @param path 所属文件路径。
      * @param recordKey 稳定业务键。
-     * @return 两个版本的原始记录文本。
+     * @return 待审核候选版本的原始记录文本。
      */
     @Override
     public WarframeOfficialRawRecordDTO record(String id, String path, String recordKey) {
         WarframeOfficialImportBatch batch = requireBatch(id);
+        BusinessAssert.isTrue(
+            ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(Instant.now()),
+            WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
         WarframeOfficialDataDomain domain = WarframeOfficialDataDomain.fromPath(path);
         BusinessAssert.notNull(domain, WarframeManagementErrorCode.DATASET_INVALID);
         BusinessAssert.isTrue(StrUtil.isNotBlank(recordKey), WarframeManagementErrorCode.DATASET_INVALID);
@@ -302,121 +342,12 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             manifest(batch).files().stream().filter(file -> path.equals(file.path())).findFirst().orElse(null);
         BusinessAssert.notNull(candidate, WarframeManagementErrorCode.DATASET_INVALID);
         try {
-            WarframeOfficialPreviewDTO.FileChangeDTO previewFile =
-                preview(id).files().stream().filter(file -> path.equals(file.path())).findFirst().orElse(null);
-            BusinessAssert.notNull(previewFile, WarframeManagementErrorCode.DATASET_INVALID);
             OfficialImportRecordDTO next = objects.record(candidate.sha256(), domain, recordKey);
-            OfficialImportRecordDTO previous = previewFile.baselineSha256() == null ? null
-                : objects.record(previewFile.baselineSha256(), domain, recordKey);
-            return new WarframeOfficialRawRecordDTO(previous == null ? null : previous.rawJson(),
-                next == null ? null : next.rawJson(), previous == null ? null : previous.localizedJson(),
-                next == null ? null : next.localizedJson());
+            BusinessAssert.notNull(next, WarframeManagementErrorCode.DATASET_INVALID);
+            return new WarframeOfficialRawRecordDTO(next.rawJson(), next.localizedJson());
         } catch (IOException exception) {
             throw unavailable(exception);
         }
-    }
-
-    /**
-     * 采纳已经确认的业务变更。
-     *
-     * @param id 目标记录的本地主键或协议标识。
-     * @return 游戏资料数据文件预览对象。
-     */
-    @Override
-    @RdtLock
-    public WarframeOfficialPreviewDTO apply(String id, List<WarframeOfficialRecordSelectionDTO> selectedChanges) {
-        WarframeOfficialImportBatch selected = requireBatch(id);
-        BusinessAssert.isTrue(
-            ImportStatus.PENDING.name().equals(selected.getStatus()) && selected.getExpiresAt().isAfter(Instant.now()),
-            WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND, "该官方预览已采纳、丢弃或过期，不能再次提交");
-        BusinessAssert.notNull(selectedChanges, WarframeManagementErrorCode.DATASET_INVALID, "请选择要采纳的记录差异");
-        WarframeOfficialManifest initialManifest = manifest(selected);
-        Set<String> batchPaths = initialManifest.files().stream()
-            .filter(file -> selected.getProductPath() == null || selected.getProductPath().equals(file.path()))
-            .map(FileEntry::path).collect(Collectors.toSet());
-        Set<String> selectedPaths = new HashSet<>();
-        Set<WarframeOfficialRecordSelectionDTO> selectedKeys = new HashSet<>();
-        for (WarframeOfficialRecordSelectionDTO change : selectedChanges) {
-            BusinessAssert.isTrue(
-                change != null && StrUtil.isNotBlank(change.path()) && StrUtil.isNotBlank(change.recordKey())
-                    && batchPaths.contains(change.path()) && WarframeOfficialDataDomain.fromPath(change.path()) != null,
-                WarframeManagementErrorCode.DATASET_INVALID, "所选差异不属于当前预览");
-            selectedPaths.add(change.path());
-            selectedKeys.add(change);
-        }
-        BusinessAssert.isTrue(selectedKeys.size() == selectedChanges.size(),
-            WarframeManagementErrorCode.DATASET_INVALID, "所选差异重复");
-        lockManager.lockAll(batchPaths.stream().map(WarframeOfficialImportServiceImpl::datasetLock).toList());
-        lockManager.lock(METADATA_LOCK);
-        WarframeOfficialImportBatch batch = requireBatch(id);
-        BusinessAssert.isTrue(
-            ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(Instant.now()),
-            WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND, "该官方预览只能采纳一次");
-        WarframeOfficialManifest manifest = manifest(batch);
-        String previousChangeKey = batch.getChangeObjectKey();
-        String nextChangeKey = WarframeOfficialSnapshotStore.nextChangesKey(batch.getId());
-        OfficialFilteredChangesDTO remaining;
-        try {
-            Files.createDirectories(properties.getStagingDirectory());
-            remaining =
-                objects.filterChanges(previousChangeKey, nextChangeKey, selectedKeys, properties.getStagingDirectory());
-            BusinessAssert.isTrue(remaining.matchedSelections() == selectedKeys.size(),
-                WarframeManagementErrorCode.DATASET_INVALID, "所选差异已不存在或不属于当前预览");
-            int remainingCount = remaining.remainingCounts().values().stream().mapToInt(Integer::intValue).sum();
-            BusinessAssert.isTrue(!selectedKeys.isEmpty() || remainingCount == 0,
-                WarframeManagementErrorCode.DATASET_INVALID, "请至少选择一条待审核差异");
-        } catch (IOException | RuntimeException exception) {
-            objects.deleteChanges(nextChangeKey);
-            if (exception instanceof IOException io)
-                throw unavailable(io);
-            throw (RuntimeException)exception;
-        }
-        try {
-            try (WarframeOfficialSnapshotDTO snapshot = new WarframeOfficialSnapshotDTO(
-                new WarframeOfficialVersionDTO(batch.getSourceRef(), batch.getCommitSha()), manifest,
-                Files.createTempDirectory(properties.getStagingDirectory(), "approval-"))) {
-                // 只恢复本次已选记录所属文件；其余冻结差异仍保留在新对象键中。
-                List<OfficialFileDigestDTO> datasetFiles = snapshotParser.parseFileDigests(manifest).stream()
-                    .filter(file -> batch.getProductPath() == null || batch.getProductPath().equals(file.path()))
-                    .toList();
-                WarframeOfficialRecordSource incoming = consumer -> {
-                };
-                if (CollUtil.isNotEmpty(selectedPaths)) {
-                    for (FileEntry entry : manifest.files()) {
-                        if (selectedPaths.contains(entry.path())) {
-                            objects.restore(entry, snapshot.directory().resolve(entry.path()));
-                        }
-                    }
-                    incoming = snapshotParser.recordSource(snapshot.directory(), selectedPaths);
-                }
-                approval.apply(id, incoming, datasetFiles, remaining.selectedIdentities(), selectedPaths,
-                    remaining.remainingPaths(), remaining.objectKey(), remaining.remainingCounts());
-            }
-        } catch (IOException | RuntimeException exception) {
-            WarframeOfficialImportBatch current = batches.findById(id).orElse(null);
-            boolean switched = current != null && nextChangeKey.equals(current.getChangeObjectKey());
-            if (!switched)
-                objects.deleteChanges(nextChangeKey);
-            if (switched) {
-                log.warn("Official batch {} committed; cache notification or temporary cleanup needs retry", id,
-                    exception);
-                try {
-                    objects.deleteChanges(previousChangeKey);
-                } catch (RuntimeException cleanup) {
-                    exception.addSuppressed(cleanup);
-                }
-                return preview(id);
-            }
-            if (exception instanceof IOException io)
-                throw unavailable(io);
-            throw (RuntimeException)exception;
-        }
-        try {
-            objects.deleteChanges(previousChangeKey);
-        } catch (RuntimeException exception) {
-            log.warn("Official batch {} advanced but prior change object cleanup failed", id, exception);
-        }
-        return preview(id);
     }
 
     private static LockKey datasetLock(String path) {
@@ -434,8 +365,13 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
         WarframeOfficialImportBatch batch = batches.findById(id).orElse(null);
         BusinessAssert.notNull(batch, WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
-        BusinessAssert.isTrue(ImportStatus.APPLIED.name().equals(batch.getStatus())
-            || (ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(Instant.now())),
+        BusinessAssert.isTrue(
+            ImportStatus.APPLIED.name().equals(batch.getStatus())
+                || ImportStatus.APPLYING.name().equals(batch.getStatus())
+                || ImportStatus.PARTIAL_FAILED.name().equals(batch.getStatus())
+                || (ImportStatus.EXPIRED.name().equals(batch.getStatus()) && batch.getRetryExpiresAt() != null)
+                || (ImportStatus.PENDING.name().equals(batch.getStatus())
+                    && batch.getExpiresAt().isAfter(Instant.now())),
             WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
         return batch;
     }
@@ -449,7 +385,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
      * @return 游戏资料数据文件预览对象。
      */
     private WarframeOfficialPreviewDTO buildPreview(WarframeOfficialImportBatch batch,
-        WarframeOfficialManifest manifest, Map<String, Integer> recordChanges) {
+        WarframeOfficialManifest manifest, OfficialChangeCountsDTO recordChanges) {
         Map<String, String> adopted = datasetFiles.findAll().stream().filter(file -> file.getAdoptedSha256() != null)
             .collect(Collectors.toMap(WarframeOfficialFile::getProductPath, WarframeOfficialFile::getAdoptedSha256));
         List<FileChangeDTO> changes = new ArrayList<>();
@@ -460,7 +396,10 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             String oldHash = adopted.get(file.path());
             String type = oldHash == null ? ChangeType.ADDED.name()
                 : oldHash.equals(file.sha256()) ? ChangeType.UNCHANGED.name() : ChangeType.CHANGED.name();
-            changes.add(new FileChangeDTO(file.path(), file.sha256(), file.bytes(), file.recordCount(), type, oldHash));
+            changes.add(new FileChangeDTO(file.path(), file.sha256(), file.bytes(), file.recordCount(), type, oldHash,
+                recordChanges.count(file.path(), ChangeType.ADDED.name()),
+                recordChanges.count(file.path(), ChangeType.CHANGED.name()),
+                recordChanges.count(file.path(), ChangeType.REMOVED.name())));
             totalBytes += file.bytes();
         }
         changes.sort(Comparator.comparing(FileChangeDTO::path));
@@ -470,9 +409,9 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
         return new WarframeOfficialPreviewDTO(batch.getId(),
             new WarframeOfficialVersionDTO(batch.getSourceRef(), batch.getCommitSha()), batch.getBuildId(),
             batch.getBaselineId(), batch.getStatus(), batch.getExpiresAt(), totalBytes,
-            recordChanges.getOrDefault(ChangeType.ADDED.name(), 0),
-            recordChanges.getOrDefault(ChangeType.CHANGED.name(), 0),
-            recordChanges.getOrDefault(ChangeType.REMOVED.name(), 0), unmapped, changes);
+            recordChanges.totals().getOrDefault(ChangeType.ADDED.name(), 0),
+            recordChanges.totals().getOrDefault(ChangeType.CHANGED.name(), 0),
+            recordChanges.totals().getOrDefault(ChangeType.REMOVED.name(), 0), unmapped, changes, null, null);
     }
 
     /**

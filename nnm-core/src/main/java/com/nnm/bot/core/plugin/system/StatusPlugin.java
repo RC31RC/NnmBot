@@ -1,11 +1,12 @@
 package com.nnm.bot.core.plugin.system;
 
+import com.nnm.bot.core.constant.SystemCommandCodes;
+
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.constant.MatchType;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -16,21 +17,15 @@ import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.List;
 
-@BotPluginCommand(code = SystemCommandCodes.STATUS, matchType = MatchType.EXACT, name = "状态", gameCode = "system",
-    order = Integer.MIN_VALUE + 1, allowRelatedAction = true)
-public class StatusPlugin extends BotPlugin<Void> {
-
-    @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("system.status"));
-    }
+@BotPluginCommand(code = SystemCommandCodes.STATUS, matchType = MatchType.EXACT)
+public class StatusPlugin extends BotPlugin<Void, Void> {
 
     private static final long MEBIBYTE = 1024L * 1024L;
     @Resource
     private ObjectProvider<CommandRegistry> commandRegistryProvider;
 
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, Void parsed) {
         BotMessageContext context = invocation.context();
         Runtime runtime = Runtime.getRuntime();
         long usedMemory = runtime.totalMemory() - runtime.freeMemory();
@@ -43,8 +38,8 @@ public class StatusPlugin extends BotPlugin<Void> {
         long usedMemoryMiB = usedMemory / MEBIBYTE;
         long maxMemoryMiB = runtime.maxMemory() / MEBIBYTE;
         int pluginCount = this.commandRegistryProvider.getObject().size();
-        return CommandResult.view("system.status", "NnmBot 运行正常", new StatusDisplay(accountId, scope, uptimeText,
-            javaVersion, "%d MiB / %d MiB".formatted(usedMemoryMiB, maxMemoryMiB), pluginCount));
+        return CommandResult.html("NnmBot 运行正常", new StatusDisplay(accountId, scope, uptimeText, javaVersion,
+            "%d MiB / %d MiB".formatted(usedMemoryMiB, maxMemoryMiB), pluginCount));
     }
 
     /** 运行状态只展示一份，摘要不再重复全部数据。 */

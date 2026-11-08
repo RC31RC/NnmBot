@@ -1,39 +1,36 @@
 package com.nnm.bot.core.plugin.execution;
 
 import com.nnm.bot.core.plugin.api.BotPlugin;
+import com.nnm.bot.core.constant.CommandExecutionConstants.CommandInputMode;
 import com.nnm.bot.core.plugin.model.CommandMatch;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import java.util.Objects;
 
 /**
- * 将一个 Plugin 与它自己的准备输入绑定，避免异构注册表丢失泛型关系。
+ * 将命令调用与自己的准备结果绑定，避免异构注册表丢失泛型关系。
  *
- * @param match 已完成准入与认领的命令
- * @param plugin 该命令对应的 Plugin
- * @param input 事务外准备的输入
- * @param <P> 输入的具体类型
+ * @param call 已完成准入的命令及参数来源
+ * @param input 事务外准备结果
+ * @param <P> 准备结果的类型
+ * @param <A> 类型化参数的类型
  */
-public record PreparedCommand<P>(CommandMatch match, BotPlugin<P> plugin, P input) {
-
-    public PreparedCommand {
-        Objects.requireNonNull(match, "命令不能为空");
-        if (match.command().plugin() != plugin) {
-            throw new IllegalArgumentException("准备输入必须属于当前命令的 Plugin");
-        }
+public record PreparedCommand<P, A>(CommandCall<P, A> call, P input) {
+    /** 只有机器人文本需要准备消息或附件；已绑定 DTO 不再读取原消息。 */
+    public static <P, A> PreparedCommand<P, A> prepare(CommandCall<P, A> call) {
+        P prepared =
+            call.input().mode() == CommandInputMode.TEXT ? call.plugin().prepare(call.match().invocation()) : null;
+        return new PreparedCommand<>(call, prepared);
     }
 
-    /** 捕获注册表通配类型，在同一个类型关系内完成准备。 */
-    public static PreparedCommand<?> prepare(CommandMatch match) {
-        return prepare(match, match.command().plugin());
+    public CommandMatch match() {
+        return call.match();
     }
 
-    /** 通过泛型捕获绑定 Plugin 与返回值，不使用未经检查的强制转换。 */
-    private static <P> PreparedCommand<P> prepare(CommandMatch match, BotPlugin<P> plugin) {
-        return new PreparedCommand<>(match, plugin, plugin.prepare(match.invocation()));
+    public BotPlugin<P, A> plugin() {
+        return call.plugin();
     }
 
-    /** 在调用方的业务事务中执行已绑定的 Plugin。 */
+    /** 两种输入在同一个 Spring 事务代理内执行。 */
     public CommandResult execute() {
-        return plugin.handle(match.invocation(), input);
+        return call.plugin().invoke(call.match().invocation(), input, call.input());
     }
 }

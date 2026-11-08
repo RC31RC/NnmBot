@@ -1,5 +1,8 @@
 package com.nnm.bot.warframe.constant;
 
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.exception.BusinessException;
+
 import java.util.List;
 import java.util.Locale;
 
@@ -87,7 +90,7 @@ public final class WarframeCommandCatalog {
                         return dataset;
                 }
             }
-            throw new IllegalArgumentException("不支持的资料分类：" + value);
+            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "不支持的资料分类：" + value);
         }
     }
 

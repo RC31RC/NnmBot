@@ -15,11 +15,21 @@ import com.nnm.bot.warframe.persistent.curated.service.watch.WarframeGroupWatchR
 import jakarta.annotation.Resource;
 
 /** 取消 Warframe 事件订阅。 */
-@BotPluginCommand(code = WarframeCommandCodes.UNSUBSCRIBE, matchType = MatchType.PREFIX, name = "取消订阅",
-    gameCode = "warframe", order = 76)
+@BotPluginCommand(code = WarframeCommandCodes.UNSUBSCRIBE, matchType = MatchType.PREFIX)
 // bot_group_bot、bot_group 校验当前群和机器人绑定；bot_group_member 定位调用者；
 // wf_group_watch_rule 查找并停用匹配订阅规则。渠道实例身份由 Provider 在内存边界解析。
-public final class UnsubscribePlugin extends BotPlugin<Void> {
+public final class UnsubscribePlugin extends BotPlugin<Void, WarframeSubscriptionSpec> {
+    /**
+     * 取得已匹配的命令参数，供业务命令解析。
+     *
+     * @param invocation 当前命令调用
+     * @param prepared 无额外准备输入
+     * @return 已规范化的命令参数
+     */
+    @Override
+    protected WarframeSubscriptionSpec parse(CommandInvocation invocation, Void prepared) {
+        return WarframeSubscriptionSpec.parse(invocation.arguments());
+    }
 
     @Resource
     private BotGroupCommandContextResolver groupResolver;
@@ -36,8 +46,7 @@ public final class UnsubscribePlugin extends BotPlugin<Void> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        WarframeSubscriptionSpec parsed = WarframeSubscriptionSpec.parse(invocation.arguments());
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeSubscriptionSpec parsed) {
         if (parsed == null) {
             return CommandResult.rejected("取消订阅格式：取消订阅 主题 [条件 ...]，条件与创建订阅时相同");
         }

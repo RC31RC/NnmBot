@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.system;
 
+import com.nnm.bot.core.constant.SystemCommandCodes;
+
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
@@ -14,15 +16,14 @@ import org.springframework.beans.factory.ObjectProvider;
 import java.util.Comparator;
 import java.util.Locale;
 
-@BotPluginCommand(code = SystemCommandCodes.HELP, matchType = MatchType.EXACT, name = "帮助", gameCode = "system",
-    order = Integer.MIN_VALUE, allowRelatedAction = true)
-public class HelpPlugin extends BotPlugin<Void> {
+@BotPluginCommand(code = SystemCommandCodes.HELP, matchType = MatchType.EXACT)
+public class HelpPlugin extends BotPlugin<Void, Void> {
 
     @Resource
     private ObjectProvider<CommandRegistry> commandRegistryProvider;
 
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, Void parsed) {
         StringBuilder help = new StringBuilder("NnmBot 命令\n");
         this.commandRegistryProvider.getObject().commands().stream()
             .filter(command -> !command.descriptor().code().equalsIgnoreCase(SystemCommandCodes.HELP))

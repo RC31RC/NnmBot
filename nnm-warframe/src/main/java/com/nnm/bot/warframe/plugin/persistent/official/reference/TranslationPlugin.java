@@ -5,26 +5,25 @@ import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.service.reference.WarframeTranslationService;
 import jakarta.annotation.Resource;
 import java.util.List;
 
 /** 查询游戏文本翻译。 */
-@BotPluginCommand(code = WarframeCommandCodes.TRANSLATION, matchType = MatchType.PREFIX, name = "翻译",
-    gameCode = "warframe", order = 63)
+@BotPluginCommand(code = WarframeCommandCodes.TRANSLATION, matchType = MatchType.PREFIX)
 // 从当前生效的官方语言根树查询，自维护完整根优先。
-public final class TranslationPlugin extends BotPlugin<Void> {
-
+public final class TranslationPlugin extends BotPlugin<Void, String> {
     /**
-     * 将业务数据转换为命令或页面所需的展示字段。
+     * 取得已匹配的命令参数，供业务命令解析。
      *
-     * @return 当前命令或页面需要的展示字段。
+     * @param invocation 当前命令调用
+     * @param prepared 无额外准备输入
+     * @return 已规范化的命令参数
      */
     @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("warframe.community"));
+    protected String parse(CommandInvocation invocation, Void prepared) {
+        return invocation.arguments() == null ? "" : invocation.arguments().trim();
     }
 
     @Resource
@@ -37,8 +36,8 @@ public final class TranslationPlugin extends BotPlugin<Void> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        var display = catalog.translations(invocation.arguments());
-        return CommandResult.view("warframe.community", "翻译查询", display);
+    public CommandResult handle(CommandInvocation invocation, Void prepared, String parsed) {
+        var display = catalog.translations(parsed);
+        return CommandResult.html("翻译查询", display);
     }
 }

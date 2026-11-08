@@ -14,6 +14,9 @@ public interface ObjectStorage {
 
     InputStream open(String objectId) throws IOException;
 
+    /** 仅获取对象指定字节区间，供大预览的索引分页使用。 */
+    InputStream openRange(String objectId, long offset, long length) throws IOException;
+
     void copy(String sourceId, String targetId);
 
     void delete(String objectId);

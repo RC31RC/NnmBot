@@ -16,10 +16,11 @@ withPostgres(({ apply, query }) => {
     JOIN pg_namespace n ON n.oid=t.relnamespace
     WHERE c.contype='f' AND n.nspname='nnmbot' AND t.relname LIKE 'wf_official_bounty_%'`), "0",
   "Static data trees use logical parent ids rather than foreign-key cascades");
-  assert.equal(query("SELECT count(*) FROM information_schema.tables"
-    + " WHERE table_schema='nnmbot' AND left(table_name,13)='wf_community_'"), "0",
-  "Retired community-source tables must not enter the baseline");
-  console.log("PASS typed official bounty model and retired community-source isolation");
+  assert.equal(query(`SELECT count(*) FROM information_schema.tables
+    WHERE table_schema='nnmbot' AND table_name IN
+      ('wf_community_source', 'wf_community_record', 'wf_community_raw')`), "0",
+  "Retired generic community-source tables must not enter the baseline");
+  console.log("PASS typed official bounty model and retired generic community-source isolation");
 }).catch(error => {
   console.error(error.message);
   process.exitCode = 1;

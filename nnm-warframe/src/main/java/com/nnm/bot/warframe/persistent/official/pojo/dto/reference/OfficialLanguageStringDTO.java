@@ -3,6 +3,7 @@ package com.nnm.bot.warframe.persistent.official.pojo.dto.reference;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
 import com.nnm.bot.warframe.persistent.official.parser.input.OfficialInputText;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
@@ -66,8 +67,9 @@ public class OfficialLanguageStringDTO extends OfficialObjectDTO implements Offi
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(text), OfficialInputText.first(zhText), null, null,
-            null);
+        return new OfficialRecordHeaderDTO(
+            OfficialInputText.firstWithin(OfficialDataConstants.RECORD_NAME_MAX_LENGTH, text, key),
+            OfficialInputText.firstWithin(OfficialDataConstants.RECORD_NAME_MAX_LENGTH, zhText), null, null, null);
     }
 
     /**

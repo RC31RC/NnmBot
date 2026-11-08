@@ -13,7 +13,6 @@ import com.nnm.bot.core.plugin.model.PresentationPolicy;
 import com.nnm.bot.core.plugin.model.ReplyAction;
 import com.nnm.bot.core.plugin.model.ReplyBlock;
 import com.nnm.bot.core.plugin.model.ReplyMessage;
-import com.nnm.bot.core.constant.CommandPresentationConstants.ViewFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -52,7 +51,7 @@ public record NotificationContent(List<Message> messages, CompositionPolicy comp
     }
 
     public PresentationPolicy presentation() {
-        return new PresentationPolicy(List.of(ViewFormat.TEXT), composition, interaction, List.of());
+        return new PresentationPolicy(interaction, List.of());
     }
 
     public List<UUID> resourceIds() {
@@ -66,7 +65,8 @@ public record NotificationContent(List<Message> messages, CompositionPolicy comp
                 case TEXT -> (ReplyBlock)new ReplyBlock.Text(block.text());
                 case MARKDOWN -> new ReplyBlock.Markdown(BotMarkdownMessage.content(block.text()), block.plainText());
                 case IMAGE -> new ReplyBlock.Image(resources.apply(block.resourceId()));
-            }).toList(), message.actions().stream().map(Action::replyAction).toList(), message.composition(), false))
+            }).toList(), message.actions().stream().map(Action::replyAction).toList(),
+                message.composition() == null ? composition : message.composition()))
             .toList();
     }
 

@@ -6,7 +6,7 @@ import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.CommandView;
+import com.nnm.bot.warframe.persistent.official.pojo.query.guide.WarframeGuideQuery;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.guide.WarframeGuideVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.guide.WarframeGuideVO.FeaturePropertiesVO;
@@ -16,18 +16,12 @@ import com.nnm.bot.warframe.persistent.official.service.guide.WarframeGuideServi
 import jakarta.annotation.Resource;
 import java.util.List;
 
-@BotPluginCommand(code = WarframeCommandCodes.MAP_FEATURES, matchType = MatchType.PREFIX, name = "开放世界地图标注",
-    gameCode = "warframe", order = 75)
+@BotPluginCommand(code = WarframeCommandCodes.MAP_FEATURES, matchType = MatchType.PREFIX)
 public final class MapFeaturesPlugin extends AbstractGuidePlugin {
 
-    /**
-     * 将业务数据转换为命令或页面所需的展示字段。
-     *
-     * @return 当前命令或页面需要的展示字段。
-     */
     @Override
-    public List<CommandView> views() {
-        return List.of(CommandView.textImageAndMarkdown("warframe.guide"));
+    protected boolean supportsLayers() {
+        return true;
     }
 
     @Resource
@@ -41,15 +35,11 @@ public final class MapFeaturesPlugin extends AbstractGuidePlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared) {
-        Query query;
-        try {
-            query = query(invocation.arguments(), true);
-        } catch (IllegalArgumentException exception) {
-            return CommandResult.rejected(exception.getMessage());
-        }
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeGuideQuery parsed) {
+        if (parsed.error() != null)
+            return CommandResult.rejected(parsed.error());
         WarframeGuideVO<FeatureVO> display =
-            guideService.map(query.keyword(), query.world(), query.layer(), query.page());
+            guideService.map(parsed.keyword(), parsed.world(), parsed.layer(), parsed.page());
         StringBuilder text = new StringBuilder("开放世界地图标注：").append(display.pagination()).append("\n坐标为来源地图图片坐标，不是经纬度");
         for (FeatureVO feature : display.items()) {
             text.append("\n\n").append(feature.name() == null ? "未命名标注" : feature.name()).append(" · ")
@@ -70,6 +60,6 @@ public final class MapFeaturesPlugin extends AbstractGuidePlugin {
         }
         if (CollUtil.isEmpty(display.items()))
             text.append("\n没有找到匹配的地图标注");
-        return CommandResult.view("warframe.guide", text.toString(), display);
+        return CommandResult.html(text.toString(), display);
     }
 }
