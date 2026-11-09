@@ -1,67 +1,64 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
-import java.util.stream.Collectors;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStatus;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ChangeType;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialApprovalService;
-import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialSnapshotParser;
+import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+import com.nnm.bot.warframe.persistent.official.client.source.WarframeOfficialSourceClient;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ApplyFileStatus;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ChangeType;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStatus;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.event.WarframeOfficialDataChangePublisher;
 import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialRecordSource;
-import java.util.Collection;
-import java.util.function.Consumer;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.OfficialRivenWeaponDTO;
+import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialSnapshotParser;
 import com.nnm.bot.warframe.persistent.official.parser.input.OfficialObjectFields;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialInputParser;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialFieldChangeDTO;
-import java.io.IOException;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
-import java.util.TreeSet;
-import java.util.UUID;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ApplyFileStatus;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFilteredChangesDTO;
-import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialApplyFileRepository;
-import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.persistent.official.event.WarframeOfficialDataChangePublisher;
-import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeWorldStateCodebookInvalidator;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
-import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
-import com.nnm.bot.warframe.persistent.official.client.source.WarframeOfficialSourceClient;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
-import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialFile;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
-import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRecordChangeDTO;
-import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportBatchRepository;
-import com.nnm.bot.warframe.persistent.official.service.record.OfficialRecordPersistenceService;
-import com.nnm.bot.warframe.persistent.official.repository.support.OfficialRepositoryRegistry;
-import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialFileRepository;
-import com.nnm.bot.warframe.persistent.official.repository.maintenance.WarframeOfficialRebuildMarkerRepository;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFileDigestDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFilteredChangesDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialImportRecordDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialFieldChangeDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRecordChangeDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.OfficialRivenWeaponDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialFile;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
+import com.nnm.bot.warframe.persistent.official.repository.maintenance.WarframeOfficialRebuildMarkerRepository;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialApplyFileRepository;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialFileRepository;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportBatchRepository;
+import com.nnm.bot.warframe.persistent.official.repository.support.OfficialRepositoryRegistry;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialApprovalService;
+import com.nnm.bot.warframe.persistent.official.service.record.OfficialRecordPersistenceService;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialDetailService;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Isolation;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 /** 审批事务独立于网络与对象存储；行锁一直持有到事务最终提交。 */
 @Service
@@ -82,8 +79,6 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
     private WarframeOfficialDetailService details;
     @Resource
     private WarframeOfficialDataChangePublisher dataChanges;
-    @Resource
-    private WarframeWorldStateCodebookInvalidator codebookInvalidator;
     @Resource
     private WarframeOfficialSnapshotParser snapshotParser;
     @Resource
@@ -180,15 +175,19 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
             }
             records.releaseWritten(oldRows.values());
         });
-        forIdBatches(previous.values(), ids -> {
-            for (var old : records.findAllById(ids)) {
+        Map<WarframeOfficialDataDomain, List<Long>> removedByDomain = new LinkedHashMap<>();
+        previous.forEach((identity, id) -> {
+            var domain = WarframeOfficialDataDomain.fromCode(identity.substring(0, identity.indexOf(':')));
+            removedByDomain.computeIfAbsent(domain, ignored -> new ArrayList<>()).add(id);
+        });
+        removedByDomain.forEach((domain, remaining) -> forIdBatches(remaining, ids -> {
+            for (var old : repositories.require(domain).findAllById(ids)) {
                 if (old.isEnabled())
-                    consumer
-                        .accept(new WarframeOfficialRecordChangeDTO(repositories.require(old).domain().productPath(),
-                            old.getBkey(), old.getLocalizedName(), ChangeType.REMOVED.name(), List.of()));
+                    consumer.accept(new WarframeOfficialRecordChangeDTO(domain.productPath(), old.getBkey(),
+                        old.getLocalizedName(), ChangeType.REMOVED.name(), List.of()));
                 records.releaseWritten(List.of(old));
             }
-        });
+        }));
     }
 
     /**
@@ -251,7 +250,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
             List<Long> ids = approvedKeys.stream().map(key -> previous.get(domain.domainCode() + ":" + key))
                 .filter(Objects::nonNull).toList();
             forIdBatches(ids, batch -> {
-                records.deleteRecords(batch);
+                records.deleteRecords(domain, batch);
                 records.flush();
             });
         } else {
@@ -304,8 +303,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
         }
         job.setUpdatedAt(Instant.now());
         applyFiles.save(job);
-        dataChanges.publishAfterCommit();
-        codebookInvalidator.invalidateAfterCommit();
+        dataChanges.publishAfterCommit(WarframeOfficialDataDomain.fromPath(file.path()));
         return completed;
     }
 

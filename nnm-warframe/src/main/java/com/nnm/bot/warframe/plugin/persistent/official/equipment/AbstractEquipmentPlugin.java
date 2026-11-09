@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.plugin.persistent.official.equipment;
 
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.warframe.persistent.official.pojo.query.equipment.WarframeEquipmentQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.equipment.WarframeEquipmentCommandDTO;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
@@ -12,7 +12,7 @@ import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.regex.Pattern;
 
-abstract class AbstractEquipmentPlugin extends BotPlugin<Void, WarframeEquipmentQuery> {
+abstract class AbstractEquipmentPlugin extends BotPlugin<Void, WarframeEquipmentCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -21,7 +21,7 @@ abstract class AbstractEquipmentPlugin extends BotPlugin<Void, WarframeEquipment
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeEquipmentQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeEquipmentCommandDTO parse(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
@@ -34,12 +34,12 @@ abstract class AbstractEquipmentPlugin extends BotPlugin<Void, WarframeEquipment
             query = query.substring(0, matcher.start()).trim();
         }
         if (page < 1 || INVALID_PAGE.matcher(query).find()) {
-            return new WarframeEquipmentQuery(query, page, "页码必须为正整数：--page 2");
+            return new WarframeEquipmentCommandDTO(query, page, "页码必须为正整数：--page 2");
         }
         if (query.length() > 200) {
-            return new WarframeEquipmentQuery(query, page, "查询内容过长，请缩短到 200 字以内");
+            return new WarframeEquipmentCommandDTO(query, page, "查询内容过长，请缩短到 200 字以内");
         }
-        return new WarframeEquipmentQuery(query, page, null);
+        return new WarframeEquipmentCommandDTO(query, page, null);
     }
 
     private static final Pattern PAGE = Pattern.compile("(?:^|\\s)--page(?:\\s+|=)([0-9]+)$");
@@ -56,7 +56,7 @@ abstract class AbstractEquipmentPlugin extends BotPlugin<Void, WarframeEquipment
      * @param query 已解析的装备检索条件。
      * @return 命令结果对象。
      */
-    protected CommandResult equipment(Category dataset, String title, WarframeEquipmentQuery query) {
+    protected CommandResult equipment(Category dataset, String title, WarframeEquipmentCommandDTO query) {
         if (query.error() != null)
             return CommandResult.rejected(query.error());
         WarframeEquipmentVO display = WarframeEquipmentVO.page(query.keyword(), title,

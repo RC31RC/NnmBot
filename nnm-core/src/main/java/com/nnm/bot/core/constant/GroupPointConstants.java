@@ -14,22 +14,6 @@ public final class GroupPointConstants {
         SIGN_IN, COMMAND_COST, COMMAND_REWARD, REFUND, ADMIN_ADJUST
     }
 
-    /** 积分账务的操作互斥，与成员实体资源锁区分。 */
-    public enum LockPurpose {
-        REFUND("refund");
-
-        private final String key;
-
-        LockPurpose(String key) {
-            this.key = key;
-        }
-
-        /** 返回用于分布式互斥的稳定操作名。 */
-        public String key() {
-            return key;
-        }
-    }
-
     /** 积分账户与账务状态的稳定错误码；账本矛盾属于服务故障，不报成用户输入错误。 */
     @Getter
     @RequiredArgsConstructor

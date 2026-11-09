@@ -2,6 +2,8 @@ package com.nnm.bot.warframe.persistent.official.service.rewards;
 
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeBountyDefinitionDetailsDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeBountyVO;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 public interface WarframeBountyDefinitionService {
@@ -21,4 +23,12 @@ public interface WarframeBountyDefinitionService {
      * @return 赏金静态定义的分页视图。
      */
     WarframeBountyVO page(String keyword, int page);
+
+    /**
+     * 对本次动态数据的赏金类型统一批量读取静态定义。
+     *
+     * @param jobTypes 当前动态赏金类型。
+     * @return 已找到的类型及定义，不包含缺失占位值。
+     */
+    Map<String, WarframeBountyDefinitionDetailsDTO> findAll(Collection<String> jobTypes);
 }

@@ -1,23 +1,23 @@
 package com.nnm.bot.warframe.persistent.official.service.rewards.impl;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialRelicDTO;
+import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.*;
+import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialRelicDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicDetailsDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicDetailsDTO.*;
-import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRelicService;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialSelectionService;
 import com.nnm.bot.warframe.persistent.official.repository.rewards.OfficialRelicRepository;
-import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
+import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialSelectionService;
+import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRelicService;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WarframeRelicServiceImpl implements WarframeRelicService {
@@ -25,7 +25,7 @@ public class WarframeRelicServiceImpl implements WarframeRelicService {
     private WarframeOfficialSelectionService selection;
 
     @Resource
-    private WarframeOfficialRecordReadService catalog;
+    private WarframeOfficialLookupService catalog;
 
     @Resource
     private OfficialRelicRepository relics;
@@ -42,7 +42,11 @@ public class WarframeRelicServiceImpl implements WarframeRelicService {
         String query = keyword == null ? "" : keyword.trim();
         List<WarframeRelicDetailsDTO> result = new ArrayList<>();
         List<Long> candidateIds = relics.findPreferredRelicIds(query);
-        for (var root : catalog.recordsByIds(WarframeOfficialDataDomain.RELIC, candidateIds)) {
+        var loaded = catalog.recordsByIds(WarframeOfficialDataDomain.RELIC, candidateIds);
+        for (Long id : candidateIds) {
+            var root = loaded.get(id);
+            if (root == null)
+                continue;
             var source = (OfficialRelicDTO)root.data();
             if (source.getStates() == null)
                 continue;

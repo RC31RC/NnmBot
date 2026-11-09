@@ -9,7 +9,7 @@ import java.util.regex.Matcher;
 import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.warframe.persistent.official.pojo.query.upgrades.WarframeRivenDefinitionQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenDefinitionCommandDTO;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @BotPluginCommand(code = WarframeCommandCodes.RIVEN_DEFINITIONS, matchType = MatchType.PREFIX)
-public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenDefinitionQuery> {
+public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenDefinitionCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -31,7 +31,7 @@ public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenD
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeRivenDefinitionQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeRivenDefinitionCommandDTO parse(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
         String mode = "attributes";
         int page = 1;
@@ -41,15 +41,15 @@ public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenD
             if (!matcher.find())
                 break;
             if (!seen.add(matcher.group(1)))
-                return new WarframeRivenDefinitionQuery(query, mode, page, "参数不能重复");
+                return new WarframeRivenDefinitionCommandDTO(query, mode, page, "参数不能重复");
             if (matcher.group(1).equals("mode")) {
                 mode = matcher.group(2);
                 if (!Set.of("attributes", "challenges").contains(mode)) {
-                    return new WarframeRivenDefinitionQuery(query, mode, page, "mode 只支持 attributes / challenges");
+                    return new WarframeRivenDefinitionCommandDTO(query, mode, page, "mode 只支持 attributes / challenges");
                 }
             } else {
                 if (!matcher.group(2).matches("[0-9]+"))
-                    return new WarframeRivenDefinitionQuery(query, mode, page, "页码必须为正整数");
+                    return new WarframeRivenDefinitionCommandDTO(query, mode, page, "页码必须为正整数");
                 try {
                     page = Integer.parseInt(matcher.group(2));
                 } catch (NumberFormatException exception) {
@@ -59,10 +59,10 @@ public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenD
             query = query.substring(0, matcher.start()).trim();
         }
         if (page < 1 || UNKNOWN_OPTION.matcher(query).find())
-            return new WarframeRivenDefinitionQuery(query, mode, page, "页码或参数不合法");
+            return new WarframeRivenDefinitionCommandDTO(query, mode, page, "页码或参数不合法");
         if (query.length() > 200)
-            return new WarframeRivenDefinitionQuery(query, mode, page, "查询内容过长，请缩短到 200 字以内");
-        return new WarframeRivenDefinitionQuery(query, mode, page, null);
+            return new WarframeRivenDefinitionCommandDTO(query, mode, page, "查询内容过长，请缩短到 200 字以内");
+        return new WarframeRivenDefinitionCommandDTO(query, mode, page, null);
     }
 
     private static final Pattern OPTION = Pattern.compile("(?:^|\\s)--(page|mode)(?:\\s+|=)(\\S+)$");
@@ -78,7 +78,7 @@ public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenD
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeRivenDefinitionQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeRivenDefinitionCommandDTO parsed) {
         if (parsed.error() != null)
             return CommandResult.rejected(parsed.error());
         String query = parsed.keyword();

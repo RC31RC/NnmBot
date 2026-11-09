@@ -9,7 +9,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum WarframeWorldStateErrorCode implements ErrorCode {
-    IMAGE_CACHE_SERIALIZATION_FAILED(50050, "世界状态图片缓存数据处理失败，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR);
+    IMAGE_CACHE_SERIALIZATION_FAILED(50050, "世界状态图片缓存数据处理失败，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR),
+    POLLING_CONFIGURATION_INVALID(50056, "世界状态轮询间隔必须为正数", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final int code;
     private final String message;

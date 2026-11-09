@@ -7,7 +7,7 @@ import java.util.regex.Matcher;
 import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.warframe.persistent.official.pojo.query.crafting.WarframeRecipeQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.crafting.WarframeRecipeCommandDTO;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 
 @BotPluginCommand(code = WarframeCommandCodes.RECIPES, matchType = MatchType.PREFIX)
 // Plus ExportRecipes/ExportDojoRecipes -> recipe + ingredient，同文件完整候选取数。
-public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeQuery> {
+public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -28,7 +28,7 @@ public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeQuery> {
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeRecipeQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeRecipeCommandDTO parse(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
         int page = 1;
         String kind = null;
@@ -38,16 +38,16 @@ public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeQuery> {
             if (!matcher.find())
                 break;
             if (!options.add(matcher.group(1)))
-                return new WarframeRecipeQuery(query, kind, page, "参数不能重复");
+                return new WarframeRecipeCommandDTO(query, kind, page, "参数不能重复");
             String value = matcher.group(2);
             if ("kind".equals(matcher.group(1))) {
                 if (!"ordinary".equals(value) && !"dojo".equals(value)) {
-                    return new WarframeRecipeQuery(query, kind, page, "配方类型必须为 ordinary 或 dojo");
+                    return new WarframeRecipeCommandDTO(query, kind, page, "配方类型必须为 ordinary 或 dojo");
                 }
                 kind = value;
             } else {
                 if (!value.matches("[0-9]+"))
-                    return new WarframeRecipeQuery(query, kind, page, "页码必须为正整数");
+                    return new WarframeRecipeCommandDTO(query, kind, page, "页码必须为正整数");
                 try {
                     page = Integer.parseInt(value);
                 } catch (NumberFormatException exception) {
@@ -57,10 +57,10 @@ public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeQuery> {
             query = query.substring(0, matcher.start()).trim();
         }
         if (page < 1 || UNKNOWN_OPTION.matcher(query).find())
-            return new WarframeRecipeQuery(query, kind, page, "配方参数不合法");
+            return new WarframeRecipeCommandDTO(query, kind, page, "配方参数不合法");
         if (query.length() > 200)
-            return new WarframeRecipeQuery(query, kind, page, "查询内容过长，请缩短到 200 字以内");
-        return new WarframeRecipeQuery(query, kind, page, null);
+            return new WarframeRecipeCommandDTO(query, kind, page, "查询内容过长，请缩短到 200 字以内");
+        return new WarframeRecipeCommandDTO(query, kind, page, null);
     }
 
     private static final Pattern OPTION = Pattern.compile("(?:^|\\s)--(page|kind)(?:\\s+|=)(\\S+)$");
@@ -76,7 +76,7 @@ public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeQuery> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeRecipeQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeRecipeCommandDTO parsed) {
         if (parsed.error() != null)
             return CommandResult.rejected(parsed.error());
         String query = parsed.keyword();

@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.rewards;
 
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicDetailsDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.query.rewards.WarframeRelicQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicCommandDTO;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * 从官方遗物根关系树读取奖励和地点；同身份自维护整树优先，不跨来源拼接明细。
  * </p>
  */
-abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicQuery> {
+abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicCommandDTO> {
 
     /**
      * 将尾部分页参数解析成遗物检索条件。
@@ -30,7 +30,7 @@ abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicQuery> {
      * @return 查询对象；非法分页时为 null。
      */
     @Override
-    protected WarframeRelicQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeRelicCommandDTO parse(CommandInvocation invocation, Void prepared) {
         return parseQuery(invocation.arguments());
     }
 
@@ -49,7 +49,7 @@ abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicQuery> {
      * @param arguments 当前命令或操作的参数。
      * @return 命令结果对象。
      */
-    protected CommandResult relics(WarframeRelicQuery query) {
+    protected CommandResult relics(WarframeRelicCommandDTO query) {
         if (query == null) {
             return CommandResult.rejected("页码必须为正整数：--page 2");
         }
@@ -68,11 +68,11 @@ abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicQuery> {
      * @param arguments 当前命令或操作的参数。
      * @return 查询对象。
      */
-    private WarframeRelicQuery parseQuery(String arguments) {
+    private WarframeRelicCommandDTO parseQuery(String arguments) {
         String value = arguments == null ? "" : arguments.trim();
         Matcher matcher = PAGE_ARGUMENT.matcher(value);
         if (!matcher.find()) {
-            return INVALID_PAGE_ARGUMENT.matcher(value).find() ? null : new WarframeRelicQuery(value, 1);
+            return INVALID_PAGE_ARGUMENT.matcher(value).find() ? null : new WarframeRelicCommandDTO(value, 1);
         }
         int page;
         try {
@@ -81,7 +81,8 @@ abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicQuery> {
             page = Integer.MAX_VALUE;
         }
         String keyword = value.substring(0, matcher.start()).trim();
-        return page < 1 || INVALID_PAGE_ARGUMENT.matcher(keyword).find() ? null : new WarframeRelicQuery(keyword, page);
+        return page < 1 || INVALID_PAGE_ARGUMENT.matcher(keyword).find() ? null
+            : new WarframeRelicCommandDTO(keyword, page);
     }
 
 }

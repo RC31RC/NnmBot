@@ -9,10 +9,18 @@ import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommun
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewPageDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface WarframeCommunityDataService {
+    /**
+     * 列出已采纳的官方可用裂罅属性，供别名或组合选择。
+     *
+     * @return 属性编码与展示名称；未导入官方定义时为空。
+     */
+    List<WarframeCommunityRivenAttributeVO> rivenAttributes();
+
     /**
      * 列出当前支持的数据文件。
      *

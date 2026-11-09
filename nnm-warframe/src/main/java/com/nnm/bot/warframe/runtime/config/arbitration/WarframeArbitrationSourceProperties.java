@@ -14,7 +14,9 @@ import java.util.List;
 public class WarframeArbitrationSourceProperties {
 
     private URI url = URI.create("https://browse.wf/arbys.txt");
-    private Duration refreshInterval = Duration.ofMinutes(30);
+    /** 成功拉取后的刷新间隔；失败使用独立重试间隔。 */
+    private Duration refreshInterval = Duration.ofDays(10);
+    /** 本实例检查刷新状态的间隔，同时作为失败后的重试等待时间。 */
     private Duration retryInterval = Duration.ofMinutes(1);
     private Duration historyRetention = Duration.ofDays(90);
     private int maxRecords = 50_000;

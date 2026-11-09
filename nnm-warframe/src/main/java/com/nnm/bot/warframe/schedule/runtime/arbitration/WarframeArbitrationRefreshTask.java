@@ -2,22 +2,19 @@ package com.nnm.bot.warframe.schedule.runtime.arbitration;
 
 import com.nnm.bot.warframe.runtime.service.arbitration.WarframeArbitrationRefreshService;
 import jakarta.annotation.Resource;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** 各实例定时刷新自身的仲裁排期快照，数据保存在本实例内存。 */
+/** 各实例定期检查刷新时机，Service 分别控制成功刷新与失败重试的间隔。 */
 @Component
-@ConditionalOnProperty(prefix = "nnm.warframe.pull.arbitration", name = "enabled", havingValue = "true",
-    matchIfMissing = true)
 public class WarframeArbitrationRefreshTask {
     @Resource
     private WarframeArbitrationRefreshService refresh;
 
     /**
-     * 执行当前任务入口的业务操作。
+     * 到期才拉取仲裁；定期检查使短暂失败能够恢复，不改变成功后的长刷新周期。
      */
-    @Scheduled(fixedRate = 864000000, zone = "Asia/Shanghai")
+    @Scheduled(fixedDelayString = "#{@warframeArbitrationSourceProperties.retryInterval.toString()}")
     public void execute() {
         refresh.refresh();
     }

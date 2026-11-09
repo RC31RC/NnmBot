@@ -8,7 +8,7 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeCatalogConstants.VendorSection;
-import com.nnm.bot.warframe.persistent.official.pojo.query.world.WarframeVendorDefinitionQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.world.WarframeVendorDefinitionCommandDTO;
 import com.nnm.bot.warframe.persistent.official.service.world.WarframeVendorDefinitionService;
 import jakarta.annotation.Resource;
 import java.util.HashSet;
@@ -19,7 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @BotPluginCommand(code = WarframeCommandCodes.VENDOR_DEFINITIONS, matchType = MatchType.PREFIX)
-public final class VendorDefinitionsPlugin extends BotPlugin<Void, WarframeVendorDefinitionQuery> {
+public final class VendorDefinitionsPlugin extends BotPlugin<Void, WarframeVendorDefinitionCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -28,7 +28,7 @@ public final class VendorDefinitionsPlugin extends BotPlugin<Void, WarframeVendo
      * @return 类型化的查询条件及参数错误
      */
     @Override
-    protected WarframeVendorDefinitionQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeVendorDefinitionCommandDTO parse(CommandInvocation invocation, Void prepared) {
         String arguments = invocation.arguments() == null ? "" : invocation.arguments().trim();
         VendorSection section = VendorSection.ITEMS;
         int page = 1;
@@ -40,31 +40,32 @@ public final class VendorDefinitionsPlugin extends BotPlugin<Void, WarframeVendo
             keyword.append(arguments, start, matcher.start()).append(' ');
             start = matcher.end();
             if (!seen.add(matcher.group(1)))
-                return new WarframeVendorDefinitionQuery(arguments, section, page, "商人静态定义参数重复");
+                return new WarframeVendorDefinitionCommandDTO(arguments, section, page, "商人静态定义参数重复");
             if ("section".equals(matcher.group(1))) {
                 try {
                     section = VendorSection.valueOf(matcher.group(2).replace('-', '_').toUpperCase(Locale.ROOT));
                 } catch (IllegalArgumentException exception) {
-                    return new WarframeVendorDefinitionQuery(arguments, section, page, "分区必须为 items 或 random-prices");
+                    return new WarframeVendorDefinitionCommandDTO(arguments, section, page,
+                        "分区必须为 items 或 random-prices");
                 }
             } else {
                 if (!matcher.group(2).matches("[0-9]+"))
-                    return new WarframeVendorDefinitionQuery(arguments, section, page, "页码必须为正整数");
+                    return new WarframeVendorDefinitionCommandDTO(arguments, section, page, "页码必须为正整数");
                 try {
                     page = Integer.parseInt(matcher.group(2));
                 } catch (NumberFormatException exception) {
                     page = Integer.MAX_VALUE;
                 }
                 if (page < 1)
-                    return new WarframeVendorDefinitionQuery(arguments, section, page, "页码必须为正整数");
+                    return new WarframeVendorDefinitionCommandDTO(arguments, section, page, "页码必须为正整数");
             }
         }
         String query = keyword.append(arguments.substring(start)).toString().trim().replaceAll("\\s+", " ");
         if (UNKNOWN.matcher(query).find())
-            return new WarframeVendorDefinitionQuery(query, section, page, "商人静态定义参数不合法");
+            return new WarframeVendorDefinitionCommandDTO(query, section, page, "商人静态定义参数不合法");
         if (query.length() > 500)
-            return new WarframeVendorDefinitionQuery(query, section, page, "查询内容过长，请缩短到 500 字以内");
-        return new WarframeVendorDefinitionQuery(query, section, page, null);
+            return new WarframeVendorDefinitionCommandDTO(query, section, page, "查询内容过长，请缩短到 500 字以内");
+        return new WarframeVendorDefinitionCommandDTO(query, section, page, null);
     }
 
     private static final Pattern OPTION = Pattern.compile("(?:^|\\s)--(section|page)(?:\\s+|=)(\\S+)");
@@ -81,7 +82,8 @@ public final class VendorDefinitionsPlugin extends BotPlugin<Void, WarframeVendo
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeVendorDefinitionQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared,
+        WarframeVendorDefinitionCommandDTO parsed) {
         if (parsed.error() != null)
             return CommandResult.rejected(parsed.error());
         WarframeVendorDefinitionVO display = definitionService.query(parsed.keyword(), parsed.section(), parsed.page());

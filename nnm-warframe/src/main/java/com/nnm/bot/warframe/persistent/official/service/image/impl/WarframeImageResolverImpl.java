@@ -1,44 +1,37 @@
 package com.nnm.bot.warframe.persistent.official.service.image.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.warframe.constant.WarframeCacheNames;
+import com.nnm.bot.warframe.config.cache.DatasetSnapshotMetrics;
+import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.official.config.image.WarframeImageDataProperties;
-import com.nnm.bot.warframe.persistent.official.service.image.WarframeImageResolver;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.OfficialImageDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.OfficialTextIconDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
+import com.nnm.bot.warframe.persistent.official.service.image.WarframeImageResolver;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.springframework.stereotype.Service;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.locks.ReentrantLock;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
 public class WarframeImageResolverImpl implements WarframeImageResolver {
-    private final ReentrantLock indexLock = new ReentrantLock();
 
     @Resource
     private WarframeImageDataProperties properties;
     @Resource
     private WarframeOfficialRecordReadService catalog;
     @Resource
-    private CacheManager cacheManager;
-    @Resource
-    private Clock warframeClock;
+    private WarframeDatasetCache cache;
 
     /**
      * 解析引用或输入对应的实际业务对象。
@@ -124,38 +117,25 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
      */
     @Override
     public void refresh() {
-        Cache cache = Objects.requireNonNull(cacheManager.getCache(WarframeCacheNames.IMAGE_INDEX));
-        cache.evict(WarframeOfficialDataDomain.IMAGE.name());
-        cache.evict(WarframeOfficialDataDomain.TEXT_ICON.name());
         snapshot(WarframeOfficialDataDomain.IMAGE);
         snapshot(WarframeOfficialDataDomain.TEXT_ICON);
     }
 
     /**
-     * 读取指定官方资料领域的图片索引快照。
+     * 各图片主表分别保留自己的版本化快照，不因社区或普通物品更新而重读。
      *
-     * @param domain 官方数据文件所属的业务领域。
-     * @return 索引快照对象。
+     * @param domain 图片或文本图标领域。
+     * @return 本领域的不可变索引。
      */
     private IndexSnapshot snapshot(WarframeOfficialDataDomain domain) {
-        indexLock.lock();
-        try {
-            Cache cache = Objects.requireNonNull(cacheManager.getCache(WarframeCacheNames.IMAGE_INDEX));
-            IndexSnapshot previous = cache.get(domain.name(), IndexSnapshot.class);
-            Instant now = warframeClock.instant();
-            if (previous != null && now.isBefore(previous.nextAttemptAt()))
-                return previous;
+        return cache.snapshot(WarframeDatasetCacheNames.official(domain), WarframeDatasetCacheNames.IMAGES, () -> {
             Map<String, OfficialObjectDTO> entries = new LinkedHashMap<>();
             for (var record : catalog.records(domain)) {
                 if (record.data() != null)
                     entries.put(record.bkey(), record.data());
             }
-            IndexSnapshot next = new IndexSnapshot(Map.copyOf(entries), now, now.plus(properties.getRefreshInterval()));
-            cache.put(domain.name(), next);
-            return next;
-        } finally {
-            indexLock.unlock();
-        }
+            return new IndexSnapshot(Map.copyOf(entries));
+        });
     }
 
     /**
@@ -241,6 +221,11 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
         return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
-    private record IndexSnapshot(Map<String, OfficialObjectDTO> entries, Instant fetchedAt, Instant nextAttemptAt) {
+    private record IndexSnapshot(Map<String, OfficialObjectDTO> entries) implements DatasetSnapshotMetrics {
+        /** @return 图片元数据或文本图标的实际记录数。 */
+        @Override
+        public long entryCount() {
+            return entries.size();
+        }
     }
 }

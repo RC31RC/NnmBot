@@ -1,6 +1,11 @@
 package com.nnm.bot.warframe.runtime.service.riven.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.warframe.runtime.pojo.query.riven.WarframeRivenWeeklyQuery;
+import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenWeeklyManagementVO;
+import static com.nnm.bot.warframe.runtime.constant.WarframeRuntimeQueryConstants.*;
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import cn.hutool.core.collection.CollUtil;
@@ -58,24 +63,81 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
     /**
      * 按给定业务条件查询周紫卡成交统计。
      *
-     * @param platform 市场或官方接口使用的平台代码。
-     * @param query 当前业务的查询条件。
-     * @param rerolled 已洗练。
-     * @param page 从一开始的页码。
+     * @param conditions 平台、武器、洗练状态及分页条件。
      * @return 当前平台周紫卡成交统计的分页视图。
      */
     @Override
-    public WarframeRivenWeeklyVO find(String platform, String query, Boolean rerolled, int page) {
+    public WarframeRivenWeeklyVO find(WarframeRivenWeeklyQuery conditions) {
+        String platform = conditions.platform() == null ? "pc" : conditions.platform();
+        String query = conditions.keyword();
+        Boolean rerolled = conditions.rerolled();
+        int page = conditions.current() == null ? 1 : conditions.current();
+        int pageSize = conditions.size() == null ? DEFAULT_PAGE_SIZE : conditions.size();
+        BusinessAssert.isTrue(pageSize > 0 && pageSize <= MAX_PAGE_SIZE, CommonErrorCode.PARAM_INVALID);
         if (!properties.getSources().containsKey(platform) || page < 1) {
             throw new BusinessException(CommonErrorCode.PARAM_INVALID, "无效的裂罅周统计平台或页码");
         }
         Snapshot snapshot = snapshot(platform);
+        List<EntryVO> entries = entries(snapshot, query, rerolled);
+        int pages = Math.max(1, (int)((entries.size() + pageSize - 1L) / pageSize));
+        int from = (int)Math.min((page - 1L) * pageSize, entries.size());
+        boolean stale = snapshot.fetchedAt() != null
+            && !warframeClock.instant().isBefore(snapshot.fetchedAt().plus(properties.getRefreshInterval()));
+        String notice = snapshot.fetchedAt() == null ? "官方周成交统计暂不可用" : stale ? "来源刷新失败，当前为上一份成功快照"
+            : CollUtil.isEmpty(entries) ? "没有匹配的周成交统计" : from == entries.size() ? "该页没有统计记录" : null;
+        return new WarframeRivenWeeklyVO(query, platform, page + "/" + pages + " 页，共 " + entries.size() + " 条",
+            properties.getSources().get(platform).getSourceCode(), snapshot.fetchedAt(), stale,
+            entries.subList(from, Math.min(from + pageSize, entries.size())), notice);
+    }
+
+    /**
+     * 查询已有内存快照；空快照只返回等待状态，不在 HTTP 请求中下载。
+     *
+     * @param query 平台、武器、洗练状态和分页条件。
+     * @return 采集状态及查询分页。
+     */
+    @Override
+    public WarframeRivenWeeklyManagementVO page(WarframeRivenWeeklyQuery query) {
+        String platform = query.platform() == null ? "pc" : query.platform();
+        int current = query.current() == null ? 1 : query.current();
+        int size = query.size() == null ? DEFAULT_PAGE_SIZE : query.size();
+        BusinessAssert.isTrue(
+            properties.getSources().containsKey(platform) && current > 0 && size > 0 && size <= MAX_PAGE_SIZE,
+            CommonErrorCode.PARAM_INVALID);
+        Cache cache = Objects.requireNonNull(cacheManager.getCache(WarframeCacheNames.RIVEN_WEEKLY));
+        Snapshot snapshot = cache.get(platform, Snapshot.class);
+        if (snapshot == null) {
+            snapshot = new Snapshot(List.of(), null, Instant.MIN);
+        }
+        List<EntryVO> entries = entries(snapshot, query.keyword(), query.rerolled());
+        int start = (int)Math.min((current - 1L) * size, entries.size());
+        boolean stale = snapshot.fetchedAt() != null
+            && !warframeClock.instant().isBefore(snapshot.fetchedAt().plus(properties.getRefreshInterval()));
+        return new WarframeRivenWeeklyManagementVO(snapshot.fetchedAt() != null, stale,
+            properties.getSources().get(platform).getSourceCode(), platform, snapshot.fetchedAt(),
+            PageResult.of(entries.subList(start, Math.min(start + size, entries.size())), current, size,
+                entries.size()),
+            snapshot.fetchedAt() == null ? "尚未完成采集，请等待后台任务拉取" : stale ? "当前为最近一次成功快照，后台正在按周期重试" : "官方周成交统计，价格单位为白金");
+    }
+
+    /**
+     * 复用静态名称补全和筛选，命令与管理端共享相同业务解释。
+     *
+     * @param snapshot 最近一次成功快照。
+     * @param query 名称关键词。
+     * @param rerolled 洗练状态，空值表示全部。
+     * @return 稳定排序后的展示行。
+     */
+    private List<EntryVO> entries(Snapshot snapshot, String query, Boolean rerolled) {
+        if (snapshot.entries().isEmpty()) {
+            return List.of();
+        }
         String keyword = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         Map<String, WarframeReferenceResolutionDTO> names =
             itemNameService.resolveAll(snapshot.entries().stream().map(RivenWeeklyEntryDTO::compatibility)
                 .filter(Objects::nonNull).map(WarframeTranslationKey::name).distinct().toList());
         Map<String, WarframeRivenWeaponDTO> weapons = weaponCatalog.index();
-        List<EntryVO> entries = snapshot.entries().stream().map(entry -> {
+        return snapshot.entries().stream().map(entry -> {
             WarframeReferenceResolutionDTO translated =
                 entry.compatibility() == null ? null : names.get(WarframeTranslationKey.name(entry.compatibility()));
             WarframeRivenWeaponDTO weapon = weapons.get(WarframeNameNormalizer.weeklyWeapon(entry.compatibility()));
@@ -91,15 +153,6 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
             .sorted(Comparator.comparing(EntryVO::weaponName).thenComparing(EntryVO::itemType)
                 .thenComparing(EntryVO::rerolled))
             .toList();
-        int pages = Math.max(1, (int)((entries.size() + 7L) / 8));
-        int from = (int)Math.min((page - 1L) * 8, entries.size());
-        boolean stale = snapshot.fetchedAt() != null
-            && !warframeClock.instant().isBefore(snapshot.fetchedAt().plus(properties.getRefreshInterval()));
-        String notice = snapshot.fetchedAt() == null ? "官方周成交统计暂不可用" : stale ? "来源刷新失败，当前为上一份成功快照"
-            : CollUtil.isEmpty(entries) ? "没有匹配的周成交统计" : from == entries.size() ? "该页没有统计记录" : null;
-        return new WarframeRivenWeeklyVO(query, platform, page + "/" + pages + " 页，共 " + entries.size() + " 条",
-            properties.getSources().get(platform).getSourceCode(), snapshot.fetchedAt(), stale,
-            entries.subList(from, Math.min(from + 8, entries.size())), notice);
     }
 
     /**

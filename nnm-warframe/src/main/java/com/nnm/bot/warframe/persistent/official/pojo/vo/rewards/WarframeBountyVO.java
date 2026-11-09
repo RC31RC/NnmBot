@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.pojo.vo.rewards;
 
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeBountyDefinitionDetailsDTO.StageOptionDTO;
 import java.util.List;
 
@@ -17,22 +17,6 @@ public record WarframeBountyVO(String query, int page, int totalPages, int total
      */
     public WarframeBountyVO {
         items = List.copyOf(items);
-    }
-
-    /**
-     * 对已筛选数据执行分页。
-     *
-     * @param query 当前业务的查询条件。
-     * @param entries 条目集合。
-     * @param requestedPage 请求的分页。
-     * @return 赏金静态定义的分页视图。
-     */
-    public static WarframeBountyVO page(String query, List<EntryVO> entries, int requestedPage) {
-        int pages = Math.max(1, (int)((entries.size() + 3L) / 4));
-        int page = Math.max(1, Math.min(requestedPage, pages));
-        int from = (page - 1) * 4;
-        return new WarframeBountyVO(query, page, pages, entries.size(),
-            entries.subList(from, Math.min(from + 4, entries.size())));
     }
 
     /**

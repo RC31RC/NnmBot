@@ -1,30 +1,30 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
+import cn.hutool.core.collection.CollUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.nnm.bot.common.http.HttpClient;
+import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex;
+import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex.Reference;
+import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex.Snapshot;
+import com.nnm.bot.warframe.runtime.config.jackson.WarframeInputBinding;
+import com.nnm.bot.warframe.runtime.config.worldstate.WarframeBountyCycleProperties;
+import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.BountyCycleJobDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.BountyStaticPoolDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SyndicateMissionDTO;
-import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex.Reference;
-import cn.hutool.core.collection.CollUtil;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.nnm.bot.warframe.runtime.rawdata.bounty.BountyCycleRawData;
 import com.nnm.bot.warframe.runtime.rawdata.bounty.BountyCycleRawData.JobRawData;
-import jakarta.annotation.PostConstruct;
-import com.nnm.bot.warframe.runtime.config.jackson.WarframeInputBinding;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.http.HttpClient;
-import com.nnm.bot.warframe.runtime.config.worldstate.WarframeBountyCycleProperties;
-import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeBountyCycleService;
-import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex;
-import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex.Snapshot;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /** oracle 是补充动态源，官方 PHP 与已采纳静态包始终是判断轮次和解释引用的依据。 */
 @Slf4j
@@ -64,7 +64,8 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
         }
         Snapshot index;
         try {
-            index = staticLookup.current();
+            index = staticLookup.current(state.syndicateMissions().stream().map(SyndicateMissionDTO::syndicate)
+                .filter(SUPPORTED::contains).distinct().toList());
         } catch (RuntimeException exception) {
             log.warn("Bounty static index unavailable; official WorldStateDTO remains usable", exception);
             return state;

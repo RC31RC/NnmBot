@@ -5,7 +5,7 @@ import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.warframe.persistent.official.pojo.query.reference.WarframeItemRelationQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeItemRelationCommandDTO;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRelationQuery> {
+abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRelationCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -27,11 +27,11 @@ abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRe
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeItemRelationQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeItemRelationCommandDTO parse(CommandInvocation invocation, Void prepared) {
         try {
             return parseQuery(invocation.arguments());
         } catch (BusinessException exception) {
-            return new WarframeItemRelationQuery("", null, 1, exception.getMessage());
+            return new WarframeItemRelationCommandDTO("", null, 1, exception.getMessage());
         }
     }
 
@@ -47,7 +47,7 @@ abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRe
      * @param components 组件。
      * @return 命令结果对象。
      */
-    protected CommandResult relations(WarframeItemRelationQuery query, boolean components) {
+    protected CommandResult relations(WarframeItemRelationCommandDTO query, boolean components) {
         if (query.error() != null)
             return CommandResult.rejected(query.error());
         WarframeItemRelationVO display = components
@@ -70,7 +70,7 @@ abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRe
      * @param arguments 当前命令或操作的参数。
      * @return 查询对象。
      */
-    private WarframeItemRelationQuery parseQuery(String arguments) {
+    private WarframeItemRelationCommandDTO parseQuery(String arguments) {
         String input = arguments == null ? "" : arguments.trim();
         String keyword = input;
         Map<String, String> options = new HashMap<>();
@@ -104,7 +104,7 @@ abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRe
                 throw new BusinessException(CommonErrorCode.PARAM_INVALID, "页码必须为有效的正整数");
             }
         }
-        return new WarframeItemRelationQuery(keyword, type, page, null);
+        return new WarframeItemRelationCommandDTO(keyword, type, page, null);
     }
 
 }

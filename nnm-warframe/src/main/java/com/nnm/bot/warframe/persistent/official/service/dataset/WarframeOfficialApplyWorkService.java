@@ -1,10 +1,10 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset;
 
 import com.nnm.bot.common.task.TaskProgressReporter;
-import java.util.List;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyFileDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyFileDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
+import java.util.List;
 
 /** 一次审批冻结后，多个实例逐文件认领并顺序提交分类事务。 */
 public interface WarframeOfficialApplyWorkService {
@@ -16,8 +16,8 @@ public interface WarframeOfficialApplyWorkService {
      */
     void freeze(String batchId, WarframeOfficialApplyDTO selection);
 
-    /** 运行当前实例的一个文件；不同实例可领取不同文件。 */
-    void processOne();
+    /** 当前实例串行处理所有可认领文件，空闲后返回；不同实例可领取不同文件。 */
+    void processAvailable();
 
     /**
      * 保留现有管理任务回显，业务执行与崩溃恢复均以数据库为准。

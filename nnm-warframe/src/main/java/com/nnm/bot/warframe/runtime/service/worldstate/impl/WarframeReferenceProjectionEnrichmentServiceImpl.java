@@ -1,26 +1,25 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.runtime.service.worldstate.WarframeReferenceProjectionEnrichmentService;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.UnresolvedReferenceVO;
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
+import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityCatalogService;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceType;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeStateTranslationDetailsDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeReferenceResolutionDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeBountyDefinitionDetailsDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeStateTranslationDetailsDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeRewardPoolVO;
+import com.nnm.bot.warframe.persistent.official.service.reference.WarframeReferenceResolverService;
+import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeBountyDefinitionService;
+import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRewardPoolService;
+import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateRuleService;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateCommandVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO;
-import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeBountyDefinitionService;
-import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateRuleService;
-import com.nnm.bot.warframe.persistent.official.service.reference.WarframeReferenceResolverService;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeRewardPoolVO;
-import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityCatalogService;
-import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRewardPoolService;
+import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.UnresolvedReferenceVO;
+import com.nnm.bot.warframe.runtime.service.worldstate.WarframeReferenceProjectionEnrichmentService;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -30,7 +29,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 为管理端、机器人命令和蹲任务统一增强 WorldStateDTO 展示投影。
@@ -130,9 +132,15 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                 enrichArbitration(output.data(), essence), output.unresolvedReferences())).toList();
         }
         if (containsBounties) {
-            var pools = rewardPoolService.find("", null);
-            safeOutputs = safeOutputs.stream().map(output -> new WarframeWorldStateCommandVO(output.text(),
-                prepareBounties(output.data(), translations, pools), output.unresolvedReferences())).toList();
+            Set<String> jobTypes = new LinkedHashSet<>();
+            Set<String> poolKeys = new LinkedHashSet<>();
+            safeOutputs.forEach(output -> collectBountyKeys(output.data(), jobTypes, poolKeys));
+            var definitions = bountyDefinitionService.findAll(jobTypes);
+            var pools = rewardPoolService.findAll(poolKeys);
+            safeOutputs = safeOutputs.stream()
+                .map(output -> new WarframeWorldStateCommandVO(output.text(),
+                    prepareBounties(output.data(), translations, pools, definitions), output.unresolvedReferences()))
+                .toList();
         }
         Map<String, String> nightwaveDescriptions = containsNightwave ? stateDescriptions(translations) : Map.of();
         Map<String, WarframeReferenceType> references = new LinkedHashMap<>();
@@ -256,6 +264,27 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
     }
 
     /**
+     * 递归收集本次动态赏金的静态引用，所有引用先去重再按表批量补查。
+     *
+     * @param value 动态展示数据。
+     * @param jobs 当前请求的赏金类型。
+     * @param pools 当前请求的奖励池。
+     */
+    private void collectBountyKeys(Object value, Set<String> jobs, Set<String> pools) {
+        if (value instanceof Map<?, ?> map) {
+            Object job = map.get("jobType");
+            Object pool = map.get("rewardPoolReference");
+            if (job != null && StrUtil.isNotBlank(job.toString()))
+                jobs.add(job.toString());
+            if (pool != null && StrUtil.isNotBlank(pool.toString()))
+                pools.add(pool.toString());
+            map.values().forEach(child -> collectBountyKeys(child, jobs, pools));
+        } else if (value instanceof Collection<?> values) {
+            values.forEach(child -> collectBountyKeys(child, jobs, pools));
+        }
+    }
+
+    /**
      * 赏金动态参数关联数据库里的名称、说明和奖励池，再交给统一引用解析。
      *
      * @param source 已经组装的原始展示字段映射。
@@ -264,16 +293,15 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      * @return 以本方法约定的业务键组织的数据映射。
      */
     private Map<String, Object> prepareBounties(Map<?, ?> source, List<WarframeStateTranslationDetailsDTO> translations,
-        List<WarframeRewardPoolVO.EntryVO> pools) {
+        List<WarframeRewardPoolVO.EntryVO> pools, Map<String, WarframeBountyDefinitionDetailsDTO> definitions) {
         Map<String, Object> result = new LinkedHashMap<>();
         source.forEach((key, value) -> {
             Object prepared = value;
             if (value instanceof Map<?, ?> map) {
-                prepared = prepareBounties(map, translations, pools);
+                prepared = prepareBounties(map, translations, pools, definitions);
             } else if (value instanceof List<?> list) {
-                prepared = list.stream()
-                    .map(entry -> entry instanceof Map<?, ?> map ? prepareBounties(map, translations, pools) : entry)
-                    .toList();
+                prepared = list.stream().map(entry -> entry instanceof Map<?, ?> map
+                    ? prepareBounties(map, translations, pools, definitions) : entry).toList();
             }
             result.put(String.valueOf(key), prepared);
         });
@@ -281,7 +309,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             return result;
         }
         String jobType = String.valueOf(result.remove("jobType"));
-        bountyDefinitionService.find(jobType).ifPresent(definition -> {
+        Optional.ofNullable(definitions.get(jobType)).ifPresent(definition -> {
             // 仅补静态定义，不替换动态实例、时间、状态和奖励池引用。
             // 引用解析只遍历 Map/List；不要把包含内部词条路径的 DTO 直接交给命令。
             Map<String, Object> displayDefinition = new LinkedHashMap<>();

@@ -5,14 +5,14 @@ import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.warframe.persistent.official.pojo.query.guide.WarframeGuideQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.guide.WarframeGuideCommandDTO;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideQuery> {
+abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -21,11 +21,11 @@ abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideQuery> {
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeGuideQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeGuideCommandDTO parse(CommandInvocation invocation, Void prepared) {
         try {
             return query(invocation.arguments(), supportsLayers());
         } catch (BusinessException exception) {
-            return new WarframeGuideQuery("", null, null, 1, exception.getMessage());
+            return new WarframeGuideCommandDTO("", null, null, 1, exception.getMessage());
         }
     }
 
@@ -42,7 +42,7 @@ abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideQuery> {
      * @param map 映射。
      * @return 查询对象。
      */
-    protected WarframeGuideQuery query(String arguments, boolean map) {
+    protected WarframeGuideCommandDTO query(String arguments, boolean map) {
         String input = arguments == null ? "" : arguments.trim();
         Matcher start = OPTIONS_START.matcher(input);
         String keyword = input;
@@ -84,7 +84,7 @@ abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideQuery> {
                 page = Integer.MAX_VALUE;
             }
         }
-        return new WarframeGuideQuery(keyword, world, layer, page, null);
+        return new WarframeGuideCommandDTO(keyword, world, layer, page, null);
     }
 
 }

@@ -2,26 +2,28 @@ package com.nnm.bot.warframe.persistent.official.service.reference.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameIndexDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeReferenceResolutionDTO;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
+import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
 import com.nnm.bot.warframe.persistent.official.service.reference.WarframeItemNameService;
 import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateCodebookService;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
 
 /** 名称来自已采纳官方/自维护整树，语言键由同一关系模型的字典解析。 */
 @Service
 public class WarframeItemNameServiceImpl implements WarframeItemNameService {
     @Resource
-    private WarframeOfficialRecordReadService officialCatalogService;
+    private WarframeOfficialLookupService officialLookup;
     @Resource
     private WarframeWorldStateCodebookService codebook;
 
@@ -36,9 +38,23 @@ public class WarframeItemNameServiceImpl implements WarframeItemNameService {
         Set<String> keys = itemKeys.stream().filter(StrUtil::isNotBlank).collect(Collectors.toSet());
         if (CollUtil.isEmpty(keys))
             return Map.of();
-        Map<String, WarframeOfficialRecordReadDTO> items = new LinkedHashMap<>();
-        officialCatalogService.records().stream().filter(item -> keys.contains(item.bkey()))
-            .forEach(item -> items.putIfAbsent(item.bkey(), item));
+        Map<String, WarframeOfficialNameDTO> items = new LinkedHashMap<>();
+        for (var domain : WarframeOfficialDataDomain.values()) {
+            if (!domain.itemIndex())
+                continue;
+            var index = officialLookup.nameIndex(domain);
+            for (String key : keys) {
+                var item = index.items().get(WarframeOfficialNameIndexDTO.identity(domain.domainCode(), key));
+                if (item != null)
+                    items.putIfAbsent(key, item);
+            }
+        }
+        var languages =
+            codebook
+                .findLanguages(keys.stream()
+                    .filter(key -> !items.containsKey(key)
+                        || (!usable(items.get(key).localizedName()) && !usable(items.get(key).officialName())))
+                    .toList());
         Map<String, WarframeReferenceResolutionDTO> result = new LinkedHashMap<>();
         for (String key : keys) {
             var item = items.get(key);
@@ -52,10 +68,10 @@ public class WarframeItemNameServiceImpl implements WarframeItemNameService {
                 source = name.equals(key) ? null : item.domainCode();
             }
             if (source == null) {
-                var entry = codebook.findLanguage(key);
-                if (entry.isPresent()) {
-                    name = entry.get().displayName();
-                    source = entry.get().source();
+                var entry = languages.get(key);
+                if (entry != null) {
+                    name = entry.displayName();
+                    source = entry.source();
                 }
             }
             result.put(key,

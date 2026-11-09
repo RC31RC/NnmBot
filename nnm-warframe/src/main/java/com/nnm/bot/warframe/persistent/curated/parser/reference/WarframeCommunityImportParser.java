@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityImportDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityImportIssueDTO;
 import java.util.Map;
+import java.util.Arrays;
 
 /** 社区导入只处理对象、数组和稳定键字典容器，记录字段由 Jackson 自动绑定。 */
 @Component
@@ -213,6 +214,10 @@ public class WarframeCommunityImportParser {
                 text(item.attributeCode(), "attributeCode", false);
                 text(item.aliasName(), "aliasName", false);
                 check(item.attributeCode().matches("[a-z0-9_/]+(?:\\+[a-z0-9_/]+){0,2}"), "紫卡别名必须关联一至三个官方属性代码");
+                String[] codes = item.attributeCode().split("[+]");
+                check(Arrays.stream(codes).distinct().count() == codes.length, "组合不能重复选择同一个官方属性");
+                Arrays.sort(codes);
+                value = new WarframeCommunityRecordDTO.RivenAliasDTO(String.join("+", codes), item.aliasName());
                 yield item.aliasName();
             }
         };

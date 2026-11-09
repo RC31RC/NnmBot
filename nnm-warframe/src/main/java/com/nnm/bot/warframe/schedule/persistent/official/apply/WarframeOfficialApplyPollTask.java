@@ -16,7 +16,7 @@ public class WarframeOfficialApplyPollTask {
     @Scheduled(fixedDelayString = "${nnm.warframe.pull.dataset.apply-poll-interval:5s}")
     public void poll() {
         try {
-            work.processOne();
+            work.processAvailable();
         } catch (RuntimeException exception) {
             log.warn("官方审批工作项轮询将在下次调度重试", exception);
         }

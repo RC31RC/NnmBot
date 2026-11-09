@@ -1,33 +1,50 @@
 package com.nnm.bot.warframe.runtime.service.arbitration.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
+import com.nnm.bot.warframe.runtime.pojo.query.arbitration.WarframeArbitrationQuery;
+import com.nnm.bot.warframe.runtime.pojo.vo.arbitration.WarframeArbitrationManagementVO;
+import com.nnm.bot.warframe.runtime.pojo.vo.arbitration.WarframeArbitrationManagementVO.EntryVO;
+import java.util.Locale;
+import java.util.stream.Stream;
+import static com.nnm.bot.warframe.runtime.constant.WarframeRuntimeQueryConstants.*;
 import com.nnm.bot.warframe.runtime.cache.arbitration.WarframeArbitrationSnapshotStore;
 import com.nnm.bot.warframe.runtime.cache.arbitration.WarframeArbitrationSnapshotStore.Snapshot;
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationProperties;
 import com.nnm.bot.warframe.runtime.constant.ArbitrationConstants.QueryType;
-import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
+import com.nnm.bot.warframe.runtime.parser.arbitration.WarframeArbitrationScheduleParser;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleDTO;
+import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
 import com.nnm.bot.warframe.runtime.service.arbitration.WarframeArbitrationService;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /** 仲裁视图只读取 JVM 内存快照，并按每次查询的当前时刻重新筛选。 */
 @Service
+@Slf4j
 public class WarframeArbitrationServiceImpl implements WarframeArbitrationService {
     /** 每个 JVM 独立持有最近一次成功刷新的有界内存快照。 */
     @Resource
     private WarframeArbitrationSnapshotStore snapshots;
+    @Resource
+    private WarframeArbitrationScheduleParser parser;
     /** 日期、显示上限及高效任务筛选规则。 */
     @Resource
     private WarframeArbitrationProperties properties;
     /** 可测试的当前时刻，避免缓存冻结“当前任务”。 */
     @Resource
     private Clock warframeClock;
+    @Resource
+    private WarframeArbitrationSourceProperties sourceProperties;
 
     /**
      * 按真实查询范围筛选最近一次成功的 JVM 内存快照，不在机器人请求中下载来源。
@@ -49,6 +66,14 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
         Instant fetchedAt = snapshot.fetchedAt();
         List<ArbitrationScheduleEntryDTO> all = snapshot.entries().stream()
             .filter(entry -> entry.expiry().isAfter(from) && entry.activation().isBefore(until)).toList();
+        if (all.stream().anyMatch(entry -> entry.nodeReference() != null)) {
+            try {
+                all = parser.reproject(all);
+            } catch (RuntimeException exception) {
+                // 静态资料不可用时保留已解释的有效排期，不触发上游重新下载。
+                log.warn("仲裁静态引用重投影失败，使用有效快照", exception);
+            }
+        }
         List<ArbitrationScheduleEntryDTO> entries = all.stream()
             .filter(record -> query != QueryType.CURRENT || !record.activation().isAfter(now))
             .filter(record -> query != QueryType.EFFICIENT || (record.activation().isAfter(now) && efficient(record)))
@@ -74,6 +99,51 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
             notice += " 所查时间范围排期不完整。";
         }
         return new ArbitrationScheduleDTO(entries, notice, fetchedAt, properties.getZone());
+    }
+
+    /**
+     * 查询快照中的任意时间范围；只对当前页重解释静态引用。
+     *
+     * @param query 时间、关键词和分页条件。
+     * @return 完整快照元数据及分页后的展示行。
+     */
+    @Override
+    public WarframeArbitrationManagementVO page(WarframeArbitrationQuery query) {
+        int current = query.current() == null ? 1 : query.current();
+        int size = query.size() == null ? DEFAULT_PAGE_SIZE : query.size();
+        BusinessAssert.isTrue(current > 0 && size > 0 && size <= MAX_PAGE_SIZE, CommonErrorCode.PARAM_INVALID);
+        BusinessAssert.isTrue(query.from() == null || query.until() == null || query.from().isBefore(query.until()),
+            CommonErrorCode.PARAM_INVALID, "结束时间必须晚于开始时间");
+        String keyword = query.keyword() == null ? "" : query.keyword().trim().toLowerCase(Locale.ROOT);
+        Snapshot snapshot = snapshots.current();
+        List<ArbitrationScheduleEntryDTO> matches =
+            snapshot.entries().stream().filter(entry -> query.from() == null || entry.expiry().isAfter(query.from()))
+                .filter(entry -> query.until() == null || entry.activation().isBefore(query.until()))
+                .filter(entry -> keyword.isEmpty() || Stream
+                    .of(entry.node(), entry.missionType(), entry.enemy(), entry.planet(), entry.nodeReference())
+                    .anyMatch(value -> value != null && value.toLowerCase(Locale.ROOT).contains(keyword)))
+                .toList();
+        int start = (int)Math.min((current - 1L) * size, matches.size());
+        List<ArbitrationScheduleEntryDTO> page = matches.subList(start, Math.min(start + size, matches.size()));
+        if (page.stream().anyMatch(entry -> entry.nodeReference() != null)) {
+            try {
+                page = parser.reproject(page);
+            } catch (RuntimeException exception) {
+                log.warn("仲裁管理页静态引用重投影失败，保留有效快照", exception);
+            }
+        }
+        List<EntryVO> records = page
+            .stream().map(entry -> new EntryVO(entry.id(), entry.activation(), entry.expiry(), entry.node(),
+                entry.missionType(), entry.enemy(), entry.planet(), entry.boundsJson(), entry.nodeReference()))
+            .toList();
+        Instant fetchedAt = snapshot.fetchedAt();
+        boolean stale = fetchedAt != null
+            && !warframeClock.instant().isBefore(fetchedAt.plus(sourceProperties.getRefreshInterval()));
+        Instant from = snapshot.entries().isEmpty() ? null : snapshot.entries().getFirst().activation();
+        Instant until = snapshot.entries().isEmpty() ? null : snapshot.entries().getLast().expiry();
+        return new WarframeArbitrationManagementVO(fetchedAt != null, stale, sourceProperties.getUrl().toString(),
+            fetchedAt, from, until, PageResult.of(records, current, size, matches.size()),
+            "第三方预测排期，以游戏内实际任务为准；当前页面只查询本实例快照。");
     }
 
     /**

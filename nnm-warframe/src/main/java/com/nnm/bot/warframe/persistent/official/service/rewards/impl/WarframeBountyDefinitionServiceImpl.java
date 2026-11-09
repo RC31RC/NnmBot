@@ -1,27 +1,30 @@
 package com.nnm.bot.warframe.persistent.official.service.rewards.impl;
 
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.BOUNTY_PAGE_SIZE;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialBountyDTO;
-import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialSelectionService;
-import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.*;
-import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeBountyDefinitionService;
-import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeBountyVO;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialBountyDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeBountyDefinitionDetailsDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeBountyDefinitionDetailsDTO.StageOptionDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeBountyVO;
+import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
+import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeBountyDefinitionService;
+import jakarta.annotation.Resource;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
+import org.springframework.stereotype.Service;
 
 @Service
 public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefinitionService {
     @Resource
-    private WarframeOfficialRecordReadService catalog;
-    @Resource
-    private WarframeOfficialSelectionService data;
+    private WarframeOfficialLookupService catalog;
 
     /**
      * 按给定业务条件查询赏金静态定义。
@@ -31,9 +34,31 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
      */
     @Override
     public Optional<WarframeBountyDefinitionDetailsDTO> find(String jobType) {
-        return catalog.records(WarframeOfficialDataDomain.BOUNTY).stream()
-            .filter(row -> row.bkey().equals("definitions/" + jobType) || row.bkey().equals(jobType)).findFirst()
-            .map(row -> details((OfficialBountyDTO)row.data(), jobType));
+        return Optional.ofNullable(findAll(List.of(jobType)).get(jobType));
+    }
+
+    /**
+     * 一次收集类型引用，兼容同文件定义分组键和根级键的实际输入合同。
+     *
+     * @param jobTypes 本次使用的赏金类型。
+     * @return 当前请求的静态定义。
+     */
+    @Override
+    public Map<String, WarframeBountyDefinitionDetailsDTO> findAll(Collection<String> jobTypes) {
+        var keys = jobTypes.stream().filter(value -> value != null && !value.isBlank())
+            .flatMap(value -> Stream.of("definitions/" + value, value)).distinct().toList();
+        var rows = catalog.records(WarframeOfficialDataDomain.BOUNTY, keys);
+        Map<String, WarframeBountyDefinitionDetailsDTO> result = new LinkedHashMap<>();
+        for (String jobType : jobTypes) {
+            if (jobType == null || jobType.isBlank())
+                continue;
+            var root = rows.get(("definitions/" + jobType).toLowerCase(Locale.ROOT));
+            if (root == null)
+                root = rows.get(jobType.toLowerCase(Locale.ROOT));
+            if (root != null)
+                result.put(jobType, details((OfficialBountyDTO)root.data(), jobType));
+        }
+        return Map.copyOf(result);
     }
 
     /**
@@ -46,15 +71,27 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
     @Override
     public WarframeBountyVO page(String keyword, int page) {
         List<WarframeBountyVO.EntryVO> result = new ArrayList<>();
-        for (var root : catalog.records(WarframeOfficialDataDomain.BOUNTY)) {
-            if (!root.bkey().startsWith("definitions/") || !data.matches(root, keyword))
+        String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        var keys = catalog.nameIndex(WarframeOfficialDataDomain.BOUNTY).items().values().stream()
+            .filter(row -> row.bkey().startsWith("definitions/")
+                && (row.bkey() + " " + row.officialName() + " " + row.localizedName()).toLowerCase(Locale.ROOT)
+                    .contains(query))
+            .map(row -> row.bkey()).sorted().toList();
+        int totalPages = Math.max(1, (int)((keys.size() + (long)BOUNTY_PAGE_SIZE - 1) / BOUNTY_PAGE_SIZE));
+        int currentPage = Math.max(1, Math.min(page, totalPages));
+        int from = (currentPage - 1) * BOUNTY_PAGE_SIZE;
+        var pageKeys = keys.subList(from, Math.min(from + BOUNTY_PAGE_SIZE, keys.size()));
+        var rows = catalog.records(WarframeOfficialDataDomain.BOUNTY, pageKeys);
+        for (String key : pageKeys) {
+            var root = rows.get(key.toLowerCase(Locale.ROOT));
+            if (root == null)
                 continue;
             var value = details((OfficialBountyDTO)root.data(), root.bkey().substring("definitions/".length()));
             result.add(new WarframeBountyVO.EntryVO(value.jobType(), name(root), description(root.data()),
                 first(((OfficialBountyDTO)root.data()).getIcon()), "", OFFICIAL_SOURCE_CODE, "ROOT_SELECTED",
                 value.stages()));
         }
-        return WarframeBountyVO.page(keyword, result, page);
+        return new WarframeBountyVO(keyword, currentPage, totalPages, keys.size(), result);
     }
 
     /**

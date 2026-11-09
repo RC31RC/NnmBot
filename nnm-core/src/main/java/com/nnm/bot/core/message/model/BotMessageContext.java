@@ -1,16 +1,14 @@
 package com.nnm.bot.core.message.model;
 
-import com.nnm.bot.core.plugin.model.CommandExecutionContext;
-
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.core.constant.BotChannelErrorCode;
 import com.nnm.bot.core.constant.BotMessageScope;
 import com.nnm.bot.core.constant.BotPlatform;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-
+import com.nnm.bot.core.plugin.model.CommandExecutionContext;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import org.springframework.util.Assert;
 
 /**
  * 与平台无关的消息上下文，供插件处理消息时使用。
@@ -45,6 +43,7 @@ public final class BotMessageContext {
     private final BotMessageReference reference;
     /** QQ 当前消息自身的引用索引，与平台 messageId 分别保存。 */
     private final String referenceIndex;
+    private final String invocationId;
     private final String dispatchId;
     private final long receivedAt;
     private final CommandExecutionContext execution;
@@ -53,13 +52,13 @@ public final class BotMessageContext {
         String conversationId, String messageId, String rawMessage, String message, Object nativeSource,
         List<BotIncomingAttachment> attachments) {
         this(platform, scope, botAccountId, senderId, conversationId, messageId, rawMessage, message, nativeSource,
-            attachments, null, System.currentTimeMillis(), null, null, null);
+            attachments, UUID.randomUUID().toString(), null, System.currentTimeMillis(), null, null, null);
     }
 
     private BotMessageContext(BotPlatform platform, BotMessageScope scope, String botAccountId, String senderId,
         String conversationId, String messageId, String rawMessage, String message, Object nativeSource,
-        List<BotIncomingAttachment> attachments, String dispatchId, long receivedAt, CommandExecutionContext execution,
-        BotMessageReference reference, String referenceIndex) {
+        List<BotIncomingAttachment> attachments, String invocationId, String dispatchId, long receivedAt,
+        CommandExecutionContext execution, BotMessageReference reference, String referenceIndex) {
         this.platform = platform;
         this.scope = scope;
         this.botAccountId = botAccountId;
@@ -70,6 +69,7 @@ public final class BotMessageContext {
         this.message = message;
         this.nativeSource = nativeSource;
         this.attachments = attachments == null ? List.of() : List.copyOf(attachments);
+        this.invocationId = invocationId;
         this.dispatchId = dispatchId;
         this.receivedAt = receivedAt;
         this.execution = execution;
@@ -102,24 +102,25 @@ public final class BotMessageContext {
 
     public BotMessageContext withDispatchId(String id) {
         return new BotMessageContext(platform, scope, botAccountId, senderId, conversationId, messageId, rawMessage,
-            message, nativeSource, attachments, id, receivedAt, execution, reference, referenceIndex);
+            message, nativeSource, attachments, invocationId, id, receivedAt, execution, reference, referenceIndex);
     }
 
     public BotMessageContext withReceivedAt(long timestamp) {
         Assert.isTrue(timestamp > 0, "receivedAt must be positive");
         return new BotMessageContext(platform, scope, botAccountId, senderId, conversationId, messageId, rawMessage,
-            message, nativeSource, attachments, dispatchId, timestamp, execution, reference, referenceIndex);
+            message, nativeSource, attachments, invocationId, dispatchId, timestamp, execution, reference,
+            referenceIndex);
     }
 
     public BotMessageContext withExecution(CommandExecutionContext value) {
         return new BotMessageContext(platform, scope, botAccountId, senderId, conversationId, messageId, rawMessage,
-            message, nativeSource, attachments, dispatchId, receivedAt, value, reference, referenceIndex);
+            message, nativeSource, attachments, invocationId, dispatchId, receivedAt, value, reference, referenceIndex);
     }
 
     /** 复制平台引用元数据，不发起网络读取。 */
     public BotMessageContext withReference(BotMessageReference value, String index) {
         return new BotMessageContext(platform, scope, botAccountId, senderId, conversationId, messageId, rawMessage,
-            message, nativeSource, attachments, dispatchId, receivedAt, execution, value, index);
+            message, nativeSource, attachments, invocationId, dispatchId, receivedAt, execution, value, index);
     }
 
     /** 返回显式引用；普通消息为空。 */
@@ -134,6 +135,11 @@ public final class BotMessageContext {
 
     public CommandExecutionContext execution() {
         return execution;
+    }
+
+    /** 本次进入系统的调用身份；无平台消息 ID 时只能保证同一次调用内的重试幂等。 */
+    public String invocationId() {
+        return invocationId;
     }
 
     public String dispatchId() {

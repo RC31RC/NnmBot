@@ -1,11 +1,10 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.common.task.TaskProgressReporter;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
-import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ApplyFileStatus;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ChangeType;
@@ -16,6 +15,7 @@ import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialSnapshotP
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFilteredChangesDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyFileDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialSnapshotDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
@@ -30,11 +30,9 @@ import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficial
 import com.nnm.bot.warframe.storage.WarframeOfficialSnapshotStore;
 import jakarta.annotation.Resource;
 import java.nio.file.Files;
-import java.time.Instant;
-import java.util.Set;
-import java.util.Map;
 import java.util.List;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyFileDTO;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -70,35 +68,40 @@ public class WarframeOfficialApplyWorkServiceImpl implements WarframeOfficialApp
         state.freeze(batchId, selection);
     }
 
+    /** 按本实例串行耗尽当前可认领文件，其他实例仍可并行处理不同文件。 */
     @Override
-    public void processOne() {
+    public void processAvailable() {
         if (!running.compareAndSet(false, true))
             return;
         try {
-            for (var batch : batches
-                .findAllByStatusAndApplyPlanJsonIsNullOrderByCreatedAtAsc(ImportStatus.APPLYING.name())) {
-                try {
-                    preparation.prepare(batch.getId());
-                } catch (RuntimeException exception) {
-                    log.warn("官方批次 {} 准备失败，下一轮重试", batch.getId(), exception);
+            work:
+            while (!Thread.currentThread().isInterrupted()) {
+                for (var batch : batches
+                    .findAllByStatusAndApplyPlanJsonIsNullOrderByCreatedAtAsc(ImportStatus.APPLYING.name())) {
+                    try {
+                        preparation.prepare(batch.getId());
+                    } catch (RuntimeException exception) {
+                        log.warn("官方批次 {} 准备失败，下一轮重试", batch.getId(), exception);
+                        return;
+                    }
+                    continue work;
                 }
-                return;
-            }
-            var claim = state.claim();
-            if (claim.isEmpty()) {
-                // 纯零差异审批无需文件工作项；断电后最后一个 DONE 的批次也在这里收尾。
-                batches.findAllByStatusOrderByCreatedAtDesc(ImportStatus.APPLYING.name())
-                    .forEach(batch -> state.finish(batch.getId()));
-                return;
-            }
-            WarframeOfficialApplyFile job = claim.get();
-            try {
-                processFile(job);
-            } catch (Exception exception) {
-                log.warn("官方文件 {} 入库未完成", job.getProductPath(), exception);
-                state.fail(job.getId(), job.getOwnerToken(), exception);
-            } finally {
-                state.finish(job.getBatchId());
+                var claim = state.claim();
+                if (claim.isEmpty()) {
+                    // 纯零差异审批无需文件工作项；断电后最后一个 DONE 的批次也在这里收尾。
+                    batches.findAllByStatusOrderByCreatedAtDesc(ImportStatus.APPLYING.name())
+                        .forEach(batch -> state.finish(batch.getId()));
+                    return;
+                }
+                WarframeOfficialApplyFile job = claim.get();
+                try {
+                    processFile(job);
+                } catch (Exception exception) {
+                    log.warn("官方文件 {} 入库未完成", job.getProductPath(), exception);
+                    state.fail(job.getId(), job.getOwnerToken(), exception);
+                } finally {
+                    state.finish(job.getBatchId());
+                }
             }
         } finally {
             running.set(false);
@@ -143,7 +146,6 @@ public class WarframeOfficialApplyWorkServiceImpl implements WarframeOfficialApp
                     throw new BusinessException(OfficialApprovalErrorCode.PARTIAL_APPLY_FAILED);
                 return imports.preview(batchId);
             }
-            processOne();
             var files = jobs.findAllByBatchId(batchId);
             reporter.report(ImportStage.APPLYING.name(),
                 "已入库 " + files.stream().filter(item -> ApplyFileStatus.DONE.name().equals(item.getStatus())).count()

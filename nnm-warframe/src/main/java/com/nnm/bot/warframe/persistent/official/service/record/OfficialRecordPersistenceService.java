@@ -1,9 +1,10 @@
 package com.nnm.bot.warframe.persistent.official.service.record;
 
-import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordIdentityQuery;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
+import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordIdentityQuery;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -120,4 +121,30 @@ public interface OfficialRecordPersistenceService {
      * @return 以本方法约定的业务键组织的数据映射。
      */
     Map<String, Long> officialIdentities(Collection<String> paths);
+
+    /**
+     * 已知数据集时直达具体 Repository，不探测其他主表。
+     *
+     * @param domain 独立 JSON 领域。
+     * @param id 本地主键。
+     * @return 当前主表中找到的实体。
+     */
+    Optional<OfficialRecord> findById(WarframeOfficialDataDomain domain, long id);
+
+    /**
+     * 按已知独立主表直接读取非受管摘要。
+     *
+     * @param domain 独立 JSON 领域。
+     * @param id 本地主键。
+     * @return 找到的非受管摘要。
+     */
+    Optional<WarframeOfficialRecordDTO> findDataById(WarframeOfficialDataDomain domain, long id);
+
+    /**
+     * 按已知独立主表直接删除根和必要子树。
+     *
+     * @param domain 独立 JSON 领域。
+     * @param ids 本次删除的根主键。
+     */
+    void deleteRecords(WarframeOfficialDataDomain domain, Collection<Long> ids);
 }

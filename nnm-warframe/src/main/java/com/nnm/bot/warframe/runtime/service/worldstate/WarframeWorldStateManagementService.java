@@ -14,6 +14,13 @@ public interface WarframeWorldStateManagementService {
     WarframeWorldStateManagementVO current();
 
     /**
+     * 展示完整解析字段，不套用机器人命令的字段裁剪和条数限制。
+     *
+     * @return 按运行时业务字段分区的完整解析视图。
+     */
+    WarframeWorldStateManagementVO parsed();
+
+    /**
      * 读取排障使用的原始快照和采集信息。
      *
      * @return 用于排障的世界状态原文及采集信息。

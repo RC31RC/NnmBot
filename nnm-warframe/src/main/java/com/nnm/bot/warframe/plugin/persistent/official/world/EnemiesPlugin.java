@@ -8,7 +8,7 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeCatalogConstants.EnemySection;
-import com.nnm.bot.warframe.persistent.official.pojo.query.world.WarframeEnemyQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.world.WarframeEnemyCommandDTO;
 import com.nnm.bot.warframe.persistent.official.service.world.WarframeEnemyService;
 import jakarta.annotation.Resource;
 import java.util.HashSet;
@@ -19,7 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @BotPluginCommand(code = WarframeCommandCodes.ENEMIES, matchType = MatchType.PREFIX)
-public final class EnemiesPlugin extends BotPlugin<Void, WarframeEnemyQuery> {
+public final class EnemiesPlugin extends BotPlugin<Void, WarframeEnemyCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -28,7 +28,7 @@ public final class EnemiesPlugin extends BotPlugin<Void, WarframeEnemyQuery> {
      * @return 类型化的查询条件及参数错误
      */
     @Override
-    protected WarframeEnemyQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeEnemyCommandDTO parse(CommandInvocation invocation, Void prepared) {
         String arguments = invocation.arguments() == null ? "" : invocation.arguments().trim();
         EnemySection section = EnemySection.AVATARS;
         int page = 1;
@@ -40,32 +40,32 @@ public final class EnemiesPlugin extends BotPlugin<Void, WarframeEnemyQuery> {
             keyword.append(arguments, start, matcher.start()).append(' ');
             start = matcher.end();
             if (!seen.add(matcher.group(1)))
-                return new WarframeEnemyQuery(arguments, section, page, "敌人资料参数重复");
+                return new WarframeEnemyCommandDTO(arguments, section, page, "敌人资料参数重复");
             if ("section".equals(matcher.group(1))) {
                 try {
                     section = EnemySection.valueOf(matcher.group(2).replace('-', '_').toUpperCase(Locale.ROOT));
                 } catch (IllegalArgumentException exception) {
-                    return new WarframeEnemyQuery(arguments, section, page,
+                    return new WarframeEnemyCommandDTO(arguments, section, page,
                         "分区必须为 avatars、agents、damage-controllers、droptables、hit-proxies 或 ai-weapons");
                 }
             } else {
                 if (!matcher.group(2).matches("[0-9]+"))
-                    return new WarframeEnemyQuery(arguments, section, page, "页码必须为正整数");
+                    return new WarframeEnemyCommandDTO(arguments, section, page, "页码必须为正整数");
                 try {
                     page = Integer.parseInt(matcher.group(2));
                 } catch (NumberFormatException exception) {
                     page = Integer.MAX_VALUE;
                 }
                 if (page < 1)
-                    return new WarframeEnemyQuery(arguments, section, page, "页码必须为正整数");
+                    return new WarframeEnemyCommandDTO(arguments, section, page, "页码必须为正整数");
             }
         }
         String query = keyword.append(arguments.substring(start)).toString().trim().replaceAll("\\s+", " ");
         if (UNKNOWN.matcher(query).find())
-            return new WarframeEnemyQuery(query, section, page, "敌人资料参数不合法");
+            return new WarframeEnemyCommandDTO(query, section, page, "敌人资料参数不合法");
         if (query.length() > 500)
-            return new WarframeEnemyQuery(query, section, page, "查询内容过长，请缩短到 500 字以内");
-        return new WarframeEnemyQuery(query, section, page, null);
+            return new WarframeEnemyCommandDTO(query, section, page, "查询内容过长，请缩短到 500 字以内");
+        return new WarframeEnemyCommandDTO(query, section, page, null);
     }
 
     private static final Pattern OPTION = Pattern.compile("(?:^|\\s)--(section|page)(?:\\s+|=)(\\S+)");
@@ -82,7 +82,7 @@ public final class EnemiesPlugin extends BotPlugin<Void, WarframeEnemyQuery> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeEnemyQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeEnemyCommandDTO parsed) {
         if (parsed.error() != null)
             return CommandResult.rejected(parsed.error());
         WarframeEnemyVO display = enemyService.query(parsed.keyword(), parsed.section(), parsed.page());

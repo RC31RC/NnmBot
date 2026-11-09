@@ -1,14 +1,17 @@
 package com.nnm.bot.warframe.config;
 
-import com.nnm.bot.warframe.constant.WarframeCacheNames;
 import com.nnm.bot.warframe.config.cache.WarframeCacheProperties;
 import com.nnm.bot.warframe.config.cache.WarframeCacheProperties.CacheRegion;
+import com.nnm.bot.warframe.constant.WarframeCacheNames;
+import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import java.util.concurrent.atomic.AtomicLong;
 import org.cache2k.Cache2kBuilder;
 import org.cache2k.extra.spring.SpringCache2kCacheManager;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Configuration(proxyBeanMethods = false)
 public class WarframeCacheConfiguration {
@@ -32,11 +35,27 @@ public class WarframeCacheConfiguration {
                 builder -> region(builder, WarframeCacheNames.MARKET_ORDERS, properties.getMarketOrders()),
                 builder -> region(builder, WarframeCacheNames.MARKET_AUCTIONS, properties.getMarketAuctions()),
                 builder -> region(builder, WarframeCacheNames.MARKET_STATISTICS, properties.getMarketStatistics()),
-                builder -> region(builder, WarframeCacheNames.ITEM_RESOLUTION_INDEX,
-                    properties.getItemResolutionIndex()),
-                builder -> region(builder, WarframeCacheNames.IMAGE_INDEX, properties.getImageIndex()),
                 builder -> region(builder, WarframeCacheNames.RIVEN_WEEKLY, properties.getRivenWeekly()),
                 builder -> region(builder, WarframeCacheNames.WORLD_STATE_IMAGES, properties.getWorldStateImages()));
+        for (WarframeOfficialDataDomain domain : WarframeOfficialDataDomain.values()) {
+            if (domain == WarframeOfficialDataDomain.OTHER)
+                continue;
+            String dataset = WarframeDatasetCacheNames.official(domain);
+            CacheRegion records = properties.getDatasets().getOrDefault(domain.domainCode(),
+                domain == WarframeOfficialDataDomain.LANGUAGE_STRING ? properties.getLanguageRecords()
+                    : properties.getDatasetRecords());
+            cacheManager.addCaches(
+                builder -> region(builder,
+                    WarframeDatasetCacheNames.region(dataset, WarframeDatasetCacheNames.SNAPSHOTS),
+                    properties.getDatasetSnapshots()),
+                builder -> region(builder, WarframeDatasetCacheNames.region(dataset, WarframeDatasetCacheNames.RECORDS),
+                    records));
+        }
+        for (WarframeCommunityDataset dataset : WarframeCommunityDataset.values()) {
+            cacheManager.addCaches(builder -> region(builder, WarframeDatasetCacheNames
+                .region(WarframeDatasetCacheNames.community(dataset), WarframeDatasetCacheNames.SNAPSHOTS),
+                properties.getDatasetSnapshots()));
+        }
         cacheManager.setAllowUnknownCache(false);
         return cacheManager;
     }

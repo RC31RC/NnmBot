@@ -1,24 +1,23 @@
 package com.nnm.bot.warframe.persistent.official.service.rewards.impl;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialRewardPoolDTO;
-import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialSelectionService;
-import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import java.util.ArrayList;
-import java.util.List;
 import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.*;
-import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRewardPoolService;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialRewardPoolDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeRewardPoolVO.EntryVO;
+import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
+import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRewardPoolService;
+import jakarta.annotation.Resource;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import org.springframework.stereotype.Service;
 
 @Service
 public class WarframeRewardPoolServiceImpl implements WarframeRewardPoolService {
     @Resource
-    private WarframeOfficialRecordReadService catalog;
-    @Resource
-    private WarframeOfficialSelectionService data;
+    private WarframeOfficialLookupService catalog;
 
     /**
      * 按给定业务条件查询奖励池。
@@ -30,12 +29,29 @@ public class WarframeRewardPoolServiceImpl implements WarframeRewardPoolService 
     @Override
     public List<EntryVO> find(String keyword, Integer stage) {
         List<EntryVO> result = new ArrayList<>();
-        for (var root : catalog.records(WarframeOfficialDataDomain.REWARD_POOL)) {
-            if (!data.matches(root, keyword))
-                continue;
+        String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        var keys = catalog.nameIndex(WarframeOfficialDataDomain.REWARD_POOL).items().values().stream()
+            .filter(row -> (row.bkey() + " " + row.officialName() + " " + row.localizedName()).toLowerCase(Locale.ROOT)
+                .contains(query))
+            .map(row -> row.bkey()).toList();
+        for (var root : catalog.records(WarframeOfficialDataDomain.REWARD_POOL, keys).values()) {
             collect(root.bkey(), name(root), (OfficialRewardPoolDTO)root.data(), stage, result);
         }
         return result;
+    }
+
+    /**
+     * 按引用键一次补查缺失奖励池，缓存命中不访问数据库。
+     *
+     * @param poolKeys 本次引用的奖励池键。
+     * @return 本次需要的阶段奖励投影。
+     */
+    @Override
+    public List<EntryVO> findAll(Collection<String> poolKeys) {
+        List<EntryVO> result = new ArrayList<>();
+        catalog.records(WarframeOfficialDataDomain.REWARD_POOL, poolKeys).values()
+            .forEach(root -> collect(root.bkey(), name(root), (OfficialRewardPoolDTO)root.data(), null, result));
+        return List.copyOf(result);
     }
 
     /**

@@ -12,8 +12,9 @@ import java.time.Instant;
  * @param missionType 经代码簿解析的任务类型，用于高效筛选
  * @param enemy 经代码簿解析的敌方阵营
  * @param planet 经代码簿解析的星球，用于高效筛选
+ * @param nodeReference 文本上游的原始星图键；直接给出展示字段的 JSON 上游为空
  * @param boundsJson 上游边界信息；arbys.txt 未提供时保留空对象，不推算补造
  */
 public record ArbitrationScheduleEntryDTO(String id, Instant activation, Instant expiry, String node,
-    String missionType, String enemy, String planet, String boundsJson) {
+    String missionType, String enemy, String planet, String boundsJson, String nodeReference) {
 }

@@ -6,7 +6,7 @@ import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
-import com.nnm.bot.warframe.persistent.official.pojo.query.upgrades.WarframeUpgradeQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeUpgradeCommandDTO;
 
 @BotPluginCommand(code = WarframeCommandCodes.MOD_SETS, matchType = MatchType.PREFIX)
 // Plus ExportModSet -> mod_set + mod_set_plus_rank_stat，等级表示装备件数。
@@ -19,7 +19,7 @@ public final class ModSetsPlugin extends AbstractUpgradePlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeUpgradeQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeUpgradeCommandDTO parsed) {
         return upgrade(Category.MOD_SET, "MOD 套装", parsed);
     }
 }

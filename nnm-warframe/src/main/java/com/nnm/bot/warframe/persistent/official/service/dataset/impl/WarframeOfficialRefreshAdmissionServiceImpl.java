@@ -1,7 +1,12 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ACTIVE_REFRESH_PREFIX;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ALL_SCOPE;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.APPLY_TASK_PREFIX;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_ALL_TASK_PREFIX;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_PERMISSION;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_TASK_PREFIX;
 import cn.hutool.core.util.StrUtil;
-
 import com.nnm.bot.common.constant.TaskConstants.AdminTaskStatus;
 import com.nnm.bot.common.task.AdminTaskEvent;
 import com.nnm.bot.common.task.AdminTaskService;
@@ -10,22 +15,16 @@ import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStatus;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.APPLY_TASK_PREFIX;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_TASK_PREFIX;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_ALL_TASK_PREFIX;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ACTIVE_REFRESH_PREFIX;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ALL_SCOPE;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_PERMISSION;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRefreshConflictDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
-import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportBatchRepository;
-import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
-import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialImportService;
-import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialRetentionService;
 import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialSnapshotParser;
-import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialRefreshAdmissionService;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRefreshConflictDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportBatchRepository;
 import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialApplyWorkService;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialImportService;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialRefreshAdmissionService;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialRetentionService;
 import io.github.rdt.state.SharedStateStore;
 import jakarta.annotation.Resource;
 import java.time.Instant;
@@ -75,7 +74,15 @@ public class WarframeOfficialRefreshAdmissionServiceImpl implements WarframeOffi
             active(productPath).ifPresent(running::add);
         }
         Instant now = Instant.now();
-        List<WarframeOfficialImportBatch> all = batches.findAll();
+        var all = batches
+            .findAllProjectedByStatusIn(
+                List.of(ImportStatus.APPLYING.name(), ImportStatus.PENDING.name(), ImportStatus.PARTIAL_FAILED.name()))
+            .stream()
+            .filter(batch -> ImportStatus.APPLYING.name().equals(batch.getStatus())
+                || ImportStatus.PENDING.name().equals(batch.getStatus()) && batch.getExpiresAt().isAfter(now)
+                || ImportStatus.PARTIAL_FAILED.name().equals(batch.getStatus())
+                    && (batch.getRetryExpiresAt() == null || batch.getRetryExpiresAt().isAfter(now)))
+            .toList();
         // 即使预览已到期，正在排队／执行的采纳也必须阻止新的刷新。
         all.forEach(batch -> tasks.findActive(APPLY_TASK_PREFIX + batch.getId()).flatMap(tasks::find)
             .ifPresent(event -> running.add(new WarframeOfficialRefreshConflictDTO.TaskDTO(event.taskId(),

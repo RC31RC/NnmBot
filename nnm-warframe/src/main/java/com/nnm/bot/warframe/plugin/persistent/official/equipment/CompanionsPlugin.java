@@ -4,7 +4,7 @@ import java.util.regex.Matcher;
 import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.warframe.persistent.official.pojo.query.catalog.WarframeCatalogPageQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.catalog.WarframeCatalogPageCommandDTO;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 @BotPluginCommand(code = WarframeCommandCodes.COMPANIONS, matchType = MatchType.PREFIX)
-public final class CompanionsPlugin extends BotPlugin<Void, WarframeCatalogPageQuery> {
+public final class CompanionsPlugin extends BotPlugin<Void, WarframeCatalogPageCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -24,7 +24,7 @@ public final class CompanionsPlugin extends BotPlugin<Void, WarframeCatalogPageQ
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeCatalogPageQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeCatalogPageCommandDTO parse(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
@@ -32,15 +32,15 @@ public final class CompanionsPlugin extends BotPlugin<Void, WarframeCatalogPageQ
             try {
                 page = Integer.parseInt(matcher.group(1));
             } catch (NumberFormatException exception) {
-                return new WarframeCatalogPageQuery(query, page, "页码必须为有效的正整数：--page 2");
+                return new WarframeCatalogPageCommandDTO(query, page, "页码必须为有效的正整数：--page 2");
             }
             query = query.substring(0, matcher.start()).trim();
         }
         if (page < 1 || OPTION.matcher(query).find())
-            return new WarframeCatalogPageQuery(query, page, "仅支持末尾分页参数：--page 2");
+            return new WarframeCatalogPageCommandDTO(query, page, "仅支持末尾分页参数：--page 2");
         if (query.length() > 200)
-            return new WarframeCatalogPageQuery(query, page, "查询内容过长，请缩短到 200 字以内");
-        return new WarframeCatalogPageQuery(query, page, null);
+            return new WarframeCatalogPageCommandDTO(query, page, "查询内容过长，请缩短到 200 字以内");
+        return new WarframeCatalogPageCommandDTO(query, page, null);
     }
 
     private static final Pattern PAGE = Pattern.compile("(?:^|\\s)--page(?:\\s+|=)([0-9]+)$");
@@ -57,7 +57,7 @@ public final class CompanionsPlugin extends BotPlugin<Void, WarframeCatalogPageQ
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeCatalogPageQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeCatalogPageCommandDTO parsed) {
         if (parsed.error() != null)
             return CommandResult.rejected(parsed.error());
         WarframeCompanionVO display =

@@ -1,30 +1,30 @@
 package com.nnm.bot.warframe.persistent.official.repository.support;
 
-import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialIdentityDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialSummaryDTO;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
-
-import cn.hutool.core.util.StrUtil;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialIdentityDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialNameDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialSummaryDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
 import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordQuery;
-import org.springframework.data.domain.Page;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.repository.NoRepositoryBean;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.repository.NoRepositoryBean;
 
 /** 仅复用单表查询代码；每个具体接口绑定自己的 Entity 和独立业务表。 */
 @NoRepositoryBean
@@ -81,6 +81,36 @@ public interface OfficialMainRepository<T extends OfficialRecord>
                 preferredEnabled().and((entity, query, builder) -> entity.get("id").in(batch));
             result.addAll(findBy(specification, query -> query.as(OfficialSummaryDTO.class).all()).stream()
                 .map(this::toData).toList());
+        }
+        return result;
+    }
+
+    /**
+     * 读取本数据集的轻量名称投影。
+     *
+     * @return 不含描述长文本与子表的投影。
+     */
+    default List<OfficialNameDTO> findNames() {
+        return findBy(
+            preferredEnabled().and((entity, query, builder) -> builder.notEqual(entity.get("bkey"), METADATA_BKEY)),
+            query -> query.as(OfficialNameDTO.class).all());
+    }
+
+    /**
+     * 按业务键真正分批查询，仅装载本次需要的记录。
+     *
+     * @param keys 已规范化的业务键。
+     * @return 自维护优先的摘要，未找到的键不返回。
+     */
+    default List<WarframeOfficialRecordDTO> findPreferredSummariesByKeys(Collection<String> keys) {
+        List<String> requested = keys.stream().map(key -> key.trim().toLowerCase(Locale.ROOT)).distinct().toList();
+        List<WarframeOfficialRecordDTO> result = new ArrayList<>();
+        for (int start = 0; start < requested.size(); start += RECORD_BATCH_SIZE) {
+            List<String> batch = requested.subList(start, Math.min(start + RECORD_BATCH_SIZE, requested.size()));
+            Specification<T> spec = preferredEnabled().and((entity, query, builder) -> builder
+                .and(builder.lower(entity.get("bkey")).in(batch), builder.notEqual(entity.get("bkey"), METADATA_BKEY)));
+            result.addAll(
+                findBy(spec, query -> query.as(OfficialSummaryDTO.class).all()).stream().map(this::toData).toList());
         }
         return result;
     }

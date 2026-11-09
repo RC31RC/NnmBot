@@ -14,6 +14,7 @@ import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketItemDTO;
 import com.nnm.bot.warframe.runtime.pojo.vo.market.WarframeMarketOrderVO;
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.OrderFilter;
 import com.nnm.bot.warframe.runtime.pojo.query.market.WarframeMarketOrderQuery;
+import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketCommandDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemResolutionDTO;
 import com.nnm.bot.warframe.runtime.service.market.WarframeMarketService;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeItemResolverService;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @BotPluginCommand(code = WarframeCommandCodes.MARKET, matchType = MatchType.PREFIX)
 // 订单来自 Warframe Market API；商品身份从官方目录与人工别名/术语白名单解析。
-public class MarketPlugin extends BotPlugin<Void, WarframeMarketOrderQuery> {
+public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -41,7 +42,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketOrderQuery> {
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeMarketOrderQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeMarketCommandDTO parse(CommandInvocation invocation, Void prepared) {
         return parseQuery(invocation.arguments());
     }
 
@@ -61,14 +62,13 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketOrderQuery> {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMarketOrderQuery parsed) {
-        WarframeMarketOrderQuery query = parsed;
-        if (StrUtil.isBlank(query.itemInput())) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMarketCommandDTO parsed) {
+        if (StrUtil.isBlank(parsed.itemInput())) {
             return CommandResult.rejected("格式：wm [满级] [买家|卖家] [平台] 物品名称 [页码]");
         }
-        WarframeItemResolutionDTO resolution = itemResolver.resolve(query.itemInput());
+        WarframeItemResolutionDTO resolution = itemResolver.resolve(parsed.itemInput());
         // Market 有自己的可交易目录，不能因为官方物品多候选就提前拒绝匹配。
-        String slug = resolveMarketSlug(query.itemInput(), resolution);
+        String slug = resolveMarketSlug(parsed.itemInput(), resolution);
         if (StrUtil.isBlank(slug)) {
             if (resolution.ambiguous()) {
                 return CommandResult.rejected("物品名称存在多个候选，请输入更完整的名称：" + resolution.candidates().stream()
@@ -76,10 +76,11 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketOrderQuery> {
             }
             return CommandResult.rejected("没有找到对应的 Warframe Market 物品，请输入物品名称或 Market URL 名称");
         }
-        query = query.withMarketSlug(slug);
+        WarframeMarketOrderQuery query = new WarframeMarketOrderQuery(parsed.itemInput(), slug, parsed.platform(),
+            parsed.filter(), parsed.maxLevel(), parsed.page());
         Optional<WarframeMarketOrderPageDTO> result = marketService.queryOrders(query);
         if (result.isEmpty()) {
-            return CommandResult.rejected("暂时无法获取 " + query.itemInput() + " 的市场订单，请稍后再试");
+            return CommandResult.rejected("暂时无法获取 " + parsed.itemInput() + " 的市场订单，请稍后再试");
         }
         WarframeMarketOrderPageDTO data = result.get();
         // Service 保留完整查询能力；WM 不将百科详情和重复订单视图交给发送渠道。
@@ -92,7 +93,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketOrderQuery> {
      * @param raw 原始。
      * @return 游戏资料市场订单查询对象。
      */
-    static WarframeMarketOrderQuery parseQuery(String raw) {
+    static WarframeMarketCommandDTO parseQuery(String raw) {
         String[] tokens = StrUtil.emptyIfNull(raw).trim().split("\\s+");
         boolean maxLevel = false;
         OrderFilter filter = OrderFilter.ALL;
@@ -128,7 +129,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketOrderQuery> {
                 item.add(token);
             }
         }
-        return new WarframeMarketOrderQuery(String.join(" ", item), "", platform, filter, maxLevel, page);
+        return new WarframeMarketCommandDTO(String.join(" ", item), platform, filter, maxLevel, page);
     }
 
     /**

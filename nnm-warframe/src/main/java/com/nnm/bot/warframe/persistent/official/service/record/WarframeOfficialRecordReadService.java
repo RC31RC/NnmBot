@@ -1,10 +1,11 @@
 package com.nnm.bot.warframe.persistent.official.service.record;
 
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.world.WarframeOfficialRegionDTO;
-import java.util.List;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -22,17 +23,27 @@ public interface WarframeOfficialRecordReadService {
     /**
      * 读取当前条件下的业务记录。
      *
-     * @return 当前独立官方记录的摘要及类型化详情组成的列表。
-     */
-    List<WarframeOfficialRecordReadDTO> records();
-
-    /**
-     * 读取当前条件下的业务记录。
-     *
      * @param domain 官方数据文件所属的业务领域。
      * @return 当前独立官方记录的摘要及类型化详情组成的列表。
      */
     List<WarframeOfficialRecordReadDTO> records(WarframeOfficialDataDomain domain);
+
+    /**
+     * 只读取一个独立数据集的名称投影。
+     *
+     * @param domain 独立 JSON 领域。
+     * @return 不含长文本与子树的名称投影。
+     */
+    List<WarframeOfficialNameDTO> names(WarframeOfficialDataDomain domain);
+
+    /**
+     * 按本次请求的业务键批量装载摘要及所需子树。
+     *
+     * @param domain 独立 JSON 领域。
+     * @param keys 稳定业务键。
+     * @return 实际找到的记录。
+     */
+    List<WarframeOfficialRecordReadDTO> recordsByKeys(WarframeOfficialDataDomain domain, Collection<String> keys);
 
     /**
      * 按已在数据库筛选出的本地主键装载完整记录树。

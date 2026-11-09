@@ -4,13 +4,16 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
-import java.time.Instant;
+import org.hibernate.annotations.DynamicUpdate;
 
 /** 每个官方 JSON 文件的采纳与候选版本状态；仅待审候选原文暂存在对象存储。 */
 @Getter
 @Setter
+// 候选元数据可能与业务写入并发更新，不能把读取时的旧数据版本写回数据库。
+@DynamicUpdate
 @Entity
 @Table(name = "wf_official_dataset_file")
 public class WarframeOfficialFile {
@@ -18,6 +21,10 @@ public class WarframeOfficialFile {
     @Id
     @Column(name = "product_path", nullable = false, length = 260)
     private String productPath;
+
+    /** 数据库可见内容版本；采纳和人工维护均在原事务内递增。 */
+    @Column(name = "data_revision", nullable = false)
+    private long dataRevision;
 
     @Column(name = "adopted_sha256", length = 64)
     private String adoptedSha256;

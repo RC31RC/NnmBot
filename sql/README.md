@@ -16,10 +16,21 @@
 
 群组级联约束、官方批次失败重试期限及对象回收标记均已归入 `init.sql`，不再保留本轮 01、02 临时脚本。
 
+## 本轮缓存版本升级
+
+已有开发库先执行一次 `01_dataset_cache_revision.sql`，再启动本轮代码。脚本在现有
+`wf_official_dataset_file` 和 `wf_community_dataset_lock` 中增加 `data_revision`，并补齐
+71 个官方 JSON 的文件锁行；保留已采纳 SHA、来源及业务内容，不拉取或重导入数据。
+新数据库仍只执行 `init.sql`，不重复执行 01。文件锁的初始 `checked_at=epoch` 不代表已成功拉取。
+
+版本与每个写事务原子递增，缓存通知只在提交后广播；失败时以各实例定时复核版本补偿。
+本轮没有 Outbox/Inbox 表、自动迁移器或第二份统一业务主表。
+
 ## 验证
 
 ```sh
 node scripts/database/verify-warframe-sql.cjs --hibernate
+node scripts/database/verify-dataset-cache-sql.cjs
 node scripts/database/verify-bounty-sql.cjs
 node scripts/database/verify-worldstate-command-sql.cjs
 node scripts/database/verify-bot-reply-routing.cjs

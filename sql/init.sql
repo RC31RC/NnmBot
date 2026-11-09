@@ -6259,6 +6259,7 @@ COMMENT ON COLUMN nnmbot.wf_official_rebuild_marker.requested_at IS '登记待�
 -- BEGIN GENERATED NNM DATASET FILE ENTITY
 CREATE TABLE nnmbot.wf_official_dataset_file (
     product_path character varying(260) PRIMARY KEY,
+    data_revision bigint NOT NULL DEFAULT 0 CONSTRAINT ck_wf_official_dataset_revision CHECK (data_revision >= 0),
     adopted_sha256 character varying(64),
     candidate_sha256 character varying(64),
     json_changed boolean NOT NULL DEFAULT false,
@@ -6281,6 +6282,7 @@ CREATE TABLE nnmbot.wf_official_dataset_file (
     CONSTRAINT ck_wf_dataset_file_commit CHECK (commit_sha IS NULL OR commit_sha ~ '^[a-f0-9]{40}$'),
     CONSTRAINT ck_wf_dataset_file_parser_version CHECK (parser_contract_version > 0)
 );
+COMMENT ON COLUMN nnmbot.wf_official_dataset_file.data_revision IS '数据库可见内容版本；采纳、删除和自维护覆盖均在原写事务中递增，与上游 SHA 无关';
 COMMENT ON TABLE nnmbot.wf_official_dataset_file IS '逐 Nnm JSON 文件维护当前版本、候选版本与变化调度状态';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_file.product_path IS 'Nnm 静态 JSON 文件相对路径及稳定主键';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_file.adopted_sha256 IS '当前已审核采纳源文件 SHA-256';
@@ -6300,6 +6302,80 @@ COMMENT ON COLUMN nnmbot.wf_official_dataset_file.candidate_parser_contract_vers
 COMMENT ON COLUMN nnmbot.wf_official_dataset_file.parser_contract_version IS '规范化解析契约版本；变化时要求重新解析';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_file.adopted_at IS '当前文件版本最后一次事务采纳时间';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_file.checked_at IS '候选文件最后一次完成契约校验的时间';
+-- 每个 JSON 预建文件锁及版本行，首次官方导入前的自维护写入也有独立版本。
+INSERT INTO nnmbot.wf_official_dataset_file(product_path, checked_at) VALUES
+    ('crafting/recipes.json.gz', TIMESTAMPTZ 'epoch'),
+    ('crafting/dojo-recipes.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/abilities.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/archwings.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/companions-animals.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/companions-sentinels.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/gear.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/railjack-weapons.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/resource-drones.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/ships.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/warframes.json.gz', TIMESTAMPTZ 'epoch'),
+    ('equipment/weapons.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/ayatan-treasures.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/boosters.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/bundles.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/captura-scenes.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/components.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/credit-bundles.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/customizations.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/decorations.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/endo-bundles.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/internal-definitions.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/misc-items.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/resources.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/reward-packs.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/skins.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/songs.json.gz', TIMESTAMPTZ 'epoch'),
+    ('items/supply-drops.json.gz', TIMESTAMPTZ 'epoch'),
+    ('market/trade-items.json.gz', TIMESTAMPTZ 'epoch'),
+    ('progression/achievements.json.gz', TIMESTAMPTZ 'epoch'),
+    ('progression/challenges.json.gz', TIMESTAMPTZ 'epoch'),
+    ('progression/intrinsics.json.gz', TIMESTAMPTZ 'epoch'),
+    ('progression/nightwave.json.gz', TIMESTAMPTZ 'epoch'),
+    ('reference/images.json.gz', TIMESTAMPTZ 'epoch'),
+    ('reference/item-localizations.json.gz', TIMESTAMPTZ 'epoch'),
+    ('reference/ability-owner-localizations.json.gz', TIMESTAMPTZ 'epoch'),
+    ('reference/upgrade-localizations.json.gz', TIMESTAMPTZ 'epoch'),
+    ('reference/language-strings.json.gz', TIMESTAMPTZ 'epoch'),
+    ('reference/text-icons.json.gz', TIMESTAMPTZ 'epoch'),
+    ('rewards/bounties.json.gz', TIMESTAMPTZ 'epoch'),
+    ('rewards/drop-tables.json.gz', TIMESTAMPTZ 'epoch'),
+    ('rewards/relics.json.gz', TIMESTAMPTZ 'epoch'),
+    ('rewards/reward-pools.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/arcanes.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/avionics.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/focus-upgrades.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/mod-sets.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/mods.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/riven-attributes.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/riven-definitions.json.gz', TIMESTAMPTZ 'epoch'),
+    ('upgrades/riven-weapons.json.gz', TIMESTAMPTZ 'epoch'),
+    ('world/codex.json.gz', TIMESTAMPTZ 'epoch'),
+    ('world/enemies.json.gz', TIMESTAMPTZ 'epoch'),
+    ('world/inbox-messages.json.gz', TIMESTAMPTZ 'epoch'),
+    ('world/quest-keys.json.gz', TIMESTAMPTZ 'epoch'),
+    ('world/star-chart.json.gz', TIMESTAMPTZ 'epoch'),
+    ('world/tilesets.json.gz', TIMESTAMPTZ 'epoch'),
+    ('world/vendors.json.gz', TIMESTAMPTZ 'epoch'),
+    ('worldstate/activities.json.gz', TIMESTAMPTZ 'epoch'),
+    ('worldstate/bosses.json.gz', TIMESTAMPTZ 'epoch'),
+    ('worldstate/factions.json.gz', TIMESTAMPTZ 'epoch'),
+    ('worldstate/fissure-modifiers.json.gz', TIMESTAMPTZ 'epoch'),
+    ('worldstate/mission-types.json.gz', TIMESTAMPTZ 'epoch'),
+    ('worldstate/syndicates.json.gz', TIMESTAMPTZ 'epoch'),
+    ('worldstate/upgrade-types.json.gz', TIMESTAMPTZ 'epoch'),
+    ('statistics/usage-2020.json.gz', TIMESTAMPTZ 'epoch'),
+    ('statistics/usage-2021.json.gz', TIMESTAMPTZ 'epoch'),
+    ('statistics/usage-2022.json.gz', TIMESTAMPTZ 'epoch'),
+    ('statistics/usage-2023.json.gz', TIMESTAMPTZ 'epoch'),
+    ('statistics/usage-2024.json.gz', TIMESTAMPTZ 'epoch'),
+    ('statistics/usage-2025.json.gz', TIMESTAMPTZ 'epoch')
+ON CONFLICT (product_path) DO NOTHING;
 -- END GENERATED NNM DATASET FILE ENTITY
 
 -- 审批只提交一次选择；文件工作项跨实例领取，同文件各变更类型分别提交事务。
@@ -24335,7 +24411,10 @@ COMMENT ON TABLE nnmbot.wf_community_import_source IS '管理员配置的白名�
 COMMENT ON COLUMN nnmbot.wf_community_import_source.dataset IS '白名单数据集代码';
 COMMENT ON COLUMN nnmbot.wf_community_import_source.raw_url IS '受协议、域名、网络地址、超时和大小约束的管理员输入地址';
 -- 审核提交锁定数据集行，确保选中集合在一个事务中校验并写入。
-CREATE TABLE nnmbot.wf_community_dataset_lock (dataset varchar(50) PRIMARY KEY);
+-- 社区表版本从零递增，禁止负版本导致缓存代际倒退。
+CREATE TABLE nnmbot.wf_community_dataset_lock (dataset varchar(50) PRIMARY KEY,
+    data_revision bigint NOT NULL DEFAULT 0 CONSTRAINT ck_wf_community_dataset_revision CHECK (data_revision >= 0));
+COMMENT ON COLUMN nnmbot.wf_community_dataset_lock.data_revision IS '社区数据集可见内容版本；与数据变更同事务递增，用于本地缓存及跨实例版本补偿';
 COMMENT ON TABLE nnmbot.wf_community_dataset_lock IS '纯自维护数据集的审核及手工修改串行化锁';
 COMMENT ON COLUMN nnmbot.wf_community_dataset_lock.dataset IS '白名单数据集代码；锁行不承载业务内容';
 INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('alias');

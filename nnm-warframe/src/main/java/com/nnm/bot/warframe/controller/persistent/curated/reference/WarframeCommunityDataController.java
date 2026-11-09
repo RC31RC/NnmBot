@@ -17,6 +17,7 @@ import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommun
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunitySourceDTO;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityDataService;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +40,17 @@ public class WarframeCommunityDataController {
     @SaCheckPermission("warframe:community:view")
     public ApiResponse<List<WarframeCommunityDatasetVO>> datasets() {
         return ApiResponse.ok(service.datasets());
+    }
+
+    /**
+     * 查询已采纳的官方裂罅属性，供社区组合表单选择。
+     *
+     * @return 可用的官方属性及名称。
+     */
+    @PostMapping("/riven-attributes/query")
+    @SaCheckPermission("warframe:community:view")
+    public ApiResponse<List<WarframeCommunityRivenAttributeVO>> rivenAttributes() {
+        return ApiResponse.ok(service.rivenAttributes());
     }
 
     /**

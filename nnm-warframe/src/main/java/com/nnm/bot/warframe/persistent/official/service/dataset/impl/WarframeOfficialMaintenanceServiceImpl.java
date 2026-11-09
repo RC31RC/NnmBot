@@ -2,39 +2,39 @@ package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_GROUPS;
-
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.warframe.persistent.official.parser.input.OfficialInputTypes;
-import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordIdentityQuery;
 import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.exception.SystemException;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.persistent.official.event.WarframeOfficialDataChangePublisher;
-import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeWorldStateCodebookInvalidator;
+import com.nnm.bot.warframe.constant.WarframeCacheErrorCode;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
-import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.entity.maintenance.WarframeOfficialRebuildMarker;
-import com.nnm.bot.warframe.persistent.official.service.record.OfficialRecordPersistenceService;
-import com.nnm.bot.warframe.persistent.official.repository.maintenance.WarframeOfficialRebuildMarkerRepository;
-import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialMaintenanceService;
-import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialDetailService;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.event.WarframeOfficialDataChangePublisher;
+import com.nnm.bot.warframe.persistent.official.parser.input.OfficialInputTypes;
 import com.nnm.bot.warframe.persistent.official.parser.schema.WarframeOfficialModels;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.maintenance.WarframeOfficialRecordSaveDTO;
-import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordHeaderDTO;
-import jakarta.annotation.Resource;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.maintenance.WarframeOfficialRebuildMarker;
+import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
+import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordIdentityQuery;
+import com.nnm.bot.warframe.persistent.official.repository.maintenance.WarframeOfficialRebuildMarkerRepository;
 import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialFileRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialMaintenanceService;
+import com.nnm.bot.warframe.persistent.official.service.record.OfficialRecordPersistenceService;
+import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialDetailService;
+import jakarta.annotation.Resource;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Set;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /** 单个 JSON 主表及必要子孙的维护状态转换，与上游版本状态分离。 */
 @Service
@@ -44,8 +44,6 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
     private WarframeOfficialFileRepository files;
     @Resource
     private WarframeOfficialDataChangePublisher dataChanges;
-    @Resource
-    private WarframeWorldStateCodebookInvalidator codebookInvalidator;
     @Resource
     private OfficialRecordPersistenceService records;
     @Resource
@@ -71,13 +69,17 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
         OfficialRecord previous = id == null ? null : require(id);
         WarframeOfficialDataDomain domain =
             id == null ? WarframeOfficialDataDomain.fromCode(request.domain()) : models.domain(previous.getClass());
-        if (previous != null && previous.getMaintenanceType() == MaintenanceType.OFFICIAL)
-            lockImportBaseline(domain);
+        BusinessAssert.isTrue(domain != WarframeOfficialDataDomain.OTHER, WarframeManagementErrorCode.DATASET_INVALID);
+        String group = StrUtil.trimToEmpty(request.group());
+        BusinessAssert.isTrue(group.isEmpty() || RECORD_GROUPS.getOrDefault(domain, Set.of()).contains(group),
+            OfficialDataErrorCode.GROUP_INVALID);
+        lockDataset(domain);
         if (previous != null)
             records.releaseWritten(List.of(previous));
         OfficialRecord root;
         if (id != null) {
-            root = require(id);
+            root = records.findById(domain, id).filter(OfficialRecord::isEnabled)
+                .orElseThrow(() -> new BusinessException(WarframeManagementErrorCode.ITEM_NOT_FOUND));
             if (root.getMaintenanceType() == MaintenanceType.OFFICIAL) {
                 root = convertRoot(id, request.confirmed(), request.replaceExisting());
             }
@@ -86,9 +88,6 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
                 WarframeManagementErrorCode.DATASET_INVALID);
             root = records.newRecord(domain.domainCode());
             // 新增独立资料由后端分配身份；编辑和官方覆盖沿用已有业务键，不能随名称变化。
-            String group = StrUtil.trimToEmpty(request.group());
-            BusinessAssert.isTrue(group.isEmpty() || RECORD_GROUPS.getOrDefault(domain, Set.of()).contains(group),
-                OfficialDataErrorCode.GROUP_INVALID);
             root.setBkey((group.isEmpty() ? "" : group + "/") + "self:" + UUID.randomUUID());
             root.setMaintenanceType(MaintenanceType.SELF_MAINTAINED);
             root.setEnabled(true);
@@ -104,8 +103,8 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
         root.setProductCategory(header.productCategory());
         root = records.saveAndFlush(root);
         details.synchronize(List.of(root), Map.of(root.getId(), data), List.of());
-        invalidateAfterCommit();
-        return records.findDataById(root.getId()).orElseThrow();
+        dataChanges.publishAfterCommit(domain);
+        return records.findDataById(domain, root.getId()).orElseThrow();
     }
 
     /**
@@ -117,16 +116,16 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
     @Transactional
     public void delete(long recordId) {
         OfficialRecord previous = require(recordId);
-        if (previous.getMaintenanceType() == MaintenanceType.OFFICIAL)
-            lockImportBaseline(models.domain(previous.getClass()));
+        lockDataset(models.domain(previous.getClass()));
         records.releaseWritten(List.of(previous));
-        OfficialRecord record = require(recordId);
-        records.deleteRecords(List.of(recordId));
+        OfficialRecord record = records.findById(models.domain(previous.getClass()), recordId)
+            .orElseThrow(() -> new BusinessException(WarframeManagementErrorCode.ITEM_NOT_FOUND));
+        records.deleteRecords(models.domain(record.getClass()), List.of(recordId));
         records.flush();
         if (record.getMaintenanceType() == MaintenanceType.OFFICIAL) {
             markForRebuild(record);
         }
-        invalidateAfterCommit();
+        dataChanges.publishAfterCommit(models.domain(record.getClass()));
     }
 
     /**
@@ -142,7 +141,7 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
     public WarframeOfficialRecordDTO convertToSelfMaintained(long recordId, boolean confirmed,
         boolean replaceExisting) {
         OfficialRecord saved = convertRoot(recordId, confirmed, replaceExisting);
-        return records.findDataById(saved.getId()).orElseThrow();
+        return records.findDataById(models.domain(saved.getClass()), saved.getId()).orElseThrow();
     }
 
     /**
@@ -156,9 +155,10 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
     private OfficialRecord convertRoot(long recordId, boolean confirmed, boolean replaceExisting) {
         BusinessAssert.isTrue(confirmed, WarframeManagementErrorCode.OFFICIAL_CONVERSION_CONFIRM_REQUIRED);
         OfficialRecord previous = require(recordId);
-        lockImportBaseline(models.domain(previous.getClass()));
+        lockDataset(models.domain(previous.getClass()));
         records.releaseWritten(List.of(previous));
-        OfficialRecord source = require(recordId);
+        OfficialRecord source = records.findById(models.domain(previous.getClass()), recordId)
+            .orElseThrow(() -> new BusinessException(WarframeManagementErrorCode.ITEM_NOT_FOUND));
         BusinessAssert.isTrue(source.getMaintenanceType() == MaintenanceType.OFFICIAL,
             WarframeManagementErrorCode.OFFICIAL_CONVERSION_CONFIRM_REQUIRED);
         var existing = records.findForMaintenance(new OfficialRecordIdentityQuery(MaintenanceType.SELF_MAINTAINED,
@@ -177,23 +177,16 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
         details.synchronize(List.of(saved), Map.of(saved.getId(), data), List.of());
         // 自维护是并存的整树覆盖；保留官方版本，删除覆盖后可立即恢复官方查询结果。
         records.flush();
-        invalidateAfterCommit();
+        dataChanges.publishAfterCommit(models.domain(saved.getClass()));
         return saved;
     }
 
     /** 锁住同一文件的短事务，协调官方删除／复制与分类采纳的提交先后。 */
-    private void lockImportBaseline(WarframeOfficialDataDomain domain) {
+    private void lockDataset(WarframeOfficialDataDomain domain) {
         BusinessAssert.notNull(domain, WarframeManagementErrorCode.DATASET_INVALID);
-        // 尚未登记的官方文件没有分类入库任务；登记后的文件行短锁协调提交顺序。
-        files.findFirstByProductPath(domain.productPath());
-    }
-
-    /**
-     * 在当前事务成功提交后刷新相关缓存。
-     */
-    private void invalidateAfterCommit() {
-        dataChanges.publishAfterCommit();
-        codebookInvalidator.invalidateAfterCommit();
+        // 初始化 SQL 预建全部文件行；自维护覆盖也必须在同一文件版本下提交。
+        files.findFirstByProductPath(domain.productPath()).orElseThrow(
+            () -> new SystemException(WarframeCacheErrorCode.DATASET_VERSION_MISSING, "数据集版本锁行未初始化，请执行本轮 SQL"));
     }
 
     /**

@@ -1,7 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.constant;
 
 import com.nnm.bot.common.exception.SystemException;
-
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Set;
@@ -10,6 +9,7 @@ import java.util.Set;
 public final class OfficialDataConstants {
     public static final int IMPORT_HEAD_ID = 1;
     public static final int RECORD_BATCH_SIZE = 250;
+    public static final int BOUNTY_PAGE_SIZE = 4;
     public static final int RECORD_NAME_MAX_LENGTH = 500;
     public static final String APPLY_TASK_PREFIX = "WARFRAME_OFFICIAL_APPLY:";
     public static final String REFRESH_TASK_PREFIX = "WARFRAME_OFFICIAL_REFRESH:";

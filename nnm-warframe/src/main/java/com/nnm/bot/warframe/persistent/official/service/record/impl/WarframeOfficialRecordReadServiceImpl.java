@@ -1,30 +1,31 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
-import java.util.Objects;
-import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.IMPORT_HEAD_ID;
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.world.OfficialRegionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.world.WarframeOfficialRegionDTO;
+import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportHeadRepository;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialRepositoryRegistry;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialTableRelations;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
-import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportHeadRepository;
 import jakarta.annotation.Resource;
+import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.Map;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.world.OfficialRegionDTO;
-import java.util.LinkedHashMap;
-import java.util.Collection;
-import java.util.LinkedHashSet;
 
 @Service
 public class WarframeOfficialRecordReadServiceImpl implements WarframeOfficialRecordReadService {
@@ -50,18 +51,6 @@ public class WarframeOfficialRecordReadServiceImpl implements WarframeOfficialRe
     /**
      * 读取当前条件下的业务记录。
      *
-     * @return 当前独立官方记录的摘要及类型化详情组成的列表。
-     */
-    @Override
-    public List<WarframeOfficialRecordReadDTO> records() {
-        return WarframeOfficialDataDomain.itemIndexCodes().stream()
-            .flatMap(code -> repositories.require(WarframeOfficialDataDomain.fromCode(code)).findSummaries().stream())
-            .filter(record -> !record.getBkey().equals(METADATA_BKEY)).map(record -> toRecord(record, null)).toList();
-    }
-
-    /**
-     * 读取当前条件下的业务记录。
-     *
      * @param domain 官方数据文件所属的业务领域。
      * @return 当前独立官方记录的摘要及类型化详情组成的列表。
      */
@@ -74,6 +63,40 @@ public class WarframeOfficialRecordReadServiceImpl implements WarframeOfficialRe
         Map<Long, OfficialRecordDTO> details =
             relations.load(domain.domainCode(), roots.stream().map(WarframeOfficialRecordDTO::getId).toList());
         return roots.stream().map(record -> toRecord(record, details.get(record.getId()))).toList();
+    }
+
+    /**
+     * 仅查询独立主表的名称所需字段。
+     *
+     * @param domain 独立 JSON 领域。
+     * @return 轻量不可变投影。
+     */
+    @Override
+    public List<WarframeOfficialNameDTO> names(WarframeOfficialDataDomain domain) {
+        return repositories.require(domain).findNames().stream()
+            .map(row -> new WarframeOfficialNameDTO(row.getId(), row.getBkey(), domain.domainCode(),
+                row.getOfficialName(), row.getLocalizedName(), row.getParentName(), row.getProductCategory(),
+                row.getWikiSlug(), row.getMarketSlug()))
+            .toList();
+    }
+
+    /**
+     * 单数据集批量补查，只为命中的根记录读取关联树。
+     *
+     * @param domain 独立 JSON 领域。
+     * @param keys 业务键集合。
+     * @return 与同一读取快照一致的完整记录投影。
+     */
+    @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<WarframeOfficialRecordReadDTO> recordsByKeys(WarframeOfficialDataDomain domain,
+        Collection<String> keys) {
+        if (keys.isEmpty())
+            return List.of();
+        var roots = repositories.require(domain).findPreferredSummariesByKeys(keys);
+        var details =
+            relations.load(domain.domainCode(), roots.stream().map(WarframeOfficialRecordDTO::getId).toList());
+        return roots.stream().map(root -> toRecord(root, details.get(root.getId()))).toList();
     }
 
     /**

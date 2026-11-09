@@ -3,7 +3,7 @@ package com.nnm.bot.warframe.plugin.persistent.official.reference;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.reference.WarframeDefinitionVO;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.warframe.persistent.official.pojo.query.reference.WarframeDefinitionQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeDefinitionCommandDTO;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
@@ -12,7 +12,7 @@ import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.regex.Pattern;
 
-abstract class AbstractDefinitionPlugin extends BotPlugin<Void, WarframeDefinitionQuery> {
+abstract class AbstractDefinitionPlugin extends BotPlugin<Void, WarframeDefinitionCommandDTO> {
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *
@@ -21,13 +21,13 @@ abstract class AbstractDefinitionPlugin extends BotPlugin<Void, WarframeDefiniti
      * @return 已规范化的命令参数
      */
     @Override
-    protected WarframeDefinitionQuery parse(CommandInvocation invocation, Void prepared) {
+    protected WarframeDefinitionCommandDTO parse(CommandInvocation invocation, Void prepared) {
         String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
         if (matcher.find()) {
             if (!matcher.group(1).matches("[0-9]+"))
-                return new WarframeDefinitionQuery(query, page, "页码必须为正整数");
+                return new WarframeDefinitionCommandDTO(query, page, "页码必须为正整数");
             try {
                 page = Integer.parseInt(matcher.group(1));
             } catch (NumberFormatException exception) {
@@ -36,10 +36,10 @@ abstract class AbstractDefinitionPlugin extends BotPlugin<Void, WarframeDefiniti
             query = query.substring(0, matcher.start()).trim();
         }
         if (page < 1 || OPTION.matcher(query).find())
-            return new WarframeDefinitionQuery(query, page, "定义查询参数不合法");
+            return new WarframeDefinitionCommandDTO(query, page, "定义查询参数不合法");
         if (query.length() > 500)
-            return new WarframeDefinitionQuery(query, page, "查询内容过长，请缩短到 500 字以内");
-        return new WarframeDefinitionQuery(query, page, null);
+            return new WarframeDefinitionCommandDTO(query, page, "查询内容过长，请缩短到 500 字以内");
+        return new WarframeDefinitionCommandDTO(query, page, null);
     }
 
     private static final Pattern PAGE = Pattern.compile("(?:^|\\s)--page(?:\\s+|=)(\\S+)$");
@@ -62,7 +62,7 @@ abstract class AbstractDefinitionPlugin extends BotPlugin<Void, WarframeDefiniti
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeDefinitionQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeDefinitionCommandDTO parsed) {
         if (parsed.error() != null)
             return CommandResult.rejected(parsed.error());
         WarframeDefinitionVO display = definitionService.query(domain(), parsed.keyword(), parsed.page());

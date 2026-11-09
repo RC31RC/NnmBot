@@ -3,6 +3,7 @@ package com.nnm.bot.warframe.persistent.curated.service.reference;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO.*;
 import java.util.List;
+import java.util.Map;
 
 public interface WarframeCommunityCatalogService {
     /**
@@ -32,4 +33,10 @@ public interface WarframeCommunityCatalogService {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     List<WarframeCommunityRecordDTO<RivenAliasDTO>> rivenAliases();
+
+    /** @return 社区别名到目标名称，保留多目标候选。 */
+    Map<String, List<String>> aliasTargets();
+
+    /** @return 社区术语到英文目标名称，不保存官方记录副本。 */
+    Map<String, List<String>> termTargets();
 }

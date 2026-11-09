@@ -30,6 +30,17 @@ public class WarframeWorldStateManagementController {
     }
 
     /**
+     * 查询完整解析字段，供后台详情展示。
+     *
+     * @return 保留嵌套字段的解析视图。
+     */
+    @PostMapping("/parsed/query")
+    @SaCheckPermission("warframe:world:view")
+    public ApiResponse<WarframeWorldStateManagementVO> parsed() {
+        return ApiResponse.ok(worldStateManagementService.parsed());
+    }
+
+    /**
      * 查询最近成功快照的原始文本、字段目录与采集信息。
      *
      * @return 最近一次成功采集的原文及字段信息。

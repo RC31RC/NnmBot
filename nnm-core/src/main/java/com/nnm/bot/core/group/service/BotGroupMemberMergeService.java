@@ -9,6 +9,7 @@ import com.nnm.bot.core.group.repository.BotGroupMemberMergeRepository;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import com.nnm.bot.core.group.repository.BotGroupPointTransactionRepository;
 import jakarta.annotation.Resource;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,8 @@ public class BotGroupMemberMergeService {
 
     @Resource
     private BotGroupMemberRepository memberRepository;
+    @Resource
+    private EntityManager entityManager;
     @Resource
     private BotGroupMemberMergeRepository mergeRepository;
     @Resource
@@ -38,8 +41,11 @@ public class BotGroupMemberMergeService {
             throw new BusinessException(CommonErrorCode.PARAM_INVALID, "只能合并同一逻辑群组的成员");
         }
 
-        BotGroupMember lockedTarget = load(groupId, target.getId());
-        BotGroupMember lockedSource = load(groupId, source.getId());
+        // 所有合并按主键升序获取两行锁，避免两次反向合并形成死锁。
+        BotGroupMember first = load(groupId, Math.min(target.getId(), source.getId()));
+        BotGroupMember second = load(groupId, Math.max(target.getId(), source.getId()));
+        BotGroupMember lockedTarget = first.getId().equals(target.getId()) ? first : second;
+        BotGroupMember lockedSource = first.getId().equals(source.getId()) ? first : second;
         ensureCompatible(lockedTarget, lockedSource);
         mergeFields(lockedTarget, lockedSource);
 
@@ -69,10 +75,12 @@ public class BotGroupMemberMergeService {
     }
 
     private BotGroupMember load(long groupId, long memberId) {
-        return memberRepository.findByIdAndGroupId(memberId, groupId)
-            .or(() -> memberRepository.findById(memberId)
-                .filter(member -> Long.valueOf(groupId).equals(member.getGroupId())))
+        long lockedId = memberRepository.lockIdByIdAndGroupId(memberId, groupId)
             .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "群组成员不存在: " + memberId));
+        BotGroupMember member = memberRepository.findById(lockedId)
+            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "群组成员不存在: " + memberId));
+        entityManager.refresh(member);
+        return member;
     }
 
     private void ensureCompatible(BotGroupMember target, BotGroupMember source) {

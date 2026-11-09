@@ -46,11 +46,15 @@ public class WarframeArbitrationRefreshServiceImpl implements WarframeArbitratio
                 return;
             }
             try {
-                snapshots.replace(parser.parse(client.fetch()), now);
-                nextAttemptAt = now.plus(properties.getRefreshInterval());
+                var entries = parser.parse(client.fetch());
+                Instant completedAt = warframeClock.instant();
+                snapshots.replace(entries, completedAt);
+                nextAttemptAt = completedAt.plus(properties.getRefreshInterval());
             } catch (RuntimeException exception) {
-                nextAttemptAt = now.plus(properties.getRetryInterval());
-                log.warn("仲裁排期刷新失败，保留最近一次有效内存快照", exception);
+                // 请求本身可能经历多次超时；等待时间从失败完成后计算，避免耗时请求耗尽重试间隔。
+                nextAttemptAt = warframeClock.instant().plus(properties.getRetryInterval());
+                log.warn("仲裁排期刷新失败，保留最近一次有效内存快照 source={} retryAfter={} nextAttemptAt={}", properties.getUrl(),
+                    properties.getRetryInterval(), nextAttemptAt, exception);
             }
         } finally {
             refreshLock.unlock();

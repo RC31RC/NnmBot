@@ -6,7 +6,7 @@ import com.nnm.bot.core.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.model.CommandInvocation;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.warframe.persistent.official.pojo.query.guide.WarframeGuideQuery;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.guide.WarframeGuideCommandDTO;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.guide.WarframeGuideVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.guide.WarframeGuideVO.FishVO;
@@ -38,7 +38,7 @@ public final class FishGuidePlugin extends AbstractGuidePlugin {
      * @return 命令处理结果，包含文本、展示对象或明确的输入错误。
      */
     @Override
-    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeGuideQuery parsed) {
+    public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeGuideCommandDTO parsed) {
         if (parsed.error() != null)
             return CommandResult.rejected(parsed.error());
         WarframeGuideVO<FishVO> display = guideService.fish(parsed.keyword(), parsed.world(), parsed.page());

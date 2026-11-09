@@ -1,19 +1,18 @@
 package com.nnm.bot.warframe.runtime.parser.arbitration;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeWorldStateCodebookEntryDTO;
+import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateCodebookService;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.runtime.config.jackson.WarframeInputBinding;
+import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
 import com.nnm.bot.warframe.runtime.rawdata.arbitration.ArbitrationScheduleRawData;
 import com.nnm.bot.warframe.runtime.rawdata.arbitration.ArbitrationScheduleRawData.EntryRawData;
 import jakarta.annotation.PostConstruct;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
-import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeWorldStateCodebookEntryDTO;
-import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateCodebookService;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
+import org.springframework.stereotype.Component;
 
 @Component
 public class WarframeArbitrationScheduleParser {
@@ -89,7 +89,7 @@ public class WarframeArbitrationScheduleParser {
                 String planet = display(row.getPlanetZh(), row.getPlanet(), "planet", 100);
                 var bounds = row.getBounds();
                 entries.add(new ArbitrationScheduleEntryDTO(id, activation, expiry, node, mission, enemy, planet,
-                    bounds == null ? "{}" : objectMapper.writeValueAsString(bounds)));
+                    bounds == null ? "{}" : objectMapper.writeValueAsString(bounds), null));
             }
             return entries.stream().sorted(Comparator.comparing(ArbitrationScheduleEntryDTO::activation)).toList();
         } catch (JsonProcessingException exception) {
@@ -152,7 +152,30 @@ public class WarframeArbitrationScheduleParser {
             throw new IllegalArgumentException("Arbitration node has no planet: " + nodeReference);
         return new ArbitrationScheduleEntryDTO("arbys:" + activation.getEpochSecond(), activation,
             activation.plus(Duration.ofHours(1)), node.displayName(), mission.displayName(), faction.displayName(),
-            planet, "{}");
+            planet, "{}", nodeReference);
+    }
+
+    /**
+     * 只根据保留的静态引用重建显示字段，不下载仲裁排期。
+     *
+     * @param entries 当前查询范围内的有效排期。
+     * @return 由当前静态代码表解释的查询投影。
+     */
+    public List<ArbitrationScheduleEntryDTO> reproject(List<ArbitrationScheduleEntryDTO> entries) {
+        return entries.stream().map(entry -> {
+            if (entry.nodeReference() == null)
+                return entry;
+            var node = codebook.findNode(entry.nodeReference()).orElse(null);
+            if (node == null)
+                return entry;
+            var mission = codebook.findMissionType(node.relatedReference()).orElse(null);
+            var faction = codebook.findFaction(node.factionReference()).orElse(null);
+            String planet = extractPlanet(node.displayName());
+            return new ArbitrationScheduleEntryDTO(entry.id(), entry.activation(), entry.expiry(), node.displayName(),
+                mission == null ? entry.missionType() : mission.displayName(),
+                faction == null ? entry.enemy() : faction.displayName(),
+                StrUtil.isBlank(planet) ? entry.planet() : planet, entry.boundsJson(), entry.nodeReference());
+        }).toList();
     }
 
     /**

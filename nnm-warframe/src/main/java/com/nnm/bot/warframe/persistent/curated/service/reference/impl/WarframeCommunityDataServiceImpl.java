@@ -1,63 +1,58 @@
 package com.nnm.bot.warframe.persistent.curated.service.reference.impl;
 
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeCommunityQuery;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityInputDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRowDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityArbitrationEssenceDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRivenAliasDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityTermDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityAliasDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityApplyReceipt;
-import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityDatasetLockRepository;
-import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityRivenAliasRepository;
-import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityApplyReceiptRepository;
-import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityAlias;
-import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityAliasRepository;
-import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityImportSource;
-import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityRivenAlias;
-import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityImportSourceRepository;
-import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityTerm;
-import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityArbitrationEssenceRepository;
-import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityTermRepository;
-import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityRow;
-import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityArbitrationEssence;
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.exception.BusinessException;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.persistent.curated.cache.reference.WarframeItemIndexInvalidator;
+import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.curated.client.reference.WarframeCommunityInputClient;
 import com.nnm.bot.warframe.persistent.curated.config.reference.WarframeCommunityProperties;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+import com.nnm.bot.warframe.persistent.curated.event.WarframeCommunityDataChangePublisher;
+import com.nnm.bot.warframe.persistent.curated.parser.reference.WarframeCommunityImportParser;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.*;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityAliasDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityArbitrationEssenceDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityFieldChangeDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityInputDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityOperationDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPendingPreviewDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewPageDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRivenAliasDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRowDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityTermDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.*;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityAlias;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityApplyReceipt;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityArbitrationEssence;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityImportSource;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityRivenAlias;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityRow;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityTerm;
+import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeCommunityQuery;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityDatasetVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityFieldChangeDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityOperationDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPendingPreviewDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewPageDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.*;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityAliasRepository;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityApplyReceiptRepository;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityArbitrationEssenceRepository;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityDatasetLockRepository;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityImportSourceRepository;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityRivenAliasRepository;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityTermRepository;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityDataService;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
+import com.nnm.bot.warframe.persistent.official.service.upgrades.WarframeRivenAttributeService;
+import java.util.Set;
+import java.util.Arrays;
 import io.github.rdt.state.SharedStateStore;
 import jakarta.annotation.Resource;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Page;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.*;
-import com.nnm.bot.warframe.persistent.curated.parser.reference.WarframeCommunityImportParser;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -78,11 +73,22 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataService {
     @Resource
     private WarframeCommunityImportParser importParser;
+    @Resource
+    private WarframeRivenAttributeService officialRivenAttributes;
 
     private static final int BATCH_SIZE = 250;
     @Resource
@@ -108,9 +114,52 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     @Resource
     private SharedStateStore state;
     @Resource
-    private WarframeItemIndexInvalidator invalidator;
+    private WarframeCommunityDataChangePublisher invalidator;
     @Resource
     private PlatformTransactionManager transactionManager;
+
+    /**
+     * 从官方定义生成属性选择项，与命令查询共同排除搜索占位属性。
+     *
+     * @return 按中文名称与编码稳定排序的属性列表。
+     */
+    @Override
+    public List<WarframeCommunityRivenAttributeVO> rivenAttributes() {
+        return officialRivenAttributes.definitions().stream()
+            .filter(attribute -> StrUtil.isNotBlank(attribute.code()) && !Boolean.TRUE.equals(attribute.searchOnly())
+                && !Set.of("has", "none").contains(attribute.code()))
+            .map(attribute -> new WarframeCommunityRivenAttributeVO(attribute.code(),
+                StrUtil.isNotBlank(attribute.effect()) ? attribute.effect()
+                    : StrUtil.blankToDefault(attribute.effectEn(), attribute.code()),
+                attribute.effectEn(), attribute.negativeOnly(), attribute.exclusiveTo()))
+            .sorted(Comparator.comparing(WarframeCommunityRivenAttributeVO::label)
+                .thenComparing(WarframeCommunityRivenAttributeVO::code))
+            .toList();
+    }
+
+    /**
+     * 每次操作只读取一次官方定义，防止上传或旧预览绕过属性选择约束。
+     *
+     * @param dataset 待写入的数据集。
+     * @param records 待生成预览或采纳的记录。
+     */
+    private void validateRivenAliases(WarframeCommunityDataset dataset, Collection<WarframeCommunityInputDTO> records) {
+        if (dataset != WarframeCommunityDataset.RIVEN_ALIAS || records.isEmpty()) {
+            return;
+        }
+        Set<String> allowed =
+            rivenAttributes().stream().map(WarframeCommunityRivenAttributeVO::code).collect(Collectors.toSet());
+        BusinessAssert.isTrue(!allowed.isEmpty(), WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT,
+            "请先拉取并采纳官方裂罅属性定义，再维护紫卡别名与组合");
+        for (WarframeCommunityInputDTO record : records) {
+            var alias = (WarframeCommunityRecordDTO.RivenAliasDTO)record;
+            String[] codes = alias.attributeCode().split("[+]", -1);
+            BusinessAssert.isTrue(
+                codes.length >= 1 && codes.length <= 3 && Arrays.stream(codes).distinct().count() == codes.length
+                    && allowed.containsAll(Arrays.asList(codes)),
+                WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT, "紫卡别名必须选择一至三个不同的官方属性：" + alias.attributeCode());
+        }
+    }
 
     /**
      * 列出当前支持的数据文件。
@@ -165,6 +214,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
         var parsed = importParser.parse(dataset, json);
         Map<String, WarframeCommunityInputDTO> incoming = parsed.records();
+        validateRivenAliases(dataset, incoming.values());
         List<WarframeCommunityOperationDTO> operations = new ArrayList<>();
         // 输入只产生新增或修改；提前确定字段顺序，避免每条记录重复排序。
         List<String> fieldsToCompare = dataset.fields().stream().sorted().toList();
@@ -391,6 +441,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             .filter(operation -> request.selectedOperationIds().contains(operation.id())).toList();
         BusinessAssert.isTrue(selected.size() == request.selectedOperationIds().size(),
             WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT);
+        validateRivenAliases(dataset, selected.stream().map(WarframeCommunityOperationDTO::value).toList());
         // 一个根事务包住全部批次；任何后续冲突或写入失败都回滚此前批次的 flush。
         for (int start = 0; start < selected.size(); start += BATCH_SIZE) {
             List<WarframeCommunityOperationDTO> batch =
@@ -419,7 +470,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         saved.setAppliedCount(selected.size());
         saved.setAppliedAt(Instant.now());
         receipts.save(saved);
-        invalidator.invalidateAfterCommit();
+        invalidator.invalidateAfterCommit(dataset);
         return new WarframeCommunityApplyVO(request.previewId(), selected.size());
     }
 
@@ -436,7 +487,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         lock(dataset);
         BusinessAssert.isTrue(repository(dataset).existsById(id), WarframeManagementErrorCode.ITEM_NOT_FOUND);
         repository(dataset).deleteById(id);
-        invalidator.invalidateAfterCommit();
+        invalidator.invalidateAfterCommit(dataset);
     }
 
     /**

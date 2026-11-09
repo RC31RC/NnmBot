@@ -1,9 +1,14 @@
 package com.nnm.bot.warframe.config.cache;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.warframe.constant.WarframeCacheErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import jakarta.annotation.PostConstruct;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "nnm.warframe.cache")
 public class WarframeCacheProperties {
@@ -14,9 +19,65 @@ public class WarframeCacheProperties {
     private final CacheRegion marketOrders = new CacheRegion(256, Duration.ofSeconds(60));
     private final CacheRegion marketAuctions = new CacheRegion(128, Duration.ofSeconds(60));
     private final CacheRegion marketStatistics = new CacheRegion(64, Duration.ofHours(1));
-    private final CacheRegion itemResolutionIndex = new CacheRegion(1, Duration.ofHours(8));
-    private final CacheRegion imageIndex = new CacheRegion(2, null);
+    private final CacheRegion datasetSnapshots = new CacheRegion(4, Duration.ofHours(8));
+    private final CacheRegion datasetRecords = new CacheRegion(128, Duration.ofHours(1));
+    private final CacheRegion languageRecords = new CacheRegion(10_000, Duration.ofHours(6));
+    private final Map<String, CacheRegion> datasets = defaultDatasets();
+
+    private Duration negativeTtl = Duration.ofSeconds(45);
+    private Duration revisionCheckInterval = Duration.ofMinutes(5);
+
     private final CacheRegion rivenWeekly = new CacheRegion(4, null);
+
+    /** @return 大关系表分别使用较小热点容量，不把整棵资料树套用统一大容量。 */
+    private static Map<String, CacheRegion> defaultDatasets() {
+        Map<String, CacheRegion> result = new LinkedHashMap<>();
+        result.put(WarframeOfficialDataDomain.DROP_TABLE.domainCode(), new CacheRegion(16, Duration.ofHours(1)));
+        result.put(WarframeOfficialDataDomain.REWARD_POOL.domainCode(), new CacheRegion(32, Duration.ofHours(1)));
+        result.put(WarframeOfficialDataDomain.BOUNTY.domainCode(), new CacheRegion(64, Duration.ofHours(1)));
+        result.put(WarframeOfficialDataDomain.RELIC.domainCode(), new CacheRegion(64, Duration.ofHours(1)));
+        return result;
+    }
+
+    /** @return 每个数据集的轻量快照容量；条目内的记录规模单独记录。 */
+    public CacheRegion getDatasetSnapshots() {
+        return datasetSnapshots;
+    }
+
+    /** @return 大表按业务键缓存的默认容量。 */
+    public CacheRegion getDatasetRecords() {
+        return datasetRecords;
+    }
+
+    /** @return 语言键热点缓存容量。 */
+    public CacheRegion getLanguageRecords() {
+        return languageRecords;
+    }
+
+    /** @return 按领域代码覆盖的记录缓存配置。 */
+    public Map<String, CacheRegion> getDatasets() {
+        return datasets;
+    }
+
+    /** @return 已确认查无记录的存活时间。 */
+    public Duration getNegativeTtl() {
+        return negativeTtl;
+    }
+
+    /** @param value 已确认查无记录的存活时间。 */
+    public void setNegativeTtl(Duration value) {
+        negativeTtl = value;
+    }
+
+    /** @return 遗漏通知的数据库版本复核间隔。 */
+    public Duration getRevisionCheckInterval() {
+        return revisionCheckInterval;
+    }
+
+    /** @param value 遗漏通知的数据库版本复核间隔。 */
+    public void setRevisionCheckInterval(Duration value) {
+        revisionCheckInterval = value;
+    }
 
     /**
      * 读取订阅记忆。
@@ -28,30 +89,12 @@ public class WarframeCacheProperties {
     }
 
     /**
-     * 读取图片索引。
-     *
-     * @return 缓存星区对象。
-     */
-    public CacheRegion getImageIndex() {
-        return imageIndex;
-    }
-
-    /**
      * 读取紫卡每周。
      *
      * @return 缓存星区对象。
      */
     public CacheRegion getRivenWeekly() {
         return rivenWeekly;
-    }
-
-    /**
-     * 读取物品解析状态索引。
-     *
-     * @return 缓存星区对象。
-     */
-    public CacheRegion getItemResolutionIndex() {
-        return itemResolutionIndex;
     }
 
     /**
@@ -110,14 +153,18 @@ public class WarframeCacheProperties {
         validate(marketOrders, "nnm.warframe.cache.market-orders", true);
         validate(marketAuctions, "nnm.warframe.cache.market-auctions", true);
         validate(marketStatistics, "nnm.warframe.cache.market-statistics", true);
-        validate(itemResolutionIndex, "nnm.warframe.cache.item-resolution-index", true);
-        validate(imageIndex, "nnm.warframe.cache.image-index", false);
-        if (imageIndex.capacity < 2) {
-            throw new IllegalArgumentException("nnm.warframe.cache.image-index.capacity must be at least 2");
-        }
+        validate(datasetSnapshots, "nnm.warframe.cache.dataset-snapshots", true);
+        validate(datasetRecords, "nnm.warframe.cache.dataset-records", true);
+        validate(languageRecords, "nnm.warframe.cache.language-records", true);
+        datasets.forEach((name, region) -> validate(region, "nnm.warframe.cache.datasets." + name, true));
+        if (negativeTtl == null || negativeTtl.isNegative() || negativeTtl.isZero() || revisionCheckInterval == null
+            || revisionCheckInterval.isNegative() || revisionCheckInterval.isZero())
+            throw new SystemException(WarframeCacheErrorCode.CONFIGURATION_INVALID,
+                "Dataset negative TTL and revision check interval must be positive");
         validate(rivenWeekly, "nnm.warframe.cache.riven-weekly", false);
         if (rivenWeekly.capacity < 4) {
-            throw new IllegalArgumentException("nnm.warframe.cache.riven-weekly.capacity must be at least 4");
+            throw new SystemException(WarframeCacheErrorCode.CONFIGURATION_INVALID,
+                "nnm.warframe.cache.riven-weekly.capacity must be at least 4");
         }
     }
 
@@ -129,12 +176,16 @@ public class WarframeCacheProperties {
      * @param expiryRequired 到期必要。
      */
     private void validate(CacheRegion region, String name, boolean expiryRequired) {
+        if (region == null)
+            throw new SystemException(WarframeCacheErrorCode.CONFIGURATION_INVALID, name + " must be configured");
         if (region.capacity < 1) {
-            throw new IllegalArgumentException(name + ".capacity must be at least 1");
+            throw new SystemException(WarframeCacheErrorCode.CONFIGURATION_INVALID,
+                name + ".capacity must be at least 1");
         }
         if (expiryRequired && (ObjectUtil.isNull(region.expireAfterWrite) || region.expireAfterWrite.isZero()
             || region.expireAfterWrite.isNegative())) {
-            throw new IllegalArgumentException(name + ".expire-after-write must be positive");
+            throw new SystemException(WarframeCacheErrorCode.CONFIGURATION_INVALID,
+                name + ".expire-after-write must be positive");
         }
     }
 
@@ -143,11 +194,16 @@ public class WarframeCacheProperties {
         private int capacity;
         private Duration expireAfterWrite;
 
+        /** 创建可由配置绑定的单数据集覆盖项。 */
+        public CacheRegion() {
+            this(128, Duration.ofHours(1));
+        }
+
         /**
-         * 构造缓存星区，并保存初始化参数。
+         * 构造有界缓存区域。
          *
-         * @param capacity 容量。
-         * @param expireAfterWrite 过期后续写入。
+         * @param capacity 最大条目数。
+         * @param expireAfterWrite 写入过期时间；为空时由版本失效管理。
          */
         CacheRegion(int capacity, Duration expireAfterWrite) {
             this.capacity = capacity;

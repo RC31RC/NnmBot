@@ -1,20 +1,19 @@
 package com.nnm.bot.core.group.service;
 
-import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
-import java.nio.charset.StandardCharsets;
 import cn.hutool.core.util.StrUtil;
+import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
+import com.nnm.bot.core.constant.SystemCommandCodes;
 import com.nnm.bot.core.message.model.BotMessageContext;
 import com.nnm.bot.core.plugin.model.CommandDescriptor;
 import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.ReplyBlock;
 import com.nnm.bot.core.plugin.model.PointCommandDisplay;
-import com.nnm.bot.core.constant.SystemCommandCodes;
-import org.springframework.stereotype.Component;
-
+import com.nnm.bot.core.plugin.model.ReplyBlock;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.UUID;
 import java.util.ArrayList;
+import java.util.UUID;
+import org.springframework.stereotype.Component;
 
 /**
  * 集中定义命令积分的幂等和响应规则，避免特殊命令把记账逻辑带回插件。
@@ -32,7 +31,7 @@ public class CommandPointPolicy {
     public String rewardIdempotencyKey(BotMessageContext context, CommandDescriptor descriptor, long groupId,
         long memberId) {
         if (isSignIn(descriptor)) {
-            // 沿用历史键格式，升级当天不会把旧签到记录再次奖励。
+            // 签到是按业务日期幂等；其他奖励按消息或调用身份幂等。
             return TransactionType.SIGN_IN.name() + ":" + groupId + ":" + memberId + ":" + LocalDate.now(BUSINESS_ZONE);
         }
         return messageIdempotencyKey(TransactionType.COMMAND_REWARD, context, descriptor, groupId, memberId);
@@ -81,8 +80,8 @@ public class CommandPointPolicy {
         long groupId, long memberId) {
         String eventId = context.messageId();
         if (StrUtil.isBlank(eventId)) {
-            String fallback = context.rawMessage() + "|" + context.senderId() + "|" + context.conversationId();
-            eventId = UUID.nameUUIDFromBytes(fallback.getBytes(StandardCharsets.UTF_8)).toString();
+            // 没有平台事件身份时，不把相同文本永久当成同一条消息。
+            eventId = context.invocationId();
         }
         String key = type + ":" + groupId + ":" + memberId + ":" + context.platform().name() + ":" + descriptor.code()
             + ":" + eventId;

@@ -1,15 +1,16 @@
 package com.nnm.bot.warframe.persistent.official.repository.snapshot;
 
+import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialConflictBatchDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.snapshot.WarframeOfficialImportBatch;
+import jakarta.persistence.LockModeType;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
-import java.util.Optional;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.time.Instant;
-import java.util.List;
 
 public interface WarframeOfficialImportBatchRepository extends JpaRepository<WarframeOfficialImportBatch, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -44,4 +45,12 @@ public interface WarframeOfficialImportBatchRepository extends JpaRepository<War
     List<WarframeOfficialImportBatch> findAllByStatusAndApplyingAtBefore(String status, Instant cutoff);
 
     List<WarframeOfficialImportBatch> findAllByStatusAndExpiresAtAfterOrderByCreatedAtDesc(String status, Instant now);
+
+    /**
+     * 只读取仍可能影响准入的状态投影，不装载审核大字段。
+     *
+     * @param statuses 待审、采纳中和可重试状态。
+     * @return 轻量准入候选。
+     */
+    List<WarframeOfficialConflictBatchDTO> findAllProjectedByStatusIn(Collection<String> statuses);
 }

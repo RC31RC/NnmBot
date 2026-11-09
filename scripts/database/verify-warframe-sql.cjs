@@ -183,7 +183,7 @@ withPostgres(async cluster => {
 
   if (hibernate) {
     execFileSync("sh", ["mvnw", "-pl", "nnm-app", "-am", "test",
-      "-Dtest=PostgresSchemaValidationTest,OfficialRivenWeaponTreeTest", "-Dsurefire.failIfNoSpecifiedTests=false",
+      "-Dtest=PostgresSchemaValidationTest,OfficialRivenWeaponTreeTest,PointAccountConcurrencyTest", "-Dsurefire.failIfNoSpecifiedTests=false",
       `-Dnnm.test.postgres-url=${jdbcUrl}`], {
       cwd: root, stdio: "inherit", timeout: 300000
     });

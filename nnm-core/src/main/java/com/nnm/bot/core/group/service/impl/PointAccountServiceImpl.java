@@ -1,31 +1,26 @@
 package com.nnm.bot.core.group.service.impl;
 
-import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
-import com.nnm.bot.core.constant.GroupPointConstants.PointErrorCode;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.GroupPointConstants.LockPurpose;
-import com.nnm.bot.core.group.service.CanonicalMemberResolver;
-
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.constant.GroupPointConstants.PointErrorCode;
+import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.domain.BotGroupPointTransaction;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import com.nnm.bot.core.group.repository.BotGroupPointTransactionRepository;
+import com.nnm.bot.core.group.service.CanonicalMemberResolver;
 import com.nnm.bot.core.group.service.PointAccountService;
 import com.nnm.bot.core.group.service.PointBalance;
 import com.nnm.bot.core.group.service.PointChangeResult;
 import com.nnm.bot.core.group.service.PointOperation;
-import io.github.rdt.lock.DistributedLockManager;
-import io.github.rdt.lock.LockKey;
-import io.github.rdt.lock.RdtLock;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /** 数据库积分账户实现，所有余额变更都在短事务内持锁完成。 */
 @Service
@@ -34,22 +29,22 @@ public class PointAccountServiceImpl implements PointAccountService {
     @Resource
     private BotGroupMemberRepository memberRepository;
     @Resource
-    private BotGroupPointTransactionRepository transactionRepository;
+    private EntityManager entityManager;
     @Resource
-    private DistributedLockManager lockManager;
+    private BotGroupPointTransactionRepository transactionRepository;
     @Resource
     private CanonicalMemberResolver canonicalMembers;
 
     @Override
     @Transactional
-    @RdtLock
     public PointChangeResult earn(PointOperation operation) {
-        operation = canonical(operation);
-        lockManager.lock(LockKey.forResource(BotGroupMember.class, operation.memberId()));
+        BotGroupMember member = lockedMember(operation.groupId(), operation.memberId());
+        // 行锁后再查流水，等待前一事务提交的重试才能看到已经落库的幂等记录。
         if (existsByIdempotencyKey(operation.idempotencyKey())) {
-            return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
+            return repeated(operation.idempotencyKey(), member);
         }
-        BotGroupMember member = lockedMember(operation);
+        if (!member.isEnabled())
+            throw new BusinessException(PointErrorCode.ACCOUNT_UNAVAILABLE);
         long points = Math.addExact(member.getPoints(), operation.amount());
         member.setPoints(points);
         member.setTotalEarned(Math.addExact(member.getTotalEarned(), operation.amount()));
@@ -60,14 +55,14 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     @Override
     @Transactional
-    @RdtLock
     public PointChangeResult spend(PointOperation operation) {
-        operation = canonical(operation);
-        lockManager.lock(LockKey.forResource(BotGroupMember.class, operation.memberId()));
+        BotGroupMember member = lockedMember(operation.groupId(), operation.memberId());
+        // 行锁后再查流水，等待前一事务提交的重试才能看到已经落库的幂等记录。
         if (existsByIdempotencyKey(operation.idempotencyKey())) {
-            return repeated(operation.idempotencyKey(), operation.groupId(), operation.memberId());
+            return repeated(operation.idempotencyKey(), member);
         }
-        BotGroupMember member = lockedMember(operation);
+        if (!member.isEnabled())
+            throw new BusinessException(PointErrorCode.ACCOUNT_UNAVAILABLE);
         if (member.getPoints() < operation.amount()) {
             return PointChangeResult.denied("积分不足，需要 " + operation.amount() + " 分", snapshot(member));
         }
@@ -80,23 +75,17 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     @Override
     @Transactional
-    @RdtLock
     public PointChangeResult refund(String originalIdempotencyKey, String description) {
-        lockManager.lock(
-            LockKey.forOperation(PointAccountServiceImpl.class, LockPurpose.REFUND.key(), originalIdempotencyKey));
         BotGroupPointTransaction original = transactionRepository.findByIdempotencyKey(originalIdempotencyKey)
             .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "原积分扣费流水不存在"));
         if (!TransactionType.COMMAND_COST.name().equals(original.getTransactionType()) || original.getAmount() >= 0) {
             throw new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "只有命令扣费流水允许退款");
         }
+        BotGroupMember member = lockedMember(original.getGroupId(), original.getMemberId());
         String refundKey = "REFUND:" + original.getId();
         if (existsByIdempotencyKey(refundKey)) {
-            return repeated(refundKey, original.getGroupId(), original.getMemberId());
+            return repeated(refundKey, member);
         }
-        long memberId = canonicalMemberId(original.getGroupId(), original.getMemberId());
-        lockManager.lock(LockKey.forResource(BotGroupMember.class, memberId));
-        BotGroupMember member = memberRepository.findByIdAndGroupId(memberId, original.getGroupId())
-            .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "退款流水存在，但对应的积分账户已不存在"));
         long refund = Math.abs(original.getAmount());
         member.setPoints(Math.addExact(member.getPoints(), refund));
         member.setTotalSpent(Math.max(0, member.getTotalSpent() - refund));
@@ -118,27 +107,20 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     @Override
     @Transactional
-    @RdtLock
     public PointChangeResult adjust(long groupId, long memberId, long targetPoints, String idempotencyKey,
         String description) {
         if (groupId <= 0 || memberId <= 0) {
             throw new BusinessException(CommonErrorCode.PARAM_INVALID, "积分账户标识必须为正数");
         }
-        memberId = canonicalMemberId(groupId, memberId);
-        lockManager.lock(LockKey.forResource(BotGroupMember.class, memberId));
         if (targetPoints < 0) {
             throw new BusinessException(CommonErrorCode.PARAM_INVALID, "积分余额不能为负数");
         }
         String normalizedIdempotencyKey = requireText(idempotencyKey, "idempotencyKey");
+        BotGroupMember member = lockedMember(groupId, memberId);
         if (existsByIdempotencyKey(normalizedIdempotencyKey)) {
-            return repeated(normalizedIdempotencyKey, groupId, memberId);
+            return repeated(normalizedIdempotencyKey, member);
         }
-        BotGroupMember member = memberRepository.findByIdAndGroupId(memberId, groupId)
-            .orElseThrow(() -> new BusinessException(PointErrorCode.ACCOUNT_NOT_FOUND));
         long amount = Math.subtractExact(targetPoints, member.getPoints());
-        if (amount == 0) {
-            return PointChangeResult.applied(snapshot(member), null);
-        }
         if (amount > 0) {
             member.setTotalEarned(Math.addExact(member.getTotalEarned(), amount));
         } else {
@@ -147,7 +129,7 @@ public class PointAccountServiceImpl implements PointAccountService {
         member.setPoints(targetPoints);
         memberRepository.save(member);
 
-        PointOperation operation = new PointOperation(groupId, memberId, null, TransactionType.ADMIN_ADJUST,
+        PointOperation operation = new PointOperation(groupId, member.getId(), null, TransactionType.ADMIN_ADJUST,
             Math.abs(amount), normalizedIdempotencyKey, description);
         BotGroupPointTransaction transaction = saveTransaction(operation, member, amount);
         return PointChangeResult.applied(snapshot(member), transaction.getId());
@@ -165,22 +147,24 @@ public class PointAccountServiceImpl implements PointAccountService {
         return StrUtil.isNotBlank(idempotencyKey) && transactionRepository.existsByIdempotencyKey(idempotencyKey);
     }
 
-    private BotGroupMember lockedMember(PointOperation operation) {
-        // 不使用命令入口的余额和启用状态；行锁一直持有到事务提交，避免方法锁提前释放。
-        BotGroupMember member = memberRepository.findByIdAndGroupId(operation.memberId(), operation.groupId())
-            .orElseThrow(() -> new BusinessException(PointErrorCode.ACCOUNT_NOT_FOUND));
-        if (!member.isEnabled())
-            throw new BusinessException(PointErrorCode.ACCOUNT_UNAVAILABLE);
-        return member;
-    }
-
-    private PointOperation canonical(PointOperation operation) {
-        long memberId = canonicalMemberId(operation.groupId(), operation.memberId());
-        if (memberId == operation.memberId()) {
-            return operation;
+    private BotGroupMember lockedMember(long groupId, long memberId) {
+        long canonical = canonicalMemberId(groupId, memberId);
+        for (int attempt = 0; attempt < CanonicalMemberResolver.MAX_RESOLUTION_DEPTH; attempt++) {
+            var lockedId = memberRepository.lockIdByIdAndGroupId(canonical, groupId);
+            if (lockedId.isPresent()) {
+                // 先以标量查询取锁，再刷新旧实体，避免锁查询自身触发一级缓存版本冲突。
+                BotGroupMember member = memberRepository.findById(lockedId.get())
+                    .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "已锁定的积分账户不存在"));
+                entityManager.refresh(member);
+                return member;
+            }
+            // 合并可在解析身份与取行锁之间提交；此时沿已提交别名重取目标行。
+            long next = canonicalMemberId(groupId, canonical);
+            if (next == canonical)
+                throw new BusinessException(PointErrorCode.ACCOUNT_NOT_FOUND);
+            canonical = next;
         }
-        return new PointOperation(operation.groupId(), memberId, operation.commandCode(), operation.transactionType(),
-            operation.amount(), operation.idempotencyKey(), operation.description());
+        throw new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "积分账户合并链持续变化");
     }
 
     private long canonicalMemberId(long groupId, long memberId) {
@@ -190,7 +174,7 @@ public class PointAccountServiceImpl implements PointAccountService {
     private BotGroupPointTransaction saveTransaction(PointOperation operation, BotGroupMember member, long amount) {
         BotGroupPointTransaction transaction = new BotGroupPointTransaction();
         transaction.setGroupId(operation.groupId());
-        transaction.setMemberId(operation.memberId());
+        transaction.setMemberId(member.getId());
         transaction.setCommandCode(operation.commandCode());
         transaction.setTransactionType(operation.transactionType().name());
         transaction.setAmount(amount);
@@ -212,10 +196,11 @@ public class PointAccountServiceImpl implements PointAccountService {
         return value.trim();
     }
 
-    private PointChangeResult repeated(String idempotencyKey, long groupId, long memberId) {
+    private PointChangeResult repeated(String idempotencyKey, BotGroupMember member) {
         BotGroupPointTransaction transaction = transactionRepository.findByIdempotencyKey(idempotencyKey)
             .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "幂等流水不存在"));
-        return PointChangeResult.repeated(balance(groupId, memberId).orElseThrow(
-            () -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "幂等流水存在，但积分账户不存在")), transaction.getId());
+        if (!member.getGroupId().equals(transaction.getGroupId()) || !member.getId().equals(transaction.getMemberId()))
+            throw new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "幂等键属于其他积分账户");
+        return PointChangeResult.repeated(snapshot(member), transaction.getId());
     }
 }

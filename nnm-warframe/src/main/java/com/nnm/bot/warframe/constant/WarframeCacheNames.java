@@ -7,8 +7,6 @@ public final class WarframeCacheNames {
     public static final String MARKET_ORDERS = "warframeMarketOrders";
     public static final String MARKET_AUCTIONS = "warframeMarketAuctions";
     public static final String MARKET_STATISTICS = "warframeMarketStatistics";
-    public static final String ITEM_RESOLUTION_INDEX = "warframeItemResolutionIndex";
-    public static final String IMAGE_INDEX = "warframeImageIndex";
     public static final String RIVEN_WEEKLY = "warframeRivenWeekly";
     public static final String WORLD_STATE_IMAGES = "warframeWorldStateImages";
 

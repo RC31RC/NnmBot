@@ -1,19 +1,17 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordIdentityQuery;
-import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
-import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
+import com.nnm.bot.warframe.persistent.official.pojo.query.OfficialRecordIdentityQuery;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainRepository;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialRepositoryRegistry;
 import com.nnm.bot.warframe.persistent.official.repository.support.OfficialTableRelations;
 import com.nnm.bot.warframe.persistent.official.service.record.OfficialRecordPersistenceService;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -21,6 +19,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersistenceService {
@@ -248,5 +248,44 @@ public class OfficialRecordPersistenceServiceImpl implements OfficialRecordPersi
                 .forEach(row -> identities.put(repository.domain().domainCode() + ":" + row.getBkey(), row.getId()));
         }
         return identities;
+    }
+
+    /**
+     * 根据明确领域读取主键，不扫描其他 JSON 主表。
+     *
+     * @param domain 独立领域。
+     * @param id 主记录标识。
+     * @return 当前表中的实体。
+     */
+    @Override
+    public Optional<OfficialRecord> findById(WarframeOfficialDataDomain domain, long id) {
+        return repositories.require(domain).findById(id).map(record -> record);
+    }
+
+    /**
+     * 根据明确领域读取摘要，不扫描其他 JSON 主表。
+     *
+     * @param domain 独立领域。
+     * @param id 主记录标识。
+     * @return 当前表中的非受管投影。
+     */
+    @Override
+    public Optional<WarframeOfficialRecordDTO> findDataById(WarframeOfficialDataDomain domain, long id) {
+        return repositories.require(domain).findDataById(id);
+    }
+
+    /**
+     * 只删除指定独立表的根记录及其子孙。
+     *
+     * @param domain 独立领域。
+     * @param ids 根标识集合。
+     */
+    @Override
+    @Transactional
+    public void deleteRecords(WarframeOfficialDataDomain domain, Collection<Long> ids) {
+        if (ids.isEmpty())
+            return;
+        relations.deleteChildren(domain.domainCode(), ids);
+        repositories.require(domain).deleteAllByIdInBatch(ids);
     }
 }
