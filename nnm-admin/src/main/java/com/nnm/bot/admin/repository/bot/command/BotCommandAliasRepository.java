@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/** 查询并维护命令主名称与附加触发词。 */
 public interface BotCommandAliasRepository extends JpaRepository<BotCommandAlias, Long> {
 
     List<BotCommandAlias> findAllByCommandId(Long commandId);

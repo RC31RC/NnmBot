@@ -1,9 +1,11 @@
 package com.nnm.bot.warframe.plugin.persistent.official.crafting;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.crafting.WarframeMaterialVO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.crafting.WarframeMaterialCommandDTO;
@@ -35,8 +37,8 @@ abstract class AbstractMaterialPlugin extends BotPlugin<Void, WarframeMaterialCo
         }
         if (page < 1 || OPTION.matcher(query).find())
             return new WarframeMaterialCommandDTO(query, page, "仅支持末尾分页参数：--page 2");
-        if (query.length() > 200)
-            return new WarframeMaterialCommandDTO(query, page, "查询内容过长，请缩短到 200 字以内");
+        if (query.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)
+            return new WarframeMaterialCommandDTO(query, page, OfficialCommandErrorCode.QUERY_TOO_LONG.getMessage());
         return new WarframeMaterialCommandDTO(query, page, null);
     }
 

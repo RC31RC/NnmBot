@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.adapter.command;
 
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO.CommandTemplateDTO;
 import cn.hutool.core.util.ObjectUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
@@ -10,9 +10,9 @@ import com.nnm.bot.admin.repository.bot.command.BotCommandAliasRepository;
 import com.nnm.bot.admin.repository.bot.command.BotCommandRepository;
 import com.nnm.bot.admin.repository.bot.command.BotCommandTemplateRepository;
 import com.nnm.bot.core.plugin.api.CommandConfigurationProvider;
-import com.nnm.bot.core.plugin.model.CommandDefinition;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.model.CommandTrigger;
+import com.nnm.bot.core.plugin.api.CommandDefinitionDTO;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO;
+import com.nnm.bot.core.plugin.api.CommandTrigger;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -39,22 +39,22 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
     private BotCommandTemplateRepository templateRepository;
 
     @Override
-    public Map<String, CommandDefinition> loadAll() {
+    public Map<String, CommandDefinitionDTO> loadAll() {
         List<BotCommand> commands = commandRepository.findAll();
         if (commands.isEmpty()) {
             return Map.of();
         }
 
         Map<Long, List<CommandTrigger>> triggersByCommand = triggersByCommand();
-        Map<Long, CommandTemplate> templatesByCommand = templatesByCommand(commands);
-        Map<String, CommandDefinition> definitions = new LinkedHashMap<>();
+        Map<Long, CommandTemplateDTO> templatesByCommand = templatesByCommand(commands);
+        Map<String, CommandDefinitionDTO> definitions = new LinkedHashMap<>();
 
         for (BotCommand command : commands) {
-            CommandExecutionConfiguration configuration =
-                new CommandExecutionConfiguration(command.isEnabled(), command.isShowInHelp(),
+            CommandExecutionConfigurationDTO configuration =
+                new CommandExecutionConfigurationDTO(command.isEnabled(), command.isShowInHelp(),
                     templatesByCommand.get(command.getId()), normalizedTriggers(triggersByCommand.get(command.getId())),
                     command.getPermissionOverride(), command.getCooldownSeconds(), command.isMentionInvoker());
-            CommandDefinition definition = new CommandDefinition(command.getCode(), command.getName(),
+            CommandDefinitionDTO definition = new CommandDefinitionDTO(command.getCode(), command.getName(),
                 command.getGameCode(), command.getDescription(), configuration);
             definitions.put(command.getCode().trim().toLowerCase(Locale.ROOT), definition);
         }
@@ -70,11 +70,11 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         return result;
     }
 
-    private Map<Long, CommandTemplate> templatesByCommand(List<BotCommand> commands) {
+    private Map<Long, CommandTemplateDTO> templatesByCommand(List<BotCommand> commands) {
         Map<Long, BotCommandTemplate> templates = new HashMap<>();
         for (BotCommandTemplate template : templateRepository.findAll())
             templates.put(template.getId(), template);
-        Map<Long, CommandTemplate> result = new HashMap<>();
+        Map<Long, CommandTemplateDTO> result = new HashMap<>();
         for (BotCommand command : commands) {
             Long templateId = command.getTemplateId();
             if (templateId == null)
@@ -85,7 +85,7 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
                     templateId);
                 continue;
             }
-            result.put(command.getId(), new CommandTemplate(selected.getTemplateCode(), selected.getHtmlContent()));
+            result.put(command.getId(), new CommandTemplateDTO(selected.getTemplateCode(), selected.getHtmlContent()));
         }
         return result;
     }

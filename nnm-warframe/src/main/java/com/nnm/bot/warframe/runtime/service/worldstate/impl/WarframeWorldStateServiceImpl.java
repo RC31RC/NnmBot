@@ -6,10 +6,10 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.warframe.runtime.cache.worldstate.WorldStateRuntimeSnapshot;
 import com.nnm.bot.warframe.runtime.client.worldstate.WarframeWorldStateApiClient;
 import com.nnm.bot.warframe.runtime.event.worldstate.WorldStateUpdatedEvent;
@@ -17,6 +17,8 @@ import com.nnm.bot.warframe.runtime.mapper.worldstate.OfficialWorldStateMapper;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeBountyCycleService;
+import com.nnm.bot.warframe.runtime.service.worldstate.WarframeInvasionEnrichmentService;
+import com.nnm.bot.warframe.runtime.service.worldstate.WarframeKuvaMissionEnrichmentService;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeCycleService;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeWorldStateService;
 import jakarta.annotation.Resource;
@@ -58,6 +60,12 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     /** 编排赏金动态补充信息与官方静态数据解析。 */
     @Resource
     private WarframeBountyCycleService bountyCycleService;
+    /** 只补全匹配官方轮次的双方入侵任务；失败仍发布官方结果。 */
+    @Resource
+    private WarframeInvasionEnrichmentService invasionEnrichmentService;
+    /** 外部任务流仅增加有效赤毒任务，失败时保持官方数据。 */
+    @Resource
+    private WarframeKuvaMissionEnrichmentService kuvaMissionEnrichmentService;
     /** 最近一次完整的本机快照，所有分区必须一起替换。 */
     private final AtomicReference<WorldStateRuntimeSnapshot> currentSnapshot = new AtomicReference<>();
 
@@ -153,8 +161,8 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
                 throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED,
                     "官方世界状态字段绑定失败：" + exception.getMessage(), exception);
             }
-            WorldStateDTO state =
-                cycleService.resolve(bountyCycleService.enrich(worldStateMapper.map(rawData, source, result.body())));
+            WorldStateDTO state = cycleService.resolve(kuvaMissionEnrichmentService.enrich(invasionEnrichmentService
+                .enrich(bountyCycleService.enrich(worldStateMapper.map(rawData, source, result.body())))));
             applySnapshot(new WorldStateRuntimeSnapshot(rawData, state, source, result.body(), sha256(result.body()),
                 state.metadata().fetchedAt(), topLevelFields(result.body())));
             progress.complete("Warframe 世界数据已更新");

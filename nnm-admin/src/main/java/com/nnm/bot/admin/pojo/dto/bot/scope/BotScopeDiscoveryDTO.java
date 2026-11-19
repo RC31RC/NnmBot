@@ -1,7 +1,7 @@
 package com.nnm.bot.admin.pojo.dto.bot.scope;
 
-import com.nnm.bot.core.constant.BotChannelStatus;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotChannelStatus;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 
 import java.util.List;
 

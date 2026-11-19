@@ -1,6 +1,6 @@
 package com.nnm.bot.core.channel.model;
 
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 
 import java.time.Duration;
 

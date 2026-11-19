@@ -1,6 +1,6 @@
 package com.nnm.bot.common.ocr;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -12,7 +12,7 @@ import com.nnm.bot.common.config.ocr.OcrProperties;
 import com.nnm.bot.common.concurrent.BoundedTaskExecutor;
 import com.nnm.bot.common.constant.OcrErrorCode;
 import com.nnm.bot.common.constant.ComputationErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import io.github.mymonstercat.Model;
 import io.github.mymonstercat.ocr.InferenceEngine;
 import io.github.mymonstercat.ocr.config.ParamConfig;
@@ -68,8 +68,8 @@ public class RapidOcrService implements OcrService {
             throw new BusinessException(OcrErrorCode.IMAGE_REQUIRED);
         }
         if (image.length > this.properties.getMaxInputBytes()) {
-            throw new BusinessException(OcrErrorCode.IMAGE_TOO_LARGE,
-                "OCR 图片大小为 " + image.length + " 字节，超过限制 " + this.properties.getMaxInputBytes() + " 字节");
+            throw new BusinessException(OcrErrorCode.IMAGE_BYTES_TOO_LARGE,
+                OcrErrorCode.IMAGE_BYTES_TOO_LARGE.formatLimit(image.length, this.properties.getMaxInputBytes()));
         }
 
         return taskExecutor.execute(() -> recognizeImage(image));
@@ -109,8 +109,8 @@ public class RapidOcrService implements OcrService {
         ImageMetadata metadata = this.readMetadata(image);
         long pixels = (long)metadata.width() * metadata.height();
         if (pixels > this.properties.getMaxImagePixels()) {
-            throw new BusinessException(OcrErrorCode.IMAGE_TOO_LARGE,
-                "OCR 图片像素数为 " + pixels + "，超过限制 " + this.properties.getMaxImagePixels());
+            throw new BusinessException(OcrErrorCode.IMAGE_PIXELS_TOO_LARGE,
+                OcrErrorCode.IMAGE_PIXELS_TOO_LARGE.formatLimit(pixels, this.properties.getMaxImagePixels()));
         }
         try {
             BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(image));
@@ -119,7 +119,7 @@ public class RapidOcrService implements OcrService {
             }
             return decoded;
         } catch (IOException exception) {
-            throw new BusinessException(OcrErrorCode.INVALID_IMAGE, "OCR 图片解码失败", exception);
+            throw new BusinessException(OcrErrorCode.INVALID_IMAGE, exception);
         }
     }
 
@@ -145,7 +145,7 @@ public class RapidOcrService implements OcrService {
                 reader.dispose();
             }
         } catch (IOException exception) {
-            throw new BusinessException(OcrErrorCode.INVALID_IMAGE, "无法读取 OCR 图片尺寸", exception);
+            throw new BusinessException(OcrErrorCode.INVALID_IMAGE, exception);
         }
     }
 

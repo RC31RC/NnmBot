@@ -1,21 +1,20 @@
 package com.nnm.bot.core.plugin.execution;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
-import com.nnm.bot.common.resource.ResourceScope;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.core.resource.ResourceScope;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.CommandAccessPolicy;
 import com.nnm.bot.core.plugin.api.CommandCooldownGuard;
 import com.nnm.bot.core.plugin.api.CommandCostGuard;
-import com.nnm.bot.core.plugin.model.CommandAccessDecision;
-import com.nnm.bot.core.plugin.model.CommandCostReservation;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.model.CommandMatch;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.plugin.api.CommandAccessDecision;
+import com.nnm.bot.core.plugin.api.CommandCostReservationDTO;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 import io.github.rdt.lock.RdtLock;
 import jakarta.annotation.Resource;
 import java.util.Locale;
@@ -84,7 +83,7 @@ public class CommandExecutionPipeline {
             return null;
         BotMessageContext context = match.invocation().context();
         CommandDescriptor descriptor = match.command().descriptor();
-        CommandCostReservation reservation = costGuard.reserve(context, descriptor);
+        CommandCostReservationDTO reservation = costGuard.reserve(context, descriptor);
         if (reservation == null || !reservation.allowed()) {
             String message = reservation == null ? null : reservation.message();
             throw new CommandRejectedException(
@@ -112,7 +111,7 @@ public class CommandExecutionPipeline {
      */
     @RdtLock
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void refundUnsentCommandCost(CommandCostReservation reservation, Throwable failure) {
+    public void refundUnsentCommandCost(CommandCostReservationDTO reservation, Throwable failure) {
         if (reservation.reserved())
             costGuard.refund(reservation, failure);
     }
@@ -120,7 +119,7 @@ public class CommandExecutionPipeline {
     /** 检查当前实例和用户是否仍允许执行；不申请锁、扣费、认领或消耗冷却。 */
     private boolean allowed(CommandMatch match) {
         RuntimeCommand command = match.command();
-        CommandExecutionConfiguration configuration = command.configuration();
+        CommandExecutionConfigurationDTO configuration = command.configuration();
         if (!configuration.enabled() || (coordinator != null && coordinator.shouldIgnore(match)))
             return false;
         CommandAccessPolicy policy = accessPolicyProvider.getIfAvailable();

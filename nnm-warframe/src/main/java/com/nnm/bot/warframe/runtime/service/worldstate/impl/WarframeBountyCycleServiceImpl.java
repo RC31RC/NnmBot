@@ -9,6 +9,8 @@ import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficia
 import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex.Snapshot;
 import com.nnm.bot.warframe.runtime.config.jackson.WarframeInputBinding;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframeBountyCycleProperties;
+import com.nnm.bot.warframe.runtime.constant.WarframeBountyCycleConstants.Ally;
+import com.nnm.bot.warframe.runtime.constant.WarframeBountyCycleConstants.Syndicate;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.BountyCycleJobDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.BountyStaticPoolDTO;
@@ -22,7 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +31,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleService {
-    private static final Set<String> SUPPORTED = Set.of("HexSyndicate", "ZarimanSyndicate", "EntratiLabSyndicate");
-
     @Resource
     private HttpClient httpClient;
     @Resource
@@ -58,20 +57,20 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
      */
     @Override
     public WorldStateDTO enrich(WorldStateDTO state) {
-        if (state.syndicateMissions().stream()
-            .noneMatch(mission -> mission.syndicate() != null && SUPPORTED.contains(mission.syndicate()))) {
+        if (state.syndicateMissions().stream().noneMatch(mission -> Syndicate.supports(mission.syndicate()))) {
             return state;
         }
         Snapshot index;
         try {
             index = staticLookup.current(state.syndicateMissions().stream().map(SyndicateMissionDTO::syndicate)
-                .filter(SUPPORTED::contains).distinct().toList());
+                .filter(Syndicate::supports).distinct().toList());
         } catch (RuntimeException exception) {
-            log.warn("Bounty static index unavailable; official WorldStateDTO remains usable", exception);
-            return state;
+            // 静态表故障不应阻断本轮动态赏金；原始节点和挑战仍可如实展示。
+            log.warn("Bounty static index unavailable; retaining raw bounty-cycle jobs", exception);
+            index = new Snapshot(Map.of(), Map.of(), Map.of());
         }
-        if (!index.available())
-            return state;
+        if (index == null)
+            index = new Snapshot(Map.of(), Map.of(), Map.of());
         BountyCycleRawData cycle = null;
         String status = properties.isEnabled() ? "unavailable" : "disabled";
         if (properties.isEnabled()) {
@@ -93,8 +92,7 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
         }
         List<SyndicateMissionDTO> missions = new ArrayList<>();
         for (SyndicateMissionDTO mission : state.syndicateMissions()) {
-            missions.add(mission.syndicate() != null && SUPPORTED.contains(mission.syndicate())
-                ? merge(mission, cycle, status, index) : mission);
+            missions.add(Syndicate.supports(mission.syndicate()) ? merge(mission, cycle, status, index) : mission);
         }
         return state.withSyndicateMissions(missions);
     }
@@ -121,11 +119,11 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
             if (official.expiry() == null || cycle.getExpiry() != official.expiry().toEpochMilli()) {
                 status = "expiry_mismatch_not_merged";
             } else {
-                List<JobRawData> rows = switch (official.syndicate()) {
-                    case "HexSyndicate" -> cycle.getBounties().getHex();
-                    case "ZarimanSyndicate" -> cycle.getBounties().getZariman();
-                    case "EntratiLabSyndicate" -> cycle.getBounties().getEntratiLab();
-                    default -> List.of();
+                List<JobRawData> rows = switch (Syndicate.fromCode(official.syndicate())) {
+                    case HEX -> cycle.getBounties().getHex();
+                    case ZARIMAN -> cycle.getBounties().getZariman();
+                    case ENTRATI_LAB -> cycle.getBounties().getEntratiLab();
+                    case null -> List.of();
                 };
                 status = CollUtil.isNotEmpty(rows) ? "expiry_matches_official_php" : "no_supplemental_jobs";
                 if (CollUtil.isNotEmpty(rows)) {
@@ -140,15 +138,17 @@ public class WarframeBountyCycleServiceImpl implements WarframeBountyCycleServic
                         String nodeKey = row.getNode();
                         String challengeKey = row.getChallenge();
                         String ally = row.getAlly();
+                        Ally allyDefinition = Ally.fromKey(ally);
                         Reference node = index.nodes().get(nodeKey);
                         Reference challenge = index.challenges().get(challengeKey);
                         // 成品尚未发布 ally agent 身份映射时只保留原始键，禁止从 tmp 复制名字表或猜测。
                         jobs.add(new WorldStateDTO.BountyCycleJobDTO(nodeKey, node == null ? null : node.displayName(),
                             node == null ? null : node.systemName(), node == null ? null : node.missionType(),
                             challengeKey, challenge == null ? null : challenge.displayName(),
-                            challenge == null ? null : challenge.descriptionZh(), ally, null,
+                            challenge == null ? null : challenge.descriptionZh(), ally,
+                            allyDefinition == null ? null : allyDefinition.displayName(),
                             node == null || challenge == null ? "unresolved_static_reference"
-                                : ally == null ? "resolved" : "ally_unresolved",
+                                : ally == null || allyDefinition != null ? "resolved" : "ally_unresolved",
                             node == null ? null : node.missionTypeKey(), tier, rows.size()));
                     }
                 }

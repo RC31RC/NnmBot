@@ -4,8 +4,8 @@ import com.nnm.bot.warframe.persistent.official.pojo.vo.reference.WarframeDefini
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeDefinitionCommandDTO;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 import com.nnm.bot.warframe.persistent.official.service.reference.WarframeDefinitionService;
 import jakarta.annotation.Resource;

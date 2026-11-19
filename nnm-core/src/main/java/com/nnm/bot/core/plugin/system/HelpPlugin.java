@@ -1,21 +1,22 @@
 package com.nnm.bot.core.plugin.system;
 
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.Comparator;
 import java.util.Locale;
 
+/** 根据当前启用配置生成可见命令列表。 */
 @BotPluginCommand(code = SystemCommandCodes.HELP, matchType = MatchType.EXACT)
 public class HelpPlugin extends BotPlugin<Void, Void> {
 

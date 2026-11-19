@@ -1,9 +1,9 @@
 package com.nnm.bot.warframe.persistent.official.event;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.transaction.AfterCommitExecutor;
-import com.nnm.bot.warframe.config.cache.DatasetRevisionDTO;
-import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.mq.message.dataset.DatasetRevisionDTO;
+import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeCacheErrorCode;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.mq.message.persistent.official.dataset.WarframeOfficialDatasetInvalidationMessage;
@@ -39,11 +39,11 @@ public class WarframeOfficialDataChangePublisher {
         files.save(file);
         afterCommitExecutor.executeOnce(WarframeDatasetCacheNames.official(domain), () -> {
             var change = new DatasetRevisionDTO(WarframeDatasetCacheNames.official(domain), file.getDataRevision());
-            cache.observe(change);
+            cache.observe(change.dataset(), change.revision());
             try {
                 messages.send(new WarframeOfficialDatasetInvalidationMessage(change));
             } catch (RuntimeException exception) {
-                // 无需可靠事务消息；其他实例的版本复核会补偿本次通知遗漏。
+                // 不轮询数据库补偿通知；其他实例按缓存自身的过期策略重新加载。
                 log.warn("官方数据已提交，版本广播失败 dataset={} revision={}", change.dataset(), change.revision(), exception);
             }
         });

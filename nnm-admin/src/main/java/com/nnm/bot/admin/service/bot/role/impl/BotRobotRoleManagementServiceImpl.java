@@ -1,9 +1,10 @@
 package com.nnm.bot.admin.service.bot.role.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.ArrayList;
 import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
 
-import com.nnm.bot.admin.constant.BotRobotRoleLockPurpose;
+import com.nnm.bot.admin.constant.bot.BotRobotRoleLockPurpose;
 import java.util.Comparator;
 import cn.hutool.core.util.ObjectUtil;
 
@@ -21,15 +22,13 @@ import com.nnm.bot.admin.repository.bot.command.BotCommandRobotRoleRepository;
 import com.nnm.bot.admin.repository.bot.role.BotRobotRoleInstanceRepository;
 import com.nnm.bot.admin.repository.bot.role.BotRobotRoleRepository;
 import com.nnm.bot.admin.service.bot.role.BotRobotRoleManagementService;
-import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 import io.github.rdt.lock.LockKey;
 import io.github.rdt.lock.RdtLock;
 import io.github.rdt.lock.DistributedLockManager;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +41,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/** 维护机器人角色、实例分配及角色允许执行的命令。 */
 @Service
 public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagementService {
 
@@ -91,7 +91,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     public long create(BotRobotRoleSaveDTO request) {
         String code = normalize(request.code());
         if (roleRepository.findByCodeIgnoreCase(code).isPresent()) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "机器人角色编码已存在");
+            throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_CODE_CONFLICT);
         }
         BotRobotRole role = new BotRobotRole();
         apply(role, request, code);
@@ -108,7 +108,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         String code = normalize(request.code());
         roleRepository.findByCodeIgnoreCase(code).filter(existing -> !existing.getId().equals(id))
             .ifPresent(existing -> {
-                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "机器人角色编码已存在");
+                throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_CODE_CONFLICT);
             });
         apply(role, request, code);
         if (ObjectUtil.isNotNull(request.botInstanceIds())) {
@@ -124,11 +124,12 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         // 使用 RDT 锁保护同一实例的角色全集，数据库只负责普通查询和唯一约束。
         lockManager.lock(LockKey.forOperation(BotRobotRoleManagementServiceImpl.class,
             BotRobotRoleLockPurpose.INSTANCE_ROLES.key(), instanceId));
-        instanceRepository.findById(instanceId).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        instanceRepository.findById(instanceId)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
         Set<Long> targetRoleIds = CollUtil.isEmpty(roleIds) ? Set.of()
             : roleIds.stream().filter(ObjectUtil::isNotNull).collect(Collectors.toSet());
         if (roleRepository.findAllById(targetRoleIds).size() != targetRoleIds.size()) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "包含不存在的机器人角色");
+            throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_UNKNOWN);
         }
 
         List<BotRobotRoleInstance> currentBindings = instanceBindingRepository.findAllByBotInstanceId(instanceId);
@@ -159,7 +160,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     public void delete(long id) {
         BotRobotRole role = role(id);
         if (instanceBindingRepository.existsByRobotRoleId(id)) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "机器人角色仍绑定机器人实例，不能删除");
+            throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_IN_USE);
         }
         // 命令关联是角色的能力定义，删除角色时一并清理，避免留下悬挂关联。
         commandBindingRepository.deleteAllByRobotRoleId(id);
@@ -172,7 +173,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         Set<Long> targetInstanceIds = new HashSet<>(ids);
         if (targetInstanceIds.size() != ids.size()
             || instanceRepository.findAllById(targetInstanceIds).size() != targetInstanceIds.size()) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "机器人角色包含重复或不存在的机器人实例");
+            throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_INSTANCE_INVALID);
         }
 
         List<BotRobotRoleInstance> currentBindings = instanceBindingRepository.findAllByRobotRoleId(role.getId());
@@ -216,7 +217,8 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     }
 
     private BotRobotRole role(long id) {
-        return roleRepository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人角色不存在"));
+        return roleRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.ROBOT_ROLE_NOT_FOUND));
     }
 
     private void apply(BotRobotRole role, BotRobotRoleSaveDTO request, String code) {
@@ -241,7 +243,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
                         .findByCodeIgnoreCase(descriptor.code()).orElseGet(() -> createDefaultCommand(descriptor)),
                     (left, right) -> left));
         if (commands.size() != codes.size()) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "机器人角色包含不存在的命令");
+            throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_COMMAND_UNKNOWN);
         }
         Set<Long> targetIds = commands.values().stream().map(BotCommand::getId).collect(Collectors.toSet());
         List<BotCommandRobotRole> current = commandBindingRepository.findAllByRobotRoleId(role.getId());

@@ -4,7 +4,8 @@ import com.nnm.bot.warframe.persistent.official.mapper.dataset.WarframeOfficialI
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
-import com.nnm.bot.common.task.AdminTaskSubmission;
+import com.nnm.bot.core.task.pojo.dto.AdminTaskSubmissionDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.vo.snapshot.WarframeOfficialTaskSubmissionVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialRecordVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialDatasetOverviewVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialFormFieldVO;
@@ -74,8 +75,9 @@ public class WarframeDataManagementController {
      */
     @PostMapping("/refresh")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<AdminTaskSubmission> refreshOfficial(@Valid @RequestBody WarframeOfficialRefreshDTO request) {
-        return ApiResponse.ok(admission.submit(request.ref(), request.productPath()));
+    public ApiResponse<WarframeOfficialTaskSubmissionVO> refreshOfficial(
+        @Valid @RequestBody WarframeOfficialRefreshDTO request) {
+        return ApiResponse.ok(taskVO(admission.submit(request.ref(), request.productPath())));
     }
 
     /**
@@ -86,8 +88,9 @@ public class WarframeDataManagementController {
      */
     @PostMapping("/refresh-all")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<AdminTaskSubmission> refreshAllOfficial(@RequestBody WarframeOfficialRefreshAllDTO request) {
-        return ApiResponse.ok(admission.submit(request.ref(), null));
+    public ApiResponse<WarframeOfficialTaskSubmissionVO> refreshAllOfficial(
+        @RequestBody WarframeOfficialRefreshAllDTO request) {
+        return ApiResponse.ok(taskVO(admission.submit(request.ref(), null)));
     }
 
     /** 查询官方全量或单文件刷新的正在执行任务与有效预览。 */
@@ -101,8 +104,9 @@ public class WarframeDataManagementController {
     /** 管理员确认后丢弃覆盖范围内的预览并重新提交；写时仍原子复核任务。 */
     @PostMapping("/refresh/discard-and-restart")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<AdminTaskSubmission> discardAndRestart(@RequestBody WarframeOfficialRefreshDTO request) {
-        return ApiResponse.ok(admission.discardAndSubmit(request.ref(), request.productPath()));
+    public ApiResponse<WarframeOfficialTaskSubmissionVO> discardAndRestart(
+        @RequestBody WarframeOfficialRefreshDTO request) {
+        return ApiResponse.ok(taskVO(admission.discardAndSubmit(request.ref(), request.productPath())));
     }
 
     private static WarframeOfficialRefreshConflictVO conflictVO(WarframeOfficialRefreshConflictDTO value) {
@@ -166,8 +170,8 @@ public class WarframeDataManagementController {
     /** 仅恢复同一次审批中失败的文件和未提交分类，不接受第二次选择。 */
     @PostMapping("/preview/{id}/apply-retry")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<AdminTaskSubmission> retryApply(@PathVariable String id) {
-        return ApiResponse.ok(admission.retryApply(id));
+    public ApiResponse<WarframeOfficialTaskSubmissionVO> retryApply(@PathVariable String id) {
+        return ApiResponse.ok(taskVO(admission.retryApply(id)));
     }
 
     /**
@@ -211,9 +215,9 @@ public class WarframeDataManagementController {
      */
     @PostMapping("/preview/{id}/apply")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<AdminTaskSubmission> applyOfficial(@PathVariable String id,
+    public ApiResponse<WarframeOfficialTaskSubmissionVO> applyOfficial(@PathVariable String id,
         @RequestBody WarframeOfficialApplyDTO request) {
-        return ApiResponse.ok(admission.submitApply(id, request));
+        return ApiResponse.ok(taskVO(admission.submitApply(id, request)));
     }
 
     /**
@@ -319,6 +323,10 @@ public class WarframeDataManagementController {
         @RequestParam(defaultValue = "false") boolean replaceExisting) {
         return ApiResponse
             .ok(officialMaintenanceService.convertToSelfMaintained(id, confirmed, replaceExisting).getId());
+    }
+
+    private static WarframeOfficialTaskSubmissionVO taskVO(AdminTaskSubmissionDTO task) {
+        return new WarframeOfficialTaskSubmissionVO(task.taskId(), task.taskType());
     }
 
 }

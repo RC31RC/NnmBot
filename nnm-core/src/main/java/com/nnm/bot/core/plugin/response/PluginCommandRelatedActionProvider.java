@@ -1,14 +1,16 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.CommandPresentationConstants;
+
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.CommandAccessPolicy;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.RelatedCommand;
-import com.nnm.bot.core.plugin.model.ReplyAction;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.api.RelatedCommand;
+import com.nnm.bot.core.plugin.api.ReplyAction;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
@@ -47,7 +49,7 @@ public class PluginCommandRelatedActionProvider implements CommandRelatedActionP
             StringBuilder text = new StringBuilder(trigger);
             for (RelatedCommand.Argument argument : link.arguments())
                 text.append(' ').append(argument.value());
-            if (text.length() <= 512)
+            if (text.length() <= CommandPresentationConstants.MAX_RELATED_ACTION_TEXT_LENGTH)
                 actions.add(new ReplyAction.Command(link.title(), text.toString(), false));
         }
         return List.copyOf(actions);

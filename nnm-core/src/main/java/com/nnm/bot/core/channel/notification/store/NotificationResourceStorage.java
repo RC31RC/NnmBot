@@ -2,14 +2,15 @@ package com.nnm.bot.core.channel.notification.store;
 
 import java.io.OutputStream;
 import java.util.Iterator;
-import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.core.channel.notification.constant.NotificationConstants.ImageFormat;
+import com.nnm.bot.core.channel.notification.constant.NotificationConstants.ResourceErrorCode;
 import com.nnm.bot.common.storage.ObjectStorage;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.mq.message.notification.NotificationResource;
 import com.nnm.bot.core.mq.message.notification.NotificationResourceManifest;
 import com.nnm.bot.core.config.BotNotificationProperties;
 import com.nnm.bot.core.config.ReplyProperties;
-import com.nnm.bot.core.plugin.model.CommandAttachment;
+import com.nnm.bot.core.plugin.api.CommandAttachment;
 import io.github.rdt.state.SharedStateStore;
 import jakarta.annotation.Resource;
 import java.io.IOException;
@@ -20,9 +21,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -46,7 +45,7 @@ public class NotificationResourceStorage {
     private BotNotificationProperties properties;
 
     public NotificationResource upload(long owner, InputStream input, long size) throws IOException {
-        BusinessAssert.isTrue(size > 0 && size <= limits.getMaxImageBytes(), CommonErrorCode.PARAM_INVALID, "图片大小超过限制");
+        BusinessAssert.isTrue(size > 0 && size <= limits.getMaxImageBytes(), ResourceErrorCode.IMAGE_SIZE_INVALID);
         UUID id = UUID.randomUUID();
         Path root = Files.createTempDirectory("nnm-notification-upload-");
         Path path = root.resolve("image");
@@ -60,18 +59,17 @@ public class NotificationResourceStorage {
             int height;
             try (ImageInputStream image = ImageIO.createImageInputStream(path.toFile())) {
                 Iterator<ImageReader> readers = ImageIO.getImageReaders(image);
-                BusinessAssert.isTrue(readers.hasNext(), CommonErrorCode.PARAM_INVALID, "仅支持可识别的 PNG、JPEG 或 GIF 图片");
+                BusinessAssert.isTrue(readers.hasNext(), ResourceErrorCode.IMAGE_UNREADABLE);
                 ImageReader reader = readers.next();
                 try {
                     reader.setInput(image, true, true);
-                    String format = reader.getFormatName().toLowerCase(Locale.ROOT);
-                    BusinessAssert.isTrue(Set.of("png", "jpeg", "jpg", "gif").contains(format),
-                        CommonErrorCode.PARAM_INVALID, "不支持的图片格式");
+                    ImageFormat format = ImageFormat.fromCode(reader.getFormatName());
+                    BusinessAssert.isTrue(format != null, ResourceErrorCode.IMAGE_FORMAT_UNSUPPORTED);
                     width = reader.getWidth(0);
                     height = reader.getHeight(0);
                     BusinessAssert.isTrue(width > 0 && height > 0 && (long)width * height <= limits.getMaxImagePixels(),
-                        CommonErrorCode.PARAM_INVALID, "图片像素超过限制");
-                    contentType = "image/" + (format.equals("jpg") ? "jpeg" : format);
+                        ResourceErrorCode.IMAGE_PIXELS_INVALID);
+                    contentType = format.getContentType();
                 } finally {
                     reader.dispose();
                 }
@@ -112,7 +110,7 @@ public class NotificationResourceStorage {
             states.<NotificationResource>get(key(id), NotificationResource.class).orElse(null);
         BusinessAssert.isTrue(
             resource != null && resource.ownerId() == owner && Instant.now().isBefore(resource.expiresAt()),
-            CommonErrorCode.PARAM_INVALID, "图片资源不存在、已过期或无权访问");
+            ResourceErrorCode.IMAGE_RESOURCE_UNAVAILABLE);
         return resource;
     }
 
@@ -129,7 +127,7 @@ public class NotificationResourceStorage {
     public NotificationResourceManifest retain(long owner, UUID submission, Collection<UUID> ids, Instant expiry) {
         BusinessAssert.isTrue(expiry.isAfter(Instant.now())
             && !expiry.isAfter(Instant.now().plus(properties.maxScheduleDelay()).plus(properties.resourceRetention())),
-            CommonErrorCode.PARAM_INVALID, "任务资源保留时间超出限制");
+            ResourceErrorCode.RESOURCE_RETENTION_INVALID);
         LinkedHashMap<UUID, NotificationResource> resources = new LinkedHashMap<UUID, NotificationResource>();
         ids.forEach(id -> resources.put(id, owned(owner, id)));
         LinkedHashMap<UUID, NotificationResource> retained = new LinkedHashMap<UUID, NotificationResource>();
@@ -164,7 +162,7 @@ public class NotificationResourceStorage {
     public CommandAttachment materialize(NotificationResourceManifest manifest, UUID id) {
         NotificationResource resource = manifest.resources().get(id);
         BusinessAssert.isTrue(resource != null && Instant.now().isBefore(manifest.expiresAt()),
-            CommonErrorCode.PARAM_INVALID, "任务资源不存在或已过期");
+            ResourceErrorCode.TASK_RESOURCE_UNAVAILABLE);
         try {
             Path root = Files.createTempDirectory("nnm-notification-delivery-");
             Path file = root.resolve("image");

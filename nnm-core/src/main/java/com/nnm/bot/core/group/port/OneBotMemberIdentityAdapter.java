@@ -1,12 +1,13 @@
 package com.nnm.bot.core.group.port;
 
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
+/** 将 OneBot 用户身份映射到群成员 OneBot 标识字段。 */
 @Component
 public class OneBotMemberIdentityAdapter implements BotGroupMemberIdentityAdapter {
 

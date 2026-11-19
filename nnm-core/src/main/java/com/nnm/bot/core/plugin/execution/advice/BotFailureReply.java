@@ -1,8 +1,8 @@
 package com.nnm.bot.core.plugin.execution.advice;
 
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
 
 import java.util.Objects;
 

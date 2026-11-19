@@ -1,13 +1,13 @@
 package com.nnm.bot.core.channel.runtime;
 
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
 import com.nnm.bot.core.channel.topology.BotTopologyLoader;
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot;
 import com.nnm.bot.core.config.ClusterProperties;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import com.nnm.bot.core.group.domain.BotGroup;
 import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.repository.BotGroupBotRepository;
@@ -121,8 +121,7 @@ public class BotConnectionPlacementCoordinator {
         String target = owners.stream().filter(owner -> component.equals(owner.instanceId())).findFirst()
             .orElse(owners.getFirst()).lease().owner();
         Lease targetIdentity = leases.find("node:" + target)
-            .orElseThrow(() -> new BusinessException(BotChannelErrorCode.CONNECTION_TARGET_LEASE_EXPIRED,
-                "迁移目标节点身份租约已失效，请刷新后重试: " + target));
+            .orElseThrow(() -> new BusinessException(BotChannelErrorCode.CONNECTION_TARGET_LEASE_EXPIRED));
         List<Move> moves = owners.stream().filter(owner -> !target.equals(owner.lease().owner()))
             .map(owner -> new Move(owner.instanceId(), owner.lease().owner(), target)).toList();
         return new Transfer(component, members, targetIdentity, moves, owners);
@@ -138,7 +137,7 @@ public class BotConnectionPlacementCoordinator {
 
     private Plan confirmed(Plan plan, String confirmationToken) {
         BusinessAssert.isTrue(plan.transfers().isEmpty() || Objects.equals(plan.confirmationToken(), confirmationToken),
-            BotChannelErrorCode.CONNECTION_MIGRATION_CONFIRMATION_REQUIRED, "该绑定需要迁移机器人连接，请重新预检查并确认最新迁移方案");
+            BotChannelErrorCode.CONNECTION_MIGRATION_RECONFIRM_REQUIRED);
         return plan;
     }
 
@@ -155,7 +154,7 @@ public class BotConnectionPlacementCoordinator {
             plan.transfers().stream()
                 .allMatch(transfer -> leases.isHeld(transfer.targetIdentity())
                     && transfer.owners().stream().allMatch(owner -> leases.isHeld(owner.lease()))),
-            BotChannelErrorCode.CONNECTION_MIGRATION_CONFIRMATION_REQUIRED, "连接归属在保存期间发生变化，请重新预检查并确认迁移方案");
+            BotChannelErrorCode.CONNECTION_OWNER_CHANGED_DURING_SAVE);
         for (Transfer transfer : plan.transfers()) {
             // 触发变更及目标连通分量在提交后可见之前，迁移意图不生效。
             stateStore.put(planKey(transfer.component()),

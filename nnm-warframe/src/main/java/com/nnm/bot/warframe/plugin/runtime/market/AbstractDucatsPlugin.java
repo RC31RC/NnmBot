@@ -1,9 +1,11 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.runtime.service.market.WarframeMarketDucatsService;
 import jakarta.annotation.Resource;
 import java.util.regex.Pattern;
@@ -49,8 +51,8 @@ abstract class AbstractDucatsPlugin extends BotPlugin<Void, String> {
         if (page < 1 || INVALID_PAGE.matcher(keyword).find()) {
             return CommandResult.rejected("页码必须为正整数：--page 2");
         }
-        if (keyword.length() > 200)
-            return CommandResult.rejected("查询内容过长，请缩短到 200 字以内");
+        if (keyword.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)
+            return CommandResult.rejected(OfficialCommandErrorCode.QUERY_TOO_LONG.getMessage());
         String title = gold ? "金垃圾" : "银垃圾";
         return ducatsService.ranking(gold, keyword, page)
             .map(value -> CommandResult.text(title + "\n" + value.summary()))

@@ -1,9 +1,9 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ApplyFileStatus;
@@ -63,6 +63,12 @@ public class WarframeOfficialApplyWorkServiceImpl implements WarframeOfficialApp
     private ObjectMapper objectMapper;
     private final AtomicBoolean running = new AtomicBoolean();
 
+    /**
+     * 将审批选择交由状态服务校验并冻结。
+     *
+     * @param batchId 待采纳批次标识。
+     * @param selection 管理员确认的分类和记录选择。
+     */
     @Override
     public void freeze(String batchId, WarframeOfficialApplyDTO selection) {
         state.freeze(batchId, selection);
@@ -137,6 +143,13 @@ public class WarframeOfficialApplyWorkServiceImpl implements WarframeOfficialApp
         }
     }
 
+    /**
+     * 等待并报告当前批次采纳进度，管理任务仅用于前端进度回显。
+     *
+     * @param batchId 审批批次标识。
+     * @param reporter 管理端任务进度接收器。
+     * @return 批次完成或失败后的预览状态。
+     */
     @Override
     public WarframeOfficialPreviewDTO await(String batchId, TaskProgressReporter reporter) {
         while (true) {
@@ -162,6 +175,12 @@ public class WarframeOfficialApplyWorkServiceImpl implements WarframeOfficialApp
         }
     }
 
+    /**
+     * 查询批次中各文件的认领和分类提交状态。
+     *
+     * @param batchId 审批批次标识。
+     * @return 按文件排列的采纳进度。
+     */
     @Override
     public List<WarframeOfficialApplyFileDTO> files(String batchId) {
         batches.findById(batchId).orElseThrow();
@@ -171,6 +190,11 @@ public class WarframeOfficialApplyWorkServiceImpl implements WarframeOfficialApp
             .sorted(java.util.Comparator.comparing(WarframeOfficialApplyFileDTO::path)).toList();
     }
 
+    /**
+     * 重试批次中尚未成功的文件工作项。
+     *
+     * @param batchId 部分采纳失败的批次标识。
+     */
     @Override
     public void retry(String batchId) {
         state.retry(batchId);

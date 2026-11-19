@@ -1,10 +1,11 @@
 package com.nnm.bot.warframe.runtime.client.market;
 
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.AuctionType;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.warframe.runtime.client.market.exchange.WarframeMarketV1HttpExchange;
 import com.nnm.bot.warframe.runtime.client.market.exchange.WarframeMarketV2HttpExchange;
@@ -119,8 +120,8 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchAuctionWeaponsResult(String type) {
-        if (!List.of("riven", "lich", "sister").contains(type)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "不支持的拍卖类型: " + type);
+        if (!AuctionType.supports(type)) {
+            throw new BusinessException(MarketErrorCode.UNSUPPORTED_AUCTION_TYPE);
         }
         return executeV2("/" + type + "/weapons", type + " weapons", () -> v2HttpExchange.fetchAuctionWeapons(type,
             properties.getPlatform(), properties.getLanguage(), properties.getUserAgent(), authorization()));

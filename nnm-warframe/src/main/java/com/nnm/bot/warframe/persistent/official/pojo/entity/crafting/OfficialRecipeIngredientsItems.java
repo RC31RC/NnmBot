@@ -124,7 +124,5 @@ public class OfficialRecipeIngredientsItems extends OfficialChildRow {
     private OfficialRecipeRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRecipeIngredientsItemsItemReferencesItems> officialRecipeIngredientsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialRecipeIngredientsItemsItemReferencesItems> officialRecipeIngredientsItemsItemReferencesItemsRows = new ArrayList<>();
 }

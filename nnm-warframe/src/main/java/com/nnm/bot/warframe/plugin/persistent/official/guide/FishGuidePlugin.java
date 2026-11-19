@@ -2,10 +2,10 @@ package com.nnm.bot.warframe.plugin.persistent.official.guide;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.guide.WarframeGuideCommandDTO;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.guide.WarframeGuideVO;
@@ -22,6 +22,11 @@ import java.util.stream.Collectors;
 @BotPluginCommand(code = WarframeCommandCodes.FISH_GUIDE, matchType = MatchType.PREFIX)
 public final class FishGuidePlugin extends AbstractGuidePlugin {
 
+    /**
+     * 鱼类资料不按地图图层区分。
+     *
+     * @return 始终为 {@code false}。
+     */
     @Override
     protected boolean supportsLayers() {
         return false;

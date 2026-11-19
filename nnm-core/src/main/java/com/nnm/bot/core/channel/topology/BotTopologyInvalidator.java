@@ -9,14 +9,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+/** 在配置事务提交后刷新本节点拓扑并通知集群其他节点。 */
 @Slf4j
 @Component
 public class BotTopologyInvalidator {
+    /** 提供本节点可原子替换的拓扑快照。 */
     @Resource
     private BotTopologyStore topology;
+    /** 通过可靠消息队列广播拓扑版本。 */
     @Resource
     private RdtMessageSendManager messages;
 
+    /** 注册提交后失效动作；无事务时立即执行。 */
     public void invalidateAfterCommit() {
         Runnable refresh = () -> {
             String version = "invalidate:" + UUID.randomUUID();

@@ -160,12 +160,8 @@ public class OfficialRelicStatesEntriesRewardsItems extends OfficialChildRow {
     private OfficialRelicStatesEntries parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems> officialRelicStatesEntriesRewardsItemsDropTableEntriesItemsRows =
-            new ArrayList<>();
+    private List<OfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems> officialRelicStatesEntriesRewardsItemsDropTableEntriesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRelicStatesEntriesRewardsItemsItemReferencesItems> officialRelicStatesEntriesRewardsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialRelicStatesEntriesRewardsItemsItemReferencesItems> officialRelicStatesEntriesRewardsItemsItemReferencesItemsRows = new ArrayList<>();
 }

@@ -4,11 +4,12 @@ import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.Map;
 import java.util.List;
-import com.nnm.bot.core.constant.BotMessageScope;
+import com.nnm.bot.core.messaging.constant.BotMessageScope;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/** QQ 官方回复窗口、额度和经人工确认的能力白名单。 */
 @Getter
 @Setter
 @ConfigurationProperties(prefix = "nnm.reply.qq")
@@ -27,14 +28,30 @@ public class QqReplyProperties {
     /** 仅登记已由真实账号确认可主动投递的账号及群 OpenID；空映射默认关闭。 */
     private Map<String, List<String>> proactiveGroups = Map.of();
 
+    /** 判断账号和会话是否经过原生键盘能力确认。
+     *
+     * @param account 机器人账号标识
+     * @param scope 目标消息作用域
+     * @return 配置显式允许时为 {@code true}
+     */
     public boolean keyboardAllowed(String account, BotMessageScope scope) {
         return keyboardAccounts.getOrDefault(account, List.of()).contains(scope);
     }
 
+    /** 判断账号是否获准向指定群 OpenID 主动发送。
+     *
+     * @param account 机器人账号标识
+     * @param groupOpenid 目标群 OpenID
+     * @return 配置显式允许时为 {@code true}
+     */
     public boolean proactiveGroupAllowed(String account, String groupOpenid) {
         return proactiveGroups.getOrDefault(account, List.of()).contains(groupOpenid);
     }
 
+    /** 校验回复额度、保留时间及主动发送白名单。
+     *
+     * @throws IllegalArgumentException 配置缺少显式资格或超出平台安全范围
+     */
     @PostConstruct
     public void validate() {
         if (keyboardAccounts == null || keyboardAccounts.entrySet().stream()

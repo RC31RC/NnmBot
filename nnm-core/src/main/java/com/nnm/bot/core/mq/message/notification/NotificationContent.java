@@ -1,18 +1,18 @@
 package com.nnm.bot.core.mq.message.notification;
 
-import com.nnm.bot.core.constant.NotificationConstants.BlockType;
+import com.nnm.bot.core.channel.notification.constant.NotificationConstants.BlockType;
 
-import com.nnm.bot.core.constant.NotificationConstants.ActionType;
+import com.nnm.bot.core.channel.notification.constant.NotificationConstants.ActionType;
 
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
+import com.nnm.bot.core.messaging.model.BotMarkdownMessage;
 import com.nnm.bot.core.config.ReplyProperties;
-import com.nnm.bot.core.plugin.model.CommandAttachment;
-import com.nnm.bot.core.constant.CommandPresentationConstants.CompositionPolicy;
-import com.nnm.bot.core.constant.CommandPresentationConstants.InteractionPolicy;
-import com.nnm.bot.core.plugin.model.PresentationPolicy;
-import com.nnm.bot.core.plugin.model.ReplyAction;
-import com.nnm.bot.core.plugin.model.ReplyBlock;
-import com.nnm.bot.core.plugin.model.ReplyMessage;
+import com.nnm.bot.core.plugin.api.CommandAttachment;
+import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.CompositionPolicy;
+import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.InteractionPolicy;
+import com.nnm.bot.core.plugin.api.PresentationPolicy;
+import com.nnm.bot.core.plugin.api.ReplyAction;
+import com.nnm.bot.core.plugin.api.ReplyBlock;
+import com.nnm.bot.core.plugin.api.ReplyMessage;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;

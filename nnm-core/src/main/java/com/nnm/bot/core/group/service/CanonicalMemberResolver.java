@@ -1,7 +1,7 @@
 package com.nnm.bot.core.group.service;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.BotGroupErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.group.constant.BotGroupErrorCode;
 import com.nnm.bot.core.group.repository.BotGroupMemberMergeRepository;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;

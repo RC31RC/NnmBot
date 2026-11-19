@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
+/** 查询后台导航菜单及角色可见菜单。 */
 public interface SysMenuRepository extends JpaRepository<SysMenu, Long> {
 
     Optional<SysMenu> findByName(String name);

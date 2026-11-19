@@ -9,6 +9,7 @@ import io.github.rdt.queue.RdtMessageConsumer;
 import io.github.rdt.spring.annotation.RdtQueueListener;
 import jakarta.annotation.Resource;
 
+/** 接收集群拓扑版本广播并触发本节点快照刷新。 */
 @RdtQueueListener(topic = BotTopologyRefreshMessageDescriptor.TOPIC, group = BotTopologyRefreshConsumerDescriptor.GROUP)
 public class BotTopologyRefreshConsumer implements RdtMessageConsumer<BotTopologyRefreshMessage> {
     @Resource

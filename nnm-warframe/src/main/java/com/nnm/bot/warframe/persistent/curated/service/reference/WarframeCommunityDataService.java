@@ -1,17 +1,17 @@
 package com.nnm.bot.warframe.persistent.curated.service.reference;
 
-import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeCommunityQuery;
 import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPendingPreviewDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewPageDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeCommunityQuery;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityDatasetVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPendingPreviewDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewPageDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
-import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface WarframeCommunityDataService {
     /**
@@ -63,14 +63,6 @@ public interface WarframeCommunityDataService {
     WarframeCommunityPreviewDTO uploadPreview(String dataset, MultipartFile file);
 
     /**
-     * 读取已配置的人工资料输入并生成变更预览。
-     *
-     * @param dataset 本次操作所属的数据文件或社区资料类型。
-     * @return 游戏资料社区预览对象。
-     */
-    WarframeCommunityPreviewDTO pullPreview(String dataset);
-
-    /**
      * 读取已冻结预览中的一页变更。
      *
      * @param dataset 本次操作所属的数据文件或社区资料类型。
@@ -115,11 +107,4 @@ public interface WarframeCommunityDataService {
      */
     void delete(String dataset, long id);
 
-    /**
-     * 取得或更新当前业务使用的数据来源。
-     *
-     * @param dataset 本次操作所属的数据文件或社区资料类型。
-     * @param url 本次外部请求或资源的地址。
-     */
-    void source(String dataset, String url);
 }

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+/** 有界计算执行器可能返回的容量、超时和执行错误。 */
 @Getter
 @RequiredArgsConstructor
 public enum ComputationErrorCode implements ErrorCode {

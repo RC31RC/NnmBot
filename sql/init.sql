@@ -4,6 +4,7 @@
 -- 新建空库只执行本文件；已有数据库仅执行合并基线之后适用的新过程脚本，不重复执行初始化脚本。
 -- 本文件同时包含完整表结构、初始化数据和序列状态；维护时必须保留已有数据段及序列值。
 -- 数据使用普通 INSERT 语句，兼容 psql、JDBC、DataGrip 和 DBeaver 的 SQL 脚本执行器。
+-- 业务关联由应用维护；本基线不声明表级外键，级联清理由业务事务负责。
 
 --
 -- PostgreSQL initialization script
@@ -2920,7 +2921,6 @@ INSERT INTO nnmbot.bot_command (id, code, name, game_code, description, enabled,
 ('35', 'relics', '遗物', 'warframe', '查询遗物信息', 't', 't', '25', NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('36', 'riven-analyse', '紫卡分析', 'warframe', '分析紫卡截图或文本', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('37', 'calendar-1999', '1999日历', 'warframe', '查看 1999 日历', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('38', 'conclave', '竞技场', 'warframe', '查看当前 Conclave 挑战', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('39', 'subscribe', '订阅', 'warframe', '订阅 Warframe 事件通知', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('40', 'unsubscribe', '取消订阅', 'warframe', '取消 Warframe 事件通知订阅', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('46', 'watch-list', '蹲任务', 'warframe', '查看当前成员的 Warframe 蹲任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-29 00:00:00', '2026-09-29 00:00:00'),
@@ -3032,7 +3032,6 @@ INSERT INTO nnmbot.bot_command_alias (id, command_id, alias_name, boundary_polic
 ('2', '42', '更新WM紫卡', 'NONE'),
 ('3', '31', '/xt', 'WHITESPACE_REQUIRED'),
 ('4', '7', 'market', 'CJK_OR_WHITESPACE'),
-('5', '38', '竞技场', 'NONE'),
 ('6', '8', '高价值', 'NONE'),
 ('7', '44', '更新翻译', 'NONE'),
 ('8', '28', '/wr', 'WHITESPACE_REQUIRED'),
@@ -3040,7 +3039,6 @@ INSERT INTO nnmbot.bot_command_alias (id, command_id, alias_name, boundary_polic
 ('10', '36', '分析紫卡', 'NONE'),
 ('11', '20', '福尔图娜', 'NONE'),
 ('12', '18', '钢铁裂缝', 'NONE'),
-('13', '38', 'conclave', 'WHITESPACE_REQUIRED'),
 ('14', '2', 'help', 'WHITESPACE_REQUIRED'),
 ('15', '2', 'HELP', 'WHITESPACE_REQUIRED'),
 ('17', '30', 'cd', 'WHITESPACE_REQUIRED'),
@@ -3053,7 +3051,6 @@ INSERT INTO nnmbot.bot_command_alias (id, command_id, alias_name, boundary_polic
 ('24', '11', '执行官', 'NONE'),
 ('25', '11', '猎杀', 'NONE'),
 ('26', '20', '夜灵平野', 'NONE'),
-('27', '38', 'pvp', 'WHITESPACE_REQUIRED'),
 ('28', '8', '仲裁任务', 'NONE'),
 ('29', '7', '/wm', 'CJK_OR_WHITESPACE'),
 ('30', '7', '/报价', 'NONE'),
@@ -3349,7 +3346,6 @@ INSERT INTO nnmbot.bot_command_robot_role (id, command_id, robot_role_id) VALUES
 ('31', '35', '1'),
 ('32', '36', '1'),
 ('33', '37', '1'),
-('34', '38', '1'),
 ('35', '39', '1'),
 ('36', '40', '1'),
 ('37', '41', '1'),
@@ -4625,7 +4621,6 @@ INSERT INTO nnmbot.sys_permission (id, code, name, type, menu_id, enabled, creat
 ('49', 'warframe:game:view', '查看 Warframe 官方游戏数据', 'BUTTON', '84', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('44', 'warframe:community:view', '查看 Warframe 社区数据', 'BUTTON', '82', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('43', 'warframe:community:update', '维护 Warframe 社区数据', 'BUTTON', '82', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('42', 'warframe:community:sync', '同步 Warframe 社区数据', 'BUTTON', '82', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('41', 'warframe:community:apply', '审批 Warframe 社区数据', 'BUTTON', '82', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('54', 'warframe:community:delete', '删除自维护 Warframe 社区数据', 'BUTTON', '82', 't', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('55', 'bot:notification:preview', '预览群组通知', 'BUTTON', '88', 't', '2026-10-21 00:00:00', '2026-10-21 00:00:00'),
@@ -4897,8 +4892,6 @@ INSERT INTO nnmbot.sys_role_permission (role_id, permission_id) VALUES
 ('2', '40'),
 ('1', '41'),
 ('2', '41'),
-('1', '42'),
-('2', '42'),
 ('1', '43'),
 ('2', '43'),
 ('1', '44'),
@@ -6207,9 +6200,7 @@ CREATE TABLE nnmbot.wf_official_dataset_head (
     id integer PRIMARY KEY,
     batch_id character varying(36),
     -- 固定单行边界，首次导入前也必须存在可锁定的行。
-    CONSTRAINT ck_wf_dataset_head_singleton CHECK (id = 1),
-    -- 生效快照必须关联一个持久化批次，不允许悬空指针。
-    CONSTRAINT fk_wf_dataset_head_batch FOREIGN KEY (batch_id) REFERENCES nnmbot.wf_official_dataset_batch(id)
+    CONSTRAINT ck_wf_dataset_head_singleton CHECK (id = 1)
 );
 COMMENT ON TABLE nnmbot.wf_official_dataset_head IS '事务级互斥的官方已采纳版本指针';
 COMMENT ON COLUMN nnmbot.wf_official_dataset_head.id IS '固定为 1 的单例主键；初始化时预建锁行';
@@ -6381,8 +6372,8 @@ ON CONFLICT (product_path) DO NOTHING;
 -- 审批只提交一次选择；文件工作项跨实例领取，同文件各变更类型分别提交事务。
 CREATE TABLE nnmbot.wf_official_apply_file (
     id uuid PRIMARY KEY,
-    batch_id character varying(36) NOT NULL REFERENCES nnmbot.wf_official_dataset_batch(id) ON DELETE CASCADE,
-    product_path character varying(260) NOT NULL REFERENCES nnmbot.wf_official_dataset_file(product_path),
+    batch_id character varying(36) NOT NULL,
+    product_path character varying(260) NOT NULL,
     -- 同一个文件只有一个持有者；三类变更按完成标记分别提交和重试。
     status character varying(16) NOT NULL,
     added_done boolean NOT NULL DEFAULT false,
@@ -24338,6 +24329,47 @@ COMMENT ON COLUMN nnmbot.wf_official_upgrade_type_root.namezh IS '中文名称';
 -- END GENERATED OFFICIAL MODELS
 
 -- BEGIN COMMUNITY WHITELIST
+-- 来自官方更新公告的固定楼层候选（非实时抽中结果）；由人工审核维护，不当作官方 JSON 表。
+CREATE TABLE nnmbot.wf_community_descendia_reward (
+    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    record_key varchar(500) NOT NULL UNIQUE,
+    updated_at timestamp with time zone NOT NULL,
+    version bigint NOT NULL,
+    floor_number integer NOT NULL CONSTRAINT ck_wf_descendia_floor CHECK (floor_number BETWEEN 1 AND 21),
+    difficulty varchar(20) NOT NULL CONSTRAINT ck_wf_descendia_difficulty CHECK (difficulty IN ('normal', 'steelPath')),
+    label TEXT NOT NULL,
+    official_pool_key varchar(500),
+    expected_pool_name TEXT,
+    source_reward_key varchar(500),
+    item_count_override integer CHECK (item_count_override > 0),
+    options_json TEXT,
+    note TEXT,
+    guaranteed boolean NOT NULL,
+    source_url TEXT NOT NULL,
+    CONSTRAINT uq_wf_descendia_floor_difficulty UNIQUE (floor_number, difficulty),
+    CONSTRAINT ck_wf_descendia_reward_source CHECK (
+        (official_pool_key IS NOT NULL)::integer + (source_reward_key IS NOT NULL)::integer
+        + (options_json IS NOT NULL)::integer = 1),
+    CONSTRAINT ck_wf_descendia_pool_identity CHECK (
+        (official_pool_key IS NULL) = (expected_pool_name IS NULL))
+);
+COMMENT ON TABLE nnmbot.wf_community_descendia_reward IS '深层下降楼层与官方 DROP_TABLE 奖池的映射，以及官方表缺失的少量补充候选；非本周实际结果';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.id IS '本地业务行 ID';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.record_key IS '难度与楼层组成的稳定身份';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.updated_at IS '最后一次人工审核变更时间';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.version IS '并发修改版本';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.floor_number IS '固定楼层序号';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.difficulty IS '普通或钢铁难度';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.label IS '人工审核的奖池名称';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.official_pool_key IS '已采纳官方 DROP_TABLE 根表 bkey；奖励、概率、数量、图标实时查询官方表，不另存副本';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.expected_pool_name IS '官方奖池源名称：防止更新时 ordinal 型 bkey 被另一奖池复用';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.source_reward_key IS '引用本表另一条有选项的补充记录，避免重复写入相同候选池';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.item_count_override IS '相同官方奖池复用于不同楼层时，公告明确的数量差异';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.options_json IS '仅官方 DROP_TABLE 缺失时人工核验的奖励候选名称 JSON 字符串数组';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.note IS '公告特殊说明，例如同一抽选结果数量翻倍';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.guaranteed IS '是否为该楼层通关固定奖励';
+COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.source_url IS '奖池核实所依据的官方公告地址';
+
 -- 纯自维护白名单业务表；不记录上传、人工录入或 URL 等输入渠道。
 CREATE TABLE nnmbot.wf_community_alias (
     id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -24387,7 +24419,7 @@ COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.record_key IS '数据�
 COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.updated_at IS '最后一次人工确认写入时间';
 COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.version IS '并发修改版本；预览应用时校验原值';
 COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.node_name IS '节点名称或稳定代码';
-COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.essence_amount IS '人工核对的仲裁精华数量';
+COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.essence_amount IS '社区维护的仲裁精华收益估计，不代表固定掉落数量';
 
 CREATE TABLE nnmbot.wf_community_riven_alias (
     id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -24405,16 +24437,11 @@ COMMENT ON COLUMN nnmbot.wf_community_riven_alias.version IS '并发修改版本
 COMMENT ON COLUMN nnmbot.wf_community_riven_alias.attribute_code IS '官方属性 slug 或一至三属性组合编码';
 COMMENT ON COLUMN nnmbot.wf_community_riven_alias.alias_name IS '人工中文属性别名或组合短语';
 
--- 输入 URL 属于管理配置，与业务行及渠道分类分开。
-CREATE TABLE nnmbot.wf_community_import_source (dataset varchar(50) PRIMARY KEY, raw_url TEXT NOT NULL);
-COMMENT ON TABLE nnmbot.wf_community_import_source IS '管理员配置的白名单数据集 raw JSON 输入地址，无硬编码默认源';
-COMMENT ON COLUMN nnmbot.wf_community_import_source.dataset IS '白名单数据集代码';
-COMMENT ON COLUMN nnmbot.wf_community_import_source.raw_url IS '受协议、域名、网络地址、超时和大小约束的管理员输入地址';
 -- 审核提交锁定数据集行，确保选中集合在一个事务中校验并写入。
 -- 社区表版本从零递增，禁止负版本导致缓存代际倒退。
 CREATE TABLE nnmbot.wf_community_dataset_lock (dataset varchar(50) PRIMARY KEY,
     data_revision bigint NOT NULL DEFAULT 0 CONSTRAINT ck_wf_community_dataset_revision CHECK (data_revision >= 0));
-COMMENT ON COLUMN nnmbot.wf_community_dataset_lock.data_revision IS '社区数据集可见内容版本；与数据变更同事务递增，用于本地缓存及跨实例版本补偿';
+COMMENT ON COLUMN nnmbot.wf_community_dataset_lock.data_revision IS '社区数据集可见内容版本；与数据变更同事务递增，用于缓存代际及跨实例通知排序';
 COMMENT ON TABLE nnmbot.wf_community_dataset_lock IS '纯自维护数据集的审核及手工修改串行化锁';
 COMMENT ON COLUMN nnmbot.wf_community_dataset_lock.dataset IS '白名单数据集代码；锁行不承载业务内容';
 INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('alias');
@@ -24435,26 +24462,40 @@ COMMENT ON COLUMN nnmbot.wf_community_apply_receipt.dataset IS '审核的白名�
 COMMENT ON COLUMN nnmbot.wf_community_apply_receipt.selection_hash IS '本次选中操作集合的摘要，重试必须一致';
 COMMENT ON COLUMN nnmbot.wf_community_apply_receipt.applied_count IS '同一原子事务内写入的选中条数';
 COMMENT ON COLUMN nnmbot.wf_community_apply_receipt.applied_at IS '审核事务提交时间';
+-- 已审核的 WFCD 八周钢铁轮换顺序；商品名、价格、数量与图标来自官方 Vendor 主表，不在此重复存储。
+CREATE TABLE nnmbot.wf_community_steel_path_rotation (
+    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    record_key varchar(500) NOT NULL UNIQUE,
+    updated_at timestamp with time zone NOT NULL,
+    version bigint NOT NULL,
+    rotation_index integer NOT NULL,
+    anchor_week date NOT NULL,
+    store_item varchar(500) NOT NULL,
+    CONSTRAINT ck_wf_steel_rotation_index CHECK (rotation_index BETWEEN 0 AND 7),
+    CONSTRAINT uq_wf_steel_rotation_index UNIQUE (rotation_index),
+    CONSTRAINT uq_wf_steel_rotation_item UNIQUE (store_item)
+);
+COMMENT ON TABLE nnmbot.wf_community_steel_path_rotation IS '人工校准的钢铁每周商品顺序；仅存官方 Vendor 的物品身份及周轮换锚点';
+COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.id IS '本地业务行 ID';
+COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.record_key IS '轮换序号的稳定业务键';
+COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.updated_at IS '人工审核更新时间';
+COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.version IS '乐观锁版本';
+COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.rotation_index IS '相对锚点周的八周轮换序号，0 到 7';
+COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.anchor_week IS 'WFCD 已审核轮换起始周一，UTC 日期；每行必须一致';
+COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.store_item IS '官方 Vendor.items.storeItem 的精确键，不重复记录商品资料';
 -- END COMMUNITY WHITELIST
 
 
--- 原有纯人工紫卡中文别名及组合，不含正式属性定义或社区来源元数据。
-INSERT INTO nnmbot.wf_community_riven_alias (record_key, attribute_code, alias_name, updated_at, version) VALUES ('暴击', 'critical_chance', '暴击', CURRENT_TIMESTAMP, 0);
-INSERT INTO nnmbot.wf_community_riven_alias (record_key, attribute_code, alias_name, updated_at, version) VALUES ('基础伤害', 'base_damage_/_melee_damage', '基础伤害', CURRENT_TIMESTAMP, 0);
-INSERT INTO nnmbot.wf_community_riven_alias (record_key, attribute_code, alias_name, updated_at, version) VALUES ('基双爆', 'base_damage_/_melee_damage+critical_chance+critical_damage', '基双爆', CURRENT_TIMESTAMP, 0);
-INSERT INTO nnmbot.wf_community_riven_alias (record_key, attribute_code, alias_name, updated_at, version) VALUES ('多双爆', 'multishot+critical_chance+critical_damage', '多双爆', CURRENT_TIMESTAMP, 0);
-INSERT INTO nnmbot.wf_community_riven_alias (record_key, attribute_code, alias_name, updated_at, version) VALUES ('滑爆', 'critical_chance_on_slide_attack', '滑爆', CURRENT_TIMESTAMP, 0);
-INSERT INTO nnmbot.wf_community_riven_alias (record_key, attribute_code, alias_name, updated_at, version) VALUES ('划爆', 'critical_chance_on_slide_attack', '划爆', CURRENT_TIMESTAMP, 0);
 
 -- 管理端持久化通知：每名管理员独立持有消息和到期时间；任务、预览和人工公告共享此存储。
 CREATE TABLE nnmbot.sys_admin_notice (
     id varchar(36) PRIMARY KEY,
-    recipient_id bigint NOT NULL REFERENCES nnmbot.sys_user(id) ON DELETE CASCADE,
+    recipient_id bigint NOT NULL,
     source_key varchar(128) UNIQUE,
     title varchar(200) NOT NULL,
     content TEXT NOT NULL,
     required_permission varchar(100),
-    publisher_id bigint REFERENCES nnmbot.sys_user(id) ON DELETE SET NULL,
+    publisher_id bigint,
     task_id varchar(36),
     task_type varchar(400),
     task_status varchar(16),
@@ -24500,18 +24541,153 @@ INSERT INTO nnmbot.sys_role_permission (role_id, permission_id) VALUES
 SELECT pg_catalog.setval('nnmbot.sys_menu_id_seq', GREATEST((SELECT MAX(id) FROM nnmbot.sys_menu), 90), true);
 SELECT pg_catalog.setval('nnmbot.sys_permission_id_seq', GREATEST((SELECT MAX(id) FROM nnmbot.sys_permission), 62), true);
 
--- 群组私有数据随逻辑群组删除，防止绕过服务或异常路径留下悬挂关系。
-ALTER TABLE nnmbot.bot_group_bot ADD CONSTRAINT fk_bot_group_bot_group
-    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
-ALTER TABLE nnmbot.bot_group_member ADD CONSTRAINT fk_bot_group_member_group
-    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
-ALTER TABLE nnmbot.bot_group_point_transaction ADD CONSTRAINT fk_bot_group_point_transaction_group
-    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
-ALTER TABLE nnmbot.bot_group_member_merge ADD CONSTRAINT fk_bot_group_member_merge_group
-    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
--- 订阅与事件记忆只属于其群组，不在群组删除后继续保留。
-ALTER TABLE nnmbot.wf_group_watch_rule ADD CONSTRAINT fk_wf_group_watch_rule_group
-    FOREIGN KEY (group_id) REFERENCES nnmbot.bot_group(id) ON DELETE CASCADE;
--- 平台作用域删除时清理成员绑定，后台系统用户及机器人实例继续独立存在。
-ALTER TABLE nnmbot.bot_scope_member ADD CONSTRAINT fk_bot_scope_member_scope
-    FOREIGN KEY (scope_id) REFERENCES nnmbot.bot_scope(id) ON DELETE CASCADE;
+-- BEGIN REFERENCE BASELINE
+-- 已执行的 01/02 参考资料补丁合入空库基线：17 条完整的自维护官方模型记录。
+-- 原补丁用于清理旧库过时记录的 DELETE 不适用于空库，不在此重放；OFFICIAL 资料仍由审核导入。
+INSERT INTO nnmbot.wf_official_customs_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludefromcodex_state, excludefromcodex, excludefrommarket_state, hexcolours_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, legacycolours_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, recordkey_state, titletag_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Types/StoreItems/AvatarImages/FanChannel/AvatarImageKavatsSchroedinger', 'Kavat''s Schroedinger Glyph', 'Kavat''s Schroedinger 浮印', '个人档案的浮印。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 4, true, 2, '/Lotus/Language/Glyphs/GenericGlyphDesc', 2, 'A Glyph for your profile.', 2, '个人档案的浮印。', 4, true, 0, 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/Glyphs/KavatsSchroedingerGlyphName', 2, 'Kavat''s Schroedinger Glyph', 2, 'Kavat''s Schroedinger 浮印', 0, 0, 0, 2, '/Lotus/Types/StoreItems/AvatarImages/FanChannel/AvatarImageKavatsSchroedinger'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_customs_root WHERE lower(bkey)=lower('/Lotus/Types/StoreItems/AvatarImages/FanChannel/AvatarImageKavatsSchroedinger'));
+INSERT INTO nnmbot.wf_official_customs_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludefromcodex_state, excludefrommarket_state, hexcolours_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, legacycolours_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, recordkey_state, titletag_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Types/StoreItems/AvatarImages/FanChannel/AvatarImageKnightmareFrame', 'Knightmare Frame Glyph', 'Knightmare Frame 浮印', '个人档案的浮印。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 4, false, 2, '/Lotus/Language/Glyphs/GenericGlyphDesc', 2, 'A Glyph for your profile.', 2, '个人档案的浮印。', 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/Glyphs/KnightmareFrameGlyphName', 2, 'Knightmare Frame Glyph', 2, 'Knightmare Frame 浮印', 0, 0, 0, 2, '/Lotus/Types/StoreItems/AvatarImages/FanChannel/AvatarImageKnightmareFrame'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_customs_root WHERE lower(bkey)=lower('/Lotus/Types/StoreItems/AvatarImages/FanChannel/AvatarImageKnightmareFrame'));
+INSERT INTO nnmbot.wf_official_misc_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, dissectionparts_state, excludefromcodex_state, excludefrommarket_state, helminthsnack_count_state, helminthsnack_gain_state, helminthsnack_itemreferences_state, helminthsnack_type_state, icon_state, iconstatus_state, iconurl_state, itemreferences_state, longdescription_state, name_state, name, nameen_state, nameen, namezh_state, namezh, parentname_state, parentname, pickupquantity_maxvalue_state, pickupquantity_minvalue_state, platinumcost_state, primesellingprice_state, productcategory_state, purchasequantity_state, rarity_state, recordkey_state, showininventory_state, standingbonus_state, syndicatetag_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Types/Items/ShipFeatureItems/EidolonArchwingFoundryUpgradeFeatureItem', 'Archwing Launcher Segment', '曲翼发射模块', '将曲翼发射器加入铸造厂。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 4, false, 2, '/Lotus/Language/ShipFeatureItems/ShipFeatureEidolonArchwingFoundryUpgradeDesc', 2, 'Adds the Archwing Launcher to the foundry.', 2, '将曲翼发射器加入铸造厂。', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ShipFeatureItems/ShipFeatureEidolonArchwingFoundryUpgrade', 2, 'Archwing Launcher Segment', 2, '曲翼发射模块', 2, '/Lotus/Types/Items/ShipFeatureItems/ShipFeatureItem', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Types/Items/ShipFeatureItems/EidolonArchwingFoundryUpgradeFeatureItem'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_misc_root WHERE lower(bkey)=lower('/Lotus/Types/Items/ShipFeatureItems/EidolonArchwingFoundryUpgradeFeatureItem'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Bard/BardAltCloakA', 'Semi-Cloak', '半透明斗篷', '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideADesc', 2, 'A semi-transparent look when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideAName', 2, 'Semi-Cloak', 2, '半透明斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Bard/BardAltCloakA'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Bard/BardAltCloakA'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Bard/BardAltCloakB', 'Glow-Cloak', '发光斗篷', '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBDesc', 2, 'An alternate, opaque glow, for when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBName', 2, 'Glow-Cloak', 2, '发光斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Bard/BardAltCloakB'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Bard/BardAltCloakB'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, namezh_state, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Effects/BaseFootsteps', 'BaseFootsteps', NULL, '选择要进行赋能的道具', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/Items/GenericSuitCustomizationDesc', 2, 'Item to be infused', 2, '选择要进行赋能的道具', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, 'BaseFootsteps', 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Effects/BaseFootsteps'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Effects/BaseFootsteps'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Loki/LokiAltCloakA', 'Semi-Cloak', '半透明斗篷', '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideADesc', 2, 'A semi-transparent look when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideAName', 2, 'Semi-Cloak', 2, '半透明斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Loki/LokiAltCloakA'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Loki/LokiAltCloakA'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Loki/LokiAltCloakB', 'Glow-Cloak', '发光斗篷', '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBDesc', 2, 'An alternate, opaque glow, for when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBName', 2, 'Glow-Cloak', 2, '发光斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Loki/LokiAltCloakB'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Loki/LokiAltCloakB'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Necro/SWVisceraNekrosAuxillaryScarf', 'Viscera Binds', '脏器绑带', NULL, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/SteamWorkshop/NekrosVisceraBindsDesc', 2, '[PH] Binds for Nekros, designed by ???.', 0, 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/SteamWorkshop/NekrosVisceraBindsName', 2, 'Viscera Binds', 2, '脏器绑带', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Necro/SWVisceraNekrosAuxillaryScarf'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Necro/SWVisceraNekrosAuxillaryScarf'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Ninja/NinjaAltCloakA', 'Semi-Cloak', '半透明斗篷', '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideADesc', 2, 'A semi-transparent look when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideAName', 2, 'Semi-Cloak', 2, '半透明斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Ninja/NinjaAltCloakA'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Ninja/NinjaAltCloakA'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Ninja/NinjaAltCloakB', 'Glow-Cloak', '发光斗篷', '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBDesc', 2, 'An alternate, opaque glow, for when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBName', 2, 'Glow-Cloak', 2, '发光斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Ninja/NinjaAltCloakB'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Ninja/NinjaAltCloakB'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, namezh_state, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Operator/Hair/HairAdultNightwave', '', NULL, '独特的发型。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/Items/GenericOperatorHairDescription', 2, 'A distinct hair style.', 2, '独特的发型。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Operator/Hair/HairAdultNightwave'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Operator/Hair/HairAdultNightwave'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, namezh_state, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Operator/Hair/HairAdultNightwaveB', '', NULL, '独特的发型。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/Items/GenericOperatorHairDescription', 2, 'A distinct hair style.', 2, '独特的发型。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Operator/Hair/HairAdultNightwaveB'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Operator/Hair/HairAdultNightwaveB'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Ranger/RangerAltCloakA', 'Semi-Cloak', '半透明斗篷', '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideADesc', 2, 'A semi-transparent look when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideAName', 2, 'Semi-Cloak', 2, '半透明斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Ranger/RangerAltCloakA'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Ranger/RangerAltCloakA'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Ranger/RangerAltCloakB', 'Glow-Cloak', '发光斗篷', '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBDesc', 2, 'An alternate, opaque glow, for when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBName', 2, 'Glow-Cloak', 2, '发光斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Ranger/RangerAltCloakB'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Ranger/RangerAltCloakB'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Werewolf/WerewolfAltCloakA', 'Semi-Cloak', '半透明斗篷', '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideADesc', 2, 'A semi-transparent look when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现半透明外观。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideAName', 2, 'Semi-Cloak', 2, '半透明斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Werewolf/WerewolfAltCloakA'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Werewolf/WerewolfAltCloakA'));
+INSERT INTO nnmbot.wf_official_skin_root (maintenance_type, bkey, official_name, localized_name, description, enabled, created_at, updated_at, root_state, additionalitems_state, alwaysavailable_state, base_state, codexsecret_state, codexsecret, description_value_state, description_value, descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, excludedplatforms_state, excludefromcodex_state, excludefromcodex, excludefrommarket_state, icon_state, iconasset_state, iconstatus_state, iconurl_state, itemreferences_state, name_state, name, nameen_state, nameen, namezh_state, namezh, platinumcost_state, productcategory_state, randomisedupgrades_state, recordkey_state, requirement_state, subroutines_state, tradable_state, uniquename_state, uniquename)
+SELECT 'SELF_MAINTAINED', '/Lotus/Upgrades/Skins/Werewolf/WerewolfAltCloakB', 'Glow-Cloak', '发光斗篷', '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 0, 0, 0, 4, false, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBDesc', 2, 'An alternate, opaque glow, for when this Warframe is cloaked. Does not alter enemy perception.', 2, '当此战甲披上这件斗篷时呈现不透明光芒。但并不会影响敌人的感知。', 0, 4, true, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Language/ItemDescription/InvisibilityOverrideBName', 2, 'Glow-Cloak', 2, '发光斗篷', 0, 0, 0, 0, 0, 0, 0, 2, '/Lotus/Upgrades/Skins/Werewolf/WerewolfAltCloakB'
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=lower('/Lotus/Upgrades/Skins/Werewolf/WerewolfAltCloakB'));
+
+-- END REFERENCE BASELINE
+
+-- 已执行的 04 突击火灾环境危机社区术语；官方裂隙静态表只有 VoidT 等级。
+-- 来源：Warframe Wiki Sortie / Fire Hazard（https://wiki.warframe.com/w/Sortie）。
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_FIRE', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_FIRE', '火灾（环境危机）', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+-- 突击变体映射：参考 warframe-worldstate-data/data/zh/sortieData.json；已存在的 HAZARD_FIRE 不覆盖。
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_LOW_ENERGY', 'sortie_modifier', 'SORTIE_MODIFIER_LOW_ENERGY', '能量减少', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_IMPACT', 'sortie_modifier', 'SORTIE_MODIFIER_IMPACT', '敌人物理强化(冲击)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_SLASH', 'sortie_modifier', 'SORTIE_MODIFIER_SLASH', '敌人物理强化(切割)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_PUNCTURE', 'sortie_modifier', 'SORTIE_MODIFIER_PUNCTURE', '敌人物理强化(穿刺)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_EXIMUS', 'sortie_modifier', 'SORTIE_MODIFIER_EXIMUS', '卓越者大本营', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_MAGNETIC', 'sortie_modifier', 'SORTIE_MODIFIER_MAGNETIC', '敌人元素强化(磁力)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_CORROSIVE', 'sortie_modifier', 'SORTIE_MODIFIER_CORROSIVE', '敌人元素强化(腐蚀)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_VIRAL', 'sortie_modifier', 'SORTIE_MODIFIER_VIRAL', '敌人元素强化(病毒)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_ELECTRICITY', 'sortie_modifier', 'SORTIE_MODIFIER_ELECTRICITY', '敌人元素强化(电击)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_RADIATION', 'sortie_modifier', 'SORTIE_MODIFIER_RADIATION', '敌人元素强化(辐射)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_GAS', 'sortie_modifier', 'SORTIE_MODIFIER_GAS', '敌人元素强化(毒气)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_FIRE', 'sortie_modifier', 'SORTIE_MODIFIER_FIRE', '敌人元素强化(火焰)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_EXPLOSION', 'sortie_modifier', 'SORTIE_MODIFIER_EXPLOSION', '敌人元素强化(爆炸)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_FREEZE', 'sortie_modifier', 'SORTIE_MODIFIER_FREEZE', '敌人元素强化(冰冻)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_TOXIN', 'sortie_modifier', 'SORTIE_MODIFIER_TOXIN', '敌人元素强化(毒素)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_POISON', 'sortie_modifier', 'SORTIE_MODIFIER_POISON', '敌人元素强化(毒素)', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_RADIATION', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_RADIATION', '辐射灾害', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_MAGNETIC', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_MAGNETIC', '电磁异常', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_FOG', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_FOG', '浓雾', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_ICE', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_ICE', '低温外泄', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_COLD', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_COLD', '极度寒冷', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_ARMOR', 'sortie_modifier', 'SORTIE_MODIFIER_ARMOR', '敌人护甲强化', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_SHIELDS', 'sortie_modifier', 'SORTIE_MODIFIER_SHIELDS', '敌人护盾强化', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_SECONDARY_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_SECONDARY_ONLY', '次要 限定', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_SHOTGUN_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_SHOTGUN_ONLY', '霰弹枪 限定', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_SNIPER_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_SNIPER_ONLY', '狙击枪 限定', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_RIFLE_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_RIFLE_ONLY', '突击步枪 限定', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_MELEE_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_MELEE_ONLY', '武器限定：近戰', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+VALUES ('sortie_modifier:SORTIE_MODIFIER_BOW_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_BOW_ONLY', '弓箭 限定', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;

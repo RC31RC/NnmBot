@@ -1,6 +1,6 @@
 package com.nnm.bot.core.plugin.execution.advice;
 
-import com.nnm.bot.core.constant.CommandExecutionConstants.FailurePropagation;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.FailurePropagation;
 
 import java.util.Objects;
 

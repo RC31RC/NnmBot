@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.system.impl;
 
+import com.nnm.bot.admin.constant.rbac.RbacErrorCode;
+import com.nnm.bot.admin.constant.AdminAuthErrorCode;
 import com.nnm.bot.admin.service.system.RbacHierarchyService;
 
 import com.nnm.bot.admin.pojo.entity.system.SysRole;
@@ -7,8 +9,7 @@ import com.nnm.bot.admin.pojo.entity.system.SysUser;
 import com.nnm.bot.admin.pojo.entity.system.SysMenu;
 import com.nnm.bot.admin.pojo.entity.system.SysPermission;
 import com.nnm.bot.admin.repository.system.SysUserRepository;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** 统一校验用户、角色、授权等级及权限点的管理层级。 */
 @Service
 public class RbacHierarchyServiceImpl implements RbacHierarchyService {
 
@@ -26,7 +28,7 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
 
     public SysUser operator(long operatorId) {
         return this.userRepository.findWithAuthoritiesById(operatorId).filter(SysUser::isEnabled)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
+            .orElseThrow(() -> new BusinessException(AdminAuthErrorCode.ACCOUNT_UNAVAILABLE));
     }
 
     public boolean canManageUser(SysUser operator, SysUser target) {
@@ -54,22 +56,21 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
     }
 
     public void checkCanManageUser(SysUser operator, SysUser target) {
-        BusinessAssert.isTrue(canManageUser(operator, target), CommonErrorCode.PERMISSION_DENIED,
-            "权限不足，无法操作当前用户或同级及更高级别用户");
+        BusinessAssert.isTrue(canManageUser(operator, target), RbacErrorCode.CANNOT_MANAGE_USER);
     }
 
     public void checkCanManageRole(SysUser operator, SysRole role) {
-        BusinessAssert.isTrue(canManageRole(operator, role), CommonErrorCode.PERMISSION_DENIED, "权限不足，无法管理同级或更高级别角色");
+        BusinessAssert.isTrue(canManageRole(operator, role), RbacErrorCode.CANNOT_MANAGE_ROLE);
     }
 
     public void checkCanAssignRoles(SysUser operator, Collection<SysRole> roles) {
         BusinessAssert.isTrue(roles.stream().allMatch(role -> canAssignRole(operator, role)),
-            CommonErrorCode.PERMISSION_DENIED, "不能分配未启用、同级或更高级别角色");
+            RbacErrorCode.CANNOT_ASSIGN_ROLE);
     }
 
     public void checkRequestedLevel(SysUser operator, int authorityLevel) {
         BusinessAssert.isTrue(authorityLevel >= 0 && authorityLevel < effectiveLevel(operator),
-            CommonErrorCode.PERMISSION_DENIED, "角色等级必须低于当前操作者等级");
+            RbacErrorCode.AUTHORITY_LEVEL_DENIED);
     }
 
     public void checkCanAssignMenus(SysUser operator, Collection<SysMenu> menus) {
@@ -79,7 +80,7 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
         Set<Long> manageableMenuIds = operator.getRoles().stream().filter(SysRole::isEnabled)
             .flatMap(role -> role.getMenus().stream()).map(SysMenu::getId).collect(Collectors.toSet());
         BusinessAssert.isTrue(menus.stream().map(SysMenu::getId).allMatch(manageableMenuIds::contains),
-            CommonErrorCode.PERMISSION_DENIED, "不能分配当前操作者未拥有的菜单");
+            RbacErrorCode.CANNOT_ASSIGN_MENU);
     }
 
     public void checkCanAssignPermissions(SysUser operator, Collection<SysPermission> permissions) {
@@ -91,7 +92,7 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
                 .filter(SysPermission::isEnabled).map(SysPermission::getCode).collect(Collectors.toSet());
         BusinessAssert.isTrue(
             permissions.stream().map(SysPermission::getCode).allMatch(manageablePermissionCodes::contains),
-            CommonErrorCode.PERMISSION_DENIED, "不能分配当前操作者未拥有的权限");
+            RbacErrorCode.CANNOT_ASSIGN_PERMISSION);
     }
 
     private boolean isSuperAdmin(SysUser user) {

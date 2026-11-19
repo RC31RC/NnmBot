@@ -18,6 +18,12 @@ public class WarframeOfficialPreviewPublicationServiceImpl implements WarframeOf
     @Resource
     private WarframeOfficialImportBatchRepository batches;
 
+    /**
+     * 在短数据库事务内登记候选文件并发布预览批次。
+     *
+     * @param batch 已写入对象存储的待审核批次。
+     * @param files 本批次官方文件摘要。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void publish(WarframeOfficialImportBatch batch, List<OfficialFileDigestDTO> files) {

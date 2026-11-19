@@ -42,5 +42,12 @@ public interface WarframeOfficialApplyFileRepository extends JpaRepository<Warfr
 
     List<WarframeOfficialApplyFile> findAllByBatchId(String batchId);
 
+    /**
+     * 删除指定批次的全部文件审批工作项。
+     *
+     * @param batchId 待删除批次标识。
+     */
+    void deleteAllByBatchId(String batchId);
+
     boolean existsByBatchIdAndStatus(String batchId, String status);
 }

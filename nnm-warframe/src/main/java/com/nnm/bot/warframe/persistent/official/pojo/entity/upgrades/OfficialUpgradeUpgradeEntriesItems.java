@@ -59,7 +59,5 @@ public class OfficialUpgradeUpgradeEntriesItems extends OfficialChildRow {
     private OfficialUpgradeRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialUpgradeUpgradeEntriesItemsUpgradeValuesItems> officialUpgradeUpgradeEntriesItemsUpgradeValuesItemsRows =
-            new ArrayList<>();
+    private List<OfficialUpgradeUpgradeEntriesItemsUpgradeValuesItems> officialUpgradeUpgradeEntriesItemsUpgradeValuesItemsRows = new ArrayList<>();
 }

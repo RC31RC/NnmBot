@@ -147,6 +147,5 @@ public class OfficialAnimalRoot extends OfficialRecord {
     private String nameZh;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialAnimalConservationItemReferencesItems> officialAnimalConservationItemReferencesItemsRows =
-        new ArrayList<>();
+    private List<OfficialAnimalConservationItemReferencesItems> officialAnimalConservationItemReferencesItemsRows = new ArrayList<>();
 }

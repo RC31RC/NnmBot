@@ -1,8 +1,8 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
@@ -35,6 +35,11 @@ public class WarframeOfficialApplyPreparationServiceImpl implements WarframeOffi
     @Resource
     private ObjectMapper objectMapper;
 
+    /**
+     * 在对象存储阶段生成冻结选择对应的差异计划。
+     *
+     * @param batchId 待准备的审批批次标识。
+     */
     @Override
     @RdtLock
     public void prepare(String batchId) {

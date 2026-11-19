@@ -14,6 +14,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/** 装配有界平台线程池、背压虚拟线程执行器及计算任务门面。 */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(ExecutorProperties.class)
 public class ExecutorConfig {
@@ -53,6 +54,7 @@ public class ExecutorConfig {
         return executor;
     }
 
+    /** 创建由 CPU 池和队列容量共同限流的图片计算执行器。 */
     @Bean(destroyMethod = "close")
     public BoundedTaskExecutor imageTaskExecutor(ExecutorProperties properties,
         @Qualifier("cpuTaskExecutor") AsyncTaskExecutor cpuExecutor) {
@@ -61,6 +63,12 @@ public class ExecutorConfig {
             properties.getTask().getMaxSize() + properties.getTask().getQueueCapacity());
     }
 
+    /** 创建限制 OCR 在途量和结果等待时间的计算执行器。
+     *
+     * @param properties 执行器资源预算
+     * @param cpuExecutor 有界 CPU 工作线程池
+     * @return OCR 专用有界执行器
+     */
     @Bean(destroyMethod = "close")
     public BoundedTaskExecutor ocrTaskExecutor(ExecutorProperties properties,
         @Qualifier("cpuTaskExecutor") AsyncTaskExecutor cpuExecutor) {
@@ -87,6 +95,7 @@ public class ExecutorConfig {
         return virtualExecutor("nnm-io-", properties.getApplicationConcurrency(), properties);
     }
 
+    /** 创建容量受配置约束的本地定时任务执行器。 */
     @Bean(name = {"taskScheduler", "scheduledExecutor"})
     public ThreadPoolTaskScheduler scheduledExecutor(ExecutorProperties properties) {
         properties.validate();

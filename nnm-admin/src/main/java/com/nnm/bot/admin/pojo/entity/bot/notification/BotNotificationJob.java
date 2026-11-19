@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.entity.bot.notification;
 
-import com.nnm.bot.admin.constant.BotNotificationConstants.JobStatus;
+import com.nnm.bot.admin.constant.bot.notification.BotNotificationConstants.JobStatus;
 
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationDTO;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationReportDTO;

@@ -1,14 +1,14 @@
 package com.nnm.bot.core.plugin.system;
 
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.ObjectProvider;
@@ -17,6 +17,7 @@ import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.List;
 
+/** 以结构化卡片展示机器人进程和命令注册状态。 */
 @BotPluginCommand(code = SystemCommandCodes.STATUS, matchType = MatchType.EXACT)
 public class StatusPlugin extends BotPlugin<Void, Void> {
 

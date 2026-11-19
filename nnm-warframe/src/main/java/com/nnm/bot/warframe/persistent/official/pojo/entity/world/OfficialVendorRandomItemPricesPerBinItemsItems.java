@@ -60,7 +60,5 @@ public class OfficialVendorRandomItemPricesPerBinItemsItems extends OfficialChil
     private OfficialVendorRandomItemPricesPerBinItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialVendorRandomItemPricesPerBinItemsItemsItemReferencesItems> officialVendorRandomItemPricesPerBinItemsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialVendorRandomItemPricesPerBinItemsItemsItemReferencesItems> officialVendorRandomItemPricesPerBinItemsItemsItemReferencesItemsRows = new ArrayList<>();
 }

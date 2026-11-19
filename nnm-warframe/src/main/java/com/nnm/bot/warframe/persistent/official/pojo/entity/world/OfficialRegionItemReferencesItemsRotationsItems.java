@@ -31,7 +31,5 @@ public class OfficialRegionItemReferencesItemsRotationsItems extends OfficialChi
     private OfficialRegionItemReferencesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRegionItemReferencesItemsRotationsItemsItems> officialRegionItemReferencesItemsRotationsItemsItemsRows =
-            new ArrayList<>();
+    private List<OfficialRegionItemReferencesItemsRotationsItemsItems> officialRegionItemReferencesItemsRotationsItemsItemsRows = new ArrayList<>();
 }

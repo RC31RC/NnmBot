@@ -4,24 +4,23 @@ import java.util.Map.Entry;
 import java.lang.Character.UnicodeScript;
 import cn.hutool.core.util.ObjectUtil;
 
-import com.nnm.bot.core.constant.CommandBoundaryPolicy;
-import com.nnm.bot.core.constant.MatchType;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.plugin.constant.CommandBoundaryPolicy;
+import com.nnm.bot.core.plugin.constant.MatchType;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.api.CommandCatalog;
 import com.nnm.bot.core.plugin.api.CommandSpecification;
-import com.nnm.bot.core.plugin.model.CommandMetadata;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.core.plugin.api.CommandMetadataDTO;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.plugin.api.CommandConfigurationProvider;
-import com.nnm.bot.core.plugin.model.CommandDefinition;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandMatch;
-import com.nnm.bot.core.plugin.model.CommandTrigger;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.plugin.api.CommandDefinitionDTO;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.execution.CommandMatch;
+import com.nnm.bot.core.plugin.api.CommandTrigger;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -156,7 +155,7 @@ public class CommandRegistry {
     /**
      * 返回插件声明的稳定元数据，供管理端展示和运行时注册使用。
      */
-    public CommandMetadata metadata(BotPlugin<?, ?> plugin) {
+    public CommandMetadataDTO metadata(BotPlugin<?, ?> plugin) {
         Objects.requireNonNull(plugin, "plugin must not be null");
         BotPluginCommand annotation = AnnotationUtils.findAnnotation(plugin.getClass(), BotPluginCommand.class);
         if (annotation == null)
@@ -176,7 +175,7 @@ public class CommandRegistry {
         CommandSpecification definition = owner.entries().get(code);
         if (definition == null || !code.equals(definition.code()))
             throw new SystemException(CommandErrorCode.COMMAND_CONFIGURATION_INVALID, "目录索引与命令定义编码不一致：" + code);
-        return new CommandMetadata(code, requireText(definition.displayName(), "plugin name"),
+        return new CommandMetadataDTO(code, requireText(definition.displayName(), "plugin name"),
             requireText(owner.gameCode(), "plugin gameCode"), annotation.matchType(), definition.order());
     }
 
@@ -205,12 +204,12 @@ public class CommandRegistry {
         log.info("Discovered {} BotPlugin implementations: {}", pluginsByCode.size(), pluginsByCode.keySet());
 
         CommandConfigurationProvider provider = this.configurationProvider.getIfAvailable();
-        Map<String, CommandDefinition> definitions =
+        Map<String, CommandDefinitionDTO> definitions =
             ObjectUtil.isNull(provider) ? Map.of() : Objects.requireNonNullElse(provider.loadAll(), Map.of());
-        Map<String, CommandDefinition> definitionsByCode = new HashMap<>();
+        Map<String, CommandDefinitionDTO> definitionsByCode = new HashMap<>();
         definitions.forEach((key, definition) -> {
             if (ObjectUtil.isNotNull(definition)) {
-                CommandDefinition previous = definitionsByCode.put(normalize(definition.code()), definition);
+                CommandDefinitionDTO previous = definitionsByCode.put(normalize(definition.code()), definition);
                 if (ObjectUtil.isNotNull(previous)) {
                     throw new IllegalStateException("Duplicate database command code: " + definition.code());
                 }
@@ -226,14 +225,14 @@ public class CommandRegistry {
 
         for (Entry<String, BotPlugin<?, ?>> entry : pluginsByCode.entrySet()) {
             BotPlugin<?, ?> plugin = entry.getValue();
-            CommandDefinition definition = definitionsByCode.remove(entry.getKey());
+            CommandDefinitionDTO definition = definitionsByCode.remove(entry.getKey());
             if (ObjectUtil.isNull(definition)) {
                 // 插件是稳定实现，数据库只负责覆盖可变配置；未配置时使用安全默认值。
                 definition = defaultDefinition(plugin);
                 log.debug("Bot plugin [{}] has no database command definition; using defaults",
                     metadata(plugin).code());
             }
-            CommandExecutionConfiguration configuration = definition.configuration();
+            CommandExecutionConfigurationDTO configuration = definition.configuration();
             CommandDescriptor descriptor = new CommandDescriptor(definition.code(), definition.name(),
                 configuration.triggers(), definition.description(), configuration.permissionOverride(),
                 metadata(plugin).matchType(), metadata(plugin).order());
@@ -261,16 +260,16 @@ public class CommandRegistry {
             List.copyOf(prefixCommands));
     }
 
-    private CommandDefinition defaultDefinition(BotPlugin<?, ?> plugin) {
-        CommandMetadata metadata = metadata(plugin);
+    private CommandDefinitionDTO defaultDefinition(BotPlugin<?, ?> plugin) {
+        CommandMetadataDTO metadata = metadata(plugin);
         String code = requireText(metadata.code(), "plugin code");
         String name = requireText(metadata.name(), "plugin name");
         String gameCode = requireText(metadata.gameCode(), "plugin gameCode");
-        return new CommandDefinition(code, name, gameCode, "", CommandExecutionConfiguration.disabledDefaults());
+        return new CommandDefinitionDTO(code, name, gameCode, "", CommandExecutionConfigurationDTO.disabledDefaults());
     }
 
     private void registerPlugin(Map<String, BotPlugin<?, ?>> plugins, BotPlugin<?, ?> plugin) {
-        CommandMetadata metadata = metadata(plugin);
+        CommandMetadataDTO metadata = metadata(plugin);
         String code = requireText(metadata.code(), "plugin code");
         BotPlugin<?, ?> previous = plugins.put(normalize(code), plugin);
         if (ObjectUtil.isNotNull(previous)) {

@@ -5,7 +5,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.ErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -68,6 +68,10 @@ public final class BusinessAssert {
             throw new BusinessException(errorCode, message);
         }
         return value;
+    }
+
+    public static void equals(Object actual, Object expected, ErrorCode errorCode) {
+        equals(actual, expected, errorCode, errorCode.getMessage());
     }
 
     public static void equals(Object actual, Object expected, ErrorCode errorCode, String message) {

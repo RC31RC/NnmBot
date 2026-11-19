@@ -51,6 +51,5 @@ public class OfficialEnemyHitProxiesItems extends OfficialChildRow {
     private OfficialEnemyRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialEnemyHitProxiesItemsItemReferencesItems> officialEnemyHitProxiesItemsItemReferencesItemsRows =
-        new ArrayList<>();
+    private List<OfficialEnemyHitProxiesItemsItemReferencesItems> officialEnemyHitProxiesItemsItemReferencesItemsRows = new ArrayList<>();
 }

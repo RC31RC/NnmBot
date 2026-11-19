@@ -52,7 +52,5 @@ public class OfficialChallengeCountedRewardsItems extends OfficialChildRow {
     private OfficialChallengeRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialChallengeCountedRewardsItemsItemReferencesItems> officialChallengeCountedRewardsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialChallengeCountedRewardsItemsItemReferencesItems> officialChallengeCountedRewardsItemsItemReferencesItemsRows = new ArrayList<>();
 }

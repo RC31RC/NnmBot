@@ -4,6 +4,20 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
+/** 分布式任务、实例认领、故障切换和发现流程的时间预算。
+ *
+ * @param taskRetention 任务结果保留时长
+ * @param taskTimeout 单项任务执行超时
+ * @param taskPollInterval 任务状态轮询间隔
+ * @param ownerLease 实例所有权租约时长，至少覆盖三次协调周期
+ * @param reconcileInterval 集群实例协调间隔
+ * @param messageDedupRetention 消息去重记录保留时长
+ * @param discoveryTimeout 渠道发现超时
+ * @param componentFailureThreshold 组件判定故障前的等待时长
+ * @param componentStartupGrace 组件启动宽限时长
+ * @param componentFailoverBackoff 故障切换重试间隔
+ * @param maxTaskSubscriptions 单个任务允许的最大订阅数
+ */
 @ConfigurationProperties("nnm.cluster")
 public record ClusterProperties(@DefaultValue("2h") Duration taskRetention, @DefaultValue("30m") Duration taskTimeout,
     @DefaultValue("2s") Duration taskPollInterval, @DefaultValue("30s") Duration ownerLease,

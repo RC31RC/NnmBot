@@ -231,9 +231,7 @@ public class OfficialResourcesRoot extends OfficialRecord {
     private String uniqueName;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialResourcesHelminthSnackItemReferencesItems> officialResourcesHelminthSnackItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialResourcesHelminthSnackItemReferencesItems> officialResourcesHelminthSnackItemReferencesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialResourcesItemReferencesItems> officialResourcesItemReferencesItemsRows = new ArrayList<>();

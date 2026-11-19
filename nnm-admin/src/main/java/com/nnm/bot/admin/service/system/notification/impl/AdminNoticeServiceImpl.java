@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.system.notification.impl;
 
+import com.nnm.bot.admin.constant.AdminNoticeErrorCode;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.admin.config.AdminNoticeProperties;
@@ -11,11 +12,10 @@ import com.nnm.bot.admin.pojo.vo.system.notification.AdminNoticeVO;
 import com.nnm.bot.admin.repository.system.AdminNoticeRepository;
 import com.nnm.bot.admin.repository.system.SysUserRepository;
 import com.nnm.bot.admin.service.system.notification.AdminNoticeService;
-import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.response.PageResult;
-import com.nnm.bot.common.constant.TaskConstants.AdminTaskStatus;
-import com.nnm.bot.common.task.AdminTaskEvent;
-import com.nnm.bot.common.task.AdminTaskFinishedEvent;
+import com.nnm.bot.core.task.constant.TaskConstants.AdminTaskStatus;
+import com.nnm.bot.core.task.pojo.dto.AdminTaskDTO;
+import com.nnm.bot.core.task.event.AdminTaskFinishedEvent;
 import com.nnm.bot.common.validation.BusinessAssert;
 import jakarta.annotation.Resource;
 import java.time.Instant;
@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 public class AdminNoticeServiceImpl implements AdminNoticeService {
+    private static final int MAX_HISTORY_PAGE_SIZE = 100;
     private static final String OFFICIAL_APPLY_TASK = "WARFRAME_OFFICIAL_APPLY:";
     private static final String OFFICIAL_REFRESH_ALL_TASK = "WARFRAME_OFFICIAL_REFRESH_ALL:";
     private static final String OFFICIAL_REFRESH_TASK = "WARFRAME_OFFICIAL_REFRESH:";
@@ -55,7 +56,8 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
     @Override
     @Transactional(readOnly = true)
     public PageResult<AdminNoticeVO> history(long userId, int current, int size) {
-        BusinessAssert.isTrue(current > 0 && size > 0 && size <= 100, CommonErrorCode.PARAM_INVALID);
+        BusinessAssert.isTrue(current > 0 && size > 0 && size <= MAX_HISTORY_PAGE_SIZE,
+            AdminNoticeErrorCode.HISTORY_PAGE_INVALID);
         List<AdminNoticeVO> visible =
             notices.findByRecipientIdAndExpiresAtAfterOrderByCreatedAtDesc(userId, Instant.now()).stream()
                 .filter(notice -> notice.getRequiredPermission() == null
@@ -76,10 +78,10 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
         BusinessAssert.isTrue(
             request.expiresAt().isAfter(now)
                 && !request.expiresAt().isAfter(now.plus(properties.getMaxManualRetention())),
-            CommonErrorCode.PARAM_INVALID, "通知过期时间须在将来且不得超过最长有效期");
+            AdminNoticeErrorCode.INVALID_EXPIRY);
         String title = request.title().trim();
         String content = request.content().trim();
-        BusinessAssert.isTrue(!title.isEmpty() && !content.isEmpty(), CommonErrorCode.PARAM_INVALID);
+        BusinessAssert.isTrue(!title.isEmpty() && !content.isEmpty(), AdminNoticeErrorCode.CONTENT_REQUIRED);
         List<AdminNotice> batch = new ArrayList<>();
         for (SysUser user : users.findAll()) {
             if (admin(user)) {
@@ -95,7 +97,7 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
     @EventListener
     @Transactional
     public void taskFinished(AdminTaskFinishedEvent finished) {
-        AdminTaskEvent event = finished.event();
+        AdminTaskDTO event = finished.event();
         if (event.status() != AdminTaskStatus.COMPLETED && event.status() != AdminTaskStatus.FAILED
             && event.status() != AdminTaskStatus.CANCELLED)
             return;

@@ -6,7 +6,7 @@ import com.nnm.bot.core.mq.messagedescriptor.notification.GroupNotificationMessa
 public final class GroupNotificationMessage extends GroupNotificationMessageDescriptor {
     public GroupNotificationMessage() {}
 
-    public GroupNotificationMessage(GroupNotificationRequest payload) {
+    public GroupNotificationMessage(GroupNotificationDTO payload) {
         super(payload);
     }
 }

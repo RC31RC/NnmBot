@@ -25,7 +25,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialRewardP
 import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+import com.nnm.bot.common.error.ErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialSnapshotErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialInputParser;
@@ -47,6 +49,7 @@ import java.util.Set;
 /** 消费固定版本业务成品；嵌套集合按发布键分域，数组位置不构成记录身份。 */
 @Component
 public class WarframeOfficialSnapshotParser {
+    private static final int MAX_RECORD_KEY_LENGTH = 500;
     public static final int CONTRACT_VERSION = 10;
     @Resource
     private ObjectMapper objectMapper;
@@ -81,7 +84,7 @@ public class WarframeOfficialSnapshotParser {
         throws IOException {
         List<OfficialFileDigestDTO> files = parseFileDigests(manifest);
         for (OfficialFileDigestDTO file : files) {
-            check(Files.isRegularFile(directory.resolve(file.path())), "成品 JSON 不存在：" + file.path());
+            check(Files.isRegularFile(directory.resolve(file.path())), OfficialSnapshotErrorCode.FILE_MISSING);
         }
         return files;
     }
@@ -96,10 +99,11 @@ public class WarframeOfficialSnapshotParser {
         Map<String, FileEntry> entries = new LinkedHashMap<>();
         for (FileEntry entry : manifest.files()) {
             check(WarframeOfficialDataDomain.fromPath(entry.path()) != null,
-                "当前 NnmBot 版本没有该 JSON 文件的实体映射，拒绝部分采纳：" + entry.path());
-            check(entries.putIfAbsent(entry.path(), entry) == null, "manifest 包含重复成品路径：" + entry.path());
+                OfficialSnapshotErrorCode.FILE_UNREGISTERED);
+            check(entries.putIfAbsent(entry.path(), entry) == null, OfficialSnapshotErrorCode.FILE_PATH_DUPLICATE);
         }
-        check(entries.keySet().equals(Set.copyOf(supportedPaths())), "manifest 文件集合与 NnmBot 实体契约不一致，拒绝部分采纳");
+        check(entries.keySet().equals(Set.copyOf(supportedPaths())),
+            OfficialSnapshotErrorCode.MANIFEST_FILE_SET_MISMATCH);
 
         List<OfficialFileDigestDTO> payloads = new ArrayList<>();
         for (WarframeOfficialDataDomain type : domains()) {
@@ -175,7 +179,7 @@ public class WarframeOfficialSnapshotParser {
                 wrapped(parser, records, domain);
             } else if (Set.of(WarframeOfficialDataDomain.DOJO_RECIPE, WarframeOfficialDataDomain.ENEMY,
                 WarframeOfficialDataDomain.CODEX).contains(domain)) {
-                check(token == JsonToken.START_OBJECT, "分组文件必须为对象：" + domain.productPath());
+                check(token == JsonToken.START_OBJECT, OfficialSnapshotErrorCode.GROUP_ROOT_INVALID);
                 while (parser.nextToken() != JsonToken.END_OBJECT) {
                     String group = parser.currentName();
                     parser.nextToken();
@@ -186,7 +190,7 @@ public class WarframeOfficialSnapshotParser {
             } else {
                 dictionary(parser, records, domain, "");
             }
-            check(parser.nextToken() == null, "成品文件包含尾随 JSON：" + domain.productPath());
+            check(parser.nextToken() == null, OfficialSnapshotErrorCode.FILE_TRAILING_JSON);
         }
     }
 
@@ -199,10 +203,10 @@ public class WarframeOfficialSnapshotParser {
      * @throws IOException 读取输入、绑定字段或写入输出失败时抛出；由调用边界处理。
      */
     private void wrapped(JsonParser parser, RecordSink records, WarframeOfficialDataDomain domain) throws IOException {
-        check(parser.currentToken() == JsonToken.START_OBJECT, "包装文件必须为对象：" + domain.productPath());
+        check(parser.currentToken() == JsonToken.START_OBJECT, OfficialSnapshotErrorCode.WRAPPED_ROOT_INVALID);
         OfficialObjectDTO metadata = newInput(domain);
         while (parser.nextToken() != JsonToken.END_OBJECT) {
-            check(parser.currentToken() == JsonToken.FIELD_NAME, "文件字段结构无效：" + domain.productPath());
+            check(parser.currentToken() == JsonToken.FIELD_NAME, OfficialSnapshotErrorCode.WRAPPED_FIELD_INVALID);
             String field = parser.currentName();
             parser.nextToken();
             switch (domain) {
@@ -274,7 +278,7 @@ public class WarframeOfficialSnapshotParser {
      */
     private void systems(JsonParser parser, RecordSink records, WarframeOfficialDataDomain domain,
         OfficialRegionDTO metadata) throws IOException {
-        check(parser.currentToken() == JsonToken.START_ARRAY, "systems 必须是数组");
+        check(parser.currentToken() == JsonToken.START_ARRAY, OfficialSnapshotErrorCode.SYSTEMS_ARRAY_REQUIRED);
         List<OfficialRegionDTO.SystemsDTO> systems = new ArrayList<>();
         while (parser.nextToken() != JsonToken.END_ARRAY) {
             OfficialRegionDTO.SystemsDTO system = new OfficialRegionDTO.SystemsDTO();
@@ -302,9 +306,9 @@ public class WarframeOfficialSnapshotParser {
      */
     private void array(JsonParser parser, RecordSink records, WarframeOfficialDataDomain domain, String group)
         throws IOException {
-        check(parser.currentToken() == JsonToken.START_ARRAY, "业务集合必须为数组：" + domain.productPath() + "/" + group);
+        check(parser.currentToken() == JsonToken.START_ARRAY, OfficialSnapshotErrorCode.RECORD_ARRAY_REQUIRED);
         while (parser.nextToken() != JsonToken.END_ARRAY) {
-            check(parser.currentToken() == JsonToken.START_OBJECT, "业务记录必须为对象：" + domain.productPath());
+            check(parser.currentToken() == JsonToken.START_OBJECT, OfficialSnapshotErrorCode.RECORD_OBJECT_REQUIRED);
             OfficialRecordDTO value = WarframeOfficialInputParser.parseCurrentValue(objectMapper, domain, parser);
             String key = value.stableKey();
             if (domain.name().startsWith("USAGE_"))
@@ -314,7 +318,7 @@ public class WarframeOfficialSnapshotParser {
             }
             if (domain == WarframeOfficialDataDomain.RIVEN_WEAPON)
                 validateListings((OfficialRivenWeaponDTO)value);
-            check(StrUtil.isNotBlank(key), "成品缺少明确的稳定业务键：" + domain.productPath());
+            check(StrUtil.isNotBlank(key), OfficialSnapshotErrorCode.RECORD_KEY_MISSING);
             add(records, domain, StrUtil.isEmpty(group) ? key : group + "/" + key, value);
         }
     }
@@ -331,7 +335,7 @@ public class WarframeOfficialSnapshotParser {
         List<Object> keys = new ArrayList<>();
         for (String field : List.of("year", "platform", "category", "item", "rank")) {
             Object item = OfficialObjectFields.get(row, field);
-            check(item != null, "统计缺少身份字段：" + field);
+            check(item != null, OfficialSnapshotErrorCode.USAGE_ID_MISSING);
             keys.add(item);
         }
         return objectMapper.writeValueAsString(keys);
@@ -348,9 +352,10 @@ public class WarframeOfficialSnapshotParser {
      */
     private void dictionary(JsonParser parser, RecordSink records, WarframeOfficialDataDomain domain, String group)
         throws IOException {
-        check(parser.currentToken() == JsonToken.START_OBJECT, "业务集合必须为字典：" + domain.productPath() + "/" + group);
+        check(parser.currentToken() == JsonToken.START_OBJECT, OfficialSnapshotErrorCode.RECORD_DICTIONARY_REQUIRED);
         while (parser.nextToken() != JsonToken.END_OBJECT) {
-            check(parser.currentToken() == JsonToken.FIELD_NAME, "字典成员缺少名称");
+            check(parser.currentToken() == JsonToken.FIELD_NAME,
+                OfficialSnapshotErrorCode.RECORD_DICTIONARY_MEMBER_MISSING);
             String key = parser.currentName();
             parser.nextToken();
             OfficialRecordDTO value;
@@ -375,7 +380,7 @@ public class WarframeOfficialSnapshotParser {
                 value = WarframeOfficialInputParser.parseCurrentValue(objectMapper, domain, parser);
             }
             if (StrUtil.isEmpty(group) && key.startsWith("/") && value.stableKey() != null) {
-                check(key.equals(value.stableKey()), "字典键与显式业务键不一致：" + domain.productPath());
+                check(key.equals(value.stableKey()), OfficialSnapshotErrorCode.DICTIONARY_KEY_MISMATCH);
             }
             add(records, domain, StrUtil.isEmpty(group) ? key : group + "/" + key, value);
         }
@@ -391,19 +396,19 @@ public class WarframeOfficialSnapshotParser {
      */
     private void nightwaveRewards(JsonParser parser, RecordSink records, WarframeOfficialDataDomain domain)
         throws IOException {
-        check(parser.currentToken() == JsonToken.START_ARRAY, "夜波奖励必须为数组");
+        check(parser.currentToken() == JsonToken.START_ARRAY, OfficialSnapshotErrorCode.NIGHTWAVE_REWARDS_INVALID);
         Map<String, OfficialNightwaveDTO> rewards = new LinkedHashMap<>();
         while (parser.nextToken() != JsonToken.END_ARRAY) {
             OfficialNightwaveDTO reward =
                 (OfficialNightwaveDTO)WarframeOfficialInputParser.parseCurrentValue(objectMapper, domain, parser);
-            check(reward.stableKey() != null, "夜波奖励缺少物品业务键");
+            check(reward.stableKey() != null, OfficialSnapshotErrorCode.NIGHTWAVE_REWARD_KEY_MISSING);
             String key = "rewards/" + reward.stableKey() + "/"
                 + (reward.getItemCount() == null ? "unit" : reward.getItemCount().stripTrailingZeros().toPlainString());
             OfficialNightwaveDTO before = rewards.putIfAbsent(key, reward);
             check(
                 before == null
                     || objectMapper.writeValueAsString(before).equals(objectMapper.writeValueAsString(reward)),
-                "夜波奖励存在同键冲突：" + key);
+                OfficialSnapshotErrorCode.NIGHTWAVE_REWARD_KEY_DUPLICATE);
         }
         for (var entry : rewards.entrySet())
             add(records, domain, entry.getKey(), entry.getValue());
@@ -415,10 +420,11 @@ public class WarframeOfficialSnapshotParser {
      * @param value 待处理的字段值。
      */
     private void validateListings(OfficialRivenWeaponDTO value) {
-        check(value.getMarketListings() != null, "裂罅武器缺少 marketListings");
+        check(value.getMarketListings() != null, OfficialApprovalErrorCode.RIVEN_LISTINGS_MISSING);
         Set<String> ids = new HashSet<>();
         for (var listing : value.getMarketListings()) {
-            check(StrUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()), "裂罅商品 ID 缺失或重复");
+            check(StrUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()),
+                OfficialApprovalErrorCode.RIVEN_LISTING_ID_INVALID);
         }
     }
 
@@ -447,13 +453,14 @@ public class WarframeOfficialSnapshotParser {
      */
     private void add(RecordSink records, WarframeOfficialDataDomain domain, String key, OfficialRecordDTO value)
         throws IOException {
-        check(StrUtil.isNotBlank(key) && key.length() <= 500, "成品业务键长度无效：" + domain.productPath());
+        check(StrUtil.isNotBlank(key) && key.length() <= MAX_RECORD_KEY_LENGTH,
+            OfficialSnapshotErrorCode.RECORD_KEY_TOO_LONG);
         OfficialRecordHeaderDTO header = value.header();
         String json = objectMapper.writeValueAsString(value);
         OfficialImportRecordDTO record = new OfficialImportRecordDTO(domain.productPath(), domain, key,
             header.officialName(), header.localizedName(), header.parentName(), header.productCategory(),
             header.description(), json, json);
-        check(records.add(record), "成品存在重复业务键：" + domain.productPath() + "/" + key);
+        check(records.add(record), OfficialSnapshotErrorCode.RECORD_KEY_DUPLICATE);
     }
 
     /**
@@ -471,10 +478,10 @@ public class WarframeOfficialSnapshotParser {
      * 将输入契约错误统一转换为稳定业务错误。
      *
      * @param valid 有效。
-     * @param message 待发送或处理的消息。
+     * @param errorCode 对应结构错误的稳定错误码。
      */
-    private static void check(boolean valid, String message) {
-        BusinessAssert.isTrue(valid, WarframeManagementErrorCode.DATASET_INVALID, message);
+    private static void check(boolean valid, ErrorCode errorCode) {
+        BusinessAssert.isTrue(valid, errorCode);
     }
 
     /** 同一冻结输入内只允许一个明确业务身份。 */

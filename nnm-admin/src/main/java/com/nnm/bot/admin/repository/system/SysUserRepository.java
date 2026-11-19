@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/** 查询后台用户、账号状态及其角色关联。 */
 public interface SysUserRepository extends JpaRepository<SysUser, Long> {
 
     @EntityGraph(SysUser.GRAPH_AUTHORITIES)

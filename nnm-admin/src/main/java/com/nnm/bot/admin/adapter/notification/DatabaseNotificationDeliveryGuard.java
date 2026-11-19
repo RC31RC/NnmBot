@@ -5,18 +5,19 @@ import com.nnm.bot.admin.pojo.entity.bot.notification.BotNotificationJob;
 import java.util.List;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
-import com.nnm.bot.admin.constant.BotNotificationConstants.JobStatus;
+import com.nnm.bot.admin.constant.bot.notification.BotNotificationConstants.JobStatus;
 import com.nnm.bot.admin.repository.bot.notification.BotNotificationJobRepository;
 import com.nnm.bot.admin.repository.system.SysUserRepository;
 import com.nnm.bot.core.group.repository.BotGroupBotRepository;
 import com.nnm.bot.core.group.repository.BotGroupRepository;
-import com.nnm.bot.core.message.exception.BotMessageNotSentException;
-import com.nnm.bot.core.message.model.BotProactiveTarget;
+import com.nnm.bot.core.messaging.exception.BotMessageNotSentException;
+import com.nnm.bot.core.messaging.model.BotProactiveTarget;
 import com.nnm.bot.core.plugin.response.NotificationDeliveryGuard;
 import jakarta.annotation.Resource;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
+/** 使用管理端群组绑定校验通知目标及可投递机器人实例。 */
 @Component
 public class DatabaseNotificationDeliveryGuard implements NotificationDeliveryGuard {
     @Resource

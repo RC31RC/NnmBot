@@ -2,10 +2,10 @@ package com.nnm.bot.core.group.plugin.system;
 
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.constant.MatchType;
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 import com.nnm.bot.core.group.service.GroupCommandService;
 import com.nnm.bot.core.group.pojo.dto.GroupCommandOutcomeDTO;
 import jakarta.annotation.Resource;

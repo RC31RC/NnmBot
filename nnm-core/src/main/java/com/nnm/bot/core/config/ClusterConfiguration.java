@@ -10,9 +10,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+/** 注册集群运行参数，并将数据库压力接入分布式任务调度。 */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({ClusterProperties.class, BotNotificationProperties.class})
 public class ClusterConfiguration {
+    /** 计算本进程 Hikari 连接池的最高使用率，供 RDT 调度避让。
+     *
+     * @param sources 当前应用的数据源集合
+     * @return 活跃连接比例；没有可用连接池指标时返回 -1
+     */
     @Bean
     public DatabasePressureProbe rdtDatabasePressure(ObjectProvider<DataSource> sources) {
         return () -> sources.stream().filter(HikariDataSource.class::isInstance).map(HikariDataSource.class::cast)

@@ -2,8 +2,8 @@ package com.nnm.bot.core.qqofficial.gateway;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayPayloadDTO;
 import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayPayloadDTO.IdentifyDTO;
 import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayPayloadDTO.ResumeDTO;

@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.dto.system;
 
-import com.nnm.bot.admin.constant.PermissionType;
+import com.nnm.bot.admin.constant.rbac.PermissionType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

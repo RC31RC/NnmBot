@@ -253,8 +253,7 @@ public class OfficialSyndicateRoot extends OfficialRecord {
     private List<OfficialSyndicateFavoursItems> officialSyndicateFavoursItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSyndicateInitiationSacrificeItemsItems> officialSyndicateInitiationSacrificeItemsItemsRows =
-        new ArrayList<>();
+    private List<OfficialSyndicateInitiationSacrificeItemsItems> officialSyndicateInitiationSacrificeItemsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialSyndicateItemReferencesItems> officialSyndicateItemReferencesItemsRows = new ArrayList<>();

@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
+/** 以幂等键查询和更新群组积分流水。 */
 public interface BotGroupPointTransactionRepository extends JpaRepository<BotGroupPointTransaction, Long> {
 
     void deleteAllByGroupId(Long groupId);

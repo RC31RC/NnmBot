@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
+/** 查询后台角色及其菜单、权限关联。 */
 public interface SysRoleRepository extends JpaRepository<SysRole, Long> {
 
     Optional<SysRole> findByCode(String code);

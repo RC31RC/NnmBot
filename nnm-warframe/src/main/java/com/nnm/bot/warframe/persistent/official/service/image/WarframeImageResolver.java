@@ -19,8 +19,4 @@ public interface WarframeImageResolver {
      */
     String resolveTextIcon(String token, String platform);
 
-    /**
-     * 获取当前上游数据并更新本地有效状态。
-     */
-    void refresh();
 }

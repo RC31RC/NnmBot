@@ -1,11 +1,11 @@
 package com.nnm.bot.warframe.plugin.persistent.official.reference;
 
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemResolutionDTO;

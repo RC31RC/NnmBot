@@ -68,7 +68,5 @@ public class OfficialRewardPoolStagesItemsItems extends OfficialChildRow {
     private OfficialRewardPoolStagesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRewardPoolStagesItemsItemsItemReferencesItems> officialRewardPoolStagesItemsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialRewardPoolStagesItemsItemsItemReferencesItems> officialRewardPoolStagesItemsItemsItemReferencesItemsRows = new ArrayList<>();
 }

@@ -1,6 +1,5 @@
 package com.nnm.bot.warframe.persistent.official.pojo.dto.record;
 
-import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordDTO;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
 import java.time.LocalDateTime;
 

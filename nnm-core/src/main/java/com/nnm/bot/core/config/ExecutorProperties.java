@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
+/** 应用、调度、命令入口、网关事件与计算任务的线程和队列预算。 */
 @ConfigurationProperties(prefix = "nnm.executor")
 public class ExecutorProperties {
 
@@ -16,9 +17,11 @@ public class ExecutorProperties {
     private final CommandIngress commandIngress = new CommandIngress();
     private final GatewayEvents gatewayEvents = new GatewayEvents();
     private final Computation computation = new Computation();
+    /** 应用关闭时等待任务退出的最长时长。 */
     private Duration awaitTermination = Duration.ofSeconds(30);
     /** 通用 I/O 虚拟线程执行器允许同时运行的业务任务数。 */
     private int applicationConcurrency = 64;
+    /** 作用域发现任务的最大并发数。 */
     private int discoveryConcurrency = 4;
     /** 建连与账号探测独立限流，避免业务线程等待同一执行器中的握手任务。 */
     private int connectionConcurrency = 4;
@@ -75,6 +78,10 @@ public class ExecutorProperties {
         this.connectionConcurrency = connectionConcurrency;
     }
 
+    /** 校验线程数、队列容量和等待时长之间的约束。
+     *
+     * @throws IllegalArgumentException 任一执行器容量或时限无效
+     */
     public void validate() {
         if (task.coreSize < 1) {
             throw new IllegalArgumentException("nnm.executor.task.core-size must be at least 1");
@@ -117,6 +124,7 @@ public class ExecutorProperties {
         }
     }
 
+    /** CPU 密集型通用任务池参数。 */
     public static class Task {
 
         // 与下载、渲染共用 4GB 预算，默认不随开发机核心数无限放大。
@@ -158,6 +166,7 @@ public class ExecutorProperties {
         }
     }
 
+    /** 本地定时调度线程数。 */
     public static class Scheduler {
 
         private int poolSize = 2;
@@ -171,17 +180,21 @@ public class ExecutorProperties {
         }
     }
 
+    /** 命令入口排队容量、消息大小和等待预算。 */
     @Getter
     @Setter
     public static class CommandIngress {
         /** 包含派发器暂存但尚未开始的任务，不包含正在执行的命令。 */
         private int queueCapacity = 32;
+        /** 单条待派发命令载荷的最大字节数。 */
         private int maxMessageBytes = 32 * 1024;
         /** 编码载荷预留，不是 JVM 堆大小。 */
         private long maxPendingBytes = 2 * 1024 * 1024;
+        /** 等待命令进入处理队列的最长时长。 */
         private Duration maxQueueWait = Duration.ofSeconds(10);
     }
 
+    /** QQ 网关事件的工作并发和有界等待队列。 */
     @Getter
     @Setter
     public static class GatewayEvents {
@@ -189,12 +202,15 @@ public class ExecutorProperties {
         private int queueCapacity = 16;
     }
 
+    /** OCR 等同步计算任务的在途量与等待预算。 */
     @Getter
     @Setter
     public static class Computation {
         /** 完整 OCR 任务（排队与执行），不是原生引擎内部线程数。 */
         private int ocrInFlight = 1;
+        /** 计算任务允许在执行前等待的最长时长。 */
         private Duration maxQueueWait = Duration.ofSeconds(5);
+        /** 调用方等待最终计算结果的最长时长。 */
         private Duration resultTimeout = Duration.ofSeconds(30);
     }
 }

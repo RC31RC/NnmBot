@@ -4,9 +4,8 @@ import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.common.storage.ObjectStorage.StoredObject;
 import java.util.Map.Entry;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.storage.ObjectStorage;
 import com.nnm.bot.common.transaction.AfterCommitExecutor;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -101,8 +100,9 @@ public class ForumFileServiceImpl implements ForumFileService {
         } catch (IOException exception) {
             throw storageFailure("论坛附件写入失败: " + originalName, exception);
         }
-        BusinessAssert.equals(storedObjectId, expectedObjectId, CommonErrorCode.SYSTEM_ERROR,
-            "VaultS3 返回的对象 ID 与请求对象不一致");
+        if (!expectedObjectId.equals(storedObjectId)) {
+            throw new SystemException(ForumErrorCode.STORAGE_ID_MISMATCH);
+        }
 
         String url = publicUrl(storedObjectId);
         return new ForumFileVO(url, originalName, url, originalName, resolveContentType(originalName), file.getSize());
@@ -237,8 +237,8 @@ public class ForumFileServiceImpl implements ForumFileService {
     private ForumStoredFileDTO load(String prefix, String year, String month, String fileName) {
         validatePathSegments(year, month, fileName);
         String objectId = prefix + year + "/" + month + "/" + fileName;
-        StoredObject metadata = objectStorage.stat(objectId)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛附件不存在"));
+        StoredObject metadata =
+            objectStorage.stat(objectId).orElseThrow(() -> new BusinessException(ForumErrorCode.ATTACHMENT_NOT_FOUND));
         org.springframework.core.io.Resource resource = new AbstractResource() {
             /**
              * 读取说明。
@@ -272,12 +272,12 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private String promote(String temporaryUrl) {
         Matcher matcher = temporaryUrlPattern.matcher(temporaryUrl);
-        BusinessAssert.isTrue(matcher.matches(), ForumErrorCode.INVALID_FILE, "论坛临时附件地址不合法");
+        BusinessAssert.isTrue(matcher.matches(), ForumErrorCode.TEMP_URL_INVALID);
         String sourceId = temporaryObjectId(matcher.group(1), matcher.group(2), matcher.group(3));
         String targetId = permanentObjectId(matcher.group(1), matcher.group(2), matcher.group(3));
         boolean sourceExists = objectStorage.stat(sourceId).isPresent();
         boolean targetExists = objectStorage.stat(targetId).isPresent();
-        BusinessAssert.isTrue(sourceExists || targetExists, CommonErrorCode.DATA_NOT_FOUND, "论坛临时附件不存在");
+        BusinessAssert.isTrue(sourceExists || targetExists, ForumErrorCode.TEMP_ATTACHMENT_NOT_FOUND);
         if (!targetExists) {
             objectStorage.copy(sourceId, targetId);
         }
@@ -346,11 +346,10 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @param file 本次上传或读取的文件。
      */
     private void validateFile(MultipartFile file) {
-        BusinessAssert.isTrue(file != null && !file.isEmpty(), ForumErrorCode.INVALID_FILE, "请选择需要上传的论坛附件");
+        BusinessAssert.isTrue(file != null && !file.isEmpty(), ForumErrorCode.UPLOAD_REQUIRED);
         BusinessAssert.isTrue(file.getSize() <= properties.getMaxFileBytes(), ForumErrorCode.FILE_TOO_LARGE);
         String extension = extensionOf(normalizedOriginalName(file.getOriginalFilename()));
-        BusinessAssert.isTrue(allowedExtensions.contains(extension), ForumErrorCode.INVALID_FILE,
-            "不支持上传 ." + extension + " 文件");
+        BusinessAssert.isTrue(allowedExtensions.contains(extension), ForumErrorCode.EXTENSION_UNSUPPORTED);
     }
 
     /**
@@ -534,13 +533,13 @@ public class ForumFileServiceImpl implements ForumFileService {
      * 校验当前配置的必要字段与资源边界。
      */
     private void validateProperties() {
-        BusinessAssert.isTrue(properties.getMaxFileBytes() > 0, CommonErrorCode.PARAM_INVALID, "论坛附件大小限制必须大于 0");
-        BusinessAssert.notBlank(properties.getPublicPath(), CommonErrorCode.PARAM_INVALID, "论坛附件公开路径不能为空");
-        BusinessAssert.notBlank(properties.getTemporaryPublicPath(), CommonErrorCode.PARAM_INVALID, "论坛临时附件公开路径不能为空");
+        BusinessAssert.isTrue(properties.getMaxFileBytes() > 0, ForumErrorCode.MAX_FILE_BYTES_INVALID);
+        BusinessAssert.notBlank(properties.getPublicPath(), ForumErrorCode.PUBLIC_PATH_REQUIRED);
+        BusinessAssert.notBlank(properties.getTemporaryPublicPath(), ForumErrorCode.TEMP_PUBLIC_PATH_REQUIRED);
         BusinessAssert.isTrue(properties.getTemporaryRetention() != null
             && !properties.getTemporaryRetention().isNegative() && !properties.getTemporaryRetention().isZero(),
-            CommonErrorCode.PARAM_INVALID, "论坛临时附件保留时间必须大于 0");
-        BusinessAssert.notEmpty(properties.getAllowedExtensions(), CommonErrorCode.PARAM_INVALID, "论坛附件扩展名白名单不能为空");
+            ForumErrorCode.TEMP_RETENTION_INVALID);
+        BusinessAssert.notEmpty(properties.getAllowedExtensions(), ForumErrorCode.EXTENSIONS_REQUIRED);
     }
 
     /**
@@ -564,11 +563,10 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @param fileName 文件名称。
      */
     private static void validatePathSegments(String year, String month, String fileName) {
-        BusinessAssert.isTrue(year != null && year.matches("\\d{4}"), CommonErrorCode.PARAM_INVALID, "论坛附件年份不合法");
-        BusinessAssert.isTrue(month != null && month.matches("0[1-9]|1[0-2]"), CommonErrorCode.PARAM_INVALID,
-            "论坛附件月份不合法");
+        BusinessAssert.isTrue(year != null && year.matches("\\d{4}"), ForumErrorCode.YEAR_INVALID);
+        BusinessAssert.isTrue(month != null && month.matches("0[1-9]|1[0-2]"), ForumErrorCode.MONTH_INVALID);
         BusinessAssert.isTrue(StrUtil.isNotBlank(fileName) && fileName.matches("[0-9a-f]{32}\\.[a-z0-9]+"),
-            CommonErrorCode.PARAM_INVALID, "论坛附件文件名不合法");
+            ForumErrorCode.FILE_NAME_INVALID);
     }
 
     /**
@@ -579,9 +577,9 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private static String normalizedOriginalName(String fileName) {
         String normalized = StrUtil.trim(fileName);
-        BusinessAssert.isTrue(StrUtil.isNotBlank(normalized), ForumErrorCode.INVALID_FILE, "论坛附件文件名不能为空");
+        BusinessAssert.isTrue(StrUtil.isNotBlank(normalized), ForumErrorCode.FILE_NAME_REQUIRED);
         String leafName = Path.of(normalized).getFileName().toString();
-        BusinessAssert.isTrue(leafName.length() <= 255, ForumErrorCode.INVALID_FILE, "论坛附件文件名过长");
+        BusinessAssert.isTrue(leafName.length() <= 255, ForumErrorCode.FILE_NAME_TOO_LONG);
         return leafName;
     }
 
@@ -593,8 +591,8 @@ public class ForumFileServiceImpl implements ForumFileService {
      */
     private static String extensionOf(String fileName) {
         int separator = fileName.lastIndexOf('.');
-        BusinessAssert.isTrue(separator > 0 && separator < fileName.length() - 1, ForumErrorCode.INVALID_FILE,
-            "论坛附件必须包含扩展名");
+        BusinessAssert.isTrue(separator > 0 && separator < fileName.length() - 1,
+            ForumErrorCode.FILE_EXTENSION_REQUIRED);
         return fileName.substring(separator + 1).toLowerCase(Locale.ROOT);
     }
 

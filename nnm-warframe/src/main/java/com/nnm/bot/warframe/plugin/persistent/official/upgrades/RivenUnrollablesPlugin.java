@@ -1,12 +1,12 @@
 package com.nnm.bot.warframe.plugin.persistent.official.upgrades;
 
 import java.util.regex.Matcher;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.catalog.WarframeCatalogPageCommandDTO;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.upgrades.WarframeRivenUnrollableVO;
 import com.nnm.bot.warframe.persistent.official.service.upgrades.WarframeRivenUnrollableService;

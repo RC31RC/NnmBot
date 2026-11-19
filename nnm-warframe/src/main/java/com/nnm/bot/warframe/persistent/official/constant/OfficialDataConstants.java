@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.constant;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Set;
@@ -47,15 +47,22 @@ public final class OfficialDataConstants {
             this.key = key;
         }
 
+        /**
+         * 返回参与分布式锁键生成的稳定用途名。
+         *
+         * @return 锁用途标识。
+         */
         public String key() {
             return key;
         }
     }
 
+    /** 标识记录来自官方数据或本项目自维护数据。 */
     public enum MaintenanceType {
         OFFICIAL, SELF_MAINTAINED
     }
 
+    /** 官方数据预览批次的持久化生命周期状态。 */
     public enum ImportStatus {
         PENDING, APPLYING, PARTIAL_FAILED, APPLIED, EXPIRED, ARCHIVED
     }
@@ -63,6 +70,7 @@ public final class OfficialDataConstants {
     /** JPA 规定的 SKIP LOCKED 哨兵值，-2 表示不要等待别的实例持有的行锁。 */
     public static final String APPLY_SKIP_LOCKED_HINT = "-2";
 
+    /** 官方文件采纳工作项的认领与执行状态。 */
     public enum ApplyFileStatus {
         READY, RUNNING, DONE, FAILED
     }
@@ -72,6 +80,7 @@ public final class OfficialDataConstants {
         RESOLVING_VERSION, DOWNLOADING_DATASET, VERIFYING_DATASET, PREVIEW, APPLYING
     }
 
+    /** 官方数据差异的记录级分类。 */
     public enum ChangeType {
         ADDED, CHANGED, REMOVED, UNCHANGED
     }
@@ -89,14 +98,31 @@ public final class OfficialDataConstants {
             this.jsonType = jsonType;
         }
 
+        /**
+         * 返回数据库使用的字段形状编码。
+         *
+         * @return 稳定的字段形状短整数。
+         */
         public short code() {
             return code;
         }
 
+        /**
+         * 返回对应的 JSON 类型名；缺失和显式 null 没有类型名。
+         *
+         * @return JSON 类型名，或 {@code null}。
+         */
         public String jsonType() {
             return jsonType;
         }
 
+        /**
+         * 按持久化编码恢复字段形状。
+         *
+         * @param code 数据库中的形状编码；空值按字段缺失处理。
+         * @return 对应字段形状。
+         * @throws SystemException 编码不属于已知字段形状时抛出。
+         */
         public static FieldState fromCode(Short code) {
             if (code == null)
                 return MISSING;

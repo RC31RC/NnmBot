@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Collection;
 import java.util.List;
 
+/** 查询机器人能力角色与具体渠道实例的分配关系。 */
 public interface BotRobotRoleInstanceRepository extends JpaRepository<BotRobotRoleInstance, Long> {
 
     List<BotRobotRoleInstance> findAllByRobotRoleId(Long robotRoleId);

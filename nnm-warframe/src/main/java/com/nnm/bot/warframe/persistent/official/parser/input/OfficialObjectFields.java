@@ -14,6 +14,12 @@ import java.util.List;
 /** 仅供固定 DTO 与生成式表列转换的字段元数据；不承载业务查询或任意 JSON 数据。 */
 public final class OfficialObjectFields {
     private static final ClassValue<Map<String, Field>> FIELDS = new ClassValue<>() {
+        /**
+         * 为官方输入类型建立 JSON 键到 Java 字段的不可变索引。
+         *
+         * @param type 需要索引的官方输入类型。
+         * @return 仅包含显式声明 {@link JsonProperty} 的字段索引。
+         */
         @Override
         protected Map<String, Field> computeValue(Class<?> type) {
             Map<String, Field> indexed = new LinkedHashMap<>();

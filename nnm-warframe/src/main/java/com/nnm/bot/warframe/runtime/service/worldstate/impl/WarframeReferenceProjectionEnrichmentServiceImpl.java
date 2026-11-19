@@ -3,6 +3,8 @@ package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.warframe.constant.WarframeCommandCodes;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityTermGroup;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityCatalogService;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
@@ -15,10 +17,11 @@ import com.nnm.bot.warframe.persistent.official.service.reference.WarframeRefere
 import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeBountyDefinitionService;
 import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRewardPoolService;
 import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateRuleService;
+import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeRewardSummaryFormatter;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateCommandVO;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.UnresolvedReferenceVO;
+import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeReferenceProjectionEnrichmentService;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,7 +47,11 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
     private static final Set<String> REFERENCE_KEYS = Set.of("item", "reward", "rewarditems", "attackerreward",
         "defenderreward", "attackerrewards", "defenderrewards", "node", "nodes", "location", "boss", "type", "mission",
         "missiontype", "modifier", "syndicate", "faction", "upgradetype", "operationtype", "agenttype", "jobtype",
-        "locationtag", "lastdiscoveredlocation", "title", "tier", "description", "challenge");
+        "locationtag", "lastdiscoveredlocation", "mode", "title", "tier", "description", "challenge", "risks",
+        "personalmodifiers", "deviation", "attackermissions", "defendermissions", "attackerfaction", "defenderfaction");
+
+    private static final Set<String> RESEARCH_CODES = Set.of(WarframeCommandCodes.ARCHIMEDEAS,
+        WarframeCommandCodes.DEEP_ARCHIMEDEAS, WarframeCommandCodes.HEX_ARCHIMEDEAS);
 
     @Resource
     private WarframeReferenceResolverService referenceResolver;
@@ -119,10 +126,14 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             safeOutputs.stream().anyMatch(output -> "nightwave".equals(commandCode(commandCode, output)));
         boolean containsCalendar =
             safeOutputs.stream().anyMatch(output -> "calendar".equals(commandCode(commandCode, output)));
-        List<WarframeStateTranslationDetailsDTO> translations =
-            containsBounties || containsNightwave ? safeRules(worldStateRuleService.stateTranslations()) : List.of();
-        final List<WarframeStateTranslationDetailsDTO> calendarRules =
-            containsCalendar ? safeRules(worldStateRuleService.stateTranslations()) : List.of();
+        boolean containsResearch =
+            safeOutputs.stream().anyMatch(output -> RESEARCH_CODES.contains(commandCode(commandCode, output)));
+        Map<String, WarframeReferenceType> ruleReferences = new LinkedHashMap<>();
+        if (containsBounties || containsNightwave || containsCalendar || containsResearch)
+            safeOutputs.forEach(output -> collect(output.data(), null, ruleReferences));
+        List<WarframeStateTranslationDetailsDTO> translations = ruleReferences.isEmpty() ? List.of()
+            : safeRules(worldStateRuleService.findTranslations(ruleReferences.keySet()));
+        final List<WarframeStateTranslationDetailsDTO> calendarRules = containsCalendar ? translations : List.of();
         boolean containsArbitration =
             safeOutputs.stream().anyMatch(output -> "arbitration".equals(commandCode(commandCode, output))
                 || "arbitration-table".equals(commandCode(commandCode, output)));
@@ -132,6 +143,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                 enrichArbitration(output.data(), essence), output.unresolvedReferences())).toList();
         }
         if (containsBounties) {
+            var stageNames = communityCatalog.displayTerms(WarframeCommunityTermGroup.BOUNTY_STAGE);
             Set<String> jobTypes = new LinkedHashSet<>();
             Set<String> poolKeys = new LinkedHashSet<>();
             safeOutputs.forEach(output -> collectBountyKeys(output.data(), jobTypes, poolKeys));
@@ -139,31 +151,76 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             var pools = rewardPoolService.findAll(poolKeys);
             safeOutputs = safeOutputs.stream()
                 .map(output -> new WarframeWorldStateCommandVO(output.text(),
-                    prepareBounties(output.data(), translations, pools, definitions), output.unresolvedReferences()))
+                    prepareBounties(output.data(), translations, pools, definitions, stageNames),
+                    output.unresolvedReferences()))
                 .toList();
         }
         Map<String, String> nightwaveDescriptions = containsNightwave ? stateDescriptions(translations) : Map.of();
+        Map<String, String> researchDescriptions = containsResearch ? stateDescriptions(translations) : Map.of();
         Map<String, WarframeReferenceType> references = new LinkedHashMap<>();
         safeOutputs.forEach(output -> collect(output.data(), null, references));
         if (CollUtil.isEmpty(references)) {
             return safeOutputs;
         }
         Map<String, WarframeReferenceResolutionDTO> resolutions = referenceResolver.resolveAll(references);
-        List<WarframeReferenceResolutionDTO> textReplacements =
-            resolutions.values().stream().filter(WarframeReferenceResolutionDTO::resolved)
+        return safeOutputs.stream().map(output -> {
+            String code = commandCode(commandCode, output);
+            var scoped = scopedResolutions(output, code, resolutions);
+            var textReplacements = scoped.values().stream().filter(WarframeReferenceResolutionDTO::resolved)
                 .filter(resolution -> !StrUtil.equals(resolution.reference(), resolution.displayName()))
                 .sorted(Comparator
                     .comparingInt((WarframeReferenceResolutionDTO resolution) -> resolution.reference().length())
                     .reversed())
                 .toList();
-        List<WarframeReferenceResolutionDTO> unresolvedReplacements =
-            resolutions.values().stream().filter(resolution -> !resolution.resolved())
-                .sorted(Comparator
-                    .comparingInt((WarframeReferenceResolutionDTO resolution) -> resolution.reference().length())
-                    .reversed())
-                .toList();
-        return safeOutputs.stream().map(output -> enrichOutput(output, resolutions, textReplacements,
-            unresolvedReplacements, commandCode(commandCode, output), nightwaveDescriptions, calendarRules)).toList();
+            return enrichOutput(output, scoped, textReplacements, code, nightwaveDescriptions, calendarRules,
+                researchDescriptions);
+        }).toList();
+    }
+
+    /**
+     * 只对当前科研或赏金投影补充整词译名，保持官方结果、歧义及其他命令互不影响。
+     *
+     * @param output 当前展示投影。
+     * @param code 当前命令代码。
+     * @param official 已完成的官方及自维护业务引用解析。
+     * @return 当前投影独有的解析结果。
+     */
+    private Map<String, WarframeReferenceResolutionDTO> scopedResolutions(WarframeWorldStateCommandVO output,
+        String code, Map<String, WarframeReferenceResolutionDTO> official) {
+        boolean research = switch (code) {
+            case WarframeCommandCodes.ARCHIMEDEAS, WarframeCommandCodes.DEEP_ARCHIMEDEAS,
+                WarframeCommandCodes.HEX_ARCHIMEDEAS -> true;
+            default -> false;
+        };
+        boolean sortie = WarframeCommandCodes.SORTIES.equals(code);
+        if (!research && !sortie && !containsJobs(output.data()))
+            return official;
+        var group = research ? WarframeCommunityTermGroup.ARCHIMEDEA
+            : sortie ? WarframeCommunityTermGroup.SORTIE_MODIFIER : WarframeCommunityTermGroup.BOUNTY_STAGE;
+        var terms = communityCatalog.displayTerms(group);
+        if (terms == null || terms.isEmpty())
+            return official;
+        Map<String, WarframeReferenceType> references = new LinkedHashMap<>();
+        collect(output.data(), null, references);
+        Map<String, WarframeReferenceResolutionDTO> result = new LinkedHashMap<>(official);
+        references.forEach((key, type) -> {
+            var previous = official.get(key);
+            if (((research || sortie) && type != WarframeReferenceType.MODIFIER)
+                || (previous != null && previous.status() != WarframeReferenceResolutionStatus.UNRESOLVED))
+                return;
+            var candidates = terms.getOrDefault(WarframeNameNormalizer.phrase(key), List.of());
+            if (candidates.isEmpty() && group == WarframeCommunityTermGroup.BOUNTY_STAGE
+                && terms.values().stream().anyMatch(values -> values.contains(key)))
+                candidates = List.of(key);
+            if (candidates.isEmpty())
+                return;
+            var status = candidates.size() == 1 ? WarframeReferenceResolutionStatus.RESOLVED
+                : WarframeReferenceResolutionStatus.AMBIGUOUS;
+            result.put(key,
+                new WarframeReferenceResolutionDTO(key, candidates.size() == 1 ? candidates.getFirst() : key, key,
+                    "community:" + group.code(), status, candidates));
+        });
+        return result;
     }
 
     /**
@@ -290,18 +347,21 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      * @param source 已经组装的原始展示字段映射。
      * @param translations 译名集合。
      * @param pools 奖池集合。
+     * @param definitions 本次命中的官方赏金定义。
+     * @param stageNames 仅用于动态 locationTag 的完整阶段名称。
      * @return 以本方法约定的业务键组织的数据映射。
      */
     private Map<String, Object> prepareBounties(Map<?, ?> source, List<WarframeStateTranslationDetailsDTO> translations,
-        List<WarframeRewardPoolVO.EntryVO> pools, Map<String, WarframeBountyDefinitionDetailsDTO> definitions) {
+        List<WarframeRewardPoolVO.EntryVO> pools, Map<String, WarframeBountyDefinitionDetailsDTO> definitions,
+        Map<String, List<String>> stageNames) {
         Map<String, Object> result = new LinkedHashMap<>();
         source.forEach((key, value) -> {
             Object prepared = value;
             if (value instanceof Map<?, ?> map) {
-                prepared = prepareBounties(map, translations, pools, definitions);
+                prepared = prepareBounties(map, translations, pools, definitions, stageNames);
             } else if (value instanceof List<?> list) {
                 prepared = list.stream().map(entry -> entry instanceof Map<?, ?> map
-                    ? prepareBounties(map, translations, pools, definitions) : entry).toList();
+                    ? prepareBounties(map, translations, pools, definitions, stageNames) : entry).toList();
             }
             result.put(String.valueOf(key), prepared);
         });
@@ -334,6 +394,14 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             if (StrUtil.isNotBlank(record.description()))
                 result.put("description", record.description());
         });
+        String stage = String.valueOf(result.getOrDefault("locationTag", ""));
+        var names = stageNames.getOrDefault(WarframeNameNormalizer.phrase(stage), List.of());
+        String type = String.valueOf(result.getOrDefault("type", ""));
+        if (Boolean.TRUE.equals(result.get("isVault")) && names.size() == 1
+            && (StrUtil.isBlank(type) || "隔离库".equals(type) || jobType.equals(type) || stage.equals(type))) {
+            result.put("type", names.getFirst());
+            result.put("locationTagReference", stage);
+        }
         Object poolValue = result.remove("rewardPoolReference");
         String poolReference = poolValue == null ? "" : poolValue.toString();
         String displayType = result.get("type") == null ? null : result.get("type").toString();
@@ -348,7 +416,62 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                 result.put("rewardNotice", "奖励池尚未收录");
             }
         }
+        var definition = definitions.get(jobType);
+        var stages = bountyStages(definition, result, translations);
+        if (!stages.isEmpty())
+            result.put("stages", stages);
         return result;
+    }
+
+    /**
+     * 按同一份动态赏金的阶段组织静态可选任务及其阶段奖励，绝不推断随机选择。
+     *
+     * @param definition 当前赏金的官方静态阶段定义，可能缺失。
+     * @param job 当前赏金实例及它自己的奖励池。
+     * @param translations 已采纳的阶段任务中文译名与说明。
+     * @return 各阶段可选任务及本赏金奖励；均不标为当前选中结果。
+     */
+    private static List<Map<String, Object>> bountyStages(WarframeBountyDefinitionDetailsDTO definition,
+        Map<String, Object> job, List<WarframeStateTranslationDetailsDTO> translations) {
+        Map<Integer, List<String>> candidates = new java.util.TreeMap<>();
+        if (definition != null) {
+            for (var option : definition.stages()) {
+                candidates.computeIfAbsent(option.stage(), ignored -> new ArrayList<>()).add(option.jobReference());
+            }
+        }
+        Map<Integer, List<Map<String, Object>>> rewardsByStage = new java.util.TreeMap<>();
+        if (job.get("rewards") instanceof List<?> rewards) {
+            for (Object value : rewards) {
+                if (value instanceof Map<?, ?> reward && reward.get("stage") instanceof Number stage) {
+                    rewardsByStage.computeIfAbsent(stage.intValue(), ignored -> new ArrayList<>())
+                        .add(stringKeys(reward));
+                }
+            }
+        }
+        Set<Integer> indices = new java.util.TreeSet<>(candidates.keySet());
+        indices.addAll(rewardsByStage.keySet());
+        List<Map<String, Object>> stages = new ArrayList<>(indices.size());
+        for (int index : indices) {
+            Map<String, Object> stage = new LinkedHashMap<>();
+            stage.put("stage", index + 1);
+            stage.put("selectionStatus", "任务仅为静态候选，本轮具体阶段任务由游戏决定");
+            stage.put("missions", candidates.getOrDefault(index, List.of()).stream().map(reference -> {
+                Map<String, Object> option = new LinkedHashMap<>();
+                option.put("missionKey", reference);
+                var rule =
+                    translations.stream().filter(row -> reference.equals(row.uniqueName())).findFirst().orElse(null);
+                option.put("mission",
+                    rule != null && StrUtil.isNotBlank(rule.displayName()) ? rule.displayName() : "未收录阶段任务名称");
+                if (rule != null && StrUtil.isNotBlank(rule.description()))
+                    option.put("description", rule.description());
+                return option;
+            }).toList());
+            stage.put("rewards", rewardsByStage.getOrDefault(index, List.of()));
+            if (job.get("standingStages") instanceof List<?> standing && index < standing.size())
+                stage.put("standing", standing.get(index));
+            stages.add(stage);
+        }
+        return stages;
     }
 
     /**
@@ -386,27 +509,92 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      * @param output 需要补全或转换的输出数据。
      * @param resolutions 解析结果。
      * @param textReplacements 文本替换数据集合。
-     * @param unresolvedReplacements 未解析替换数据集合。
      * @param commandCode 命令代码。
      * @param nightwaveDescriptions 夜波说明。
      * @param calendarRules 日历规则集合。
+     * @param researchDescriptions 科研相关已采纳规则的说明。
      * @return 当前命令的标题、状态及展示条目。
      */
     private static WarframeWorldStateCommandVO enrichOutput(WarframeWorldStateCommandVO output,
         Map<String, WarframeReferenceResolutionDTO> resolutions, List<WarframeReferenceResolutionDTO> textReplacements,
-        List<WarframeReferenceResolutionDTO> unresolvedReplacements, String commandCode,
-        Map<String, String> nightwaveDescriptions, List<WarframeStateTranslationDetailsDTO> calendarRules) {
-        List<UnresolvedReferenceVO> unresolved = new ArrayList<>(output.unresolvedReferences());
+        String commandCode, Map<String, String> nightwaveDescriptions,
+        List<WarframeStateTranslationDetailsDTO> calendarRules, Map<String, String> researchDescriptions) {
+        List<WarframeWorldStateUnresolvedReferenceDTO> unresolved = new ArrayList<>(output.unresolvedReferences());
         Map<String, Object> data =
             enrichMap(output.data(), "", resolutions, commandCode, unresolved, nightwaveDescriptions, calendarRules);
+        if (RESEARCH_CODES.contains(commandCode) && !researchDescriptions.isEmpty()) {
+            data = researchDescriptions(output.data(), data, researchDescriptions);
+        }
         String text = output.text();
         for (WarframeReferenceResolutionDTO resolution : textReplacements) {
             text = text.replace(resolution.reference(), resolution.displayName());
         }
-        for (WarframeReferenceResolutionDTO resolution : unresolvedReplacements) {
-            text = text.replace(resolution.reference(), "未收录数据");
-        }
         return new WarframeWorldStateCommandVO(text, data, distinct(unresolved));
+    }
+
+    /**
+     * 按原始科研条件附加已采纳的任务说明；展示名已翻译时仍按原始键匹配。
+     *
+     * @param original 翻译前的科研字段。
+     * @param display 已翻译的展示字段。
+     * @param descriptions 由官方与自维护数据读取的任务说明。
+     * @return 保留原有字段、附带说明的展示字段。
+     */
+    private static Map<String, Object> researchDescriptions(Map<String, Object> original, Map<String, Object> display,
+        Map<String, String> descriptions) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        display.forEach((key, value) -> {
+            Object raw = original.get(key);
+            if (raw instanceof Map<?, ?> source && value instanceof Map<?, ?> child) {
+                result.put(key, researchDescriptions(stringKeys(source), stringKeys(child), descriptions));
+            } else if (raw instanceof List<?> originals && value instanceof List<?> displays) {
+                List<Object> enriched = new ArrayList<>(displays.size());
+                for (int index = 0; index < displays.size(); index++) {
+                    Object entry = displays.get(index);
+                    Object source = index < originals.size() ? originals.get(index) : null;
+                    enriched.add(source instanceof Map<?, ?> rawRow && entry instanceof Map<?, ?> displayRow
+                        ? researchDescriptions(stringKeys(rawRow), stringKeys(displayRow), descriptions) : entry);
+                }
+                result.put(key, enriched);
+            } else {
+                result.put(key, value);
+            }
+        });
+        for (String key : List.of("missionType", "deviation")) {
+            if (original.get(key) instanceof String reference) {
+                String description = descriptions.get(reference);
+                if (StrUtil.isNotBlank(description) && (result.get("description") == null
+                    || StrUtil.isBlank(String.valueOf(result.get("description"))))) {
+                    result.put("description", description);
+                }
+            }
+        }
+        for (String key : List.of("risks", "personalModifiers")) {
+            if (original.get(key) instanceof List<?> entries) {
+                Map<String, String> explanations = new LinkedHashMap<>();
+                entries.stream().filter(String.class::isInstance).map(String.class::cast).forEach(reference -> {
+                    if (StrUtil.isNotBlank(descriptions.get(reference))) {
+                        explanations.put(reference, descriptions.get(reference));
+                    }
+                });
+                if (!explanations.isEmpty()) {
+                    result.put(key + "Descriptions", explanations);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 将嵌套的展示字段转换为文本键供规则补全读取。
+     *
+     * @param source 已解析的映射。
+     * @return 保留原值的字段映射。
+     */
+    private static Map<String, Object> stringKeys(Map<?, ?> source) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        source.forEach((key, value) -> result.put(String.valueOf(key), value));
+        return result;
     }
 
     /**
@@ -447,7 +635,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      */
     private static Map<String, Object> enrichMap(Map<?, ?> source, String path,
         Map<String, WarframeReferenceResolutionDTO> resolutions, String commandCode,
-        List<UnresolvedReferenceVO> unresolved, Map<String, String> nightwaveDescriptions,
+        List<WarframeWorldStateUnresolvedReferenceDTO> unresolved, Map<String, String> nightwaveDescriptions,
         List<WarframeStateTranslationDetailsDTO> calendarRules) {
         Map<String, Object> result = new LinkedHashMap<>();
         source.forEach((keyValue, value) -> {
@@ -548,11 +736,19 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                     replacements.put(reference, name);
                 }
             }
-            // 长路径优先，避免一个物品标识恰好是另一个的前缀时替换错误。
-            for (String reference : replacements.keySet().stream()
-                .sorted(Comparator.comparingInt(String::length).reversed()).toList()) {
-                summary = summary.replace(reference, replacements.get(reference));
+            summary = WarframeRewardSummaryFormatter.replaceKnownReferences(summary, replacements);
+        }
+        if (result.get(itemsKey) instanceof List<?> localized) {
+            List<String> names = new ArrayList<>();
+            for (Object value : localized) {
+                Object item = value instanceof Map<?, ?> row ? row.get("item") : value;
+                if (!(item instanceof String name) || name.startsWith("/") || name.isBlank())
+                    break;
+                names.add(name);
             }
+            // 多奖励只能按上面的原始身份逐项替换；顺序兜底仅适用于单物品摘要。
+            if (names.size() == 1 && localized.size() == 1)
+                summary = WarframeRewardSummaryFormatter.replaceInternalReferences(summary, names);
         }
         result.put(summaryKey, summary.replaceAll("(?i)\\b(\\d+) credits\\b", "$1 现金"));
     }
@@ -572,7 +768,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      */
     private static EnrichedValue enrichValue(Object value, String fieldName, String path,
         Map<String, WarframeReferenceResolutionDTO> resolutions, String commandCode,
-        List<UnresolvedReferenceVO> unresolved, Map<String, String> nightwaveDescriptions,
+        List<WarframeWorldStateUnresolvedReferenceDTO> unresolved, Map<String, String> nightwaveDescriptions,
         List<WarframeStateTranslationDetailsDTO> calendarRules) {
         if (value instanceof Map<?, ?> map) {
             return new EnrichedValue(
@@ -605,10 +801,9 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                 boolean changed = !StrUtil.equals(reference, resolution.displayName());
                 return new EnrichedValue(resolution.displayName(), reference, changed, false, List.of());
             }
-            unresolved.add(new WarframeWorldStateVO.UnresolvedReferenceVO(commandCode, path, reference,
+            unresolved.add(new WarframeWorldStateUnresolvedReferenceDTO(commandCode, path, reference,
                 unresolvedStatus(resolution.status()), resolution.candidates()));
-            return new EnrichedValue(unresolvedDisplay(fieldName), reference, true, true,
-                List.of(resolution.status().name()));
+            return new EnrichedValue(reference, reference, false, true, List.of(resolution.status().name()));
         }
         return EnrichedValue.unchanged(value);
     }
@@ -650,13 +845,15 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
         String normalized = StrUtil.emptyIfNull(fieldName).toLowerCase(Locale.ROOT);
         return switch (normalized) {
             case "node", "nodes", "location", "lastdiscoveredlocation" -> WarframeReferenceType.NODE;
-            case "type", "mission", "missiontype" -> WarframeReferenceType.MISSION_TYPE;
+            case "type", "mission", "missiontype", "attackermissions", "defendermissions" ->
+                WarframeReferenceType.MISSION_TYPE;
             case "jobtype", "locationtag", "title" -> WarframeReferenceType.ITEM;
-            case "modifier" -> WarframeReferenceType.MODIFIER;
+            case "mode" -> WarframeReferenceType.LANGUAGE_STRING;
+            case "modifier", "risks", "personalmodifiers", "deviation" -> WarframeReferenceType.MODIFIER;
             case "tier" -> WarframeReferenceType.FISSURE_TIER;
             case "boss" -> WarframeReferenceType.SORTIE_BOSS;
             case "syndicate" -> WarframeReferenceType.SYNDICATE;
-            case "faction" -> WarframeReferenceType.FACTION;
+            case "faction", "attackerfaction", "defenderfaction" -> WarframeReferenceType.FACTION;
             case "upgradetype" -> WarframeReferenceType.UPGRADE_TYPE;
             case "operationtype" -> WarframeReferenceType.OPERATION_TYPE;
             case "agenttype" -> WarframeReferenceType.PERSISTENT_ENEMY;
@@ -685,7 +882,8 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      * @param references 引用集合。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    private static List<WarframeWorldStateVO.UnresolvedReferenceVO> distinct(List<UnresolvedReferenceVO> references) {
+    private static List<WarframeWorldStateUnresolvedReferenceDTO>
+        distinct(List<WarframeWorldStateUnresolvedReferenceDTO> references) {
         return references.stream().distinct().toList();
     }
 
@@ -714,16 +912,18 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             case "每日特惠" -> "daily-deals";
             case "入侵" -> "invasions";
             case "钢铁奖励" -> "steel-path";
-            case "电波" -> "nightwave";
+            case "电波", "午夜电波" -> "nightwave";
             case "希图斯" -> "ostrons";
             case "索拉里斯" -> "solaris";
             case "英择谛" -> "entrati";
-            case "竞技场" -> "conclave";
             case "新闻" -> "news";
             case "促销" -> "flash-sales";
             case "小小黑" -> "persistent-enemies";
             case "集团任务" -> "syndicate-missions";
-            case "实时日历" -> "calendar";
+            case "实时日历", "1999 日历赛季" -> "calendar";
+            case "科研", "科研任务" -> WarframeCommandCodes.ARCHIMEDEAS;
+            case "深层科研" -> WarframeCommandCodes.DEEP_ARCHIMEDEAS;
+            case "时光科研" -> WarframeCommandCodes.HEX_ARCHIMEDEAS;
             default -> title;
         };
     }
@@ -738,41 +938,4 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
         return status == WarframeReferenceResolutionStatus.AMBIGUOUS ? "有歧义" : "未解析";
     }
 
-    /**
-     * 按未解析引用所属字段生成中文占位文本。
-     *
-     * @param fieldName 字段名称。
-     * @return 符合当前引用业务含义的中文占位文本。
-     */
-    private static String unresolvedDisplay(String fieldName) {
-        String field = StrUtil.emptyIfNull(fieldName).toLowerCase(Locale.ROOT);
-        if (field.contains("reward") || field.equals("item")) {
-            return "未收录奖励";
-        }
-        if (field.contains("description")) {
-            return "未收录说明";
-        }
-        if (field.contains("location") || field.equals("node") || field.equals("nodes")) {
-            return "未收录地点";
-        }
-        if (field.contains("mission") || field.equals("type") || field.equals("jobtype")) {
-            return "未收录任务";
-        }
-        if (field.contains("faction")) {
-            return "未收录阵营";
-        }
-        if (field.contains("modifier")) {
-            return "未收录条件";
-        }
-        if (field.equals("tier")) {
-            return "未收录纪元";
-        }
-        if (field.contains("syndicate")) {
-            return "未收录集团";
-        }
-        if (field.equals("boss")) {
-            return "未收录目标";
-        }
-        return "未收录数据";
-    }
 }

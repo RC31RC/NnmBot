@@ -1,7 +1,7 @@
 package com.nnm.bot.core.plugin.execution.advice;
 
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.core.plugin.execution.CommandRejectedException;
 import com.nnm.bot.core.plugin.response.ReplyDeliveryException;
 import lombok.extern.slf4j.Slf4j;

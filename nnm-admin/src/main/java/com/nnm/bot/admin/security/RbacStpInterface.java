@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/** 将 Sa-Token 权限查询委托给 RBAC 服务。 */
+/** 将 Sa-Token 权限查询委托给 RBAC 服务。 */
 @Component
 public class RbacStpInterface implements StpInterface {
 

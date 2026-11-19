@@ -352,7 +352,8 @@ public class ClusterBotRuntime implements NodeIdentityListener {
 
     private boolean isConnected(BotChannelInstanceRecord record) {
         return registry.find(key(record))
-            .map(snapshot -> snapshot.status() == com.nnm.bot.core.constant.BotChannelStatus.CONNECTED).orElse(false);
+            .map(snapshot -> snapshot.status() == com.nnm.bot.core.channel.constant.BotChannelStatus.CONNECTED)
+            .orElse(false);
     }
 
     private String componentName(BotChannelInstanceRecord record, Map<String, String> placement, String fallback) {

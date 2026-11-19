@@ -12,7 +12,7 @@ import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolu
  */
 public record WarframeWorldStateCodebookEntryDTO(String reference, String displayName, String description,
     String relatedReference, String source, WarframeReferenceResolutionStatus status, String factionReference,
-    boolean selfMaintained) {
+    boolean selfMaintained, String nameKey) {
 
     /**
      * 构造世界状态代码簿条目传输对象，并保存初始化参数。
@@ -25,6 +25,7 @@ public record WarframeWorldStateCodebookEntryDTO(String reference, String displa
      * @param status 状态。
      * @param factionReference 阵营引用。
      * @param selfMaintained 自维护维护。
+     * @param nameKey 同身份的语言键；查询时按需解析，不在代码簿中缓存跨表结果。
      */
     public WarframeWorldStateCodebookEntryDTO {
         reference = StrUtil.emptyIfNull(reference);
@@ -34,6 +35,7 @@ public record WarframeWorldStateCodebookEntryDTO(String reference, String displa
         source = StrUtil.emptyIfNull(source);
         status = status == null ? WarframeReferenceResolutionStatus.UNRESOLVED : status;
         factionReference = StrUtil.emptyIfNull(factionReference);
+        nameKey = StrUtil.emptyIfNull(nameKey);
     }
 
     /**
@@ -44,7 +46,7 @@ public record WarframeWorldStateCodebookEntryDTO(String reference, String displa
      */
     public WarframeWorldStateCodebookEntryDTO withSelfMaintained(boolean value) {
         return new WarframeWorldStateCodebookEntryDTO(reference, displayName, description, relatedReference, source,
-            status, factionReference, value);
+            status, factionReference, value, nameKey);
     }
 
     /**

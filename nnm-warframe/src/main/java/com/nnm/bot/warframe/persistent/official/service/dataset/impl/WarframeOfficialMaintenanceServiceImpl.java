@@ -3,8 +3,8 @@ package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_GROUPS;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.constant.WarframeCacheErrorCode;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
@@ -94,7 +94,7 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
         }
         OfficialRecordDTO data = request.data();
         BusinessAssert.isTrue(OfficialInputTypes.type(models.domain(root.getClass())).isInstance(data),
-            WarframeManagementErrorCode.DATASET_INVALID, "请求的具体字段模型与所属文件不一致");
+            OfficialDataErrorCode.RECORD_MODEL_MISMATCH);
         OfficialRecordHeaderDTO header = data.header();
         root.setOfficialName(header.officialName());
         root.setLocalizedName(header.localizedName() == null ? header.officialName() : header.localizedName());

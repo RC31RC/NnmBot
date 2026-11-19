@@ -12,20 +12,18 @@ import com.nnm.bot.admin.pojo.query.bot.channel.OneBotAccountProbeQuery;
 import com.nnm.bot.admin.pojo.dto.bot.channel.OneBotAccountProbeDTO;
 import com.nnm.bot.admin.pojo.dto.bot.channel.OneBotInstanceSaveDTO;
 import com.nnm.bot.admin.pojo.dto.bot.channel.QqOfficialInstanceSaveDTO;
-import com.nnm.bot.admin.constant.BotManagementErrorCode;
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
 import com.nnm.bot.admin.security.BotCredentialCipher;
 import com.nnm.bot.admin.service.bot.channel.BotChannelManagementService;
 import com.nnm.bot.admin.service.bot.channel.BotChannelStatusService;
 import com.nnm.bot.admin.service.system.OperationAuditService;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.DataNotFoundException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
 import com.nnm.bot.core.channel.runtime.BotChannelRuntimeManager;
 import com.nnm.bot.core.channel.topology.BotTopologyInvalidator;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.onebot.connection.OneBotAccountProbe;
 import com.nnm.bot.core.onebot.connection.OneBotAccountProbeException;
 import jakarta.annotation.Resource;
@@ -35,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/** 持久化渠道配置并协调运行时实例、拓扑和操作审计。 */
 @Service
 public class BotChannelManagementServiceImpl implements BotChannelManagementService {
 
@@ -94,7 +93,7 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     @Transactional
     public long createQqOfficial(QqOfficialInstanceSaveDTO request) {
         topologyInvalidator.invalidateAfterCommit();
-        BusinessAssert.notBlank(request.clientSecret(), CommonErrorCode.PARAM_INVALID, "新增 QQ 官方机器人必须填写 Client Secret");
+        BusinessAssert.notBlank(request.clientSecret(), BotManagementErrorCode.QQ_SECRET_REQUIRED);
         requireUnique(null, request.instanceId(), BotPlatform.QQ_OFFICIAL, request.appId());
         BotChannelInstance instance = new BotChannelInstance();
         instance.setPlatform(BotPlatform.QQ_OFFICIAL);
@@ -124,7 +123,8 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     @Transactional
     public void delete(long id) {
         topologyInvalidator.invalidateAfterCommit();
-        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        BotChannelInstance instance =
+            repository.findById(id).orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
         runtimeManager.remove(instance.getInstanceId());
         repository.delete(instance);
         auditService.record("BOT_INSTANCE_DELETE", "BOT_INSTANCE", id, "删除机器人实例 " + instance.getInstanceId());
@@ -132,22 +132,23 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
 
     @Override
     public void start(long id) {
-        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
-        BusinessAssert.isTrue(instance.isEnabled(), CommonErrorCode.DATA_CONFLICT, "机器人实例已禁用，请先编辑并启用实例");
+        BotChannelInstance instance =
+            repository.findById(id).orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
+        BusinessAssert.isTrue(instance.isEnabled(), BotManagementErrorCode.INSTANCE_DISABLED);
         try {
             runtimeManager.start(instance.getInstanceId());
         } catch (BusinessException exception) {
             throw exception;
         } catch (RuntimeException exception) {
-            throw new BusinessException(BotManagementErrorCode.INSTANCE_START_FAILED,
-                "机器人实例启动失败：" + exception.getMessage(), exception);
+            throw new BusinessException(BotManagementErrorCode.INSTANCE_START_FAILED, exception);
         }
         auditService.record("BOT_INSTANCE_START", "BOT_INSTANCE", id, "启动机器人实例 " + instance.getInstanceId());
     }
 
     @Override
     public void stop(long id) {
-        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+        BotChannelInstance instance =
+            repository.findById(id).orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
         runtimeManager.stop(instance.getInstanceId());
         auditService.record("BOT_INSTANCE_STOP", "BOT_INSTANCE", id, "停止机器人实例 " + instance.getInstanceId());
     }
@@ -166,11 +167,11 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
                 token = credentialCipher.decrypt(config.getAccessToken());
             }
         }
-        BusinessAssert.notBlank(url, CommonErrorCode.PARAM_INVALID, "OneBot WebSocket 地址不能为空");
+        BusinessAssert.notBlank(url, BotManagementErrorCode.ONEBOT_URL_REQUIRED);
         try {
             return new OneBotAccountProbeDTO(accountProbe.probe(url, token));
         } catch (OneBotAccountProbeException exception) {
-            throw new BusinessException(BotManagementErrorCode.ACCOUNT_PROBE_FAILED, exception.getMessage(), exception);
+            throw new BusinessException(BotManagementErrorCode.ACCOUNT_PROBE_FAILED, exception);
         }
     }
 
@@ -238,17 +239,19 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     private void requireUnique(Long currentId, String instanceId, BotPlatform platform, String botAccountId) {
         repository.findByInstanceIdIgnoreCase(instanceId.trim()).filter(existing -> !existing.getId().equals(currentId))
             .ifPresent(existing -> {
-                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "实例标识已存在");
+                throw new BusinessException(BotManagementErrorCode.INSTANCE_ID_CONFLICT);
             });
         repository.findByPlatformAndBotAccountId(platform, botAccountId.trim())
             .filter(existing -> !existing.getId().equals(currentId)).ifPresent(existing -> {
-                throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "机器人账号已存在");
+                throw new BusinessException(BotManagementErrorCode.ACCOUNT_CONFLICT);
             });
     }
 
     private BotChannelInstance instance(long id, BotPlatform expectedPlatform) {
-        BotChannelInstance instance = repository.findById(id).orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
-        BusinessAssert.equals(instance.getPlatform(), expectedPlatform, CommonErrorCode.PARAM_INVALID, "机器人实例协议不匹配");
+        BotChannelInstance instance =
+            repository.findById(id).orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
+        BusinessAssert.isTrue(instance.getPlatform() == expectedPlatform,
+            BotManagementErrorCode.INSTANCE_PLATFORM_MISMATCH);
         return instance;
     }
 

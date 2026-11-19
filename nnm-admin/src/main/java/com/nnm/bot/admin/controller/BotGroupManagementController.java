@@ -6,10 +6,11 @@ import com.nnm.bot.admin.pojo.vo.bot.notification.BotNotificationJobVO;
 import com.nnm.bot.admin.pojo.vo.bot.group.BotGroupVO;
 import com.nnm.bot.admin.pojo.vo.bot.group.BotGroupMemberVO;
 import com.nnm.bot.admin.pojo.vo.bot.group.BotGroupBindingPreviewVO;
+import com.nnm.bot.admin.pojo.vo.task.AdminTaskSubmissionVO;
 import com.nnm.bot.admin.controller.assembler.bot.scope.AdminBotScopeViewAssembler;
 import com.nnm.bot.admin.controller.assembler.bot.notification.AdminBotNotificationViewAssembler;
 import com.nnm.bot.admin.controller.assembler.bot.group.AdminBotGroupViewAssembler;
-import com.nnm.bot.common.task.AdminTaskService.AdminTaskWork;
+import com.nnm.bot.core.task.service.AdminTaskService.AdminTaskWork;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotNotificationPreviewDTO;
@@ -29,9 +30,9 @@ import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupUpdateDTO;
 import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDiscoveryDTO;
 import com.nnm.bot.admin.service.bot.group.BotGroupManagementService;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.task.AdminTaskService;
-import com.nnm.bot.common.task.AdminTaskSubmission;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.core.task.service.AdminTaskService;
+import com.nnm.bot.core.task.pojo.dto.AdminTaskSubmissionDTO;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
+/** 管理逻辑群组、成员及机器人绑定关系。 */
 @RestController
 @RequestMapping("/api/admin/bot-groups")
 public class BotGroupManagementController {
@@ -58,35 +60,39 @@ public class BotGroupManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotGroupVO>> list(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotGroupVO>> list(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupVO(service.list()));
     }
 
     @PostMapping("/discovery/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotScopeDiscoveryVO>> discovery(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotScopeDiscoveryVO>> discovery(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeDiscoveryVO(service.discover()));
     }
 
     @PostMapping("/discovery")
     @SaCheckPermission("bot:group:update")
-    public ApiResponse<AdminTaskSubmission> discoverAndSynchronize() {
-        return ApiResponse.ok(submitTask("BOT_GROUP_DISCOVERY", "bot:group:update",
-            reporter -> service.discoverAndSynchronize(reporter)));
+    public ApiResponse<AdminTaskSubmissionVO> discoverAndSynchronize() {
+        return ApiResponse.ok(toVO(submitTask("BOT_GROUP_DISCOVERY", "bot:group:update",
+            reporter -> service.discoverAndSynchronize(reporter))));
     }
 
     @PostMapping("/{id}/members/refresh")
     @SaCheckPermission("bot:group:update")
-    public ApiResponse<AdminTaskSubmission> refreshMembers(@PathVariable long id) {
-        return ApiResponse.ok(submitTask("BOT_GROUP_MEMBER_REFRESH:" + id, "bot:group:update", reporter -> {
+    public ApiResponse<AdminTaskSubmissionVO> refreshMembers(@PathVariable long id) {
+        return ApiResponse.ok(toVO(submitTask("BOT_GROUP_MEMBER_REFRESH:" + id, "bot:group:update", reporter -> {
             service.refreshMembers(id, reporter);
             return service.members(id);
-        }));
+        })));
     }
 
-    private AdminTaskSubmission submitTask(String taskType, String permission, AdminTaskWork work) {
-        return taskService.findActive(taskType).map(existing -> new AdminTaskSubmission(existing, taskType))
+    private AdminTaskSubmissionDTO submitTask(String taskType, String permission, AdminTaskWork work) {
+        return taskService.findActive(taskType).map(existing -> new AdminTaskSubmissionDTO(existing, taskType))
             .orElseGet(() -> taskService.submit(taskType, permission, work));
+    }
+
+    private static AdminTaskSubmissionVO toVO(AdminTaskSubmissionDTO task) {
+        return new AdminTaskSubmissionVO(task.taskId(), task.taskType());
     }
 
     @PostMapping("/notifications")
@@ -187,7 +193,7 @@ public class BotGroupManagementController {
     @PostMapping("/{id}/members/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotGroupMemberVO>> members(@PathVariable long id,
-        @RequestBody(required = false) EmptyRequest ignored) {
+        @RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotGroupViewAssembler.toBotGroupMemberVO(service.members(id)));
     }
 

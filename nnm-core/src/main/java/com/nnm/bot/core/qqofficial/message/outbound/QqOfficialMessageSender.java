@@ -1,0 +1,91 @@
+package com.nnm.bot.core.qqofficial.message.outbound;
+
+import com.nnm.bot.core.qqofficial.message.context.QqOfficialMessageSource;
+import com.nnm.bot.core.messaging.constant.BotMessageConstants.PartKind;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.PreparedBotMessage;
+import com.nnm.bot.core.messaging.model.BotMessageSendPermit;
+import com.nnm.bot.core.channel.constant.BotChannelCapability;
+import com.nnm.bot.core.channel.constant.BotPlatform;
+import com.nnm.bot.core.messaging.sender.BotMessageSender;
+import com.nnm.bot.core.qqofficial.gateway.QqOfficialGatewayClient;
+import jakarta.annotation.Resource;
+import com.nnm.bot.core.qqofficial.config.QqReplyProperties;
+import org.springframework.stereotype.Component;
+import com.nnm.bot.core.messaging.exception.BotMessageNotSentException;
+import com.nnm.bot.core.messaging.model.BotMessagePart;
+import java.util.List;
+
+/** 将平台无关消息规划转换为 QQ 官方发送请求与临时素材。 */
+@Component
+public class QqOfficialMessageSender implements BotMessageSender {
+
+    @Resource
+    private QqOfficialGatewayClient gatewayClient;
+    @Resource
+    private QqReplyProperties replyProperties;
+    @Resource
+    private QqOfficialPassiveReplyBudget replyBudget;
+
+    @Override
+    public BotPlatform platform() {
+        return BotPlatform.QQ_OFFICIAL;
+    }
+
+    @Override
+    public boolean canReserve(BotMessageContext context, int count) {
+        return replyBudget.canReserve(context, count);
+    }
+
+    @Override
+    public List<BotMessageSendPermit> reserve(BotMessageContext context, int count) {
+        return replyBudget.reserve(context, count);
+    }
+
+    @Override
+    public boolean supports(BotMessageContext context, BotChannelCapability capability) {
+        if (capability == BotChannelCapability.NATIVE_KEYBOARD)
+            return replyProperties.keyboardAllowed(context.botAccountId(), context.scope());
+        if (capability == BotChannelCapability.TEXT_MESSAGE || capability == BotChannelCapability.MARKDOWN_MESSAGE) {
+            return true;
+        }
+        if (capability == BotChannelCapability.IMAGE_MESSAGE || capability == BotChannelCapability.FILE_MESSAGE) {
+            return context.nativeSource(QqOfficialMessageSource.class).supportsMedia();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean supportsComposition(BotMessageContext context, List<PartKind> parts) {
+        boolean keyboardAllowed = !parts.contains(PartKind.KEYBOARD)
+            || replyProperties.keyboardAllowed(context.botAccountId(), context.scope());
+        // QQ 媒体消息携带一张图片；Markdown 降为正文，按钮仍可编码为同一请求的键盘。
+        if (parts.contains(PartKind.IMAGE))
+            return context.nativeSource(QqOfficialMessageSource.class).supportsMedia() && keyboardAllowed
+                && parts.stream()
+                    .allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.IMAGE || kind == PartKind.MARKDOWN
+                        || kind == PartKind.KEYBOARD)
+                && parts.stream().filter(kind -> kind == PartKind.IMAGE).count() == 1;
+        if (parts.contains(PartKind.KEYBOARD) || parts.contains(PartKind.MARKDOWN)) {
+            return parts.stream()
+                .allMatch(kind -> kind == PartKind.TEXT || kind == PartKind.MARKDOWN || kind == PartKind.KEYBOARD)
+                && keyboardAllowed;
+        }
+        return context.nativeSource(QqOfficialMessageSource.class).supportsMedia()
+            && (parts.equals(List.of(PartKind.IMAGE)) || parts.equals(List.of(PartKind.TEXT, PartKind.IMAGE))
+                || parts.equals(List.of(PartKind.TEXT, PartKind.FILE)));
+    }
+
+    @Override
+    public PreparedBotMessage prepare(BotMessageContext context, List<BotMessagePart> blocks, String mentionUserId,
+        BotMessageSendPermit permit) {
+        if (blocks.stream()
+            .anyMatch(part -> part instanceof BotMessagePart.Keyboard
+                || part instanceof BotMessagePart.Markdown markdown && !markdown.message().buttons().isEmpty())
+            && !replyProperties.keyboardAllowed(context.botAccountId(), context.scope())) {
+            throw new BotMessageNotSentException("QQ 原生键盘资格已变化，尚未发送");
+        }
+        return this.gatewayClient.apiClient(context.botAccountId())
+            .prepare(context.nativeSource(QqOfficialMessageSource.class), blocks, permit);
+    }
+}

@@ -138,6 +138,5 @@ public class OfficialRewardPackRoot extends OfficialRecord {
     private List<OfficialRewardPackComponentsItems> officialRewardPackComponentsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRewardPackRarityWeightsPerRollItems> officialRewardPackRarityWeightsPerRollItemsRows =
-        new ArrayList<>();
+    private List<OfficialRewardPackRarityWeightsPerRollItems> officialRewardPackRarityWeightsPerRollItemsRows = new ArrayList<>();
 }

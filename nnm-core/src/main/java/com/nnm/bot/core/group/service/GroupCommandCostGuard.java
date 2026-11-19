@@ -1,17 +1,20 @@
 package com.nnm.bot.core.group.service;
 
-import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
-import com.nnm.bot.core.constant.GroupPointConstants.PointErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.group.context.BotGroupCommandContext;
+import com.nnm.bot.core.group.constant.GroupPointConstants.TransactionType;
+import com.nnm.bot.core.group.constant.GroupPointConstants.PointErrorCode;
+import com.nnm.bot.common.error.BusinessException;
 import cn.hutool.core.util.ObjectUtil;
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.plugin.model.CommandCostConfiguration;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.plugin.api.CommandCostConfigurationDTO;
 import com.nnm.bot.core.plugin.api.CommandCostConfigurationProvider;
 import com.nnm.bot.core.plugin.api.CommandCostGuard;
-import com.nnm.bot.core.plugin.model.CommandCostReservation;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandCostReservationDTO;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.core.group.domain.BotGroupMember;
+import com.nnm.bot.core.group.pojo.dto.PointChangeResultDTO;
+import com.nnm.bot.core.group.pojo.dto.PointOperationDTO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,10 +38,10 @@ public class GroupCommandCostGuard implements CommandCostGuard {
 
     @Override
     @Transactional
-    public CommandCostReservation reserve(BotMessageContext context, CommandDescriptor descriptor) {
-        CommandCostConfiguration cost = costConfigurationProvider.configuration(descriptor.code());
+    public CommandCostReservationDTO reserve(BotMessageContext context, CommandDescriptor descriptor) {
+        CommandCostConfigurationDTO cost = costConfigurationProvider.configuration(descriptor.code());
         if (ObjectUtil.isNull(cost) || !cost.active()) {
-            return CommandCostReservation.none();
+            return CommandCostReservationDTO.none();
         }
         if (!context.isGroupMessage()) {
             return denied("该命令只能在已配置的群组中使用");
@@ -69,8 +72,9 @@ public class GroupCommandCostGuard implements CommandCostGuard {
         boolean skipRepeatedRewardCost = repeatedReward && commandPointPolicy.allowsRepeatedReward(descriptor);
         boolean reserved = false;
         if (cost.chargeable() && !skipRepeatedRewardCost) {
-            PointChangeResult spendResult = pointAccountService.spend(new PointOperation(groupContext.group().getId(),
-                member.getId(), descriptor.code(), TransactionType.COMMAND_COST, cost.costPoints(), costKey, "命令积分消耗"));
+            PointChangeResultDTO spendResult =
+                pointAccountService.spend(new PointOperationDTO(groupContext.group().getId(), member.getId(),
+                    descriptor.code(), TransactionType.COMMAND_COST, cost.costPoints(), costKey, "命令积分消耗"));
             if (!spendResult.allowed()) {
                 return denied(spendResult.message());
             }
@@ -79,7 +83,7 @@ public class GroupCommandCostGuard implements CommandCostGuard {
             }
             reserved = true;
         }
-        return CommandCostReservation.approved(reserved, reserved ? costKey : null, cost.rewardPoints(), rewardKey);
+        return CommandCostReservationDTO.approved(reserved, reserved ? costKey : null, cost.rewardPoints(), rewardKey);
     }
 
     /**
@@ -88,17 +92,17 @@ public class GroupCommandCostGuard implements CommandCostGuard {
     @Override
     @Transactional
     public CommandResult commit(BotMessageContext context, CommandDescriptor descriptor,
-        CommandCostReservation reservation, CommandResult result) {
+        CommandCostReservationDTO reservation, CommandResult result) {
         if (ObjectUtil.isNull(reservation) || !reservation.rewarding()) {
             return result;
         }
         BotGroupCommandContext groupContext = groupContextResolver.resolve(context).orElse(null);
         if (ObjectUtil.isNull(groupContext)) {
-            throw new BusinessException(PointErrorCode.GROUP_UNAVAILABLE, "命令执行完成，但逻辑群组已不可用");
+            throw new BusinessException(PointErrorCode.GROUP_UNAVAILABLE_AFTER_COMMAND);
         }
         BotGroupMember member = memberIdentityResolver.findOrCreateForWrite(groupContext.group().getId(), context)
-            .orElseThrow(() -> new BusinessException(PointErrorCode.ACCOUNT_UNAVAILABLE, "命令执行完成，但群组成员已不存在"));
-        PointChangeResult change =
+            .orElseThrow(() -> new BusinessException(PointErrorCode.MEMBER_UNAVAILABLE_AFTER_COMMAND));
+        PointChangeResultDTO change =
             pointAccountService.earn(commandPointPolicy.rewardOperation(groupContext.group().getId(), member.getId(),
                 descriptor, reservation.rewardPoints(), reservation.rewardReference()));
         return commandPointPolicy.completeReward(descriptor, result, change);
@@ -106,15 +110,15 @@ public class GroupCommandCostGuard implements CommandCostGuard {
 
     @Override
     @Transactional
-    public void refund(CommandCostReservation reservation, Throwable cause) {
+    public void refund(CommandCostReservationDTO reservation, Throwable cause) {
         if (ObjectUtil.isNull(reservation) || !reservation.reserved()) {
             return;
         }
         pointAccountService.refund(reservation.reference(), "命令必要回复确定未发送退款");
     }
 
-    private CommandCostReservation denied(String reason) {
-        return CommandCostReservation.denied(reason);
+    private CommandCostReservationDTO denied(String reason) {
+        return CommandCostReservationDTO.denied(reason);
     }
 
     private boolean exists(String idempotencyKey) {

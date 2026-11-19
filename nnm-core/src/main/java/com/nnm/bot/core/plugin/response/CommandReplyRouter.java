@@ -1,30 +1,29 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.core.group.service.BotGroupCommandContext;
+import com.nnm.bot.core.group.context.BotGroupCommandContext;
 import com.nnm.bot.core.channel.model.BotChannelInstanceMetadata;
 import com.nnm.bot.core.channel.model.BotChannelTarget;
 import com.nnm.bot.core.channel.port.BotReplyContextProvider;
 import com.nnm.bot.core.channel.runtime.BotChannelTargetSelector;
 import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
 import com.nnm.bot.core.channel.model.BotChannelKey;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
-import com.nnm.bot.core.group.service.BotGroupMemberIdentityAdapters;
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.message.model.BotMessageSendPermit;
-import com.nnm.bot.core.message.exception.BotMessageNotSentException;
-import com.nnm.bot.core.message.sender.BotMessageSenderRouter;
+import com.nnm.bot.core.group.adapter.BotGroupMemberIdentityAdapters;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotMessageSendPermit;
+import com.nnm.bot.core.messaging.exception.BotMessageNotSentException;
+import com.nnm.bot.core.messaging.sender.BotMessageSenderRouter;
 import com.nnm.bot.core.plugin.execution.CommandReceiptRegistry;
 import com.nnm.bot.core.plugin.api.CommandAccessPolicy;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.ResponsePlan;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +79,7 @@ public class CommandReplyRouter {
     }
 
     public Selection select(BotMessageContext origin, CommandDescriptor descriptor,
-        CommandExecutionConfiguration configuration, CommandResult result) {
+        CommandExecutionConfigurationDTO configuration, CommandResult result) {
         BotMessageContext prepared = origin;
         Optional<BotGroupCommandContext> group = groups.resolve(prepared);
         if (group.isEmpty())
@@ -126,7 +125,7 @@ public class CommandReplyRouter {
         throw new BusinessException(BotChannelErrorCode.REPLY_INSTANCE_UNAVAILABLE);
     }
 
-    private Optional<Selection> evaluate(BotMessageContext context, CommandExecutionConfiguration configuration,
+    private Optional<Selection> evaluate(BotMessageContext context, CommandExecutionConfigurationDTO configuration,
         CommandResult result) {
         Optional<List<ResponsePlan>> planned = planner.plan(context, configuration, result);
         if (planned.isEmpty())

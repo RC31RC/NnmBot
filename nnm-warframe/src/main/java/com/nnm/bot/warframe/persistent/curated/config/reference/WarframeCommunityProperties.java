@@ -1,11 +1,12 @@
 package com.nnm.bot.warframe.persistent.curated.config.reference;
 
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import jakarta.annotation.PostConstruct;
+import java.time.Duration;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import java.time.Duration;
-import java.util.List;
 
 @Getter
 @Setter
@@ -15,10 +16,6 @@ public class WarframeCommunityProperties {
     private int maxRecords = 20_000;
     private int maxValidationIssues = 100;
     private Duration previewTtl = Duration.ofMinutes(30);
-    private Duration connectTimeout = Duration.ofSeconds(5);
-    private Duration readTimeout = Duration.ofSeconds(20);
-    private List<String> allowedHosts =
-        List.of("cdn.jsdelivr.net", "testingcf.jsdelivr.net", "jsd.onmicrosoft.cn", "raw.githubusercontent.com");
 
     /**
      * 校验当前配置或输入是否满足业务约束。
@@ -26,10 +23,9 @@ public class WarframeCommunityProperties {
     @PostConstruct
     public void validate() {
         if (maxBytes < 1 || maxBytes > 16 * 1024 * 1024 || maxRecords < 1 || maxRecords > 50_000
-            || maxValidationIssues < 1 || maxValidationIssues > 1000 || invalid(previewTtl) || invalid(connectTimeout)
-            || invalid(readTimeout) || allowedHosts == null || allowedHosts.stream().anyMatch(host -> host == null
-                || !host.matches("[a-zA-Z0-9.-]+") || host.startsWith(".") || host.endsWith("."))) {
-            throw new IllegalArgumentException("Invalid nnm.warframe.community import limits or host policy");
+            || maxValidationIssues < 1 || maxValidationIssues > 1000 || invalid(previewTtl)) {
+            throw new SystemException(WarframeManagementErrorCode.COMMUNITY_CONFIGURATION_INVALID,
+                "Invalid nnm.warframe.community import limits");
         }
     }
 

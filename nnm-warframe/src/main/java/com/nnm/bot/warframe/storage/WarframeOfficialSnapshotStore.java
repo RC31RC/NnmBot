@@ -1,11 +1,12 @@
 package com.nnm.bot.warframe.storage;
 
 import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialSnapshotValidator;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.fasterxml.jackson.core.JsonParser;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
@@ -85,6 +86,7 @@ public class WarframeOfficialSnapshotStore {
             new DigestInputStream(storage.open(DATASET_OBJECT_PREFIX + sha256 + "/" + domain.productPath()), digest)) {
             // 解析器会关闭传入流；校验边界仍需保留压缩流以复核完整原件摘要。
             parser.forEachRecord(new FilterInputStream(input) {
+                /** 保持摘要流开放，供解析结束后继续校验完整原件。 */
                 @Override
                 public void close() {}
             }, domain, consumer);
@@ -169,6 +171,11 @@ public class WarframeOfficialSnapshotStore {
             return new GroupIndex(count, bytes, List.copyOf(offsets));
         }
 
+        /**
+         * 关闭差异索引缓冲流并释放文件句柄。
+         *
+         * @throws IOException 关闭底层临时文件流失败时抛出。
+         */
         @Override
         public void close() throws IOException {
             if (output != null) {
@@ -379,10 +386,10 @@ public class WarframeOfficialSnapshotStore {
         int page = Math.max(1, current);
         int limit = Math.max(1, Math.min(MAX_PREVIEW_PAGE_SIZE, size));
         BusinessAssert.isTrue(WarframeOfficialDataDomain.fromPath(path) != null && index.files().containsKey(path),
-            WarframeManagementErrorCode.DATASET_INVALID, "所选文件不属于待审核预览：" + path);
+            OfficialApprovalErrorCode.FILE_NOT_IN_PREVIEW);
         ChangeType category =
             CATEGORIES.stream().filter(type -> type.name().equals(changeType)).findFirst().orElse(null);
-        BusinessAssert.notNull(category, WarframeManagementErrorCode.DATASET_INVALID, "预览差异分类不合法");
+        BusinessAssert.notNull(category, OfficialApprovalErrorCode.CHANGE_CATEGORY_INVALID);
         GroupIndex group = index.files().get(path).get(category.name());
         int total = group == null ? 0 : group.count();
         long skip = (long)(page - 1) * limit;
@@ -417,25 +424,25 @@ public class WarframeOfficialSnapshotStore {
             .anyMatch(group -> group == null || group.path() == null || group.changeType() == null
                 || !source.files().containsKey(group.path())
                 || !source.files().get(group.path()).containsKey(group.changeType())))
-            throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "所选文件分类不属于待审核预览");
+            throw new BusinessException(OfficialApprovalErrorCode.FILE_CATEGORY_NOT_SELECTED);
         Set<WarframeOfficialRecordSelectionDTO> selected = new HashSet<>(selection.changes());
         Set<WarframeOfficialRecordSelectionDTO> excluded = new HashSet<>(selection.excluded());
         if (selected.size() != selection.changes().size() || excluded.size() != selection.excluded().size()
             || !Collections.disjoint(selected, excluded))
-            throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "预览选择包含重复或相互冲突的记录");
+            throw new BusinessException(OfficialApprovalErrorCode.SELECTION_DUPLICATE);
         Set<WarframeOfficialFileCategoryDTO> overriddenGroups = new HashSet<>();
         for (WarframeOfficialRecordSelectionDTO item : selection.changes()) {
             WarframeOfficialFileCategoryDTO group = new WarframeOfficialFileCategoryDTO(item.path(), item.changeType());
             if (item.path() == null || item.changeType() == null || item.recordKey() == null
                 || !source.files().containsKey(item.path())
                 || !source.files().get(item.path()).containsKey(item.changeType()))
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "所选记录不属于待审核预览");
+                throw new BusinessException(OfficialApprovalErrorCode.RECORD_NOT_SELECTED);
             overriddenGroups.add(group);
         }
         for (WarframeOfficialRecordSelectionDTO item : selection.excluded()) {
             WarframeOfficialFileCategoryDTO group = new WarframeOfficialFileCategoryDTO(item.path(), item.changeType());
             if (item.recordKey() == null || !selection.allGroups().contains(group))
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "排除记录不属于已选文件分类");
+                throw new BusinessException(OfficialApprovalErrorCode.EXCLUDED_RECORD_INVALID);
             overriddenGroups.add(group);
         }
         Set<WarframeOfficialRecordSelectionDTO> matchedSelected = new HashSet<>();
@@ -511,7 +518,7 @@ public class WarframeOfficialSnapshotStore {
                     remaining.put(path, kept);
             }
             if (!matchedSelected.equals(selected) || !matchedExcluded.equals(excluded))
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "所选记录已不属于待审核预览");
+                throw new BusinessException(OfficialApprovalErrorCode.SELECTED_RECORD_CHANGED);
             byte[] indexBytes = objectMapper.writeValueAsBytes(new ChangeIndex(remaining));
             uploaded.add(indexKey(targetKey));
             try (InputStream input = new ByteArrayInputStream(indexBytes)) {

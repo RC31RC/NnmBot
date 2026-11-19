@@ -1,9 +1,9 @@
 package com.nnm.bot.warframe.persistent.official.client.source;
 
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialSourceErrorCode;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStage;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest.FileEntry;
@@ -70,8 +70,7 @@ public class WarframeOfficialSnapshotDownloader {
                     TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - fileStarted));
                 progress.report(ImportStage.VERIFYING_DATASET.name(), "已完成 " + entry.path(), ++current, total);
             }
-            BusinessAssert.equals(current, total, WarframeManagementErrorCode.DATASET_INVALID,
-                "manifest 中缺少待下载的官方 JSON 文件");
+            BusinessAssert.equals(current, total, OfficialSourceErrorCode.MANIFEST_FILE_MISSING);
             log.info("官方快照下载校验完成: files={}, elapsedMs={}", current,
                 TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
             return snapshot;

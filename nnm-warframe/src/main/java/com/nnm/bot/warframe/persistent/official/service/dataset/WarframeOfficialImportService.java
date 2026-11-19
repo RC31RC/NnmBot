@@ -3,7 +3,7 @@ package com.nnm.bot.warframe.persistent.official.service.dataset;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRawRecordDTO;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRecordChangeDTO;
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialPreviewDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialVersionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;

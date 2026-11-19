@@ -2,8 +2,8 @@ package com.nnm.bot.warframe.plugin.runtime.worldstate;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeViewKeys;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateDisplayMapper;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;

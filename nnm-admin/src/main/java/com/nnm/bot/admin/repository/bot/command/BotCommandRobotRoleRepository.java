@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Collection;
 
+/** 查询机器人能力角色可调用的命令授权关系。 */
 public interface BotCommandRobotRoleRepository extends JpaRepository<BotCommandRobotRole, Long> {
 
     List<BotCommandRobotRole> findAllByCommandId(Long commandId);

@@ -1,7 +1,7 @@
 package com.nnm.bot.core.plugin.system;
 
 import com.nnm.bot.core.plugin.api.CommandCatalog;
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;

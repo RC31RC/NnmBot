@@ -1,11 +1,11 @@
 package com.nnm.bot.warframe.runtime.cache.arbitration;
 
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.core.message.render.BotImageRenderer;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
-import com.nnm.bot.core.plugin.model.ReplyBlock.HtmlData;
+import com.nnm.bot.core.messaging.render.BotImageRenderer;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
+import com.nnm.bot.core.plugin.api.ReplyBlock.HtmlData;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.warframe.runtime.cache.worldstate.WorldStateCommandImageCache;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;

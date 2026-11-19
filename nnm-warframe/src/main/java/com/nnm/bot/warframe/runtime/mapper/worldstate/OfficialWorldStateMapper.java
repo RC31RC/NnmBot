@@ -3,10 +3,15 @@ package com.nnm.bot.warframe.runtime.mapper.worldstate;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateDisplayConstants;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
+import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ConstructionProgressRawData;
+import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SimarisRawData;
+import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.TmpRawData;
+import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.InGameMarketRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ActiveMissionRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.AlertRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.CalendarDayRawData;
@@ -14,11 +19,8 @@ import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.CalendarSeasonRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ClanInitiativeRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ClanRewardRawData;
-import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ConclaveChallengeRawData;
-import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ConclaveParameterRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ConquestDifficultyRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ConquestMissionRawData;
-import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.ConstructionProgressRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.DailyDealRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.DarkSectorDefenderRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.DarkSectorRawData;
@@ -34,13 +36,11 @@ import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.PersistentEnemyRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.RewardRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SeasonRawData;
-import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SimarisRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SortieRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SteelPathOfferingRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SyndicateJobRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SyndicateMissionRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.SyndicateRewardRawData;
-import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.TmpRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.VoidTraderItemRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.VoidTraderRawData;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData.WeeklyChallengeItemRawData;
@@ -53,6 +53,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -119,6 +120,7 @@ public class OfficialWorldStateMapper {
         List<WorldStateDTO.ActiveMissionDTO> activeMissions = activeMissions(rawData);
         List<WorldStateDTO.SortieDTO> sorties = sorties(rawData.getSorties());
         List<WorldStateDTO.VoidTraderDTO> traders = voidTraders(rawData.getVoidTraders());
+        TmpRawData temporary = parseTmp(rawData);
         WorldStateDTO state = new WorldStateDTO(alerts(rawData.getAlerts()), fissures(activeMissions),
             invasions(rawData.getInvasions()), first(sorties), cetusCycle(rawData), vallisCycle(rawData),
             cambionCycle(rawData), first(traders), arbitration(rawData), nightwave(rawData.getNightwave()),
@@ -126,15 +128,16 @@ public class OfficialWorldStateMapper {
             dailyDeals(rawData.getDailyDeals()), worldEvents(rawData.getGoals()), news(rawData.getNews()),
             syndicateMissions(rawData.getSyndicateMissions()), steelPathOfferings(rawData.getSteelPathOfferings()),
             activeMissions, sorties(rawData.getArchonHunts()), rawData.getBuildLabel(),
-            globalUpgrades(rawData.getGlobalUpgrades()), flashSales(rawData.getFlashSales()),
+            globalUpgrades(rawData.getGlobalUpgrades()), flashSales(rawData.getFlashSales(), providerTimestamp),
             persistentEnemies(rawData.getPersistentEnemies()),
             new WorldStateDTO.WorldStateMetadataDTO(source, fetchedAt, providerTimestamp, false, "nnm-world-state",
                 sha256(Objects.requireNonNull(rawJson, "官方原始响应不能为空"))),
-            archimedeas(rawData), conclaveChallenges(rawData.getPvpChallengeInstances()), constructionProgress(rawData),
-            simaris(rawData), sentientOutpost(rawData), clanInitiatives(rawData.getWeeklyVaultBonusRewards()),
-            circuitChoices(rawData.getEndlessXpSchedule()), calendarSeasons(rawData.getKnownCalendarSeasons()),
-            vaultTraders(rawData.getPrimeVaultTraders()), weeklyChallenges(rawData.getWeeklyChallenges()),
-            darkSectors(rawData.getDarkSectors()), descents(rawData.getDescents()));
+            archimedeas(rawData), constructionProgress(rawData), simaris(rawData), sentientOutpost(rawData, temporary),
+            clanInitiatives(rawData.getWeeklyVaultBonusRewards()), circuitChoices(rawData.getEndlessXpSchedule()),
+            calendarSeasons(rawData.getKnownCalendarSeasons()), vaultTraders(rawData.getPrimeVaultTraders()),
+            weeklyChallenges(rawData.getWeeklyChallenges()), darkSectors(rawData.getDarkSectors()),
+            descents(rawData.getDescents()), marketCategories(rawData.getInGameMarket()), temporaryActivity(temporary),
+            List.of());
         validate(state);
         return state;
     }
@@ -155,7 +158,8 @@ public class OfficialWorldStateMapper {
                 rewardSummary(reward, rewards), alert.getExpiry(), alert.getActivation(),
                 mission == null ? null : mission.getLocation(), mission == null ? null : mission.getFaction(),
                 mission == null ? null : mission.getMinEnemyLevel(),
-                mission == null ? null : mission.getMaxEnemyLevel(), rewards));
+                mission == null ? null : mission.getMaxEnemyLevel(), rewards,
+                reward == null || integer(reward.getCredits()) <= 0 ? null : reward.getCredits()));
         }
         return List.copyOf(result);
     }
@@ -228,7 +232,8 @@ public class OfficialWorldStateMapper {
             result.add(new WorldStateDTO.InvasionDTO(invasion.getId(), invasion.getNode(),
                 invasionRewardSummary(invasion.getAttackerReward(), attacker),
                 invasionRewardSummary(invasion.getDefenderReward(), defender), completion.floatValue(),
-                invasion.getActivation(), Boolean.TRUE.equals(invasion.getCompleted()), attacker, defender));
+                invasion.getActivation(), Boolean.TRUE.equals(invasion.getCompleted()), attacker, defender,
+                invasion.getAttackerFaction(), invasion.getDefenderFaction(), List.of(), List.of()));
         }
         return List.copyOf(result);
     }
@@ -325,7 +330,7 @@ public class OfficialWorldStateMapper {
         int standing =
             raw.getReputation() == null ? 1000 + (daily ? 0 : 3500) + (elite ? 2500 : 0) : raw.getReputation();
         return new WorldStateDTO.NightwaveMissionDTO(raw.getId(), raw.getChallenge(), raw.getTitle(), raw.getDesc(),
-            standing, daily);
+            standing, daily, raw.getActivation(), raw.getExpiry());
     }
 
     /**
@@ -358,47 +363,38 @@ public class OfficialWorldStateMapper {
     }
 
     /**
-     * 映射官方公告并优先选取中文标题，其次英文标题。
+     * 仅保留上游明确下发中文内容的公告；未定期的社区常驻入口不当作新闻。
      *
      * @param input 待解析或校验的输入。
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.NewsItemDTO> news(List<NewsRawData> input) {
         return values(input).stream()
-            .map(item -> new WorldStateDTO.NewsItemDTO(item.getId(), localizedTitle(item), item.getLink(),
+            .filter(item -> (!Boolean.TRUE.equals(item.getCommunity()) || item.getActivation() != null)
+                && chineseTitle(item) != null)
+            .map(item -> new WorldStateDTO.NewsItemDTO(item.getId(), chineseTitle(item), item.getLink(),
                 item.getImageLink(), item.getActivation(), item.getExpiry(), Boolean.TRUE.equals(item.getPriority())))
             .toList();
     }
 
     /**
-     * 从官方多语言消息中选择可读标题。
+     * 从官方公告的多语言消息中选择中文标题，不以英文内容冒充已翻译新闻。
      *
      * @param item 当前物品或集合成员。
      * @return 本地化标题对应的文本。
      */
-    private String localizedTitle(NewsRawData item) {
+    private String chineseTitle(NewsRawData item) {
         var translations = item.getTranslations();
-        if (translations != null && translations.getChinese() != null) {
+        if (translations != null && translations.getChinese() != null && !translations.getChinese().isBlank())
             return translations.getChinese();
-        }
-        if (item.getTitle() != null) {
-            return item.getTitle();
-        }
-        String english = translations == null ? null : translations.getEnglish();
-        String fallback = null;
         for (var message : values(item.getMessages())) {
-            if (fallback == null) {
-                fallback = message.getMessage();
-            }
-            String language = Objects.toString(message.getLanguageCode(), "");
-            if (language.equalsIgnoreCase("zh") || language.equalsIgnoreCase("zh-hans")) {
+            String language = Objects.toString(message.getLanguageCode(), "").toLowerCase(Locale.ROOT);
+            if ((language.equals("zh") || language.startsWith("zh-")) && message.getMessage() != null
+                && !message.getMessage().isBlank())
                 return message.getMessage();
-            }
-            if (language.equalsIgnoreCase("en")) {
-                english = message.getMessage();
-            }
         }
-        return firstNonNull(english, fallback);
+        // 汉字也用于日文；没有 zh 语言标识时不能用字形猜测语言。
+        return null;
     }
 
     /**
@@ -483,12 +479,33 @@ public class OfficialWorldStateMapper {
      * @param input 待解析或校验的输入。
      * @return 按当前条件筛选或转换后的数据集合。
      */
-    private List<WorldStateDTO.FlashSaleDTO> flashSales(List<FlashSaleRawData> input) {
-        return values(input).stream()
+    private List<WorldStateDTO.FlashSaleDTO> flashSales(List<FlashSaleRawData> input, Instant providerTimestamp) {
+        Instant reference = providerTimestamp == null ? Instant.now() : providerTimestamp;
+        return values(input).stream().filter(item -> item.getExpiry() != null && item.getExpiry().isAfter(reference)
+            && !item.getExpiry().isAfter(reference.plus(WarframeWorldStateDisplayConstants.MAX_FLASH_SALE_REMAINING))
+            && (item.getActivation() == null || !item.getActivation().isAfter(reference)))
             .map(item -> new WorldStateDTO.FlashSaleDTO(item.getId(), item.getItem(), item.getDiscount(),
                 item.getCredits(), item.getPlatinum(), Boolean.TRUE.equals(item.getShownInMarket()),
                 Boolean.TRUE.equals(item.getFeatured()), Boolean.TRUE.equals(item.getPopular()), item.getActivation(),
                 item.getExpiry()))
+            .toList();
+    }
+
+    /**
+     * 绑定当前官方商城分类，不从本地词表推断名称、图片或售价。
+     *
+     * @param market 当前官方商城结构。
+     * @return 按上游顺序保留的分类和商品身份。
+     */
+    private List<WorldStateDTO.MarketCategoryDTO> marketCategories(InGameMarketRawData market) {
+        if (market == null || market.getLandingPage() == null) {
+            return List.of();
+        }
+        return values(market.getLandingPage().getCategories()).stream().filter(
+            category -> WarframeWorldStateDisplayConstants.MARKET_CATEGORY_CODES.contains(category.getCategoryName()))
+            .map(category -> new WorldStateDTO.MarketCategoryDTO(category.getName(), category.getCategoryName(),
+                category.getIcon(), category.getAddToMenu(),
+                values(category.getItems()).stream().map(WorldStateDTO.MarketProductDTO::new).toList()))
             .toList();
     }
 
@@ -539,24 +556,6 @@ public class OfficialWorldStateMapper {
     }
 
     /**
-     * 映射 Conclave 动态挑战和数量参数。
-     *
-     * @param input 待解析或校验的输入。
-     * @return 按当前条件筛选或转换后的数据集合。
-     */
-    private List<WorldStateDTO.ConclaveChallengeDTO> conclaveChallenges(List<ConclaveChallengeRawData> input) {
-        return values(input).stream().map(challenge -> {
-            Integer amount = values(challenge.getParams()).stream().map(ConclaveParameterRawData::getValue)
-                .filter(Objects::nonNull).findFirst().orElse(challenge.getRequiredCount());
-            String category = challenge.getCategory();
-            return new WorldStateDTO.ConclaveChallengeDTO(challenge.getId(), challenge.getMode(), category, category,
-                challenge.getTitle(), null, amount, null,
-                category != null && category.toUpperCase(Locale.ROOT).contains("DAILY"),
-                category != null && category.endsWith("_ROOT"), challenge.getActivation(), challenge.getExpiry());
-        }).toList();
-    }
-
-    /**
      * 将三段式官方建造进度投影为具名字段。
      *
      * @param input 待解析或校验的输入。
@@ -591,31 +590,60 @@ public class OfficialWorldStateMapper {
         return new WorldStateDTO.SimarisDTO(target, StrUtil.isBlank(target));
     }
 
-    /**
-     * 解析 Tmp 字符串中的 Sentient 前哨节点，不从 JSON 树手工读取字段。
-     *
-     * @param input 待解析或校验的输入。
-     * @return Sentient前哨站对象。
-     */
-    private WorldStateDTO.SentientOutpostDTO sentientOutpost(OfficialWorldStateRawData input) {
+    /** @param input 官方快照；@return 可类型化绑定的 Tmp，异常时保留其它官方分区。 */
+    private TmpRawData parseTmp(OfficialWorldStateRawData input) {
+        if (StrUtil.isBlank(input.getTmp()))
+            return null;
+        try {
+            return objectMapper.readValue(input.getTmp(), TmpRawData.class);
+        } catch (JsonProcessingException exception) {
+            log.warn("官方 Tmp 扩展无法绑定：{}", exception.getOriginalMessage());
+            return null;
+        }
+    }
+
+    /** @param input 官方快照；@param temporary 已绑定的 Tmp；@return 优先读取明确的前哨字段。 */
+    private WorldStateDTO.SentientOutpostDTO sentientOutpost(OfficialWorldStateRawData input, TmpRawData temporary) {
         var outpost = input.getSentientOutposts();
         if (outpost != null && outpost.getNode() != null) {
             return new WorldStateDTO.SentientOutpostDTO(outpost.getNode(), outpost.getActivation(),
                 outpost.getExpiry());
         }
-        if (StrUtil.isBlank(input.getTmp())) {
+        Integer node = temporary == null ? null : temporary.getSentientFleetNode();
+        return node == null || node <= 0 ? null
+            : new WorldStateDTO.SentientOutpostDTO("CrewBattleNode" + node, null, null);
+    }
+
+    /** @param temporary 官方 Tmp 扩展；@return 寻呼机中文消息及每件物品的 QTCC 目标。 */
+    private WorldStateDTO.TemporaryActivityDTO temporaryActivity(TmpRawData temporary) {
+        if (temporary == null)
             return null;
+        var pager = temporary.getPager();
+        WorldStateDTO.PagerMessageDTO message = null;
+        if (pager != null) {
+            String text = StrUtil.isNotBlank(pager.getChinese()) ? pager.getChinese() : pager.getEnglish();
+            if (StrUtil.isNotBlank(text)) {
+                Instant timestamp = null;
+                try {
+                    if (StrUtil.isNotBlank(pager.getTimestamp()))
+                        timestamp = Instant.ofEpochSecond(Long.parseLong(pager.getTimestamp()));
+                } catch (NumberFormatException | DateTimeException ignored) {
+                    // 寻呼机时间损坏不应丢弃已有消息。
+                }
+                message = new WorldStateDTO.PagerMessageDTO(text, StrUtil.isNotBlank(pager.getChinese()) ? "zh" : "en",
+                    timestamp);
+            }
         }
-        try {
-            TmpRawData tmp = objectMapper.readValue(input.getTmp(), TmpRawData.class);
-            Integer node = tmp.getSentientFleetNode();
-            return node == null || node <= 0 ? null
-                : new WorldStateDTO.SentientOutpostDTO("CrewBattleNode" + node, null, null);
-        } catch (JsonProcessingException exception) {
-            // Tmp 是官方临时扩展，单独损坏时不丢弃其他有效分区；原文仍在快照中。
-            log.warn("官方 Tmp 扩展无法绑定为前哨状态：{}", exception.getOriginalMessage());
-            return null;
-        }
+        Map<String, Long> counts = temporary.getQtcc();
+        List<WorldStateDTO.CommunityCounterDTO> counters =
+            counts.keySet().stream().filter(key -> key.startsWith(WarframeWorldStateDisplayConstants.QTCC_COUNT_PREFIX))
+                .map(key -> key.substring(WarframeWorldStateDisplayConstants.QTCC_COUNT_PREFIX.length()))
+                .filter(key -> !key.isBlank())
+                .map(key -> new WorldStateDTO.CommunityCounterDTO(key,
+                    counts.get(WarframeWorldStateDisplayConstants.QTCC_COUNT_PREFIX + key),
+                    counts.get(WarframeWorldStateDisplayConstants.QTCC_LIMIT_PREFIX + key)))
+                .toList();
+        return message == null && counters.isEmpty() ? null : new WorldStateDTO.TemporaryActivityDTO(message, counters);
     }
 
     /**
@@ -649,8 +677,10 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.CircuitChoiceDTO> circuitChoices(List<EndlessXpScheduleRawData> input) {
-        return values(input).stream().limit(1).flatMap(schedule -> values(schedule.getCategoryChoices()).stream())
-            .map(choice -> new WorldStateDTO.CircuitChoiceDTO(choice.getCategory(), values(choice.getChoices())))
+        return values(input).stream()
+            .flatMap(schedule -> values(schedule.getCategoryChoices()).stream()
+                .map(choice -> new WorldStateDTO.CircuitChoiceDTO(choice.getCategory(), values(choice.getChoices()),
+                    schedule.getActivation(), schedule.getExpiry())))
             .toList();
     }
 
@@ -771,8 +801,11 @@ public class OfficialWorldStateMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private List<WorldStateDTO.DescentDTO> descents(List<DescentRawData> input) {
-        return values(input).stream().map(descent -> new WorldStateDTO.DescentDTO(descent.getRandSeed(),
-            values(descent.getChallenges()).stream().map(this::descentChallenge).toList())).toList();
+        return values(input).stream()
+            .map(descent -> new WorldStateDTO.DescentDTO(descent.getRandSeed(),
+                values(descent.getChallenges()).stream().map(this::descentChallenge).toList(), descent.getActivation(),
+                descent.getExpiry()))
+            .toList();
     }
 
     /**
@@ -996,13 +1029,13 @@ public class OfficialWorldStateMapper {
         boolean hasData = state.timestamp() != null || state.cetusCycle() != null || state.vallisCycle() != null
             || state.cambionCycle() != null || state.earthCycle() != null || state.duviriCycle() != null
             || state.zarimanCycle() != null || state.arbitration() != null || state.constructionProgress() != null
-            || state.simaris() != null || state.sentientOutpost() != null
+            || state.simaris() != null || state.sentientOutpost() != null || state.temporaryActivity() != null
             || List.of(state.alerts(), state.fissures(), state.allActiveMissions(), state.invasions(),
                 state.allSorties(), state.archonHunts(), state.events(), state.news(), state.syndicateMissions(),
                 state.allVoidTraders(), state.dailyDeals(), state.archimedeas(), state.descents(), state.flashSales(),
                 state.globalUpgrades(), state.persistentEnemies(), state.nightwave(), state.steelPathOfferings(),
-                state.conclaveChallenges(), state.clanInitiatives(), state.circuitChoices(), state.calendarSeasons(),
-                state.vaultTraders(), state.weeklyChallenges(), state.darkSectors()).stream()
+                state.clanInitiatives(), state.circuitChoices(), state.calendarSeasons(), state.vaultTraders(),
+                state.weeklyChallenges(), state.darkSectors(), state.marketCategories()).stream()
                 .anyMatch(section -> CollUtil.isNotEmpty(section));
         if (!hasData) {
             throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "官方世界状态响应不含可识别的数据");

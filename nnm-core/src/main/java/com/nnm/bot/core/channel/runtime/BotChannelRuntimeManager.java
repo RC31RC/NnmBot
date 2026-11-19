@@ -3,16 +3,15 @@ package com.nnm.bot.core.channel.runtime;
 import org.springframework.beans.factory.ObjectProvider;
 import cn.hutool.core.util.StrUtil;
 
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
-import com.nnm.bot.core.constant.BotChannelCapability;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotChannelCapability;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.channel.port.BotChannelConnector;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -59,16 +58,14 @@ public class BotChannelRuntimeManager {
             BotChannelInstanceRecord record = instanceProvider.findForStart(instanceId)
                 .orElseThrow(() -> new BusinessException(BotChannelErrorCode.INSTANCE_NOT_FOUND));
             if (!record.enabled()) {
-                throw new BusinessException(BotChannelErrorCode.INSTANCE_DISABLED, "机器人实例已禁用: " + record.instanceId());
+                throw new BusinessException(BotChannelErrorCode.INSTANCE_DISABLED);
             }
 
             BotChannelKey key = new BotChannelKey(record.platform(), record.botAccountId());
             if (authorizedKey != null) {
-                BusinessAssert.isTrue(authorizedKey.equals(key), BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
-                    "机器人平台或账号已变化，等待拓扑刷新后重新取得对应租约");
+                BusinessAssert.isTrue(authorizedKey.equals(key), BotChannelErrorCode.INSTANCE_TOPOLOGY_CHANGED);
                 ClusterBotRuntime coordinator = cluster.getObject();
-                BusinessAssert.isTrue(coordinator.isLocalOwner(key), BotChannelErrorCode.ACCOUNT_NOT_ALLOWED,
-                    "连接租约已失效，不能继续启动");
+                BusinessAssert.isTrue(coordinator.isLocalOwner(key), BotChannelErrorCode.LOCAL_OWNER_LEASE_EXPIRED);
             }
             this.removeRuntime(record.instanceId());
             this.registry.register(record.instanceId(), key, this.capabilities(record.platform()), true);
@@ -83,8 +80,7 @@ public class BotChannelRuntimeManager {
                     exception.addSuppressed(cleanupException);
                 }
                 this.registry.startFailed(key, exception);
-                throw new BusinessException(BotChannelErrorCode.INSTANCE_START_FAILED,
-                    "启动机器人实例失败: " + record.instanceId(), exception);
+                throw new BusinessException(BotChannelErrorCode.INSTANCE_START_FAILED, exception);
             }
         } finally {
             lifecycleLock.unlock();
@@ -123,13 +119,12 @@ public class BotChannelRuntimeManager {
 
     private BotChannelInstanceRecord find(String instanceId) {
         if (StrUtil.isBlank(instanceId)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "机器人实例标识不能为空");
+            throw new BusinessException(BotChannelErrorCode.INSTANCE_ID_REQUIRED);
         }
         String normalizedInstanceId = instanceId.trim();
         return this.instanceProvider.findAll().stream()
             .filter(record -> record.instanceId().equals(normalizedInstanceId)).findFirst()
-            .orElseThrow(() -> new BusinessException(BotChannelErrorCode.INSTANCE_NOT_FOUND,
-                "机器人实例不存在: " + normalizedInstanceId));
+            .orElseThrow(() -> new BusinessException(BotChannelErrorCode.INSTANCE_NOT_FOUND));
     }
 
     private Set<BotChannelCapability> capabilities(BotPlatform platform) {
@@ -140,7 +135,7 @@ public class BotChannelRuntimeManager {
         List<BotChannelConnector> matches =
             connectors.stream().filter(connector -> connector.platform() == platform).toList();
         if (matches.size() != 1) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "渠道必须注册唯一连接器: " + platform);
+            throw new BusinessException(BotChannelErrorCode.CONNECTOR_REGISTRATION_INVALID);
         }
         return matches.getFirst();
     }

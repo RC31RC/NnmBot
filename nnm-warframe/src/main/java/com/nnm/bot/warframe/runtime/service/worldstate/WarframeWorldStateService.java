@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.service.worldstate;
 
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.warframe.runtime.cache.worldstate.WorldStateRuntimeSnapshot;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 

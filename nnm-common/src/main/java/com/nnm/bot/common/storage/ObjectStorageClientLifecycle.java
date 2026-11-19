@@ -5,6 +5,7 @@ import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
 
+/** Spring 容器关闭时释放共享 OkHttp 连接池和调度线程。 */
 @Component
 public class ObjectStorageClientLifecycle implements DisposableBean {
 

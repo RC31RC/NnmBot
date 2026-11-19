@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
+/** 查询和维护机器人平台作用域配置。 */
 public interface BotScopeRepository extends JpaRepository<BotScope, Long> {
 
     List<BotScope> findAllByOrderByPlatformAscScopeTypeAscScopeKeyAsc();

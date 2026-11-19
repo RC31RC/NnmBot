@@ -55,12 +55,8 @@ public class OfficialUpgradeAvailableChallengesItems extends OfficialChildRow {
     private OfficialUpgradeRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialUpgradeAvailableChallengesItemsComplicationsItems> officialUpgradeAvailableChallengesItemsComplicationsItemsRows =
-            new ArrayList<>();
+    private List<OfficialUpgradeAvailableChallengesItemsComplicationsItems> officialUpgradeAvailableChallengesItemsComplicationsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialUpgradeAvailableChallengesItemsItemReferencesItems> officialUpgradeAvailableChallengesItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialUpgradeAvailableChallengesItemsItemReferencesItems> officialUpgradeAvailableChallengesItemsItemReferencesItemsRows = new ArrayList<>();
 }

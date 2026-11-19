@@ -1,10 +1,6 @@
 package com.nnm.bot.core.plugin.api;
 
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandInput;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandInputMode;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.RelatedCommand;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandInputMode;
 
 import java.util.List;
 

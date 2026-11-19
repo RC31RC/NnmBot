@@ -34,10 +34,6 @@
             <artifactId>nnm-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.nnm</groupId>
-            <artifactId>nnm-render</artifactId>
-        </dependency>
-        <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-spring-boot4-starter</artifactId>
         </dependency>
@@ -91,6 +87,23 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <!-- Q 类型须先于引用它们的 Repository 编译，避免 clean build 依赖已有 target。 -->
+                    <execution>
+                        <id>generate-querydsl</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>compile</goal></goals>
+                        <configuration>
+                            <proc>only</proc>
+                            <generatedSourcesDirectory>${project.build.directory}/generated-sources/querydsl</generatedSourcesDirectory>
+                            <includes><include>**/pojo/entity/**/*.java</include></includes>
+                            <annotationProcessors combine.self="override">
+                                <annotationProcessor>lombok.launch.AnnotationProcessorHider$AnnotationProcessor</annotationProcessor>
+                                <annotationProcessor>com.querydsl.apt.jpa.JPAAnnotationProcessor</annotationProcessor>
+                            </annotationProcessors>
+                        </configuration>
+                    </execution>
+                </executions>
                 <configuration>
                     <annotationProcessorPaths combine.self="override">
                         <path>
@@ -120,9 +133,23 @@
                     <annotationProcessors combine.self="override">
                         <annotationProcessor>lombok.launch.AnnotationProcessorHider$AnnotationProcessor</annotationProcessor>
                         <annotationProcessor>org.springframework.boot.configurationprocessor.ConfigurationMetadataAnnotationProcessor</annotationProcessor>
-                        <annotationProcessor>com.querydsl.apt.jpa.JPAAnnotationProcessor</annotationProcessor>
                     </annotationProcessors>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>add-querydsl-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources><source>${project.build.directory}/generated-sources/querydsl</source></sources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

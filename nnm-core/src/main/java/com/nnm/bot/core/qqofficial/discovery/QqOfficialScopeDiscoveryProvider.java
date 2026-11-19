@@ -7,7 +7,7 @@ import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 import com.nnm.bot.core.channel.model.BotMemberQueryResult;
 import com.nnm.bot.core.channel.port.BotGroupMemberQueryProvider;
 import com.nnm.bot.core.channel.port.BotScopeDiscoveryProvider;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.qqofficial.gateway.QqOfficialGatewayClient;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

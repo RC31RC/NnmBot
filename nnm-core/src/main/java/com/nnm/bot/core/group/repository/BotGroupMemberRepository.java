@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
+/** 查询群成员身份、状态和积分操作所需记录。 */
 public interface BotGroupMemberRepository extends JpaRepository<BotGroupMember, Long> {
 
     List<BotGroupMember> findAllByGroupIdOrderByMemberRoleAscIdAsc(Long groupId);

@@ -5,7 +5,7 @@ import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataCons
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
@@ -23,6 +23,7 @@ import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOffi
 import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialImportHeadRepository;
 import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialRefreshStagingRepository;
 import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialApplyStateService;
+import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialBatchPurgeService;
 import com.nnm.bot.warframe.persistent.official.service.dataset.WarframeOfficialRetentionService;
 import com.nnm.bot.warframe.storage.WarframeOfficialSnapshotStore;
 import io.github.rdt.lock.DistributedLockManager;
@@ -56,6 +57,8 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
     private WarframeOfficialApplyFileRepository jobs;
     @Resource
     private WarframeOfficialApplyStateService state;
+    @Resource
+    private WarframeOfficialBatchPurgeService batchPurge;
     @Resource
     private WarframeOfficialImportHeadRepository heads;
     @Resource
@@ -110,7 +113,11 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
                 deleteUnreferencedFiles(batch, referenced);
                 continue;
             }
-            if (ImportStatus.APPLIED.name().equals(status) && batch.getId().equals(head)) {
+            if (Objects.equals(batch.getId(), head)) {
+                if (!ImportStatus.APPLIED.name().equals(status)) {
+                    throw new SystemException(OfficialApprovalErrorCode.APPLY_STATE_INCONSISTENT,
+                        "官方数据指针引用了非已采纳批次: " + batch.getId());
+                }
                 objects.deleteAbandonedChanges(batch.getId());
                 deleteUnreferencedFiles(batch, referenced);
                 continue;
@@ -130,7 +137,7 @@ public class WarframeOfficialRetentionServiceImpl implements WarframeOfficialRet
                 batch.setObjectsReleasedAt(Instant.now());
                 batches.save(batch);
             } else {
-                batches.deleteById(batch.getId());
+                batchPurge.delete(batch.getId());
             }
         }
         removeAbandonedStaging(now.minus(properties.getStaleStagingTtl()));

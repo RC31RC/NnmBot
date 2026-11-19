@@ -3,7 +3,7 @@ package com.nnm.bot.warframe.config;
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationProperties;
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.persistent.curated.config.reference.WarframeCommunityProperties;
-import com.nnm.bot.warframe.config.cache.WarframeCacheProperties;
+import com.nnm.bot.warframe.runtime.config.cache.WarframeCacheProperties;
 import com.nnm.bot.warframe.persistent.curated.config.forum.ForumProperties;
 import com.nnm.bot.warframe.persistent.curated.config.forum.ForumStorageProperties;
 import com.nnm.bot.warframe.persistent.official.config.image.WarframeImageDataProperties;
@@ -12,6 +12,8 @@ import com.nnm.bot.warframe.runtime.config.worldstate.WarframeOfficialApiPropert
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
 import com.nnm.bot.warframe.runtime.config.riven.WarframeRivenWeeklyProperties;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframeBountyCycleProperties;
+import com.nnm.bot.warframe.runtime.config.worldstate.WarframeInvasionProperties;
+import com.nnm.bot.warframe.runtime.config.worldstate.WarframeKuvaMissionProperties;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframeCycleProperties;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframePollingProperties;
 import com.nnm.bot.warframe.persistent.curated.config.watch.WarframeSubscriptionProperties;
@@ -103,6 +105,18 @@ public class WarframePropertiesConfiguration {
     @Bean
     public WarframeBountyCycleProperties warframeBountyCycleProperties() {
         return new WarframeBountyCycleProperties();
+    }
+
+    /** @return 入侵双方任务类型的可选补充源配置。 */
+    @Bean
+    public WarframeInvasionProperties warframeInvasionProperties() {
+        return new WarframeInvasionProperties();
+    }
+
+    /** @return 与官方快照独立的结构化赤毒任务流配置。 */
+    @Bean
+    public WarframeKuvaMissionProperties warframeKuvaMissionProperties() {
+        return new WarframeKuvaMissionProperties();
     }
 
     /**

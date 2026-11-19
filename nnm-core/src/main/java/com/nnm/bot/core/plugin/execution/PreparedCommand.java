@@ -1,9 +1,8 @@
 package com.nnm.bot.core.plugin.execution;
 
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandInputMode;
-import com.nnm.bot.core.plugin.model.CommandMatch;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandInputMode;
+import com.nnm.bot.core.plugin.api.CommandResult;
 
 /**
  * 将命令调用与自己的准备结果绑定，避免异构注册表丢失泛型关系。

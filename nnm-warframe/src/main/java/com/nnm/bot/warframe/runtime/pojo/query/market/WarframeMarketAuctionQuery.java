@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.runtime.pojo.query.market;
 
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.AuctionType;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -38,9 +39,9 @@ public record WarframeMarketAuctionQuery(String type, String weaponName, String 
      * @param requireNegative 取得负面。
      */
     public WarframeMarketAuctionQuery {
-        type = Objects.requireNonNullElse(type, "riven").trim().toLowerCase(Locale.ROOT);
-        if (!List.of("riven", "lich", "sister").contains(type)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "不支持的拍卖类型: " + type);
+        type = Objects.requireNonNullElse(type, AuctionType.RIVEN.getCode()).trim().toLowerCase(Locale.ROOT);
+        if (!AuctionType.supports(type)) {
+            throw new BusinessException(MarketErrorCode.UNSUPPORTED_AUCTION_TYPE);
         }
         weaponName = Objects.requireNonNullElse(weaponName, "").trim();
         weaponSlug = Objects.requireNonNullElse(weaponSlug, "").trim().toLowerCase(Locale.ROOT);

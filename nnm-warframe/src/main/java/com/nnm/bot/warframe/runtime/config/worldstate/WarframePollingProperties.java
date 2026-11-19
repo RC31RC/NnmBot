@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.config.worldstate;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;

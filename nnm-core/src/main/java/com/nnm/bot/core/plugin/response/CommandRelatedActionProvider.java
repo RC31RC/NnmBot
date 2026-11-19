@@ -1,9 +1,9 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.ReplyAction;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.api.ReplyAction;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
 import java.util.List;
 
 /**

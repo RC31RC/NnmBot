@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.repository.support;
 
+import static com.nnm.bot.warframe.persistent.official.constant.OfficialQueryAliases.ROW;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRelationRowDTO;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.Collection;
@@ -7,11 +8,18 @@ import java.util.List;
 
 /** 各官方关系表的强类型 QueryDSL 标量投影与批量 DML。由模型生成器维护。 */
 public final class OfficialRelationQueryDsl {
-    private OfficialRelationQueryDsl() {}
+    private OfficialRelationQueryDsl() { }
 
+    /**
+     * 查询官方关系表指定主记录的类型化标量投影。
+     *
+     * @param query 执行查询的 QueryDSL 工厂。
+     * @param table 官方关系表名。
+     * @param ids 待查询的主记录标识。
+     * @return 按记录标识排序的关系行投影。
+     */
     public static List<OfficialRelationRowDTO> select(JPAQueryFactory query, String table, Collection<Long> ids) {
-        if (ids.isEmpty())
-            return List.of();
+        if (ids.isEmpty()) return List.of();
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.select(query, table, ids);
             case 1 -> OfficialRelationQueryDslPart01.select(query, table, ids);
@@ -56,9 +64,16 @@ public final class OfficialRelationQueryDsl {
         };
     }
 
+    /**
+     * 查询指定官方子表中关联到父记录的子行标识。
+     *
+     * @param query 执行查询的 QueryDSL 工厂。
+     * @param table 官方子表名。
+     * @param parentIds 父记录主键集合。
+     * @return 匹配的子行主键。
+     */
     public static List<Long> selectChildIds(JPAQueryFactory query, String table, Collection<Long> parentIds) {
-        if (parentIds.isEmpty())
-            return List.of();
+        if (parentIds.isEmpty()) return List.of();
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.selectChildIds(query, table, parentIds);
             case 1 -> OfficialRelationQueryDslPart01.selectChildIds(query, table, parentIds);
@@ -103,9 +118,16 @@ public final class OfficialRelationQueryDsl {
         };
     }
 
+    /**
+     * 按标识批量删除官方关系表记录。
+     *
+     * @param query 执行删除的 QueryDSL 工厂。
+     * @param table 官方关系表名。
+     * @param ids 待删除的关系记录主键。
+     * @return 实际删除的记录数。
+     */
     public static long deleteByIds(JPAQueryFactory query, String table, Collection<Long> ids) {
-        if (ids.isEmpty())
-            return 0;
+        if (ids.isEmpty()) return 0;
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.deleteByIds(query, table, ids);
             case 1 -> OfficialRelationQueryDslPart01.deleteByIds(query, table, ids);
@@ -150,6 +172,12 @@ public final class OfficialRelationQueryDsl {
         };
     }
 
+    /**
+     * 解析官方关系表对应的生成分片编号。
+     *
+     * @param table 官方关系表名。
+     * @return 零起始的 QueryDSL 生成分片编号。
+     */
     private static int part(String table) {
         return switch (table) {
             case "wf_official_dojo_recipe_root" -> 0;

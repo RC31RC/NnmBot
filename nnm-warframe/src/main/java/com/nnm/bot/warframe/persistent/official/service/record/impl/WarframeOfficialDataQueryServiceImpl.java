@@ -9,7 +9,7 @@ import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialDatasetOverviewVO;
 import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialFileRepository;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -81,7 +81,7 @@ public class WarframeOfficialDataQueryServiceImpl implements WarframeOfficialDat
             try {
                 maintenance = MaintenanceType.valueOf(maintenance.trim().toUpperCase(Locale.ROOT)).name();
             } catch (IllegalArgumentException exception) {
-                throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "维护类别不合法", exception);
+                throw new BusinessException(OfficialDataErrorCode.MAINTENANCE_TYPE_INVALID, exception);
             }
         }
         Page<WarframeOfficialRecordDTO> page = repositories.require(domain)
@@ -299,8 +299,7 @@ public class WarframeOfficialDataQueryServiceImpl implements WarframeOfficialDat
         try {
             return WarframeOfficialDataDomain.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(WarframeManagementErrorCode.INVALID_OFFICIAL_DATA_DOMAIN,
-                "Warframe 官方数据领域不合法：" + value, exception);
+            throw new BusinessException(WarframeManagementErrorCode.INVALID_OFFICIAL_DATA_DOMAIN, exception);
         }
     }
 }

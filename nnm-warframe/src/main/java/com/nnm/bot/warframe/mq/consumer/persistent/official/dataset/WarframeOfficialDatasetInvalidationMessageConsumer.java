@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.mq.consumer.persistent.official.dataset;
 
-import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.mq.consumerdescriptor.persistent.official.dataset.WarframeOfficialDatasetInvalidationConsumerDescriptor;
 import com.nnm.bot.warframe.mq.message.persistent.official.dataset.WarframeOfficialDatasetInvalidationMessage;
 import com.nnm.bot.warframe.mq.messagedescriptor.persistent.official.dataset.WarframeOfficialDatasetInvalidationMessageDescriptor;
@@ -24,6 +24,6 @@ public class WarframeOfficialDatasetInvalidationMessageConsumer
      */
     @Override
     public void consume(WarframeOfficialDatasetInvalidationMessage message) {
-        cache.observe(message.payload());
+        cache.observe(message.payload().dataset(), message.payload().revision());
     }
 }

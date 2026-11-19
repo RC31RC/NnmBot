@@ -17,7 +17,6 @@ import com.mikuac.shiro.handler.ActionHandler;
 import com.mikuac.shiro.handler.EventHandler;
 import com.mikuac.shiro.properties.WebSocketProperties;
 import com.mikuac.shiro.task.ShiroAsyncTask;
-import com.nnm.bot.core.onebot.message.OneBotMessageArrivalStore;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -47,7 +46,7 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
     private final ThreadPoolTaskExecutor shiroTaskExecutor;
     private final ConcurrentMap<String, Set<Long>> sessionAccounts = new ConcurrentHashMap<>();
     @Resource
-    private OneBotMessageArrivalStore messageArrivals;
+    private OneBotMessageArrivalCache messageArrivals;
 
     public MultiOneBotWebSocketClientHandler(EventHandler eventHandler, BotFactory botFactory,
         ActionHandler actionHandler, ShiroAsyncTask shiroAsyncTask, BotContainer botContainer, CoreEvent coreEvent,

@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.entity.bot.command;
 
-import com.nnm.bot.core.constant.CommandBoundaryPolicy;
+import com.nnm.bot.core.plugin.constant.CommandBoundaryPolicy;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

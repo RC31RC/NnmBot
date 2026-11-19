@@ -52,7 +52,5 @@ public class OfficialRailjackWeaponDefaultUpgradesItems extends OfficialChildRow
     private OfficialRailjackWeaponRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRailjackWeaponDefaultUpgradesItemsItemReferencesItems> officialRailjackWeaponDefaultUpgradesItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialRailjackWeaponDefaultUpgradesItemsItemReferencesItems> officialRailjackWeaponDefaultUpgradesItemsItemReferencesItemsRows = new ArrayList<>();
 }

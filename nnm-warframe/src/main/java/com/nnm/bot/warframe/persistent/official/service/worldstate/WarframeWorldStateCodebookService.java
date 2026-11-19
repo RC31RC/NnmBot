@@ -18,6 +18,15 @@ public interface WarframeWorldStateCodebookService {
     Optional<WarframeWorldStateCodebookEntryDTO> find(WarframeReferenceType type, String reference);
 
     /**
+     * 批量解析同类引用，只补查本次需要的语言键，保持代码簿与语言缓存独立。
+     *
+     * @param type 引用类型。
+     * @param references 本次原始引用键。
+     * @return 以原始请求键组织的显示投影。
+     */
+    Map<String, WarframeWorldStateCodebookEntryDTO> findAll(WarframeReferenceType type, Collection<String> references);
+
+    /**
      * 批量查询语言键，未命中键按数据集批量补查数据库。
      *
      * @param references 本次使用的语言引用。

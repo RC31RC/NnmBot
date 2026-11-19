@@ -8,16 +8,16 @@ import com.mikuac.shiro.core.BotContainer;
 import com.mikuac.shiro.dto.action.common.ActionList;
 import com.mikuac.shiro.dto.action.response.GroupInfoResp;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
 import com.nnm.bot.core.channel.model.BotDiscoveredScope;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 import com.nnm.bot.core.channel.model.BotMemberQueryResult;
 import com.nnm.bot.core.channel.port.BotGroupMemberQueryProvider;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.core.onebot.constant.OneBotErrorCode;
 import com.nnm.bot.core.channel.port.BotLocalScopeDiscoveryProvider;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -54,8 +54,7 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
         try {
             accountId = Long.parseLong(botAccountId);
         } catch (NumberFormatException exception) {
-            throw new BusinessException(BotChannelErrorCode.INVALID_ACCOUNT_ID, "OneBot 账号不是有效的 QQ 号: " + botAccountId,
-                exception);
+            throw new BusinessException(OneBotErrorCode.DISCOVERY_ACCOUNT_INVALID, exception);
         }
         Bot bot = this.botContainer.robots.get(accountId);
         if (ObjectUtil.isNull(bot)) {
@@ -75,8 +74,7 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
                 }).toList();
             return new BotScopeDiscoveryResult(true, null, scopes);
         } catch (RuntimeException exception) {
-            throw new BusinessException(BotChannelErrorCode.SCOPE_DISCOVERY_FAILED,
-                "OneBot 群组查询失败: " + safeMessage(exception), exception);
+            throw new BusinessException(OneBotErrorCode.DISCOVERY_FAILED, exception);
         }
     }
 
@@ -126,10 +124,6 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
 
     private String firstText(String first, String second) {
         return StrUtil.isNotBlank(first) ? first : StrUtil.isBlank(second) ? null : second;
-    }
-
-    private String safeMessage(RuntimeException exception) {
-        return StrUtil.isBlank(exception.getMessage()) ? exception.getClass().getSimpleName() : exception.getMessage();
     }
 
     private record MemberDiscovery(List<BotDiscoveredMember> members, boolean complete) {

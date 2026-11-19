@@ -244,7 +244,5 @@ public class OfficialDropTableRewardsItems extends OfficialChildRow {
     private OfficialDropTableRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialDropTableRewardsItemsItemCandidatesItems> officialDropTableRewardsItemsItemCandidatesItemsRows =
-            new ArrayList<>();
+    private List<OfficialDropTableRewardsItemsItemCandidatesItems> officialDropTableRewardsItemsItemCandidatesItemsRows = new ArrayList<>();
 }

@@ -3,8 +3,7 @@ package com.nnm.bot.warframe.persistent.curated.service.forum.impl;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.forum.ForumPreparedContentDTO;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.persistent.curated.config.forum.ForumProperties;
@@ -148,7 +147,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
     @Transactional(readOnly = true)
     public ForumArticlePublicVO publicDetail(long id) {
         ForumArticleDTO article = findData(id);
-        BusinessAssert.isTrue(article.isEnabled(), CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在");
+        BusinessAssert.isTrue(article.isEnabled(), ForumErrorCode.ARTICLE_NOT_FOUND);
         ForumPreparedContentDTO content = publicContent(article);
         return ForumArticlePublicVO.from(article, content);
     }
@@ -163,7 +162,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
     @Override
     @Transactional
     public long create(ForumArticleSaveDTO request, ForumOperatorDTO operator) {
-        String slug = requiredTrimmed(request.slug(), "文章标识不能为空");
+        String slug = requiredTrimmed(request.slug());
         ensureSlugAvailable(slug, null);
         ForumMetadata metadata = normalizeMetadata(request.category(), request.tags());
         ForumIdService ids = distributedIds.getIfAvailable();
@@ -193,11 +192,10 @@ public class ForumArticleServiceImpl implements ForumArticleService {
     @Override
     @Transactional
     public void update(ForumArticleSaveDTO request, ForumOperatorDTO operator) {
-        BusinessAssert.isTrue(request.id() != null && request.id() > 0, CommonErrorCode.PARAM_INVALID,
-            "修改或删除文章必须提供有效 id");
+        BusinessAssert.isTrue(request.id() != null && request.id() > 0, ForumErrorCode.ARTICLE_ID_REQUIRED);
         ForumArticle article = findArticle(request.id());
         checkCanUpdate(article, operator);
-        String slug = requiredTrimmed(request.slug(), "文章标识不能为空");
+        String slug = requiredTrimmed(request.slug());
         ensureSlugAvailable(slug, request.id());
         ForumMetadata metadata = normalizeMetadata(request.category(), request.tags());
         ForumPreparedContentDTO content =
@@ -218,8 +216,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
     @Override
     @Transactional
     public void delete(ForumArticleDeleteDTO request, ForumOperatorDTO operator) {
-        BusinessAssert.isTrue(request.id() != null && request.id() > 0, CommonErrorCode.PARAM_INVALID,
-            "修改或删除文章必须提供有效 id");
+        BusinessAssert.isTrue(request.id() != null && request.id() > 0, ForumErrorCode.ARTICLE_ID_REQUIRED);
         ForumArticle article = findArticle(request.id());
         checkCanDelete(article, operator);
         Set<String> filesToDelete = new LinkedHashSet<>(fileService.referencedPermanentFiles(article.getCoverObjectId(),
@@ -403,7 +400,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
                 .map(String::trim).filter(StrUtil::isNotBlank)
                 .collect(Collectors.toMap(value -> normalize(value), value -> value, (first, ignored) -> first));
 
-        String normalizedCategory = normalizeOption(category, categoryOptions, "分类", allowInitialization);
+        String normalizedCategory = normalizeOption(category, categoryOptions, allowInitialization);
         List<String> normalizedTags = normalizeTagOptions(tags, tagOptions, allowInitialization);
         return new ForumMetadata(normalizedCategory,
             CollUtil.isEmpty(normalizedTags) ? null : String.join(", ", normalizedTags));
@@ -414,12 +411,10 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      *
      * @param value 待校验或规范化的文本。
      * @param options 选项。
-     * @param fieldName 字段名称。
      * @param allowInitialization 允许初始化。
      * @return 规范化选项对应的文本。
      */
-    private static String normalizeOption(String value, Map<String, String> options, String fieldName,
-        boolean allowInitialization) {
+    private static String normalizeOption(String value, Map<String, String> options, boolean allowInitialization) {
         if (StrUtil.isBlank(value)) {
             return null;
         }
@@ -428,7 +423,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
             return trimmed;
         }
         String standardValue = options.get(normalize(trimmed));
-        BusinessAssert.isTrue(standardValue != null, CommonErrorCode.PARAM_INVALID, fieldName + "必须从已有选项中选择");
+        BusinessAssert.isTrue(standardValue != null, ForumErrorCode.CATEGORY_NOT_ALLOWED);
         return standardValue;
     }
 
@@ -452,7 +447,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         LinkedHashSet<String> normalized = new LinkedHashSet<>();
         for (String requestedTag : requestedTags) {
             String standardValue = options.get(normalize(requestedTag));
-            BusinessAssert.isTrue(standardValue != null, CommonErrorCode.PARAM_INVALID, "标签必须从已有选项中选择：" + requestedTag);
+            BusinessAssert.isTrue(standardValue != null, ForumErrorCode.TAG_NOT_ALLOWED);
             normalized.add(standardValue);
         }
         return List.copyOf(normalized);
@@ -476,7 +471,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      */
     private ForumArticleDTO findData(long id) {
         return repository.findProjectedById(id)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在"));
+            .orElseThrow(() -> new BusinessException(ForumErrorCode.ARTICLE_NOT_FOUND));
     }
 
     /**
@@ -486,8 +481,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 论坛文章对象。
      */
     private ForumArticle findArticle(long id) {
-        return repository.findById(id)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "论坛文章不存在"));
+        return repository.findById(id).orElseThrow(() -> new BusinessException(ForumErrorCode.ARTICLE_NOT_FOUND));
     }
 
     /**
@@ -499,7 +493,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
     private void ensureSlugAvailable(String slug, Long id) {
         boolean duplicated =
             id == null ? repository.existsBySlugIgnoreCase(slug) : repository.existsBySlugIgnoreCaseAndIdNot(slug, id);
-        BusinessAssert.isFalse(duplicated, CommonErrorCode.DATA_CONFLICT, "论坛文章 slug 已存在");
+        BusinessAssert.isFalse(duplicated, ForumErrorCode.ARTICLE_SLUG_CONFLICT);
     }
 
     /**
@@ -546,7 +540,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         try {
             return repository.saveAndFlush(article);
         } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "论坛文章数据冲突", exception);
+            throw new BusinessException(ForumErrorCode.ARTICLE_DATA_CONFLICT, exception);
         }
     }
 
@@ -585,11 +579,10 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * 校验必需文本，并裁剪首尾空白。
      *
      * @param value 待校验或规范化的文本。
-     * @param message 待发送或处理的消息。
      * @return 校验必需文本，并裁剪首尾空白对应的文本。
      */
-    private static String requiredTrimmed(String value, String message) {
-        return BusinessAssert.notBlank(value, CommonErrorCode.PARAM_INVALID, message).trim();
+    private static String requiredTrimmed(String value) {
+        return BusinessAssert.notBlank(value, ForumErrorCode.ARTICLE_SLUG_REQUIRED).trim();
     }
 
     /**

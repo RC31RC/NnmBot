@@ -5,14 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.nnm.bot.common.concurrent.BoundedTaskExecutor;
 import com.nnm.bot.common.constant.ComputationErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.render.config.RenderProperties;
 import com.nnm.bot.render.ImageService;
 import com.nnm.bot.render.RenderEngine;
 import com.nnm.bot.render.RenderOptions;
 import com.nnm.bot.render.TemplateRenderer;
-import com.nnm.bot.core.message.exception.BotImageRenderException;
-import com.nnm.bot.core.message.render.BotImageRenderer;
+import com.nnm.bot.core.messaging.exception.BotImageRenderException;
+import com.nnm.bot.core.messaging.render.BotImageRenderer;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -23,17 +23,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
+/** 协调模板变量序列化、模板处理、引擎渲染与输出限额。 */
 @Service
 public class DefaultImageService implements ImageService, BotImageRenderer {
 
+    /** 将数据库中的 HTML 模板展开为最终文档。 */
     @Resource
     private TemplateRenderer templateRenderer;
+    /** 按配置选出的具体图片渲染引擎。 */
     @Resource
     private RenderEngine renderEngine;
+    /** 限制高成本渲染任务的并发与排队。 */
     @Resource(name = "imageTaskExecutor")
     private BoundedTaskExecutor taskExecutor;
+    /** 输入和输出大小上限。 */
     @Resource
     private RenderProperties properties;
+    /** 在异步任务边界序列化并恢复模板变量。 */
     @Resource
     private ObjectMapper objectMapper;
 
@@ -60,6 +66,13 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
         return taskExecutor.execute(() -> generateImage(html, variables, bounded));
     }
 
+    /** 在线程池任务内恢复变量并完成模板处理与图片转换。
+     *
+     * @param html 原始模板
+     * @param variables 已限长的变量 JSON
+     * @param options 已合并全局上限的渲染参数
+     * @return 图片字节
+     */
     private byte[] generateImage(String html, byte[] variables, RenderOptions options) {
         try {
             Map<String, Object> data = objectMapper.readValue(variables, new TypeReference<>() {});
@@ -85,6 +98,12 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
         }
     }
 
+    /** 在写入时限制变量 JSON 大小，避免先分配超限缓冲区。
+     *
+     * @param data 模板变量
+     * @param limit 最大序列化字节数
+     * @return 变量 JSON 字节
+     */
     private byte[] serialize(Map<String, Object> data, int limit) {
         try (ByteArrayOutputStream output = new ByteArrayOutputStream() {
             private final ReentrantLock writeLock = new ReentrantLock();

@@ -1,9 +1,10 @@
 package com.nnm.bot.admin.service.bot.notification.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Image;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Markdown;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Text;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Image;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Markdown;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Text;
 import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationDTO;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationReportDTO;
@@ -11,13 +12,12 @@ import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationReportDTO
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotNotificationPreviewDTO;
 import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
 import com.nnm.bot.admin.service.bot.notification.BotGroupNotificationService;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.mq.message.notification.GroupNotificationMessage;
-import com.nnm.bot.core.mq.message.notification.GroupNotificationRequest;
+import com.nnm.bot.core.mq.message.notification.GroupNotificationDTO;
 import com.nnm.bot.core.mq.message.notification.NotificationResourceManifest;
 import com.nnm.bot.core.channel.notification.store.GroupNotificationResultStore;
 import com.nnm.bot.core.channel.notification.store.NotificationCancellationStore;
@@ -26,14 +26,14 @@ import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
 import com.nnm.bot.core.config.BotNotificationProperties;
 import com.nnm.bot.core.config.ReplyProperties;
-import com.nnm.bot.core.constant.BotChannelStatus;
+import com.nnm.bot.core.channel.constant.BotChannelStatus;
 import com.nnm.bot.core.group.domain.BotGroup;
 import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.repository.BotGroupBotRepository;
 import com.nnm.bot.core.group.repository.BotGroupRepository;
-import com.nnm.bot.core.message.model.BotProactiveTarget;
-import com.nnm.bot.core.plugin.model.DeliveryReport;
-import com.nnm.bot.core.plugin.model.ResponsePlan;
+import com.nnm.bot.core.messaging.model.BotProactiveTarget;
+import com.nnm.bot.core.plugin.response.DeliveryReport;
+import com.nnm.bot.core.plugin.response.ResponsePlan;
 import com.nnm.bot.core.plugin.response.ProactiveReplyDispatcher;
 import io.github.rdt.exception.RdtQueueException;
 import io.github.rdt.queue.RdtMessageSendManager;
@@ -52,6 +52,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+/** 解析群发目标和资源并投递通知，隔离单条投递故障。 */
 @Slf4j
 @Service
 public class BotGroupNotificationServiceImpl implements BotGroupNotificationService {
@@ -124,7 +125,7 @@ public class BotGroupNotificationServiceImpl implements BotGroupNotificationServ
                 (manifest.submissionId() + ":" + selected.target().identity()).getBytes(StandardCharsets.UTF_8));
             try {
                 messages.send(new GroupNotificationMessage(
-                    new GroupNotificationRequest(id, selected.target(), request.content(), manifest, expires)));
+                    new GroupNotificationDTO(id, selected.target(), request.content(), manifest, expires)));
                 waiting.put(id, delivery);
             } catch (RdtQueueException rejected) {
                 String reason = switch (rejected.code()) {
@@ -157,10 +158,10 @@ public class BotGroupNotificationServiceImpl implements BotGroupNotificationServ
 
     private List<Target> targets(BotGroupNotificationDTO request, NotificationResourceManifest manifest) {
         List<Long> ids = request.groupIds().stream().distinct().toList();
-        BusinessAssert.isTrue(!ids.isEmpty() && ids.size() <= 200, CommonErrorCode.PARAM_INVALID, "请选择 1–200 个群组");
+        BusinessAssert.isTrue(!ids.isEmpty() && ids.size() <= 200, BotManagementErrorCode.GROUP_SELECTION_INVALID);
         Map<Long, BotGroup> selected =
             groups.findAllById(ids).stream().collect(Collectors.toMap(BotGroup::getId, Function.identity()));
-        BusinessAssert.isTrue(selected.size() == ids.size(), CommonErrorCode.PARAM_INVALID, "部分群组已不存在");
+        BusinessAssert.isTrue(selected.size() == ids.size(), BotManagementErrorCode.GROUP_SELECTION_MISSING);
         List<BotGroupBot> candidates = bindings.findAllByGroupIdInAndEnabledTrue(ids).stream()
             .filter(binding -> "GROUP".equals(binding.getScopeType()))
             .sorted(Comparator.comparingInt(BotGroupBot::getReplyPriority).thenComparing(BotGroupBot::getId)).toList();

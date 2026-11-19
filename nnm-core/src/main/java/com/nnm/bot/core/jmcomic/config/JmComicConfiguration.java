@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+/** 注册 JMComic 客户端与下载配置。 */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(JmComicProperties.class)
 public class JmComicConfiguration {

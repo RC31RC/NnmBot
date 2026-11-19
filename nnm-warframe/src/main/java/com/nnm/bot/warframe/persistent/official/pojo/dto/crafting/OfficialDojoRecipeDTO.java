@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** DOJO_RECIPE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
-    setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialDojoRecipeDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 容量；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("capacity")
@@ -368,8 +368,7 @@ public class OfficialDojoRecipeDTO extends OfficialObjectDTO implements Official
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(name), null, null, null,
-            OfficialInputText.first(description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(name), null, null, null, OfficialInputText.first(description));
     }
 
     /**
@@ -385,7 +384,7 @@ public class OfficialDojoRecipeDTO extends OfficialObjectDTO implements Official
     /** 官方嵌套对象 IngredientsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class IngredientsItemReferencesDTO extends OfficialObjectDTO {
         /** 制造材料列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -527,7 +526,7 @@ public class OfficialDojoRecipeDTO extends OfficialObjectDTO implements Official
     /** 官方嵌套对象 IngredientsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class IngredientsDTO extends OfficialObjectDTO {
         /** 制造材料列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("ItemCount")
@@ -579,7 +578,7 @@ public class OfficialDojoRecipeDTO extends OfficialObjectDTO implements Official
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")

@@ -1,23 +1,22 @@
 package com.nnm.bot.core.channel.runtime;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import java.util.Optional;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
-import com.nnm.bot.core.mq.message.discovery.OneBotScopeDiscoveryRequest;
+import com.nnm.bot.core.mq.message.discovery.OneBotScopeDiscoveryDTO;
 import com.nnm.bot.core.mq.message.discovery.OneBotScopeDiscoveryMessage;
 import io.github.rdt.queue.RdtMessageSendManager;
 import io.github.rdt.exception.RdtErrorCode;
 import io.github.rdt.exception.RdtQueueException;
 import com.nnm.bot.core.channel.discovery.store.OneBotScopeDiscoveryResponseStore;
 import com.nnm.bot.core.config.ClusterProperties;
-import com.nnm.bot.core.channel.port.BotLocalScopeDiscoveryProvider;
+import com.nnm.bot.core.channel.registry.ChannelProviderRegistry;
 import jakarta.annotation.Resource;
 import java.time.Instant;
 import java.util.UUID;
-import java.util.List;
 import org.springframework.stereotype.Service;
 
 /**
@@ -38,19 +37,18 @@ public class ClusterScopeDiscovery {
     @Resource
     private ClusterProperties properties;
     @Resource
-    private List<BotLocalScopeDiscoveryProvider> providers;
+    private ChannelProviderRegistry providers;
 
     public BotScopeDiscoveryResult discover(BotChannelInstanceRecord instance) {
         BotChannelKey key = new BotChannelKey(instance.platform(), instance.botAccountId());
-        BotLocalScopeDiscoveryProvider provider =
-            providers.stream().filter(item -> item.platform() == instance.platform()).findFirst().orElse(null);
+        var provider = providers.localScopeDiscovery(instance.platform()).orElse(null);
         if (provider == null)
             return BotScopeDiscoveryResult.unsupported("渠道未注册本地发现服务");
         if (runtime.isLocalOwner(key))
             return provider.discoverLocal(instance.botAccountId());
         if (runtime.snapshot(key).isEmpty())
             return BotScopeDiscoveryResult.unsupported("机器人当前未连接");
-        OneBotScopeDiscoveryRequest request = new OneBotScopeDiscoveryRequest(UUID.randomUUID(), instance.platform(),
+        OneBotScopeDiscoveryDTO request = new OneBotScopeDiscoveryDTO(UUID.randomUUID(), instance.platform(),
             instance.botAccountId(), Instant.now().plus(properties.discoveryTimeout()));
         try {
             messages.send(new OneBotScopeDiscoveryMessage(request));

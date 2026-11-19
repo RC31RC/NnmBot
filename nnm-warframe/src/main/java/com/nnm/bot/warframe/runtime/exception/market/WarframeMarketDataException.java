@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.exception.market;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
 
 /** 市场上游响应违反类型合同，保留内部原文诊断，对外返回稳定提示。 */

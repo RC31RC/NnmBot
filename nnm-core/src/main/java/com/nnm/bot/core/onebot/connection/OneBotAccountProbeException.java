@@ -1,7 +1,7 @@
 package com.nnm.bot.core.onebot.connection;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 
 /** OneBot 账号探测失败，包含连接、超时或协议响应错误。 */
 public class OneBotAccountProbeException extends SystemException {

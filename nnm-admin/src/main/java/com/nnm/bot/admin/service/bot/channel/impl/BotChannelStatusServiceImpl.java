@@ -8,7 +8,7 @@ import com.nnm.bot.core.channel.topology.BotTopologyStore;
 import com.nnm.bot.core.channel.model.BotChannelInstanceMetadata;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
-import com.nnm.bot.core.constant.BotChannelStatus;
+import com.nnm.bot.core.channel.constant.BotChannelStatus;
 import jakarta.annotation.Resource;
 import java.time.Instant;
 import java.util.List;
@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
+/** 合并本机连接注册表与集群共享渠道状态。 */
 @Service
 public class BotChannelStatusServiceImpl implements BotChannelStatusService {
     @Resource

@@ -7,7 +7,7 @@ import com.nnm.bot.admin.pojo.dto.bot.role.BotRobotRoleDTO;
 import com.nnm.bot.admin.pojo.dto.bot.role.BotRobotRoleSaveDTO;
 import com.nnm.bot.admin.service.bot.role.BotRobotRoleManagementService;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 管理机器人能力角色及其命令授权。 */
 @RestController
 @RequestMapping("/api/admin/bot-robot-roles")
 public class BotRobotRoleManagementController {
@@ -27,7 +28,7 @@ public class BotRobotRoleManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotRobotRoleVO>> list(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotRobotRoleVO>> list(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotRoleViewAssembler.toBotRobotRoleVO(service.list()));
     }
 

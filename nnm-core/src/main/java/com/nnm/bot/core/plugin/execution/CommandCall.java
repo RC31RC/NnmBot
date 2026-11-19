@@ -1,10 +1,9 @@
 package com.nnm.bot.core.plugin.execution;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInput;
-import com.nnm.bot.core.plugin.model.CommandMatch;
+import com.nnm.bot.core.plugin.api.CommandInput;
 
 /** 将命令、插件和输入类型绑定；所有协议调用均交给同一 Dispatcher。 */
 public record CommandCall<P, A>(CommandMatch match, BotPlugin<P, A> plugin, CommandInput<A> input) {

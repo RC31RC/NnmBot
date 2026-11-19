@@ -1,0 +1,55 @@
+package com.nnm.bot.core.channel.constant;
+
+import com.nnm.bot.common.error.ErrorCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+/** 渠道运行时错误码，供管理接口和渠道适配层共享。 */
+@Getter
+@RequiredArgsConstructor
+public enum BotChannelErrorCode implements ErrorCode {
+
+    INSTANCE_NOT_FOUND(404, "机器人实例不存在", HttpStatus.NOT_FOUND), INSTANCE_DISABLED(409, "机器人实例已禁用", HttpStatus.CONFLICT),
+    INSTANCE_CONFIG_INVALID(400, "机器人实例连接配置无效", HttpStatus.BAD_REQUEST),
+    PLATFORM_MISMATCH(400, "机器人实例协议不匹配", HttpStatus.BAD_REQUEST),
+    INSTANCE_START_FAILED(502, "机器人实例启动失败", HttpStatus.BAD_GATEWAY),
+    CHANNEL_NOT_REGISTERED(404, "机器人渠道未注册", HttpStatus.NOT_FOUND),
+    CHANNEL_REGISTRATION_CONFLICT(409, "机器人渠道注册冲突", HttpStatus.CONFLICT),
+    MULTIPLE_OFFICIAL_INSTANCES_UNSUPPORTED(409, "同一逻辑群组暂不支持绑定多个 QQ 官方机器人实例，请先解绑原实例", HttpStatus.CONFLICT),
+    CONNECTION_MIGRATION_CONFIRMATION_REQUIRED(409, "机器人连接迁移需要管理员确认", HttpStatus.CONFLICT),
+    CONNECTION_TARGET_LEASE_EXPIRED(40921, "迁移目标节点租约已失效，请刷新后重试", HttpStatus.CONFLICT),
+    GATEWAY_READY_TIMEOUT(50420, "QQ 网关就绪超时，正在重连", HttpStatus.GATEWAY_TIMEOUT),
+    GATEWAY_HEARTBEAT_TIMEOUT(50421, "QQ 网关心跳超时，正在重连", HttpStatus.GATEWAY_TIMEOUT),
+    MESSAGE_ARRIVAL_EXPIRED(50320, "消息接收时间已过期，请重试", HttpStatus.SERVICE_UNAVAILABLE),
+    SCOPE_DISCOVERY_INTERRUPTED(50321, "群组发现已中断，请稍后重试", HttpStatus.SERVICE_UNAVAILABLE),
+    ACCOUNT_NOT_ALLOWED(403, "机器人账号未授权", HttpStatus.FORBIDDEN),
+    INVALID_ACCOUNT_ID(400, "机器人账号标识无效", HttpStatus.BAD_REQUEST),
+    MESSAGE_PARSE_FAILED(502, "渠道消息解析失败", HttpStatus.BAD_GATEWAY),
+    MESSAGE_SOURCE_INVALID(400, "消息来源类型不匹配", HttpStatus.BAD_REQUEST),
+    SCOPE_DISCOVERY_FAILED(502, "渠道群组发现失败", HttpStatus.BAD_GATEWAY),
+    SCOPE_MEMBER_DISCOVERY_FAILED(502, "渠道群成员发现失败", HttpStatus.BAD_GATEWAY),
+    MESSAGE_SENDER_NOT_REGISTERED(500, "消息发送器未注册", HttpStatus.INTERNAL_SERVER_ERROR),
+    MESSAGE_SEND_FAILED(502, "机器人消息发送失败", HttpStatus.BAD_GATEWAY),
+    FILE_STAGING_FAILED(500, "机器人文件暂存失败", HttpStatus.INTERNAL_SERVER_ERROR),
+    FILE_CLEANUP_FAILED(500, "机器人临时文件清理失败", HttpStatus.INTERNAL_SERVER_ERROR),
+    IMAGE_RENDER_FAILED(500, "命令图片渲染失败", HttpStatus.INTERNAL_SERVER_ERROR),
+    RESPONSE_STRATEGY_NOT_REGISTERED(500, "机器人响应策略未注册", HttpStatus.INTERNAL_SERVER_ERROR),
+    REPLY_INSTANCE_UNAVAILABLE(503, "当前群组没有在线且具备所需能力的回复实例", HttpStatus.SERVICE_UNAVAILABLE),
+    UNSUPPORTED_MESSAGE_CAPABILITY(501, "当前机器人渠道不支持该消息能力", HttpStatus.NOT_IMPLEMENTED),
+    REFERENCED_IMAGE_UNAVAILABLE(422, "无法取得图片或被引用图片，请将图片与命令一起发送", HttpStatus.UNPROCESSABLE_ENTITY),
+    UPSTREAM_RESPONSE_INVALID(502, "渠道上游响应无效", HttpStatus.BAD_GATEWAY),
+    INSTANCE_ID_REQUIRED(400751, "机器人实例标识不能为空", HttpStatus.BAD_REQUEST),
+    INSTANCE_KEY_CONFLICT(409751, "机器人实例标识已注册到其他渠道", HttpStatus.CONFLICT),
+    ACCOUNT_KEY_CONFLICT(409752, "机器人账号已注册到其他实例", HttpStatus.CONFLICT),
+    SENDER_REGISTRATION_CONFLICT(500751, "重复注册消息发送器", HttpStatus.INTERNAL_SERVER_ERROR),
+    CONNECTOR_REGISTRATION_INVALID(500752, "渠道连接器注册状态异常", HttpStatus.INTERNAL_SERVER_ERROR),
+    INSTANCE_TOPOLOGY_CHANGED(400753, "机器人平台或账号已变化，等待拓扑刷新后重新取得对应租约", HttpStatus.BAD_REQUEST),
+    LOCAL_OWNER_LEASE_EXPIRED(403751, "连接租约已失效，不能继续启动", HttpStatus.FORBIDDEN),
+    CONNECTION_MIGRATION_RECONFIRM_REQUIRED(409753, "该绑定需要迁移机器人连接，请重新预检查并确认最新迁移方案", HttpStatus.CONFLICT),
+    CONNECTION_OWNER_CHANGED_DURING_SAVE(409754, "连接归属在保存期间发生变化，请重新预检查并确认迁移方案", HttpStatus.CONFLICT);
+
+    private final int code;
+    private final String message;
+    private final HttpStatus status;
+}

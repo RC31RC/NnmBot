@@ -7,7 +7,7 @@ import com.nnm.bot.admin.pojo.dto.bot.command.BotTemplateDTO;
 import com.nnm.bot.admin.pojo.dto.bot.command.BotTemplateSaveDTO;
 import com.nnm.bot.admin.service.bot.command.BotTemplateManagementService;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 管理命令回复模板及其展示内容。 */
 @RestController
 @RequestMapping("/api/admin/bot-templates")
 public class BotTemplateManagementController {
@@ -27,7 +28,7 @@ public class BotTemplateManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotTemplateVO>> list(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotTemplateVO>> list(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotTemplateVO(service.list()));
     }
 

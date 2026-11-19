@@ -3,7 +3,8 @@ package com.nnm.bot.admin.security;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.admin.config.properties.BotCredentialProperties;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
+import com.nnm.bot.common.error.SystemException;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -50,7 +51,7 @@ public class BotCredentialCipher {
             byte[] payload = ByteBuffer.allocate(iv.length + encrypted.length).put(iv).put(encrypted).array();
             return PREFIX + Base64.getEncoder().encodeToString(payload);
         } catch (GeneralSecurityException exception) {
-            throw new SystemException("机器人连接凭据加密失败", exception);
+            throw new SystemException(BotManagementErrorCode.CREDENTIAL_ENCRYPT_FAILED, exception);
         }
     }
 
@@ -59,7 +60,7 @@ public class BotCredentialCipher {
             return null;
         }
         if (!ciphertext.startsWith(PREFIX)) {
-            throw new SystemException("机器人连接凭据不是受支持的密文格式");
+            throw new SystemException(BotManagementErrorCode.CREDENTIAL_FORMAT_INVALID);
         }
         try {
             byte[] payload = Base64.getDecoder().decode(ciphertext.substring(PREFIX.length()));
@@ -75,7 +76,7 @@ public class BotCredentialCipher {
             cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
         } catch (IllegalArgumentException | GeneralSecurityException exception) {
-            throw new SystemException("机器人连接凭据解密失败", exception);
+            throw new SystemException(BotManagementErrorCode.CREDENTIAL_DECRYPT_FAILED, exception);
         }
     }
 

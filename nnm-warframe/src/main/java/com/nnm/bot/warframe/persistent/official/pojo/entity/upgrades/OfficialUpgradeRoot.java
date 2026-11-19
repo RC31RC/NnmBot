@@ -315,8 +315,7 @@ public class OfficialUpgradeRoot extends OfficialRecord {
     private String upgradeType;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialUpgradeAvailableChallengesItems> officialUpgradeAvailableChallengesItemsRows =
-        new ArrayList<>();
+    private List<OfficialUpgradeAvailableChallengesItems> officialUpgradeAvailableChallengesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialUpgradeCompatibilityTagsItems> officialUpgradeCompatibilityTagsItemsRows = new ArrayList<>();
@@ -328,8 +327,7 @@ public class OfficialUpgradeRoot extends OfficialRecord {
     private List<OfficialUpgradeDescriptionLinesItems> officialUpgradeDescriptionLinesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialUpgradeIncompatibilityTagsItems> officialUpgradeIncompatibilityTagsItemsRows =
-        new ArrayList<>();
+    private List<OfficialUpgradeIncompatibilityTagsItems> officialUpgradeIncompatibilityTagsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialUpgradeItemReferencesItems> officialUpgradeItemReferencesItemsRows = new ArrayList<>();

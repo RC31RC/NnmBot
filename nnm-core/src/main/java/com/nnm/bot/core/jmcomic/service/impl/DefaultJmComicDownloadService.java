@@ -5,7 +5,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
 import com.nnm.bot.core.jmcomic.constant.JmComicErrorCode;
@@ -76,7 +76,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
                 acquired = true;
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
-                throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "JM 下载任务在排队等待时被中断", exception);
+                throw new BusinessException(JmComicErrorCode.DOWNLOAD_QUEUE_INTERRUPTED, exception);
             }
             BusinessAssert.isTrue(this.properties.isWholeFileEnabled() || this.properties.isPageDownloadEnabled(),
                 JmComicErrorCode.DOWNLOAD_METHODS_DISABLED);
@@ -104,7 +104,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
                 }
             }
             if (!this.properties.isPageDownloadEnabled()) {
-                throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "JM 整本下载不可用，分页下载已关闭", wholeFileFailure);
+                throw new BusinessException(JmComicErrorCode.WHOLE_DOWNLOAD_UNAVAILABLE, wholeFileFailure);
             }
             try {
                 return this.downloadImagesAsPdf(client, album, normalizedAlbumId, downloadDirectory, workspace);
@@ -119,11 +119,10 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             throw exception;
         } catch (IOException exception) {
             cleanupAfterFailure(workspace, exception);
-            throw new BusinessException(JmComicErrorCode.TEMPORARY_FILE_FAILED, "JM 临时目录处理失败", exception);
+            throw new BusinessException(JmComicErrorCode.TEMP_WORKSPACE_FAILED, exception);
         } catch (RuntimeException exception) {
             cleanupAfterFailure(workspace, exception);
-            throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "下载 JM 漫画 " + normalizedAlbumId + " 失败",
-                exception);
+            throw new BusinessException(JmComicErrorCode.ALBUM_DOWNLOAD_FAILED, exception);
         } finally {
             if (acquired) {
                 this.taskPermits.release();
@@ -138,7 +137,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
         try {
             imageFiles = this.validateDownload(result);
         } catch (IOException exception) {
-            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "校验 JM 图片下载结果失败", exception);
+            throw new BusinessException(JmComicErrorCode.IMAGE_VALIDATION_FAILED, exception);
         }
         Path pdf = workspace.resolve(this.safeFileName(album.getTitle(), albumId));
         this.pdfService.createCompressedPdf(imageFiles, pdf);
@@ -174,23 +173,24 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
 
     private void validateAlbum(JmAlbum album) {
         if (ObjectUtil.isNull(album)) {
-            throw new BusinessException(JmComicErrorCode.DOWNLOAD_FAILED, "JM 上游未返回漫画信息");
+            throw new BusinessException(JmComicErrorCode.ALBUM_RESPONSE_MISSING);
         }
         if (album.getPageCount() > this.properties.getMaxPages()) {
-            throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE,
-                "漫画共 " + album.getPageCount() + " 页，超过限制 " + this.properties.getMaxPages() + " 页");
+            throw new BusinessException(JmComicErrorCode.ALBUM_PAGE_LIMIT, JmComicErrorCode.ALBUM_PAGE_LIMIT
+                .getMessage().formatted(album.getPageCount(), this.properties.getMaxPages()));
         }
     }
 
     private List<Path> validateDownload(DownloadResult result) throws IOException {
         if (ObjectUtil.isNull(result) || CollUtil.isEmpty(result.getSuccessfulFiles())) {
-            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "JM 上游没有下载到图片");
+            throw new BusinessException(JmComicErrorCode.IMAGE_DOWNLOAD_EMPTY);
         }
         if (!result.isAllSuccess()) {
             Throwable firstFailure =
                 result.getFailedTasks().values().stream().filter(ObjectUtil::isNotNull).findFirst().orElse(null);
-            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE,
-                "JM 漫画有 " + result.getFailedTasks().size() + " 张图片下载失败", firstFailure);
+            throw new BusinessException(JmComicErrorCode.IMAGE_DOWNLOAD_FAILURES,
+                JmComicErrorCode.IMAGE_DOWNLOAD_FAILURES.getMessage().formatted(result.getFailedTasks().size()),
+                firstFailure);
         }
         List<Path> imageFiles = result.getSuccessfulFiles().stream().filter(ObjectUtil::isNotNull)
             .map(path -> path.toAbsolutePath().normalize()).distinct()
@@ -201,12 +201,13 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
         long totalBytes = 0;
         for (Path imageFile : imageFiles) {
             if (!Files.isRegularFile(imageFile) || !Files.isReadable(imageFile)) {
-                throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "下载结果包含不可读图片: " + imageFile);
+                throw new BusinessException(JmComicErrorCode.IMAGE_DOWNLOAD_UNREADABLE);
             }
             totalBytes = Math.addExact(totalBytes, Files.size(imageFile));
             if (totalBytes > this.properties.getMaxDownloadBytes()) {
-                throw new BusinessException(JmComicErrorCode.DOWNLOAD_TOO_LARGE,
-                    "下载图片总大小超过限制 " + this.properties.getMaxDownloadBytes() + " 字节");
+                throw new BusinessException(JmComicErrorCode.IMAGE_TOTAL_TOO_LARGE,
+                    JmComicErrorCode.IMAGE_TOTAL_TOO_LARGE.getMessage()
+                        .formatted(this.properties.getMaxDownloadBytes()));
             }
         }
         return imageFiles;

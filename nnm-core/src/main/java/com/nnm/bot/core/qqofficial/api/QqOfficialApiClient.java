@@ -1,37 +1,38 @@
 package com.nnm.bot.core.qqofficial.api;
 
-import com.nnm.bot.core.message.model.BotMessagePart.Button;
-import com.nnm.bot.core.message.model.BotMessagePart.File;
-import com.nnm.bot.core.message.model.BotMessagePart.Image;
-import com.nnm.bot.core.message.model.BotMessagePart.Keyboard;
-import com.nnm.bot.core.message.model.BotMessagePart.Markdown;
-import com.nnm.bot.core.message.model.BotMessagePart.Text;
+import com.nnm.bot.core.qqofficial.constant.QqOfficialErrorCode;
+
+import com.nnm.bot.core.messaging.model.BotMessagePart.Button;
+import com.nnm.bot.core.messaging.model.BotMessagePart.File;
+import com.nnm.bot.core.messaging.model.BotMessagePart.Image;
+import com.nnm.bot.core.messaging.model.BotMessagePart.Keyboard;
+import com.nnm.bot.core.messaging.model.BotMessagePart.Markdown;
+import com.nnm.bot.core.messaging.model.BotMessagePart.Text;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialApiRequestDTO;
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialApiResponseDTO;
-import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.http.ExternalHttpException;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
-import com.nnm.bot.core.constant.BotChannelCapability;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
+import com.nnm.bot.core.channel.constant.BotChannelCapability;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
-import com.nnm.bot.core.message.model.BotMessagePart;
-import com.nnm.bot.core.message.model.BotFile;
-import com.nnm.bot.core.message.model.BotMessageReceipt;
-import com.nnm.bot.core.message.model.PreparedBotMessage;
-import com.nnm.bot.core.message.model.BotMessageSendPermit;
-import com.nnm.bot.core.message.exception.BotMessageNotSentException;
-import com.nnm.bot.core.message.exception.BotChannelCapabilityException;
+import com.nnm.bot.core.messaging.model.BotMarkdownMessage;
+import com.nnm.bot.core.messaging.model.BotMessagePart;
+import com.nnm.bot.core.messaging.model.BotFile;
+import com.nnm.bot.core.messaging.model.BotMessageReceipt;
+import com.nnm.bot.core.messaging.model.PreparedBotMessage;
+import com.nnm.bot.core.messaging.model.BotMessageSendPermit;
+import com.nnm.bot.core.messaging.exception.BotMessageNotSentException;
+import com.nnm.bot.core.messaging.exception.BotChannelCapabilityException;
 import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
-import com.nnm.bot.core.qqofficial.message.QqOfficialMessageSource;
-import com.nnm.bot.core.qqofficial.message.dto.QqOfficialGatewayEventDTO;
+import com.nnm.bot.core.qqofficial.message.context.QqOfficialMessageSource;
+import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayEventDTO;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import java.util.function.BooleanSupplier;
 
+/** 执行 QQ 官方 API 请求并管理消息素材协议与回执。 */
 @Slf4j
 public class QqOfficialApiClient {
 
@@ -88,7 +90,7 @@ public class QqOfficialApiClient {
             request("GET", "/gateway", null, QqOfficialApiResponseDTO.GatewayDTO.class);
         String url = response == null ? null : response.url();
         if (StrUtil.isBlank(url)) {
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方机器人 Gateway 响应缺少 url");
+            throw new BusinessException(QqOfficialErrorCode.GATEWAY_URL_MISSING);
         }
         return url;
     }
@@ -105,23 +107,22 @@ public class QqOfficialApiClient {
         String cursor = "";
         do {
             if (!visitedCursors.add(cursor)) {
-                throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方群成员接口重复返回分页游标");
+                throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_CURSOR_REPEAT);
             }
             String path =
                 "/v2/groups/" + groupOpenid + "/members?cursor=" + URLEncoder.encode(cursor, StandardCharsets.UTF_8);
             QqOfficialApiResponseDTO.MemberListDTO response =
                 request("GET", path, null, QqOfficialApiResponseDTO.MemberListDTO.class);
             if (response == null || response.members() == null) {
-                throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方群成员接口响应缺少 members");
+                throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBERS_MISSING);
             }
             for (QqOfficialApiResponseDTO.MemberDTO item : response.members()) {
                 if (item == null) {
-                    throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方群成员接口响应包含空成员");
+                    throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_EMPTY);
                 }
                 if (!Boolean.TRUE.equals(item.bot())) {
                     if (StrUtil.isBlank(item.memberOpenid())) {
-                        throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID,
-                            "QQ 官方群成员接口缺少 member_openid");
+                        throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_ID_MISSING);
                     }
                     members.add(new BotDiscoveredMember(item.memberOpenid(), item.username(),
                         normalizeMemberRole(item.memberRole())));
@@ -134,13 +135,13 @@ public class QqOfficialApiClient {
 
     public BotDiscoveredMember getGroupMember(String groupOpenid, String memberOpenid) {
         if (StrUtil.isBlank(groupOpenid) || StrUtil.isBlank(memberOpenid)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "群组与成员标识不能为空");
+            throw new BusinessException(QqOfficialErrorCode.GROUP_IDS_REQUIRED);
         }
         QqOfficialApiResponseDTO.MemberDTO item = request("GET",
             "/v2/groups/" + groupOpenid + "/members/" + memberOpenid, null, QqOfficialApiResponseDTO.MemberDTO.class);
         String actualOpenid = item == null ? null : item.memberOpenid();
         if (StrUtil.isBlank(actualOpenid)) {
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方群成员详情接口缺少 member_openid");
+            throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_DETAIL_ID_MISSING);
         }
         return new BotDiscoveredMember(actualOpenid, item.username(), normalizeMemberRole(item.memberRole()));
     }
@@ -177,8 +178,7 @@ public class QqOfficialApiClient {
         }
         if (blocks.size() == 1) {
             return switch (blocks.getFirst()) {
-                case Keyboard ignored ->
-                    throw new BusinessException(CommonErrorCode.UNPROCESSABLE_ENTITY, "QQ 按钮消息需要 Markdown 正文");
+                case Keyboard ignored -> throw new BusinessException(QqOfficialErrorCode.BUTTON_MARKDOWN_REQUIRED);
                 case Text text -> prepareText(source, text.content(), permit);
                 case Markdown markdown -> prepareMarkdown(source, markdown.message(), permit,
                     keyboard.isEmpty() ? null : new Keyboard(keyboard));
@@ -215,8 +215,7 @@ public class QqOfficialApiClient {
                     case Text value -> content.add(value.content().replaceAll("([\\\\`*_{}\\[\\]()<>#!|])", "\\\\$1"));
                     case Markdown value -> {
                         if (value.message().content() == null)
-                            throw new BusinessException(CommonErrorCode.UNPROCESSABLE_ENTITY,
-                                "QQ 图片不能与自定义 Markdown 模板组合");
+                            throw new BusinessException(QqOfficialErrorCode.IMAGE_TEMPLATE_UNSUPPORTED);
                         content.add(value.message().content());
                     }
                     case Keyboard ignored -> {
@@ -253,14 +252,13 @@ public class QqOfficialApiClient {
             case "image/jpeg" -> "jpeg";
             case "image/gif" -> "gif";
             case "image/webp" -> "webp";
-            default -> throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                "QQ Markdown 不支持图片格式: " + image.contentType());
+            default -> throw new BusinessException(QqOfficialErrorCode.MARKDOWN_IMAGE_FORMAT_UNSUPPORTED);
         };
         byte[] bytes;
         try {
             bytes = image.readAllBytes(MAX_MARKDOWN_IMAGE_BYTES);
         } catch (IOException exception) {
-            throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED, "读取 QQ Markdown 图片失败", exception);
+            throw new BusinessException(QqOfficialErrorCode.MARKDOWN_IMAGE_READ_FAILED, exception);
         }
         String md5 = digest("MD5", bytes);
         QqOfficialApiResponseDTO.ImagePrepareDTO prepared = request(
@@ -270,14 +268,14 @@ public class QqOfficialApiClient {
         String uploadId = prepared == null ? null : prepared.uploadId();
         String uploadUrl = prepared == null ? null : prepared.presignedUrl();
         if (StrUtil.isBlank(uploadId) || uploadUrl == null || !uploadUrl.startsWith("https://"))
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ Markdown 素材上传地址无效");
+            throw new BusinessException(QqOfficialErrorCode.MARKDOWN_UPLOAD_URL_INVALID);
         requireOwnership();
         HttpResult upload = httpClient.putBytes(uploadUrl, bytes, Map.of("Content-Type", image.contentType()));
         if (upload == null || !upload.isSuccess())
-            throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED, "QQ Markdown 图片上传失败");
+            throw new BusinessException(QqOfficialErrorCode.MARKDOWN_UPLOAD_FAILED);
         String etag = upload.headers().getETag();
         if (etag != null && !etag.replace("\"", "").equalsIgnoreCase(md5))
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ Markdown 图片上传摘要不匹配");
+            throw new BusinessException(QqOfficialErrorCode.MARKDOWN_UPLOAD_DIGEST_INVALID);
         QqOfficialApiResponseDTO.ImageCompleteDTO finished =
             request("POST", "/v2/media-images/complete", new QqOfficialApiRequestDTO.ImageCompleteDTO(uploadId, md5),
                 QqOfficialApiResponseDTO.ImageCompleteDTO.class);
@@ -285,7 +283,7 @@ public class QqOfficialApiClient {
         String url = finished == null ? null : finished.url();
         if (imageId == null || url == null || !imageId.matches("[A-Za-z0-9_-]+")
             || !url.matches("qqbot-media://image/v1/[A-Za-z0-9_-]+"))
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ Markdown 图片素材引用无效");
+            throw new BusinessException(QqOfficialErrorCode.MARKDOWN_IMAGE_REFERENCE_INVALID);
         return new UploadedMarkdownImage(imageId, url);
     }
 
@@ -293,7 +291,7 @@ public class QqOfficialApiClient {
         String url = connection.apiBaseUrl().replaceAll("/$", "") + "/v2/media-images/" + imageId + "/delete";
         HttpResult result = httpClient.delete(url, Map.of("Authorization", "QQBot " + tokenClient.getAccessToken()));
         if (result == null || !result.isSuccess())
-            throw new BusinessException(BotChannelErrorCode.FILE_CLEANUP_FAILED, "清理 QQ Markdown 图片素材失败");
+            throw new BusinessException(QqOfficialErrorCode.MARKDOWN_IMAGE_CLEANUP_FAILED);
     }
 
     private record UploadedMarkdownImage(String imageId, String url) {
@@ -320,23 +318,19 @@ public class QqOfficialApiClient {
         try {
             declaredSize = file.size();
         } catch (IOException exception) {
-            throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                "读取 QQ 官方机器人待发送文件大小失败: " + file.fileName(), exception);
+            throw new BusinessException(QqOfficialErrorCode.FILE_SIZE_READ_FAILED, exception);
         }
         if (declaredSize > MAX_FILE_BYTES) {
-            throw new BusinessException(CommonErrorCode.FILE_TOO_LARGE,
-                "QQ 官方机器人文件不能超过 " + MAX_FILE_BYTES / 1024 / 1024 + " MB");
+            throw new BusinessException(QqOfficialErrorCode.FILE_TOO_LARGE);
         }
         FileMetadata metadata;
         try {
             metadata = inspectFile(file);
         } catch (IOException exception) {
-            throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                "读取 QQ 官方机器人待发送文件失败: " + file.fileName(), exception);
+            throw new BusinessException(QqOfficialErrorCode.FILE_READ_FAILED, exception);
         }
         if (metadata.size() > MAX_FILE_BYTES) {
-            throw new BusinessException(CommonErrorCode.FILE_TOO_LARGE,
-                "QQ 官方机器人文件不能超过 " + MAX_FILE_BYTES / 1024 / 1024 + " MB");
+            throw new BusinessException(QqOfficialErrorCode.FILE_TOO_LARGE);
         }
 
         QqOfficialApiResponseDTO.FilePrepareDTO prepared = request("POST", source.mediaPreparePath(),
@@ -347,7 +341,7 @@ public class QqOfficialApiClient {
         List<QqOfficialApiResponseDTO.FilePartDTO> parts = prepared == null ? null : prepared.parts();
         long defaultBlockSize = prepared == null || prepared.blockSize() == null ? 0 : prepared.blockSize();
         if (StrUtil.isBlank(uploadId) || parts == null || parts.isEmpty() || defaultBlockSize <= 0) {
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方机器人预上传响应缺少有效分片信息");
+            throw new BusinessException(QqOfficialErrorCode.FILE_PARTS_MISSING);
         }
 
         long uploadedBytes = 0;
@@ -360,23 +354,22 @@ public class QqOfficialApiClient {
                     part == null || part.blockSize() == null ? defaultBlockSize : part.blockSize();
                 if (partIndex < 0 || StrUtil.isBlank(presignedUrl) || configuredPartSize <= 0
                     || configuredPartSize > MAX_FILE_BYTES || configuredPartSize > Integer.MAX_VALUE) {
-                    throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方机器人分片响应无效");
+                    throw new BusinessException(QqOfficialErrorCode.FILE_PART_INVALID);
                 }
 
                 byte[] buffer = new byte[(int)configuredPartSize];
                 int chunkLength = readChunk(input, buffer);
                 if (chunkLength == 0 && metadata.size() > 0) {
-                    throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED, "QQ 官方机器人文件分片读取提前结束");
+                    throw new BusinessException(QqOfficialErrorCode.FILE_PART_READ_EARLY);
                 }
                 if (chunkLength < buffer.length && partPosition < parts.size() - 1) {
-                    throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED, "QQ 官方机器人文件分片长度与预上传响应不一致");
+                    throw new BusinessException(QqOfficialErrorCode.FILE_PART_LENGTH_MISMATCH);
                 }
                 byte[] chunk = chunkLength == buffer.length ? buffer : Arrays.copyOf(buffer, chunkLength);
                 requireOwnership();
                 HttpResult putResult = httpClient.putBytes(presignedUrl, chunk, Map.of());
                 if (!putResult.isSuccess()) {
-                    throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                        "QQ 官方机器人分片上传失败，分片序号: " + partIndex);
+                    throw new BusinessException(QqOfficialErrorCode.FILE_PART_UPLOAD_FAILED);
                 }
                 uploadedBytes += chunkLength;
 
@@ -386,11 +379,10 @@ public class QqOfficialApiClient {
                     QqOfficialApiResponseDTO.FileUploadDTO.class);
             }
         } catch (IOException exception) {
-            throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED,
-                "读取 QQ 官方机器人待发送文件失败: " + file.fileName(), exception);
+            throw new BusinessException(QqOfficialErrorCode.FILE_READ_FAILED, exception);
         }
         if (uploadedBytes != metadata.size()) {
-            throw new BusinessException(BotChannelErrorCode.FILE_STAGING_FAILED, "QQ 官方机器人文件分片总长度不一致");
+            throw new BusinessException(QqOfficialErrorCode.FILE_TOTAL_SIZE_MISMATCH);
         }
 
         QqOfficialApiResponseDTO.FileUploadDTO uploaded = request("POST", source.mediaPath(),
@@ -398,7 +390,7 @@ public class QqOfficialApiClient {
             QqOfficialApiResponseDTO.FileUploadDTO.class);
         String fileInfo = uploaded == null ? null : uploaded.fileInfo();
         if (StrUtil.isBlank(fileInfo)) {
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 官方机器人媒体响应缺少 file_info");
+            throw new BusinessException(QqOfficialErrorCode.FILE_INFO_MISSING);
         }
         return fileInfo;
     }
@@ -419,7 +411,7 @@ public class QqOfficialApiClient {
                 }
                 actualSize += read;
                 if (actualSize > MAX_FILE_BYTES) {
-                    throw new BusinessException(CommonErrorCode.FILE_TOO_LARGE, "QQ 官方机器人文件超过平台大小限制");
+                    throw new BusinessException(QqOfficialErrorCode.FILE_PLATFORM_LIMIT_EXCEEDED);
                 }
                 md5.update(buffer, 0, read);
                 sha1.update(buffer, 0, read);
@@ -484,10 +476,10 @@ public class QqOfficialApiClient {
             else if (part instanceof Markdown markdown && markdown.message().content() != null) {
                 text.add(markdown.message().content());
             } else
-                throw new BusinessException(CommonErrorCode.UNPROCESSABLE_ENTITY, "QQ 仅支持直接 Markdown 与文字、按钮组合");
+                throw new BusinessException(QqOfficialErrorCode.MARKDOWN_COMBINATION_UNSUPPORTED);
         }
         if (text.isEmpty())
-            throw new BusinessException(CommonErrorCode.UNPROCESSABLE_ENTITY, "QQ 按钮消息需要 Markdown 正文");
+            throw new BusinessException(QqOfficialErrorCode.BUTTON_MARKDOWN_REQUIRED);
         return prepareMarkdown(source, BotMarkdownMessage.content(String.join("\n", text)), permit,
             buttons.isEmpty() ? null : new Keyboard(buttons));
     }
@@ -537,7 +529,7 @@ public class QqOfficialApiClient {
             }
         }
         if (buttons.size() > 25)
-            throw new BusinessException(CommonErrorCode.UNPROCESSABLE_ENTITY, "QQ 按钮不能超过 25 个");
+            throw new BusinessException(QqOfficialErrorCode.BUTTON_COUNT_EXCEEDED);
         return List.copyOf(buttons);
     }
 
@@ -570,7 +562,7 @@ public class QqOfficialApiClient {
         QqOfficialGatewayEventDTO response =
             request("GET", "/channels/" + channelId + "/messages/" + messageId, null, QqOfficialGatewayEventDTO.class);
         if (response == null || StrUtil.isBlank(response.id())) {
-            throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 频道消息响应缺少 id");
+            throw new BusinessException(QqOfficialErrorCode.CHANNEL_RECEIPT_ID_MISSING);
         }
         return response;
     }
@@ -648,7 +640,7 @@ public class QqOfficialApiClient {
 
     private void requireOwnership() {
         if (!ownership.getAsBoolean()) {
-            throw new BusinessException(BotChannelErrorCode.CHANNEL_NOT_REGISTERED, "机器人连接租约已失效，已阻止发送");
+            throw new BusinessException(QqOfficialErrorCode.CONNECTION_LEASE_EXPIRED);
         }
     }
 

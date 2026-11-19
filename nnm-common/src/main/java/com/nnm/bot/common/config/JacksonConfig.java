@@ -7,9 +7,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/** 提供带 Java 时间模块的默认 JSON 映射器。 */
 @Configuration(proxyBeanMethods = false)
 public class JacksonConfig {
 
+    /** 应用未声明映射器时创建默认实例。 */
     @Bean
     @ConditionalOnMissingBean(ObjectMapper.class)
     public ObjectMapper objectMapper() {

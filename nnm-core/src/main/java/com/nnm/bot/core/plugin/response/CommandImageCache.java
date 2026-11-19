@@ -1,7 +1,7 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.core.message.render.BotImageRenderer;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.messaging.render.BotImageRenderer;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
 
 import java.util.Map;
 import java.util.Optional;

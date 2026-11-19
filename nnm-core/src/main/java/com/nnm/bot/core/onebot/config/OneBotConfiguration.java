@@ -5,6 +5,7 @@ import jakarta.annotation.Resource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+/** 注册 OneBot 协议级属性并在启动时验证配置。 */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OneBotProperties.class)
 public class OneBotConfiguration {

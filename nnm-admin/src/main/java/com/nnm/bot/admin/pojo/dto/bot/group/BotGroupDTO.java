@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.dto.bot.group;
 
-import com.nnm.bot.core.constant.BotChannelStatus;
+import com.nnm.bot.core.channel.constant.BotChannelStatus;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

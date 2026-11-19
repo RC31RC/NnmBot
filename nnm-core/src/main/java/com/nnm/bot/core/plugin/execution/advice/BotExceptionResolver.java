@@ -1,7 +1,7 @@
 package com.nnm.bot.core.plugin.execution.advice;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.aop.framework.Advised;
 import org.springframework.beans.factory.ListableBeanFactory;

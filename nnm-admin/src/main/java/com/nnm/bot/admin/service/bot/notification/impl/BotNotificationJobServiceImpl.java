@@ -1,12 +1,13 @@
 package com.nnm.bot.admin.service.bot.notification.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationReportDTO;
-import com.nnm.bot.common.task.AdminTaskSubmission;
+import com.nnm.bot.core.task.pojo.dto.AdminTaskSubmissionDTO;
 import com.nnm.bot.core.mq.message.notification.NotificationResourceManifest;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.config.NotificationJobProperties;
 import com.nnm.bot.admin.pojo.entity.bot.notification.BotNotificationJob;
-import com.nnm.bot.admin.constant.BotNotificationConstants.JobStatus;
+import com.nnm.bot.admin.constant.bot.notification.BotNotificationConstants.JobStatus;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationDTO;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotNotificationJobDTO;
 import com.nnm.bot.admin.repository.bot.notification.BotNotificationJobRepository;
@@ -15,14 +16,13 @@ import com.nnm.bot.admin.service.bot.notification.BotGroupNotificationService;
 import com.nnm.bot.admin.service.bot.notification.BotNotificationJobService;
 import com.nnm.bot.admin.service.system.OperationAuditService;
 import com.nnm.bot.admin.service.bot.notification.BotNotificationStateService;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.task.AdminTaskService;
+import com.nnm.bot.core.task.service.AdminTaskService;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.channel.notification.store.NotificationCancellationStore;
 import com.nnm.bot.core.channel.notification.store.NotificationResourceStorage;
 import com.nnm.bot.core.config.BotNotificationProperties;
-import com.nnm.bot.core.constant.CommandDeliveryConstants.DeliveryStatus;
-import com.nnm.bot.core.task.AdminTaskCoordination;
+import com.nnm.bot.core.plugin.constant.CommandDeliveryConstants.DeliveryStatus;
+import com.nnm.bot.core.task.coordination.AdminTaskCoordination;
 import jakarta.annotation.Resource;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -31,6 +31,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+/** 协调异步群发任务的提交、认领、取消和状态推进。 */
 @Slf4j
 @Service
 public class BotNotificationJobServiceImpl implements BotNotificationJobService {
@@ -61,23 +62,23 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
 
     @Override
     public BotNotificationJobDTO submit(long ownerId, BotGroupNotificationDTO request) {
-        BusinessAssert.notNull(request.submissionId(), CommonErrorCode.PARAM_INVALID, "缺少通知提交标识");
+        BusinessAssert.notNull(request.submissionId(), BotManagementErrorCode.SUBMISSION_ID_REQUIRED);
         UUID id = UUID.nameUUIDFromBytes((ownerId + ":" + request.submissionId()).getBytes(StandardCharsets.UTF_8));
         BotNotificationJob job = coordination.reserve("notification-owner:" + ownerId, () -> {
             BotNotificationJob existing = jobs.findById(id).orElse(null);
             if (existing != null) {
                 BusinessAssert.isTrue(existing.getOwnerId() == ownerId && existing.getRequest().equals(request),
-                    CommonErrorCode.PARAM_INVALID, "同一提交标识不能用于不同通知内容");
+                    BotManagementErrorCode.SUBMISSION_CONFLICT);
                 return existing;
             }
             Instant now = Instant.now();
             Instant due = request.scheduledAt() == null ? now : request.scheduledAt();
-            BusinessAssert.isTrue(request.scheduledAt() == null || due.isAfter(now), CommonErrorCode.PARAM_INVALID,
-                "定时发送时间必须晚于当前时间");
+            BusinessAssert.isTrue(request.scheduledAt() == null || due.isAfter(now),
+                BotManagementErrorCode.SCHEDULE_IN_PAST);
             BusinessAssert.isTrue(!due.isAfter(now.plus(notificationProperties.maxScheduleDelay())),
-                CommonErrorCode.PARAM_INVALID, "定时发送时间超出允许范围");
+                BotManagementErrorCode.SCHEDULE_OUT_OF_RANGE);
             BusinessAssert.isTrue(jobs.countByOwnerIdAndStatusIn(ownerId, ACTIVE) < properties.getMaxPendingPerUser(),
-                CommonErrorCode.PARAM_INVALID, "待发送通知任务数量已达上限");
+                BotManagementErrorCode.NOTIFICATION_CAPACITY_REACHED);
             notifications.preview(ownerId, request);
             NotificationResourceManifest manifest = resources.retain(ownerId, id, request.content().resourceIds(),
                 due.plus(notificationProperties.resourceRetention()));
@@ -115,7 +116,7 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
     @Override
     public BotNotificationJobDTO cancel(long ownerId, UUID id) {
         BotNotificationJob result = store.update(id, job -> {
-            BusinessAssert.isTrue(job.getOwnerId() == ownerId, CommonErrorCode.PARAM_INVALID, "无权操作该通知任务");
+            BusinessAssert.isTrue(job.getOwnerId() == ownerId, BotManagementErrorCode.NOTIFICATION_FORBIDDEN);
             if (job.getStatus().terminal())
                 return;
             // 先发布取消，再提交 DB；任一节点读取失败会阻止新的平台发送。
@@ -188,7 +189,7 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
         if (!claimed[0])
             return;
         try {
-            AdminTaskSubmission task =
+            AdminTaskSubmissionDTO task =
                 tasks.submit("BOT_GROUP_NOTIFICATION:" + id, "bot:notification:send", reporter -> {
                     try {
                         BotGroupNotificationReportDTO report =

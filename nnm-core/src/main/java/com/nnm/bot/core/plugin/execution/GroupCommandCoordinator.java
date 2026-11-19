@@ -1,19 +1,17 @@
 package com.nnm.bot.core.plugin.execution;
 
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.domain.BotGroupMember;
-import com.nnm.bot.core.group.service.BotGroupCommandContext;
+import com.nnm.bot.core.group.context.BotGroupCommandContext;
 import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
-import com.nnm.bot.core.group.service.BotGroupMemberIdentityAdapters;
+import com.nnm.bot.core.group.adapter.BotGroupMemberIdentityAdapters;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
 import com.nnm.bot.core.group.service.GroupCommandService;
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandExecutionContext;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot.Binding;
-import com.nnm.bot.core.plugin.model.CommandMatch;
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 import jakarta.annotation.Resource;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

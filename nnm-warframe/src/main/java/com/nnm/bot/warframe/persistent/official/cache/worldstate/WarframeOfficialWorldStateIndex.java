@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.persistent.official.cache.worldstate;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.official.config.worldstate.WarframeWorldStateDataProperties;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -22,6 +22,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.OfficialUpgr
 import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeWorldStateCodebookEntryDTO;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -116,8 +117,8 @@ public class WarframeOfficialWorldStateIndex {
             OfficialBossDTO.class, OfficialBossDTO::getNameKey, OfficialBossDTO::getName, OfficialBossDTO::getNameEn,
             OfficialBossDTO::getNameZh, value -> null, batchId);
         addCodebook(type, codebooks, WarframeReferenceType.SYNDICATE, WarframeOfficialDataDomain.SYNDICATE,
-            OfficialSyndicateDTO.class, value -> null, OfficialSyndicateDTO::getName, OfficialSyndicateDTO::getNameEn,
-            OfficialSyndicateDTO::getNameZh, value -> null, batchId);
+            OfficialSyndicateDTO.class, OfficialSyndicateDTO::getNameKey, OfficialSyndicateDTO::getName,
+            OfficialSyndicateDTO::getNameEn, OfficialSyndicateDTO::getNameZh, value -> null, batchId);
         addCodebook(type, codebooks, WarframeReferenceType.UPGRADE_TYPE, WarframeOfficialDataDomain.UPGRADE_TYPE,
             OfficialUpgradeTypeDTO.class, value -> null, OfficialUpgradeTypeDTO::getName,
             OfficialUpgradeTypeDTO::getNameEn, OfficialUpgradeTypeDTO::getNameZh, value -> null, batchId);
@@ -136,11 +137,22 @@ public class WarframeOfficialWorldStateIndex {
     private Map<String, WarframeWorldStateCodebookEntryDTO> nodeCodebook() {
         Map<String, WarframeWorldStateCodebookEntryDTO> entries = new LinkedHashMap<>();
         readUncached(WarframeOfficialDataDomain.REGION, OfficialRegionDTO.class, (key, value) -> {
-            String name = localized(value.getZhName(), value.getNameEn(), value.getName());
+            String name = Stream
+                .of(localized(value.getZhName(), value.getNameEn(), value.getName()), value.getNameEn(),
+                    value.getName())
+                .filter(WarframeNameNormalizer::isReadableDisplayName).filter(candidate -> !candidate.equals(key))
+                .findFirst().orElse(null);
+            if (name == null && StrUtil.isBlank(value.getNameKey()))
+                return null;
             String system = localized(value.getZhSystemName(), value.getSystemName(), null);
-            var entry = new WarframeWorldStateCodebookEntryDTO(key, name + (system == null ? "" : "（" + system + "）"),
-                "", value.getMissionType(), "dataset:REGION", WarframeReferenceResolutionStatus.RESOLVED,
-                value.getFaction(), false);
+            if (!WarframeNameNormalizer.isReadableDisplayName(system))
+                system = null;
+            var entry =
+                new WarframeWorldStateCodebookEntryDTO(
+                    key, name == null ? key : name + (system == null ? "" : "（" + system + "）"), "",
+                    value.getMissionType(), "dataset:REGION", name == null
+                        ? WarframeReferenceResolutionStatus.UNRESOLVED : WarframeReferenceResolutionStatus.RESOLVED,
+                    value.getFaction(), false, value.getNameKey());
             entries.put(normalize(key), entry);
             return entry;
         });
@@ -316,12 +328,20 @@ public class WarframeOfficialWorldStateIndex {
         Function<T, String> nameEn, Function<T, String> nameZh, Function<T, String> description, String batchId) {
         Map<String, WarframeWorldStateCodebookEntryDTO> entries = new LinkedHashMap<>();
         readUncached(domain, dtoType, (key, value) -> {
-            String localizedName = localized(nameZh.apply(value), nameEn.apply(value), name.apply(value));
-            if (StrUtil.isBlank(localizedName) || localizedName.startsWith("/"))
+            String localizedName = Stream
+                .of(localized(nameZh.apply(value), nameEn.apply(value), name.apply(value)), nameEn.apply(value),
+                    name.apply(value), nameZh.apply(value))
+                .filter(WarframeNameNormalizer::isReadableDisplayName).findFirst().orElse(null);
+            String languageKey = nameKey.apply(value);
+            if (localizedName == null && StrUtil.isBlank(languageKey))
                 return null;
-            WarframeWorldStateCodebookEntryDTO entry = new WarframeWorldStateCodebookEntryDTO(key, localizedName,
-                Objects.toString(description.apply(value), ""), "", "dataset:" + domain.domainCode(),
-                WarframeReferenceResolutionStatus.RESOLVED, "", false);
+            // 即使当前字段只有内部键，也要保留其官方语言键供查询边界补全名称。
+            WarframeWorldStateCodebookEntryDTO entry =
+                new WarframeWorldStateCodebookEntryDTO(
+                    key, localizedName == null ? key : localizedName, Objects.toString(description.apply(value), ""),
+                    "", "dataset:" + domain.domainCode(), localizedName == null
+                        ? WarframeReferenceResolutionStatus.UNRESOLVED : WarframeReferenceResolutionStatus.RESOLVED,
+                    "", false, languageKey);
             entries.put(normalize(key), entry);
             for (String alias : Stream.of(name.apply(value), nameEn.apply(value), nameKey.apply(value)).toList()) {
                 if (StrUtil.isNotBlank(alias))

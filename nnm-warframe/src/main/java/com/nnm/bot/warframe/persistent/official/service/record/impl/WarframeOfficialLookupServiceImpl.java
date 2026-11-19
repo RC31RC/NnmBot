@@ -1,14 +1,15 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
-import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialReferenceKeys;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameIndexDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
-import com.nnm.bot.warframe.util.WarframeNameNormalizer;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,7 +53,10 @@ public class WarframeOfficialLookupServiceImpl implements WarframeOfficialLookup
             String key = WarframeOfficialNameIndexDTO.identity(domain.domainCode(), row.bkey());
             items.put(key, row);
             String terminal = row.bkey().substring(row.bkey().lastIndexOf('/') + 1);
-            Stream.of(row.bkey(), row.officialName(), row.localizedName(), terminal).filter(Objects::nonNull)
+            Stream
+                .concat(WarframeOfficialReferenceKeys.identities(domain, row.bkey()).stream(),
+                    Stream.of(row.officialName(), row.localizedName(), terminal))
+                .filter(Objects::nonNull).flatMap(value -> WarframeNameNormalizer.itemSearchNames(value).stream())
                 .map(WarframeNameNormalizer::item).filter(value -> !value.isBlank()).distinct()
                 .forEach(name -> names.computeIfAbsent(name, ignored -> new ArrayList<>()).add(key));
         }

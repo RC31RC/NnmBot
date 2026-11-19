@@ -4,8 +4,8 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.core.onebot.constant.OneBotErrorCode;
 import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants;
 import com.nnm.bot.core.onebot.connection.dto.OneBotLoginProbeDTO;
 import com.nnm.bot.core.onebot.connection.dto.OneBotLoginProbeRequestDTO;
@@ -146,22 +146,20 @@ public class OneBotAccountProbe {
 
     private static URI websocketUri(String connectionUrl) {
         if (StrUtil.isBlank(connectionUrl)) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot WebSocket 地址不能为空");
+            throw new BusinessException(OneBotErrorCode.PROBE_URL_REQUIRED);
         }
         URI uri;
         try {
             uri = URI.create(connectionUrl.trim());
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot WebSocket 地址格式不合法",
-                exception);
+            throw new BusinessException(OneBotErrorCode.PROBE_URL_INVALID, exception);
         }
         if (!OneBotProtocolConstants.WS_SCHEME.equalsIgnoreCase(uri.getScheme())
             && !OneBotProtocolConstants.WSS_SCHEME.equalsIgnoreCase(uri.getScheme())) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID,
-                "OneBot WebSocket 地址必须使用 ws 或 wss 协议");
+            throw new BusinessException(OneBotErrorCode.PROBE_URL_SCHEME_INVALID);
         }
         if (ObjectUtil.isNull(uri.getHost())) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot WebSocket 地址缺少有效主机名");
+            throw new BusinessException(OneBotErrorCode.PROBE_URL_HOST_INVALID);
         }
         return uri;
     }

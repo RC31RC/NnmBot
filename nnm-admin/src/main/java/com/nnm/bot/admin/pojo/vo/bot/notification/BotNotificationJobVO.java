@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.vo.bot.notification;
 
-import com.nnm.bot.admin.constant.BotNotificationConstants.JobStatus;
+import com.nnm.bot.admin.constant.bot.notification.BotNotificationConstants.JobStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;

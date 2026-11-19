@@ -1,7 +1,7 @@
 package com.nnm.bot.core.plugin.execution;
 
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.constant.CommonErrorCode;
 
 /** 正常业务拒绝也必须回滚；回复载荷在事务结束后由命令入口处理。 */

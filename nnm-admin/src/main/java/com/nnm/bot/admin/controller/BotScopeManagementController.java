@@ -13,7 +13,7 @@ import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeUpdateDTO;
 import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDiscoveryDTO;
 import com.nnm.bot.admin.service.bot.scope.BotScopeManagementService;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 管理机器人作用域、成员同步及平台发现结果。 */
 @RestController
 @RequestMapping("/api/admin/bot-scopes")
 public class BotScopeManagementController {
@@ -33,13 +34,13 @@ public class BotScopeManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotScopeVO>> scopes(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotScopeVO>> scopes(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeVO(service.scopes()));
     }
 
     @PostMapping("/discovery/query")
     @SaCheckPermission("bot:group:view")
-    public ApiResponse<List<BotScopeDiscoveryVO>> discovery(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotScopeDiscoveryVO>> discovery(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeDiscoveryVO(service.discover()));
     }
 
@@ -66,7 +67,7 @@ public class BotScopeManagementController {
     @PostMapping("/{id}/members/query")
     @SaCheckPermission("bot:group:view")
     public ApiResponse<List<BotScopeMemberVO>> members(@PathVariable long id,
-        @RequestBody(required = false) EmptyRequest ignored) {
+        @RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotScopeViewAssembler.toBotScopeMemberVO(service.members(id)));
     }
 

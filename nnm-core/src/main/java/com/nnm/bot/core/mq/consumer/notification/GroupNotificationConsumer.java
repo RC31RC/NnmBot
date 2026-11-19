@@ -1,10 +1,10 @@
 package com.nnm.bot.core.mq.consumer.notification;
 
-import com.nnm.bot.core.constant.NotificationConstants.LockPurpose;
-import com.nnm.bot.core.constant.NotificationConstants.GroupResultStatus;
+import com.nnm.bot.core.channel.notification.constant.NotificationConstants.LockPurpose;
+import com.nnm.bot.core.channel.notification.constant.NotificationConstants.GroupResultStatus;
 
-import com.nnm.bot.core.mq.message.notification.GroupNotificationRequest;
-import com.nnm.bot.core.message.model.BotProactiveTarget;
+import com.nnm.bot.core.mq.message.notification.GroupNotificationDTO;
+import com.nnm.bot.core.messaging.model.BotProactiveTarget;
 import io.github.rdt.lock.LockKey;
 import io.github.rdt.lock.RdtLock;
 import com.nnm.bot.core.mq.message.notification.GroupNotificationMessage;
@@ -15,7 +15,7 @@ import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
 import com.nnm.bot.core.plugin.response.ProactiveReplyDispatcher;
 import com.nnm.bot.core.plugin.response.ReplyDeliveryException;
-import com.nnm.bot.core.plugin.model.DeliveryReport;
+import com.nnm.bot.core.plugin.response.DeliveryReport;
 import io.github.rdt.lock.DistributedLockManager;
 import com.nnm.bot.core.mq.messagedescriptor.notification.GroupNotificationMessageDescriptor;
 import com.nnm.bot.core.mq.consumerdescriptor.notification.GroupNotificationConsumerDescriptor;
@@ -25,6 +25,7 @@ import jakarta.annotation.Resource;
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 
+/** 消费群通知任务并维护结果、额度与逐接收方投递状态。 */
 @Slf4j
 @RdtQueueListener(topic = GroupNotificationMessageDescriptor.TOPIC, group = GroupNotificationConsumerDescriptor.GROUP)
 public class GroupNotificationConsumer implements RdtMessageConsumer<GroupNotificationMessage> {
@@ -42,7 +43,7 @@ public class GroupNotificationConsumer implements RdtMessageConsumer<GroupNotifi
     @Override
     @RdtLock
     public void consume(GroupNotificationMessage message) {
-        GroupNotificationRequest request = message.payload();
+        GroupNotificationDTO request = message.payload();
         if (request == null || request.requestId() == null || request.expiresAt() == null
             || !Instant.now().isBefore(request.expiresAt()))
             return;

@@ -100,7 +100,7 @@ RDT 执行策略和 Warframe 拉取周期等业务策略分别放在对应配置
 ```bash
 # Configure PostgreSQL and Redis, and install the local RDT dependency first.
 # See docs/RDT接入与多实例运行.md.
-./scripts/run-dev.sh
+sh mvnw -pl nnm-app -am -Dmaven.test.skip=true spring-boot:run
 ```
 
 Robot instances and protocol connection settings are created in the admin UI and stored in

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** 接收管理端登录、登出及当前身份查询请求。 */
 @RestController
 @RequestMapping("/api/admin/auth")
 public class AuthController {

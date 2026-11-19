@@ -1,6 +1,6 @@
 package com.nnm.bot.core.config;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import io.github.rdt.support.RetryClassifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -42,16 +42,31 @@ public class WarframeOfficialPreviewCleanupTask implements RdtScheduledTask {
     @Override
     public TaskDescriptor descriptor() {
         return new TaskDescriptor() {
+            /**
+             * 返回集群调度列表中的任务名称。
+             *
+             * @return 面向管理端和调度日志的任务名称。
+             */
             @Override
             public String displayName() {
                 return "官方数据预览与快照清理";
             }
 
+            /**
+             * 返回集群级预览清理周期。
+             *
+             * @return 使用官方预览清理时区的 Cron 计划。
+             */
             @Override
             public ScheduleSpec schedule() {
                 return new ScheduleSpec.Cron(PREVIEW_CLEANUP_CRON, PREVIEW_CLEANUP_ZONE);
             }
 
+            /**
+             * 配置错过执行和调度定义变更时的处理策略。
+             *
+             * @return 单次补偿执行且允许更新定义的调度选项。
+             */
             @Override
             public ScheduleOptions options() {
                 return ScheduleOptions.builder().maxAttempts(1).misfirePolicy(ScheduleMisfirePolicy.FIRE_ONCE)

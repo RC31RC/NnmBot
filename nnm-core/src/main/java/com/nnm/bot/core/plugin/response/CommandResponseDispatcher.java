@@ -1,41 +1,39 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import com.nnm.bot.core.plugin.response.CommandReplyRouter.Selection;
-import com.nnm.bot.common.resource.ResourceScope;
-import com.nnm.bot.core.plugin.model.DeliveryReport.Item;
-import com.nnm.bot.core.plugin.model.ReplyBlock.File;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Image;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Text;
+import com.nnm.bot.core.resource.ResourceScope;
+import com.nnm.bot.core.plugin.response.DeliveryReport.Item;
+import com.nnm.bot.core.plugin.api.ReplyBlock.File;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Image;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Text;
 import java.io.InputStream;
 import java.util.Iterator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.core.config.ReplyProperties;
-import com.nnm.bot.core.message.exception.BotChannelCapabilityException;
-import com.nnm.bot.core.message.exception.BotImageRenderException;
-import com.nnm.bot.core.message.exception.BotMessageRejectedException;
-import com.nnm.bot.core.message.exception.BotMessageNotSentException;
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.message.model.PreparedBotMessage;
-import com.nnm.bot.core.message.model.BotMessageSendPermit;
-import com.nnm.bot.core.message.model.BotMessageReceipt;
-import com.nnm.bot.core.message.render.BotImageRenderer;
-import com.nnm.bot.core.plugin.model.CommandAttachment;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.PresentationPolicy;
-import com.nnm.bot.core.plugin.model.ReplyMessage;
-import com.nnm.bot.core.plugin.model.DeliveryReport;
-import com.nnm.bot.core.constant.CommandDeliveryConstants.DeliveryStatus;
-import com.nnm.bot.core.plugin.model.ReplyBlock;
-import com.nnm.bot.core.plugin.model.ResponsePlan;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.messaging.exception.BotChannelCapabilityException;
+import com.nnm.bot.core.messaging.exception.BotImageRenderException;
+import com.nnm.bot.core.messaging.exception.BotMessageRejectedException;
+import com.nnm.bot.core.messaging.exception.BotMessageNotSentException;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.PreparedBotMessage;
+import com.nnm.bot.core.messaging.model.BotMessageSendPermit;
+import com.nnm.bot.core.messaging.model.BotMessageReceipt;
+import com.nnm.bot.core.messaging.render.BotImageRenderer;
+import com.nnm.bot.core.plugin.api.CommandAttachment;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO.CommandTemplateDTO;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.api.PresentationPolicy;
+import com.nnm.bot.core.plugin.api.ReplyMessage;
+import com.nnm.bot.core.plugin.constant.CommandDeliveryConstants.DeliveryStatus;
+import com.nnm.bot.core.plugin.api.ReplyBlock;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -53,28 +51,45 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+/** 规划、准备并投递命令回复，同时收敛资源清理与发送结果。 */
 @Slf4j
 @Component
 public class CommandResponseDispatcher {
+    /** 执行具体平台的消息创建请求。 */
     @Resource
     private ReplyDeliveryExecutor deliveryExecutor;
+    /** 延迟获取可选图片渲染器，避免渲染实现成为核心启动硬依赖。 */
     @Resource
     private ObjectProvider<BotImageRenderer> imageRendererProvider;
+    /** 允许平台适配器提供可复用的图片缓存。 */
     @Resource
     private List<CommandImageCache> imageCaches = List.of();
+    /** 解码结构化命令结果中的 JSON 数据。 */
     @Resource
     private ObjectMapper objectMapper;
+    /** 将结构化结果投影为文本回复。 */
     @Resource
     private CommandDataTextFormatter dataTextFormatter;
+    /** 选择回复原消息或授权的主动发送目标。 */
     @Resource
     private CommandReplyRouter replyRouter;
+    /** 按渠道能力和展示策略规划消息分组。 */
     @Resource
     private ReplyPlanner planner;
+    /** 将关联命令追加到可交互回复中。 */
     @Resource
     private RelatedActionAppender relatedActionAppender;
+    /** 提供回复大小、像素与资源边界。 */
     @Resource
     private ReplyProperties limits;
 
+    /** 为普通命令结果创建独立资源作用域并完成回复派发。
+     *
+     * @param origin 触发命令的原消息
+     * @param command 当前运行时命令
+     * @param result 命令结果
+     * @return 每项回复的投递状态
+     */
     public DeliveryReport dispatch(BotMessageContext origin, RuntimeCommand command, CommandResult result) {
         return dispatch(origin, command, result, new ResourceScope());
     }
@@ -85,15 +100,20 @@ public class CommandResponseDispatcher {
         return dispatch(origin, command, command.configuration(), result, resources);
     }
 
+    /** 通过相同渠道能力与资源约束发送系统通知文本。
+     *
+     * @param context 目标消息上下文
+     * @param message 通知内容
+     */
     public void dispatchNotice(BotMessageContext context, String message) {
         if (message != null && !message.isBlank()) {
-            dispatch(context, null, CommandExecutionConfiguration.defaults(), CommandResult.text(message),
+            dispatch(context, null, CommandExecutionConfigurationDTO.defaults(), CommandResult.text(message),
                 new ResourceScope());
         }
     }
 
     private DeliveryReport dispatch(BotMessageContext origin, RuntimeCommand command,
-        CommandExecutionConfiguration configuration, CommandResult result, ResourceScope scope) {
+        CommandExecutionConfigurationDTO configuration, CommandResult result, ResourceScope scope) {
         List<Item> items = new ArrayList<>();
         List<String> cleanupFailures = new ArrayList<>();
         Set<CommandAttachment> resources = new LinkedHashSet<>(result.resources());
@@ -188,8 +208,8 @@ public class CommandResponseDispatcher {
 
     /** 发送单片并按显式声明执行同实例文字回退，不重做业务或切换渠道。 */
     private Item sendPreparedReply(Selection selection, RuntimeCommand command,
-        CommandExecutionConfiguration configuration, List<ResponsePlan> plans, List<PreparedBotMessage> transmissions,
-        int index) {
+        CommandExecutionConfigurationDTO configuration, List<ResponsePlan> plans,
+        List<PreparedBotMessage> transmissions, int index) {
         BotMessageContext target = selection.context();
         boolean usedTextFallback = false;
         String fallbackReason = null;
@@ -302,13 +322,13 @@ public class CommandResponseDispatcher {
         return List.copyOf(prepared);
     }
 
-    private CommandResult renderHtmlData(RuntimeCommand command, CommandExecutionConfiguration configuration,
+    private CommandResult renderHtmlData(RuntimeCommand command, CommandExecutionConfigurationDTO configuration,
         CommandResult result, Set<CommandAttachment> resources) {
         ReplyBlock.HtmlData<?> dataBlock = result.blocks().stream().filter(ReplyBlock.HtmlData.class::isInstance)
             .map(block -> (ReplyBlock.HtmlData<?>)block).findFirst().orElse(null);
         if (dataBlock == null)
             return result;
-        CommandTemplate template = configuration.template();
+        CommandTemplateDTO template = configuration.template();
         if (template == null) {
             // 未选择 HTML 模板时仍以结构化文字保留数据，不丢弃业务结果，也不拆成多条消息。
             String formatted = dataTextFormatter.format(dataBlock.data(), null);

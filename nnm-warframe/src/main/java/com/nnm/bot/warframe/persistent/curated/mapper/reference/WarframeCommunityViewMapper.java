@@ -19,12 +19,6 @@ public final class WarframeCommunityViewMapper {
     private WarframeCommunityViewMapper() {}
 
     /**
-     * 生成变更预览，供后续确认采纳。
-     *
-     * @param value 待处理的字段值。
-     * @return 社区导入差异的预览分页。
-     */
-    /**
      * 将待审核索引转换为管理员展示项。
      *
      * @param value 已过滤失效项的预览索引。
@@ -35,6 +29,12 @@ public final class WarframeCommunityViewMapper {
             value.inputCount(), value.addedCount(), value.changedCount(), value.invalidCount());
     }
 
+    /**
+     * 将当前页的社区导入差异映射为管理端展示对象。
+     *
+     * @param value 已分页的社区预览数据。
+     * @return 供管理端审核使用的预览页。
+     */
     public static WarframeCommunityPreviewPageVO preview(WarframeCommunityPreviewPageDTO value) {
         var operations = value.operations();
         var records = operations.records().stream().map(operation -> {

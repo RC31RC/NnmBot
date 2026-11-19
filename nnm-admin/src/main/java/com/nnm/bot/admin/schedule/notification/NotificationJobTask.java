@@ -11,6 +11,7 @@ import io.github.rdt.spring.annotation.RdtScheduled;
 import jakarta.annotation.Resource;
 import java.time.ZoneId;
 
+/** 定期派发到期预约通知并清理过期任务记录。 */
 @RdtScheduled(id = "bot-notification-jobs")
 public class NotificationJobTask implements RdtScheduledTask {
     @Resource

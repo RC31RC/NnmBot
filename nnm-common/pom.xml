@@ -15,10 +15,10 @@
     <description>Common utilities, exceptions, and shared infrastructure</description>
 
     <dependencies>
-        <!-- Spring Web（用于响应模型和异常处理） -->
+        <!-- Spring Web MVC（用于响应模型和异常处理） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
         <!-- 参数校验 -->

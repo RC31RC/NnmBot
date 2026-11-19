@@ -6,60 +6,23 @@ import com.nnm.bot.core.plugin.annotation.CommandTextInline;
 import java.util.List;
 
 /**
- * 世界状态命令的展示协议。仅保留玩家需要的信息，原始引用及抓取元数据留在内部投影中。 各输出模式共用这些对象，行内注解只影响文字布局，不删减字段。
+ * 世界状态命令的展示协议。仅保留玩家需要的信息；未解析字段保留原值，未完成的字段附带解析状态供人工核对，抓取元数据留在内部投影中。各输出模式共用这些对象，行内注解只影响文字布局。
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> items,
     @JsonPropertyDescription("提示") String notice,
-    @JsonPropertyDescription("未解析引用") List<UnresolvedReferenceVO> unresolvedReferences) {
+    @JsonPropertyDescription("待确认解析") List<WarframeWorldStateResolutionVO> pendingResolutions) {
 
     /**
      * 构造世界状态展示对象，并保存初始化参数。
      *
      * @param items 当前物品或成员列表。
      * @param notice 提示。
-     */
-    public WarframeWorldStateVO(List<?> items, String notice) {
-        this(items, notice, List.of());
-    }
-
-    /**
-     * 构造世界状态展示对象，并保存初始化参数。
-     *
-     * @param items 当前物品或成员列表。
-     * @param notice 提示。
-     * @param unresolvedReferences 未解析引用集合。
+     * @param pendingResolutions 尚未完全解析的字段。
      */
     public WarframeWorldStateVO {
         items = items == null ? List.of() : List.copyOf(items);
-        unresolvedReferences = unresolvedReferences == null ? List.of() : List.copyOf(unresolvedReferences);
-    }
-
-    /**
-     * 供排查数据源使用的最小原始引用记录。原始值只出现在这个列表中， 不再进入玩家正常阅读的任务、节点或奖励字段。
-     */
-    @CommandTextInline
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    public record UnresolvedReferenceVO(@JsonPropertyDescription("命令") String command,
-        @JsonPropertyDescription("字段") String fieldPath, @JsonPropertyDescription("原始值") String reference,
-        @JsonPropertyDescription("状态") String status, @JsonPropertyDescription("候选") List<String> candidates) {
-
-        /**
-         * 构造未解析引用展示对象，并保存初始化参数。
-         *
-         * @param command 命令。
-         * @param fieldPath 字段路径。
-         * @param reference 引用。
-         * @param status 状态。
-         * @param candidates 候选集合。
-         */
-        public UnresolvedReferenceVO {
-            command = command == null ? "" : command;
-            fieldPath = fieldPath == null ? "" : fieldPath;
-            reference = reference == null ? "" : reference;
-            status = status == null ? "" : status;
-            candidates = candidates == null ? List.of() : List.copyOf(candidates);
-        }
+        pendingResolutions = pendingResolutions == null ? List.of() : List.copyOf(pendingResolutions);
     }
 
     @CommandTextInline
@@ -128,7 +91,9 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record InvasionVO(@JsonPropertyDescription("节点") String node,
         @JsonPropertyDescription("进度（%）") String completion, @JsonPropertyDescription("进攻方奖励") String attackerReward,
-        @JsonPropertyDescription("防守方奖励") String defenderReward) {
+        @JsonPropertyDescription("防守方奖励") String defenderReward,
+        @JsonPropertyDescription("进攻方任务") String attackerMissions,
+        @JsonPropertyDescription("防守方任务") String defenderMissions) {
     }
 
     @CommandTextInline
@@ -185,15 +150,6 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
 
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    public record ConclaveVO(@JsonPropertyDescription("挑战") String title,
-        @JsonPropertyDescription("要求") String description, @JsonPropertyDescription("模式") String mode,
-        @JsonPropertyDescription("分类") String category, @JsonPropertyDescription("目标数量") String amount,
-        @JsonPropertyDescription("声望") String standing, @JsonPropertyDescription("结束") String expiry,
-        @JsonPropertyDescription("剩余") String remaining) {
-    }
-
-    @CommandTextInline
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record ConstructionVO(@JsonPropertyDescription("项目") String name,
         @JsonPropertyDescription("建造进度（%）") String progress) {
     }
@@ -231,15 +187,13 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record CalendarDayVO(@JsonPropertyDescription("游戏内日期") String date,
-        @JsonPropertyDescription("循环次数") String iteration,
         @JsonPropertyDescription("事件") List<CalendarEventVO> events) {
     }
 
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    public record CalendarEventVO(@JsonPropertyDescription("任务或增益") String title,
-        @JsonPropertyDescription("说明") String description, @JsonPropertyDescription("奖励") String reward,
-        @JsonPropertyDescription("剧情人物") String dialogueName) {
+    public record CalendarEventVO(@JsonPropertyDescription("挑战") String challenge,
+        @JsonPropertyDescription("说明") String description, @JsonPropertyDescription("奖励") String reward) {
     }
 
     @CommandTextInline

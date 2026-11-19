@@ -19,6 +19,7 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/** 配置管理端 Sa-Token 会话与 Web MVC 鉴权集成。 */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({AdminBootstrapProperties.class, WebCorsProperties.class})
 public class SaTokenConfig implements WebMvcConfigurer {

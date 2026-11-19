@@ -8,6 +8,15 @@ import java.util.List;
 
 /** 按世界状态协议的周期规则执行确定性计算，阶段时间采用左闭右开区间。 */
 public final class WarframeCycleCalculator {
+    private static final long EARTH_FULL_CYCLE_SECONDS = 28_800L;
+    private static final long EARTH_DAY_SECONDS = 14_400L;
+    private static final long VALLIS_FULL_CYCLE_MILLIS = 1_600_000L;
+    private static final long VALLIS_WARM_MILLIS = 400_000L;
+    private static final long CETUS_FULL_CYCLE_MILLIS = 9_000_000L;
+    private static final long CETUS_DAY_MILLIS = 6_000_000L;
+    private static final long BOUNTY_ANCHOR_MAX_FUTURE_SECONDS = 9_000L;
+    private static final String CORPUS_FACTION = "corpus";
+    private static final String GRINEER_FACTION = "grineer";
     private static final long ZARIMAN_FULL_CYCLE_MILLIS = 18_000_000L;
     private static final long ZARIMAN_STATE_MILLIS = 9_000_000L;
     private static final long DUVIRI_FULL_CYCLE_SECONDS = 36_000L;
@@ -26,9 +35,9 @@ public final class WarframeCycleCalculator {
      * @return 地球周期对象。
      */
     public static WorldStateDTO.EarthCycleDTO earth(Instant now) {
-        long phase = Math.floorMod(now.getEpochSecond(), 28_800);
-        return new WorldStateDTO.EarthCycleDTO(phase < 14_400,
-            Instant.ofEpochSecond(now.getEpochSecond() + 14_400 - phase % 14_400));
+        long phase = Math.floorMod(now.getEpochSecond(), EARTH_FULL_CYCLE_SECONDS);
+        return new WorldStateDTO.EarthCycleDTO(phase < EARTH_DAY_SECONDS,
+            Instant.ofEpochSecond(now.getEpochSecond() + EARTH_DAY_SECONDS - phase % EARTH_DAY_SECONDS));
     }
 
     /**
@@ -39,9 +48,10 @@ public final class WarframeCycleCalculator {
      * @return 奥布山谷周期对象。
      */
     public static WorldStateDTO.VallisCycleDTO vallis(Instant now, Instant warmEpoch) {
-        long phase = Math.floorMod(now.toEpochMilli() - warmEpoch.toEpochMilli(), 1_600_000);
-        boolean warm = phase < 400_000;
-        return new WorldStateDTO.VallisCycleDTO(warm, now.plusMillis((warm ? 400_000 : 1_600_000) - phase));
+        long phase = Math.floorMod(now.toEpochMilli() - warmEpoch.toEpochMilli(), VALLIS_FULL_CYCLE_MILLIS);
+        boolean warm = phase < VALLIS_WARM_MILLIS;
+        return new WorldStateDTO.VallisCycleDTO(warm,
+            now.plusMillis((warm ? VALLIS_WARM_MILLIS : VALLIS_FULL_CYCLE_MILLIS) - phase));
     }
 
     /**
@@ -58,9 +68,10 @@ public final class WarframeCycleCalculator {
         }
         // 赏金结束时间用于校准夜晚结束点；仅接受近期有效锚点，避免回退到 Unix 起点。
         Instant anchor = bountyExpiry.truncatedTo(ChronoUnit.MINUTES);
-        long phase = Math.floorMod(now.toEpochMilli() - anchor.toEpochMilli(), 9_000_000);
-        boolean day = phase < 6_000_000;
-        return new WorldStateDTO.CetusCycleDTO(day, now.plusMillis((day ? 6_000_000 : 9_000_000) - phase));
+        long phase = Math.floorMod(now.toEpochMilli() - anchor.toEpochMilli(), CETUS_FULL_CYCLE_MILLIS);
+        boolean day = phase < CETUS_DAY_MILLIS;
+        return new WorldStateDTO.CetusCycleDTO(day,
+            now.plusMillis((day ? CETUS_DAY_MILLIS : CETUS_FULL_CYCLE_MILLIS) - phase));
     }
 
     /**
@@ -85,12 +96,13 @@ public final class WarframeCycleCalculator {
         // 先扣除赏金偏移，再按分钟对齐阵营轮次的结束时间。
         // 按完整阵营阶段外推近期过期锚点，并覆盖恰好到期的边界。
         Instant anchor = calculationPoint.plusSeconds(30).truncatedTo(ChronoUnit.MINUTES);
-        long stages = Math.floorDiv(Duration.between(anchor, now).getSeconds(), ZARIMAN_STATE_MILLIS / 1_000) + 1;
+        long stages = Math.floorDiv(Duration.between(anchor, now).getSeconds(),
+            Duration.ofMillis(ZARIMAN_STATE_MILLIS).toSeconds()) + 1;
         Instant expiry = anchor.plusMillis(stages * ZARIMAN_STATE_MILLIS);
         if (Math.floorMod(stages, 2) != 0) {
             corpus = !corpus;
         }
-        return new WorldStateDTO.ZarimanCycleDTO(corpus ? "corpus" : "grineer", expiry);
+        return new WorldStateDTO.ZarimanCycleDTO(corpus ? CORPUS_FACTION : GRINEER_FACTION, expiry);
     }
 
     /**
@@ -119,6 +131,7 @@ public final class WarframeCycleCalculator {
      * @return 赏金结束时间存在且处于允许校准窗口时返回真，否则返回假。
      */
     private static boolean validBountyAnchor(Instant now, Instant expiry, Duration maxAge) {
-        return expiry != null && !expiry.isBefore(now.minus(maxAge)) && !expiry.isAfter(now.plusSeconds(9_000));
+        return expiry != null && !expiry.isBefore(now.minus(maxAge))
+            && !expiry.isAfter(now.plusSeconds(BOUNTY_ANCHOR_MAX_FUTURE_SECONDS));
     }
 }

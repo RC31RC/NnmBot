@@ -12,7 +12,7 @@ import com.nnm.bot.core.channel.port.BotChannelInstanceIdentityResolver;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.topology.BotTopologyStore;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 

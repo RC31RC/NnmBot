@@ -31,7 +31,5 @@ public class OfficialRelicStatesEntriesItemReferencesItemsRotationsItems extends
     private OfficialRelicStatesEntriesItemReferencesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems> officialRelicStatesEntriesItemReferencesItemsRotationsItemsItemsRows =
-            new ArrayList<>();
+    private List<OfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems> officialRelicStatesEntriesItemReferencesItemsRotationsItemsItemsRows = new ArrayList<>();
 }

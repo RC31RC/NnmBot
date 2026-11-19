@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStatus;
@@ -45,6 +45,11 @@ public class WarframeOfficialApprovalRecoveryServiceImpl implements WarframeOffi
     @Resource
     private WarframeOfficialImportProperties properties;
 
+    /**
+     * 按采纳时的锁顺序恢复过期暂存，并清理未被批次引用的对象。
+     *
+     * @param stagingId 刷新暂存账本标识。
+     */
     @Override
     @RdtLock
     public void recoverStaging(String stagingId) {

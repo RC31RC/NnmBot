@@ -1,6 +1,6 @@
 package com.nnm.bot.core.group.service;
 
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.group.pojo.dto.GroupCommandOutcomeDTO;
 
 /**

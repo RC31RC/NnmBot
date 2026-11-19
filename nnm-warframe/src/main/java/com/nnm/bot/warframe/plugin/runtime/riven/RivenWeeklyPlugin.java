@@ -1,14 +1,15 @@
 package com.nnm.bot.warframe.plugin.runtime.riven;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenWeeklyVO;
 import com.nnm.bot.warframe.runtime.pojo.dto.riven.WarframeRivenWeeklyCommandDTO;
 import com.nnm.bot.warframe.runtime.pojo.query.riven.WarframeRivenWeeklyQuery;
 import java.util.regex.Matcher;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.service.riven.WarframeRivenWeeklyService;
 import jakarta.annotation.Resource;
@@ -62,7 +63,7 @@ public final class RivenWeeklyPlugin extends BotPlugin<Void, WarframeRivenWeekly
             query = query.substring(0, matcher.start()).trim();
             matcher = OPTION.matcher(query);
         }
-        if (query.contains("--") || query.length() > 200) {
+        if (query.contains("--") || query.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH) {
             return new WarframeRivenWeeklyCommandDTO(query, rerolled, page, "查询过长或参数格式无效");
         }
         return new WarframeRivenWeeklyCommandDTO(query, rerolled, page, null);

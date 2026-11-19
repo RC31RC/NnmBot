@@ -1,6 +1,6 @@
 package com.nnm.bot.core.channel.model;
 
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 
 /** 身份和路由只需这些元数据，不接触连接凭据。 */
 public record BotChannelInstanceMetadata(BotPlatform platform, String instanceId, String botAccountId,

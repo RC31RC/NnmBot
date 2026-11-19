@@ -4,6 +4,7 @@ import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataCons
 import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.official.repository.rewards.custom.OfficialRelicRepositoryCustom;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialQueryAliases;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.rewards.QOfficialRelicRoot;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.rewards.QOfficialRelicStatesEntries;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.rewards.QOfficialRelicStatesEntriesRewardsItems;
@@ -18,6 +19,7 @@ import java.util.Locale;
 
 /** 跨遗物、状态、奖励三级且含覆盖排除子查询，按需启用 QueryDSL。 */
 public class OfficialRelicRepositoryCustomImpl implements OfficialRelicRepositoryCustom {
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -30,7 +32,7 @@ public class OfficialRelicRepositoryCustomImpl implements OfficialRelicRepositor
     @Override
     public List<Long> findPreferredRelicIds(String keyword) {
         QOfficialRelicRoot root = QOfficialRelicRoot.officialRelicRoot;
-        QOfficialRelicRoot self = new QOfficialRelicRoot("selfMaintainedRoot");
+        QOfficialRelicRoot self = new QOfficialRelicRoot(OfficialQueryAliases.SELF_MAINTAINED_RELIC_ROOT);
         QOfficialRelicStatesEntries state = QOfficialRelicStatesEntries.officialRelicStatesEntries;
         QOfficialRelicStatesEntriesRewardsItems reward =
             QOfficialRelicStatesEntriesRewardsItems.officialRelicStatesEntriesRewardsItems;

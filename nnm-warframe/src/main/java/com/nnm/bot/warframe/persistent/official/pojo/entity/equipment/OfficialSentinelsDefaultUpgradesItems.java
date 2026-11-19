@@ -52,7 +52,5 @@ public class OfficialSentinelsDefaultUpgradesItems extends OfficialChildRow {
     private OfficialSentinelsRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialSentinelsDefaultUpgradesItemsItemReferencesItems> officialSentinelsDefaultUpgradesItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialSentinelsDefaultUpgradesItemsItemReferencesItems> officialSentinelsDefaultUpgradesItemsItemReferencesItemsRows = new ArrayList<>();
 }

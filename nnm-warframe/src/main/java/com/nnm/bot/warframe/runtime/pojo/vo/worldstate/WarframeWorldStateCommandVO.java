@@ -2,13 +2,13 @@ package com.nnm.bot.warframe.runtime.pojo.vo.worldstate;
 
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.UnresolvedReferenceVO;
+import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
 import java.util.List;
 import java.util.Map;
 
 /** 世界状态命令、管理端和订阅监听共用的展示投影。 */
 public record WarframeWorldStateCommandVO(String text, Map<String, Object> data,
-    List<UnresolvedReferenceVO> unresolvedReferences) {
+    List<WarframeWorldStateUnresolvedReferenceDTO> unresolvedReferences) {
 
     /**
      * 构造世界状态命令展示对象，并保存初始化参数。

@@ -1,7 +1,7 @@
 package com.nnm.bot.admin.repository.bot.notification;
 
 import com.nnm.bot.admin.pojo.entity.bot.notification.BotNotificationJob;
-import com.nnm.bot.admin.constant.BotNotificationConstants.JobStatus;
+import com.nnm.bot.admin.constant.bot.notification.BotNotificationConstants.JobStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Collection;
@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/** 按状态、执行时间和所有者维护预约通知任务。 */
 public interface BotNotificationJobRepository extends JpaRepository<BotNotificationJob, UUID> {
     List<BotNotificationJob> findTop100ByOwnerIdOrderByCreatedAtDesc(long ownerId);
 

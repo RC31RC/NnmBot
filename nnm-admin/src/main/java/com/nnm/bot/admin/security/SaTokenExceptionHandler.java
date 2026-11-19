@@ -11,6 +11,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/** 将 Sa-Token 认证和权限异常转换为统一管理 API 响应。 */
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class SaTokenExceptionHandler {

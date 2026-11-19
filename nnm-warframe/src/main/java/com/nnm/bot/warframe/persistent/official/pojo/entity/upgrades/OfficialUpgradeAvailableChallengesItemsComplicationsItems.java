@@ -59,7 +59,5 @@ public class OfficialUpgradeAvailableChallengesItemsComplicationsItems extends O
     private OfficialUpgradeAvailableChallengesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialUpgradeAvailableChallengesItemsComplicationsItemsItemReferencesItems> officialUpgradeAvailableChallengesItemsComplicationsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialUpgradeAvailableChallengesItemsComplicationsItemsItemReferencesItems> officialUpgradeAvailableChallengesItemsComplicationsItemsItemReferencesItemsRows = new ArrayList<>();
 }

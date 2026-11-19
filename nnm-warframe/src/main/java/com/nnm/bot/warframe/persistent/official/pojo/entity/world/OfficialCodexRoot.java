@@ -186,7 +186,5 @@ public class OfficialCodexRoot extends OfficialRecord {
     private List<OfficialCodexItemReferencesItems> officialCodexItemReferencesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialCodexSecretTransmissionItemReferencesItems> officialCodexSecretTransmissionItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialCodexSecretTransmissionItemReferencesItems> officialCodexSecretTransmissionItemReferencesItemsRows = new ArrayList<>();
 }

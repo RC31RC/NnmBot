@@ -1,8 +1,8 @@
 package com.nnm.bot.admin.service.bot.notification.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import com.nnm.bot.admin.service.bot.notification.BotNotificationStateService;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 
 import com.nnm.bot.admin.pojo.entity.bot.notification.BotNotificationJob;
 import com.nnm.bot.admin.repository.bot.notification.BotNotificationJobRepository;
@@ -22,7 +22,7 @@ public class BotNotificationStateServiceImpl implements BotNotificationStateServ
     @Transactional
     public BotNotificationJob update(UUID id, Consumer<BotNotificationJob> change) {
         BotNotificationJob job =
-            jobs.lockById(id).orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "通知任务不存在"));
+            jobs.lockById(id).orElseThrow(() -> new BusinessException(BotManagementErrorCode.NOTIFICATION_NOT_FOUND));
         change.accept(job);
         job.setUpdatedAt(Instant.now());
         return jobs.save(job);

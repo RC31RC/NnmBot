@@ -6,10 +6,10 @@ import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.runtime.pojo.query.riven.WarframeRivenWeeklyQuery;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenWeeklyManagementVO;
 import static com.nnm.bot.warframe.runtime.constant.WarframeRuntimeQueryConstants.*;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.warframe.runtime.constant.WarframeRivenErrorCode;
+import com.nnm.bot.common.error.BusinessException;
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.util.WarframeNameNormalizer;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenWeaponDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.riven.RivenWeeklyEntryDTO;
 import java.io.IOException;
@@ -73,9 +73,9 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
         Boolean rerolled = conditions.rerolled();
         int page = conditions.current() == null ? 1 : conditions.current();
         int pageSize = conditions.size() == null ? DEFAULT_PAGE_SIZE : conditions.size();
-        BusinessAssert.isTrue(pageSize > 0 && pageSize <= MAX_PAGE_SIZE, CommonErrorCode.PARAM_INVALID);
+        BusinessAssert.isTrue(pageSize > 0 && pageSize <= MAX_PAGE_SIZE, WarframeRivenErrorCode.WEEKLY_QUERY_INVALID);
         if (!properties.getSources().containsKey(platform) || page < 1) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "无效的裂罅周统计平台或页码");
+            throw new BusinessException(WarframeRivenErrorCode.WEEKLY_QUERY_INVALID);
         }
         Snapshot snapshot = snapshot(platform);
         List<EntryVO> entries = entries(snapshot, query, rerolled);
@@ -103,7 +103,7 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
         int size = query.size() == null ? DEFAULT_PAGE_SIZE : query.size();
         BusinessAssert.isTrue(
             properties.getSources().containsKey(platform) && current > 0 && size > 0 && size <= MAX_PAGE_SIZE,
-            CommonErrorCode.PARAM_INVALID);
+            WarframeRivenErrorCode.WEEKLY_QUERY_INVALID);
         Cache cache = Objects.requireNonNull(cacheManager.getCache(WarframeCacheNames.RIVEN_WEEKLY));
         Snapshot snapshot = cache.get(platform, Snapshot.class);
         if (snapshot == null) {

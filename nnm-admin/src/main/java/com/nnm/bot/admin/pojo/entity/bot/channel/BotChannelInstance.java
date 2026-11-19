@@ -2,7 +2,7 @@ package com.nnm.bot.admin.pojo.entity.bot.channel;
 
 import cn.hutool.core.util.ObjectUtil;
 
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.service.system.impl;
 
-import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.admin.constant.rbac.RbacErrorCode;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.dev33.satoken.session.SaSession;
@@ -12,7 +12,7 @@ import com.nnm.bot.admin.pojo.dto.system.SessionDTO;
 import com.nnm.bot.admin.repository.system.SysUserRepository;
 import com.nnm.bot.admin.service.system.OnlineSessionService;
 import com.nnm.bot.admin.service.system.OperationAuditService;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 
+/** 从 Sa-Token 会话存储枚举在线账号并执行会话下线。 */
 @Service
 public class OnlineSessionServiceImpl implements OnlineSessionService {
 
@@ -45,7 +46,7 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
         StpLogic logic = StpUtil.getStpLogic();
         Object loginId = logic.getLoginIdByToken(token);
         if (ObjectUtil.isNull(loginId)) {
-            throw new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "在线会话不存在");
+            throw new BusinessException(RbacErrorCode.ONLINE_SESSION_NOT_FOUND);
         }
         logic.kickoutByTokenValue(token);
         auditService.record("SESSION_KICKOUT", "SESSION", loginId, "强制下线指定会话");

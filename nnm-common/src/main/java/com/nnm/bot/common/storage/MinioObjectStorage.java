@@ -27,15 +27,20 @@ import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/** 通过共享 MinIO 客户端执行限流的对象存储操作。 */
 @Service
 public class MinioObjectStorage implements ObjectStorage {
 
+    /** 使用与 SDK 共用的连接池和超时配置。 */
     @Resource
     private MinioClient objectStorageClient;
+    /** 提供 bucket、键校验与并发上限。 */
     @Resource
     private ObjectStorageProperties properties;
+    /** 公平信号量限制进程内的同步存储请求数。 */
     private Semaphore permits;
 
+    /** 根据配置初始化请求许可数。 */
     @PostConstruct
     void initialize() {
         permits = new Semaphore(properties.getMaxConcurrentRequests(), true);

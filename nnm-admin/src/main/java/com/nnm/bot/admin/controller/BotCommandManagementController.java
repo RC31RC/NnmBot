@@ -14,7 +14,7 @@ import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandSaveDTO;
 import com.nnm.bot.admin.pojo.dto.bot.command.BotCommandSystemRoleSaveDTO;
 import com.nnm.bot.admin.service.bot.command.BotCommandManagementService;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 管理机器人命令定义、权限及执行配置。 */
 @RestController
 @RequestMapping("/api/admin/bot-commands")
 public class BotCommandManagementController {
@@ -34,7 +35,7 @@ public class BotCommandManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:command:view")
-    public ApiResponse<List<BotCommandVO>> commands(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotCommandVO>> commands(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandVO(service.commands()));
     }
 
@@ -48,7 +49,7 @@ public class BotCommandManagementController {
     @PostMapping("/{code}/robot-roles/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<List<BotCommandRoleVO>> roles(@PathVariable String code,
-        @RequestBody(required = false) EmptyRequest ignored) {
+        @RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandRoleVO(service.roles(code)));
     }
 
@@ -62,7 +63,7 @@ public class BotCommandManagementController {
     @PostMapping("/{code}/system-role-ids/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<List<Long>> systemRoleIds(@PathVariable String code,
-        @RequestBody(required = false) EmptyRequest ignored) {
+        @RequestBody(required = false) EmptyDTO ignored) {
         // 角色详情复用系统管理的 /roles；这里仅返回命令已绑定的主键。
         return ApiResponse.ok(service.systemRoleIds(code));
     }
@@ -78,7 +79,7 @@ public class BotCommandManagementController {
     @PostMapping("/{code}/cost/query")
     @SaCheckPermission("bot:command:view")
     public ApiResponse<BotCommandCostVO> cost(@PathVariable String code,
-        @RequestBody(required = false) EmptyRequest ignored) {
+        @RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotCommandViewAssembler.toBotCommandCostVO(service.cost(code)));
     }
 

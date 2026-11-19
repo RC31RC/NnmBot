@@ -58,10 +58,11 @@
 
         <!-- 认证 -->
         <sa-token.version>1.45.0</sa-token.version>
+        <justauth.version>2.1.0</justauth.version>
         <rdt.version>1.0.0-SNAPSHOT</rdt.version>
 
         <!-- 通用工具 -->
-        <commons-lang3.version>3.17.0</commons-lang3.version>
+        <commons-lang3.version>3.21.0</commons-lang3.version>
         <commons-text.version>1.13.0</commons-text.version>
         <hutool.version>5.8.27</hutool.version>
 
@@ -169,6 +170,11 @@
                 <groupId>cn.dev33</groupId>
                 <artifactId>sa-token-spring-boot4-starter</artifactId>
                 <version>${sa-token.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dromara.justauth</groupId>
+                <artifactId>JustAuth</artifactId>
+                <version>${justauth.version}</version>
             </dependency>
 
             <!-- VaultS3 使用 S3 兼容协议，沿用 OkHttp 4.x。 -->

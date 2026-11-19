@@ -6,7 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.client.source.WarframeOfficialSourceClient;
@@ -114,7 +114,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
                 .collect(Collectors.toMap(WarframeOfficialFile::getProductPath, file -> file));
         List<WarframeOfficialFile> states = files.stream().map(item -> {
             BusinessAssert.notNull(WarframeOfficialDataDomain.fromPath(item.path()),
-                WarframeManagementErrorCode.DATASET_INVALID, "未登记的 Nnm JSON 路径：" + item.path());
+                OfficialApprovalErrorCode.FILE_PATH_UNKNOWN);
             WarframeOfficialFile state = existing.getOrDefault(item.path(), new WarframeOfficialFile());
             state.setProductPath(item.path());
             state.setCandidateSha256(item.sha256());
@@ -165,8 +165,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
                     continue;
                 }
                 OfficialRecordDTO before = stored.get(old.getId());
-                BusinessAssert.notNull(before, WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT,
-                    "数据库中缺少官方记录详情：" + item.identity());
+                BusinessAssert.notNull(before, OfficialApprovalErrorCode.RECORD_DETAILS_MISSING);
                 List<WarframeOfficialFieldChangeDTO> fields = fieldChanges(before, after, item);
                 compareRoot(old, item, fields);
                 if (!fields.isEmpty())
@@ -208,11 +207,11 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
         Set<String> matched = new HashSet<>();
         readBatches(incoming, rows -> {
             BusinessAssert.isTrue(rows.stream().allMatch(item -> path.equals(item.path())),
-                WarframeManagementErrorCode.DATASET_INVALID, "解析结果含未选定文件");
+                OfficialApprovalErrorCode.FILE_SELECTION_INVALID);
             if (category == ChangeType.REMOVED) {
                 for (OfficialImportRecordDTO item : rows)
                     BusinessAssert.isTrue(!approvedKeys.contains(item.recordKey()),
-                        WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT, "待删除键仍在候选文件中：" + item.recordKey());
+                        OfficialApprovalErrorCode.DELETED_KEY_STILL_PRESENT);
                 return;
             }
             List<OfficialImportRecordDTO> selectedRows =
@@ -254,8 +253,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
                 records.flush();
             });
         } else {
-            BusinessAssert.equals(matched, approvedKeys, WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT,
-                "获准的业务键不在候选文件中：" + path);
+            BusinessAssert.equals(matched, approvedKeys, OfficialApprovalErrorCode.APPROVED_KEY_MISSING);
         }
     }
 
@@ -269,10 +267,9 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
         datasetFiles.findFirstByProductPath(file.path()).orElseThrow(
             () -> new SystemException(OfficialApprovalErrorCode.APPLY_STATE_INCONSISTENT, "官方文件行不存在：" + file.path()));
         var job = applyFiles.lockById(jobId).orElseThrow();
-        BusinessAssert.isTrue(
-            job.getProductPath().equals(file.path()) && ApplyFileStatus.RUNNING.name().equals(job.getStatus())
-                && ownerToken.equals(job.getOwnerToken()),
-            WarframeManagementErrorCode.DATASET_PREVIEW_CONFLICT, "文件认领已过期，不能继续提交");
+        BusinessAssert.isTrue(job.getProductPath().equals(file.path())
+            && ApplyFileStatus.RUNNING.name().equals(job.getStatus()) && ownerToken.equals(job.getOwnerToken()),
+            OfficialApprovalErrorCode.FILE_OWNER_EXPIRED);
         WarframeOfficialImportBatch batch = batches.findById(job.getBatchId()).orElseThrow();
         BusinessAssert.isTrue(
             ImportStatus.APPLYING.name().equals(batch.getStatus())
@@ -321,8 +318,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
                 .collect(Collectors.toMap(WarframeOfficialFile::getProductPath, file -> file));
         for (OfficialFileDigestDTO item : incoming) {
             WarframeOfficialDataDomain type = WarframeOfficialDataDomain.fromPath(item.path());
-            BusinessAssert.notNull(type, WarframeManagementErrorCode.DATASET_INVALID,
-                "没有对应的 Nnm JSON 文件契约：" + item.path());
+            BusinessAssert.notNull(type, OfficialApprovalErrorCode.FILE_CONTRACT_MISSING);
             WarframeOfficialFile file = previousFiles.getOrDefault(item.path(), new WarframeOfficialFile());
             file.setProductPath(type.productPath());
             file.setAdoptedSha256(item.sha256());
@@ -358,14 +354,12 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
         var input = WarframeOfficialInputParser.parseCompleteJson(objectMapper, item.domain(), item.rawJson());
         // 审核入口也会接收已解析记录，不能只依赖文件适配器检查商品身份。
         if (input instanceof OfficialRivenWeaponDTO weapon && weapon.isPresent("marketListings")) {
-            BusinessAssert.isTrue(weapon.getMarketListings() != null, WarframeManagementErrorCode.DATASET_INVALID,
-                "裂罅武器商品列表不能为空");
+            BusinessAssert.isTrue(weapon.getMarketListings() != null, OfficialApprovalErrorCode.RIVEN_LISTINGS_MISSING);
             Set<String> ids = new HashSet<>();
             for (var listing : weapon.getMarketListings()) {
                 BusinessAssert.isTrue(
                     listing != null && StrUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()),
-                    WarframeManagementErrorCode.DATASET_INVALID,
-                    "裂罅商品稳定 id 缺失或重复：" + item.path() + "#" + item.recordKey());
+                    OfficialApprovalErrorCode.RIVEN_LISTING_ID_INVALID);
             }
         }
         return input;

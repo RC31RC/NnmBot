@@ -196,7 +196,5 @@ public class OfficialDropTableGroupsItemsRewardsItems extends OfficialChildRow {
     private OfficialDropTableGroupsItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialDropTableGroupsItemsRewardsItemsItemCandidatesItems> officialDropTableGroupsItemsRewardsItemsItemCandidatesItemsRows =
-            new ArrayList<>();
+    private List<OfficialDropTableGroupsItemsRewardsItemsItemCandidatesItems> officialDropTableGroupsItemsRewardsItemsItemCandidatesItemsRows = new ArrayList<>();
 }

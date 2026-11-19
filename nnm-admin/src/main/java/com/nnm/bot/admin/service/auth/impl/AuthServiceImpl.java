@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.service.auth.impl;
 
-import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.admin.constant.AdminAuthErrorCode;
 import com.nnm.bot.admin.pojo.dto.auth.LoginDTO;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -13,7 +13,7 @@ import com.nnm.bot.admin.pojo.dto.auth.RefreshTokenDTO;
 import com.nnm.bot.admin.pojo.dto.auth.UserInfoDTO;
 import com.nnm.bot.admin.repository.system.SysUserRepository;
 import com.nnm.bot.admin.service.auth.AuthService;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
 
+/** 校验后台账号凭据并维护 Sa-Token 登录会话。 */
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -32,12 +33,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginTokenDTO login(LoginDTO request) {
         SysUser user = userRepository.findByUsernameIgnoreCase(request.userName().trim())
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "用户名或密码错误"));
+            .orElseThrow(() -> new BusinessException(AdminAuthErrorCode.INVALID_CREDENTIALS));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "用户名或密码错误");
+            throw new BusinessException(AdminAuthErrorCode.INVALID_CREDENTIALS);
         }
         if (!user.isEnabled()) {
-            throw new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用");
+            throw new BusinessException(AdminAuthErrorCode.ACCOUNT_UNAVAILABLE);
         }
 
         return login(user.getId());
@@ -48,11 +49,11 @@ public class AuthServiceImpl implements AuthService {
         String token = request.token().trim();
         Object loginId = StrUtil.isBlank(token) ? null : StpUtil.getLoginIdByToken(token);
         if (loginId == null || StrUtil.isBlank(String.valueOf(loginId))) {
-            throw new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "登录令牌无效");
+            throw new BusinessException(AdminAuthErrorCode.TOKEN_INVALID);
         }
         long userId = parseLoginId(loginId);
         SysUser user = userRepository.findWithAuthoritiesById(userId).filter(SysUser::isEnabled)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
+            .orElseThrow(() -> new BusinessException(AdminAuthErrorCode.ACCOUNT_UNAVAILABLE));
 
         StpUtil.renewTimeout(token, SaManager.getConfig().getTimeout());
         return new LoginTokenDTO(token);
@@ -66,7 +67,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public UserInfoDTO currentUser(long userId) {
         SysUser user = userRepository.findWithAuthoritiesById(userId).filter(SysUser::isEnabled)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
+            .orElseThrow(() -> new BusinessException(AdminAuthErrorCode.ACCOUNT_UNAVAILABLE));
 
         List<String> roles =
             user.getRoles().stream().filter(role -> role.isEnabled()).map(role -> role.getCode()).sorted().toList();
@@ -90,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
         try {
             return Long.parseLong(String.valueOf(loginId));
         } catch (NumberFormatException e) {
-            throw new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "登录令牌无效");
+            throw new BusinessException(AdminAuthErrorCode.TOKEN_INVALID);
         }
     }
 

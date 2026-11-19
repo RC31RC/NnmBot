@@ -1,6 +1,6 @@
 package com.nnm.bot.core.onebot.config;
 
-import com.nnm.bot.core.constant.onebot.OneBotConstants.FileTransferMode;
+import com.nnm.bot.core.onebot.constant.OneBotConstants.FileTransferMode;
 
 import cn.hutool.core.util.ObjectUtil;
 
@@ -19,13 +19,21 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "nnm.bot.channels.onebot")
 public class OneBotProperties {
 
+    /** 登录探测超时。 */
     private Duration probeTimeout = Duration.ofSeconds(8);
+    /** 单次 WebSocket 发送的超时预算。 */
     private Duration sendTimeLimit = Duration.ofSeconds(30);
+    /** WebSocket 单帧允许的最大缓冲区，单位为字节。 */
     private int sendBufferSizeBytes = 16 * 1024 * 1024;
+    /** 协议文件传输方式；AUTO 根据对端能力选择。 */
     private FileTransferMode fileTransferMode = FileTransferMode.AUTO;
+    /** 临时文件暂存目录。 */
     private Path fileStagingDirectory = Path.of(System.getProperty("user.dir"), "data", "onebot-files");
+    /** 分块文件传输的原始内容块大小，单位为字节。 */
     private int fileStreamChunkSizeBytes = 512 * 1024;
+    /** 单次文件流允许的最大总字节数。 */
     private long fileStreamMaxBytes = 128L * 1024 * 1024;
+    /** 暂存文件的保留时长。 */
     private Duration fileStreamRetention = Duration.ofMinutes(15);
 
     public Duration getProbeTimeout() {
@@ -92,6 +100,11 @@ public class OneBotProperties {
         this.fileStreamRetention = fileStreamRetention;
     }
 
+    /** 返回可传给协议客户端的发送超时毫秒数。
+     *
+     * @return 正整数毫秒
+     * @throws IllegalArgumentException 超时为空、非正数或超出客户端范围
+     */
     public int sendTimeLimitMillis() {
         if (ObjectUtil.isNull(sendTimeLimit)) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.send-time-limit must not be null");
@@ -104,6 +117,11 @@ public class OneBotProperties {
         return (int)millis;
     }
 
+    /** 返回暂存文件保留时长的毫秒数。
+     *
+     * @return 正整数毫秒
+     * @throws IllegalArgumentException 保留时长为空、非正数或溢出
+     */
     public long fileStreamRetentionMillis() {
         if (ObjectUtil.isNull(fileStreamRetention)) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.file-stream-retention must not be null");
@@ -115,6 +133,10 @@ public class OneBotProperties {
         return millis;
     }
 
+    /** 在启动时校验协议限制及编码后帧大小。
+     *
+     * @throws IllegalArgumentException 参数非法或分块超出发送缓冲区预算
+     */
     public void validateDefaults() {
         if (ObjectUtil.isNull(probeTimeout) || probeTimeout.isZero() || probeTimeout.isNegative()) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.probe-timeout must be positive");

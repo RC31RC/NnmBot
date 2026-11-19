@@ -1,18 +1,18 @@
 package com.nnm.bot.core.mq.messagedescriptor.discovery;
 
 import com.nnm.bot.core.mq.consumerdescriptor.discovery.OneBotScopeDiscoveryConsumerDescriptor;
-import com.nnm.bot.core.mq.message.discovery.OneBotScopeDiscoveryRequest;
+import com.nnm.bot.core.mq.message.discovery.OneBotScopeDiscoveryDTO;
 import io.github.rdt.queue.ConsumerDescriptor;
 import io.github.rdt.queue.MessageDescriptor;
 import io.github.rdt.queue.QueueMode;
 
 /** 主题与投递模式不依赖消息载荷或远端元数据。 */
-public abstract class OneBotScopeDiscoveryMessageDescriptor extends MessageDescriptor<OneBotScopeDiscoveryRequest> {
+public abstract class OneBotScopeDiscoveryMessageDescriptor extends MessageDescriptor<OneBotScopeDiscoveryDTO> {
     public static final String TOPIC = "onebot-scope-discovery";
 
     protected OneBotScopeDiscoveryMessageDescriptor() {}
 
-    protected OneBotScopeDiscoveryMessageDescriptor(OneBotScopeDiscoveryRequest payload) {
+    protected OneBotScopeDiscoveryMessageDescriptor(OneBotScopeDiscoveryDTO payload) {
         super(payload);
     }
 

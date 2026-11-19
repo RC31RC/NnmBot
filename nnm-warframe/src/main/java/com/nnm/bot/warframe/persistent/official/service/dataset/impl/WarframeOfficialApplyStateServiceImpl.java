@@ -4,8 +4,8 @@ import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataCons
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
@@ -59,12 +59,18 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
     @Resource
     private ObjectMapper objectMapper;
 
+    /**
+     * 在短事务中冻结审批选择并标记批次开始采纳。
+     *
+     * @param batchId 待采纳批次标识。
+     * @param selection 管理员确认的文件分类和记录选择。
+     */
     @Override
     @Transactional
     public void freeze(String batchId, WarframeOfficialApplyDTO selection) {
         var head = heads.findFirstById(IMPORT_HEAD_ID).orElseThrow();
         BusinessAssert.isTrue(!batches.existsByStatus(ImportStatus.APPLYING.name()),
-            WarframeManagementErrorCode.DATASET_REFRESH_BLOCKED, "另一批官方预览正在采纳");
+            OfficialApprovalErrorCode.OTHER_APPLY_IN_PROGRESS);
         WarframeOfficialImportBatch batch = batches.lockById(batchId).orElse(null);
         BusinessAssert.isTrue(batch != null && ImportStatus.PENDING.name().equals(batch.getStatus())
             && batch.getExpiresAt().isAfter(Instant.now()), WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
@@ -84,6 +90,12 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
             .changes().stream().anyMatch(item -> path.equals(item.path()) && type.name().equals(item.changeType()));
     }
 
+    /**
+     * 按冻结选择创建文件工作项并记录剩余差异计划。
+     *
+     * @param batchId 已进入采纳状态的批次标识。
+     * @param plan 对象存储生成的差异计划。
+     */
     @Override
     @Transactional
     public void prepared(String batchId, OfficialFilteredChangesDTO plan) {
@@ -105,7 +117,7 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
             selection.changes().stream().allMatch(item -> item != null && paths.contains(item.path()))
                 && selection.excluded().stream().allMatch(item -> item != null && paths.contains(item.path()))
                 && selection.allGroups().stream().allMatch(item -> item != null && paths.contains(item.path())),
-            WarframeManagementErrorCode.DATASET_INVALID, "选择中包含不属于此预览的文件");
+            OfficialApprovalErrorCode.SELECTION_FILE_INVALID);
         // 未选中的文件差异不生成工作项；已采纳 SHA 与候选相同的零差异文件也不重复入库。
         Map<String, WarframeOfficialPreviewDTO.FileChangeDTO> previews =
             read(batch.getPreviewJson(), WarframeOfficialPreviewDTO.class).files().stream()
@@ -145,12 +157,17 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
         BusinessAssert.isTrue(
             plan.matchedSelections() > 0
                 || plan.remainingCounts().values().stream().mapToInt(Integer::intValue).sum() == 0,
-            WarframeManagementErrorCode.DATASET_INVALID, "请至少选择一条待审核差异");
+            OfficialApprovalErrorCode.SELECTION_REQUIRED);
         batch.setApplyPlanJson(write(plan));
         batch.setApplyingAt(Instant.now());
         batches.save(batch);
     }
 
+    /**
+     * 认领一个尚未完成且当前可执行的文件工作项。
+     *
+     * @return 本次认领的文件；没有可执行项时返回空。
+     */
     @Override
     @Transactional
     public Optional<WarframeOfficialApplyFile> claim() {
@@ -179,6 +196,13 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
         return Optional.empty();
     }
 
+    /**
+     * 记录当前文件工作项失败并释放或更新其认领状态。
+     *
+     * @param jobId 文件工作项标识。
+     * @param owner 当前认领者的唯一令牌。
+     * @param error 本次处理失败原因。
+     */
     @Override
     @Transactional
     public void fail(UUID jobId, UUID owner, Exception error) {
@@ -195,6 +219,12 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
         jobs.save(job);
     }
 
+    /**
+     * 将差异准备失败写入批次状态，供管理端检查或重试。
+     *
+     * @param batchId 审批批次标识。
+     * @param error 准备阶段失败原因。
+     */
     @Override
     @Transactional
     public void failPreparation(String batchId, Exception error) {
@@ -208,6 +238,11 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
         }
     }
 
+    /**
+     * 汇总文件工作项并在全部结束后提交批次终态。
+     *
+     * @param batchId 审批批次标识。
+     */
     @Override
     @Transactional
     public void finish(String batchId) {
@@ -255,6 +290,11 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
         return plan.remainingFileCounts().getOrDefault(path, Map.of()).getOrDefault(type.name(), 0);
     }
 
+    /**
+     * 重新开放仍在保留期内的失败工作项，不重放已提交分类。
+     *
+     * @param batchId 部分采纳失败的批次标识。
+     */
     @Override
     @Transactional
     public void retry(String batchId) {
@@ -299,6 +339,11 @@ public class WarframeOfficialApplyStateServiceImpl implements WarframeOfficialAp
      * 在批次行锁内使失败数据过期，与人工重试互斥；运行中的文件仍可完成。
      *
      * @param batchId 需要检查的失败批次。
+     */
+    /**
+     * 将失败批次标记为不可重试并结束原件保留流程。
+     *
+     * @param batchId 到达重试保留期限的批次标识。
      */
     @Override
     @Transactional

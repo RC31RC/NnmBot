@@ -1,9 +1,9 @@
 package com.nnm.bot.warframe.persistent.curated.event;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.transaction.AfterCommitExecutor;
-import com.nnm.bot.warframe.config.cache.DatasetRevisionDTO;
-import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.mq.message.dataset.DatasetRevisionDTO;
+import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeCacheErrorCode;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.mq.message.persistent.curated.reference.WarframeCommunityDatasetInvalidationMessage;
@@ -39,7 +39,7 @@ public class WarframeCommunityDataChangePublisher {
         locks.save(row);
         afterCommitExecutor.executeOnce(WarframeDatasetCacheNames.community(dataset), () -> {
             var change = new DatasetRevisionDTO(WarframeDatasetCacheNames.community(dataset), row.getDataRevision());
-            cache.observe(change);
+            cache.observe(change.dataset(), change.revision());
             try {
                 messages.send(new WarframeCommunityDatasetInvalidationMessage(change));
             } catch (RuntimeException exception) {

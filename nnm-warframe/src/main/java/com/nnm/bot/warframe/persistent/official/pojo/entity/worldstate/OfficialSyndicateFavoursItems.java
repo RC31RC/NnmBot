@@ -76,7 +76,5 @@ public class OfficialSyndicateFavoursItems extends OfficialChildRow {
     private OfficialSyndicateRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialSyndicateFavoursItemsItemReferencesItems> officialSyndicateFavoursItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialSyndicateFavoursItemsItemReferencesItems> officialSyndicateFavoursItemsItemReferencesItemsRows = new ArrayList<>();
 }

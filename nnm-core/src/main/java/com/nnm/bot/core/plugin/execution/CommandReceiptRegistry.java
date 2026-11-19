@@ -1,10 +1,10 @@
 package com.nnm.bot.core.plugin.execution;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.config.BotCacheProperties;
 import com.nnm.bot.core.config.CommandRoutingProperties;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;

@@ -1,0 +1,85 @@
+{
+  "expiry": 1792784535703,
+  "bounties": {
+    "ZarimanSyndicate": [
+      {
+        "node": "SolNode235",
+        "challenge": "/Lotus/Types/Challenges/Zariman/ZarimanMobDefProtectShieldsChallenge"
+      },
+      {
+        "node": "SolNode233",
+        "challenge": "/Lotus/Types/Challenges/Zariman/ZarimanFindMelicaCacheChallenge"
+      },
+      {
+        "node": "SolNode231",
+        "challenge": "/Lotus/Types/Challenges/Zariman/ZarimanExterminateFastCompleteChallenge"
+      },
+      {
+        "node": "SolNode232",
+        "challenge": "/Lotus/Types/Challenges/Zariman/ZarimanCascadeCompleteWavesHardChallenge"
+      },
+      {
+        "node": "SolNode230",
+        "challenge": "/Lotus/Types/Challenges/Zariman/ZarimanCorruptionCollectLargeOrbsVeryHardChallenge"
+      }
+    ],
+    "EntratiLabSyndicate": [
+      {
+        "node": "SolNode716",
+        "challenge": "/Lotus/Types/Challenges/EntratiLab/EntratiLabRangedMechWeakpointEasyChallenge"
+      },
+      {
+        "node": "SolNode721",
+        "challenge": "/Lotus/Types/Challenges/EntratiLab/EntratiLabLootCratesChallenge"
+      },
+      {
+        "node": "SolNode718",
+        "challenge": "/Lotus/Types/Challenges/EntratiLab/EntratiLabKillVialedEnemyChallenge"
+      },
+      {
+        "node": "SolNode715",
+        "challenge": "/Lotus/Types/Challenges/EntratiLab/EntratiLabKillVoidRigChallenge"
+      },
+      {
+        "node": "SolNode719",
+        "challenge": "/Lotus/Types/Challenges/EntratiLab/EntratiLabKillFlyingMurmurChallenge"
+      }
+    ],
+    "HexSyndicate": [
+      {
+        "node": "SolNode851",
+        "challenge": "/Lotus/Types/Challenges/Vania/VaniaDestroyPropsEasy",
+        "ally": "/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/QuincyAllyAgent"
+      },
+      {
+        "node": "SolNode856",
+        "challenge": "/Lotus/Types/Challenges/Vania/VaniaDestroyHazardsEasy",
+        "ally": "/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/AmirAllyAgent"
+      },
+      {
+        "node": "SolNode850",
+        "challenge": "/Lotus/Types/Challenges/Vania/VaniaDestroyPropsNormal",
+        "ally": "/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/AoiAllyAgent"
+      },
+      {
+        "node": "SolNode853",
+        "challenge": "/Lotus/Types/Challenges/Vania/VaniaDestroyVehiclesHard",
+        "ally": "/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/ArthurAllyAgent"
+      },
+      {
+        "node": "SolNode858",
+        "challenge": "/Lotus/Types/Challenges/Vania/VaniaHighKillVeryHard",
+        "ally": "/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/LettieAllyAgent"
+      },
+      {
+        "node": "SolNode852",
+        "challenge": "/Lotus/Types/Challenges/Vania/VaniaSafeCracker",
+        "ally": "/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/EleanorAllyAgent"
+      },
+      {
+        "node": "SolNode852",
+        "challenge": "/Lotus/Types/Challenges/Vania/Lich/LichVaniaAbilityKill"
+      }
+    ]
+  }
+}

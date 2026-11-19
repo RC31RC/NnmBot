@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.service.dataset;
 
-import com.nnm.bot.common.task.AdminTaskSubmission;
+import com.nnm.bot.core.task.pojo.dto.AdminTaskSubmissionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialApplyDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.WarframeOfficialRefreshConflictDTO;
 
@@ -21,7 +21,7 @@ public interface WarframeOfficialRefreshAdmissionService {
      * @param productPath 单文件路径；全量为 null。
      * @return 已登记的后台任务标识。
      */
-    AdminTaskSubmission submit(String ref, String productPath);
+    AdminTaskSubmissionDTO submit(String ref, String productPath);
 
     /**
      * 在同一准入锁下丢弃冲突预览并重新提交刷新。
@@ -30,7 +30,7 @@ public interface WarframeOfficialRefreshAdmissionService {
      * @param productPath 单文件路径；全量为 null。
      * @return 已登记的后台任务标识。
      */
-    AdminTaskSubmission discardAndSubmit(String ref, String productPath);
+    AdminTaskSubmissionDTO discardAndSubmit(String ref, String productPath);
 
     /**
      * 与刷新共用准入锁，审核中的批次不可被刷新或丢弃抢先处理。
@@ -39,7 +39,7 @@ public interface WarframeOfficialRefreshAdmissionService {
      * @param selection 待采纳选择。
      * @return 后台采纳任务。
      */
-    AdminTaskSubmission submitApply(String id, WarframeOfficialApplyDTO selection);
+    AdminTaskSubmissionDTO submitApply(String id, WarframeOfficialApplyDTO selection);
 
     /**
      * 在共享准入锁内丢弃待审预览，不能越过已排队或执行中的采纳。
@@ -49,5 +49,5 @@ public interface WarframeOfficialRefreshAdmissionService {
     void discardPreview(String id);
 
     /** 仅重试同一审批中失败的文件，不重新选择或采纳已完成分类。 */
-    AdminTaskSubmission retryApply(String id);
+    AdminTaskSubmissionDTO retryApply(String id);
 }

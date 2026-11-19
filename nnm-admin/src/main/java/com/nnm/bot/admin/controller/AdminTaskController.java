@@ -1,14 +1,16 @@
 package com.nnm.bot.admin.controller;
 
-import com.nnm.bot.common.task.AdminTaskService.TaskSubscription;
+import com.nnm.bot.core.task.service.AdminTaskService.TaskSubscription;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter.SseEventBuilder;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.exception.DataNotFoundException;
-import com.nnm.bot.common.task.AdminTaskEvent;
-import com.nnm.bot.common.task.AdminTaskService;
-import com.nnm.bot.common.constant.TaskConstants.AdminTaskStatus;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.core.task.constant.AdminTaskErrorCode;
+import com.nnm.bot.core.task.pojo.dto.AdminTaskDTO;
+import com.nnm.bot.core.task.service.AdminTaskService;
+import com.nnm.bot.core.task.constant.TaskConstants.AdminTaskStatus;
+import com.nnm.bot.admin.pojo.vo.task.AdminTaskVO;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -47,10 +49,9 @@ public class AdminTaskController {
     private ThreadPoolTaskScheduler taskScheduler;
 
     @PostMapping("/{taskId}")
-    public ApiResponse<AdminTaskEvent> get(@PathVariable UUID taskId,
-        @RequestBody(required = false) EmptyRequest ignored) {
-        AdminTaskEvent event = findAuthorized(taskId);
-        return ApiResponse.ok(event);
+    public ApiResponse<AdminTaskVO> get(@PathVariable UUID taskId, @RequestBody(required = false) EmptyDTO ignored) {
+        AdminTaskDTO event = findAuthorized(taskId);
+        return ApiResponse.ok(toVO(event));
     }
 
     /** 提交取消请求；实际任务退出前仍视为运行中。 */
@@ -89,7 +90,7 @@ public class AdminTaskController {
 
             TaskSubscription registered = taskService.subscribe(taskId, event -> {
                 boolean sent = send(emitter, taskId, sendLock, SseEmitter.event().id(String.valueOf(event.sequence()))
-                    .name(event.status().name().toLowerCase()).data(event), cleanup, "事件发送失败");
+                    .name(event.status().name().toLowerCase()).data(toVO(event)), cleanup, "事件发送失败");
                 if (sent && isTerminal(event)) {
                     emitter.complete();
                 }
@@ -97,7 +98,7 @@ public class AdminTaskController {
             subscription.set(registered);
             if (closed.get())
                 cleanup.run();
-            AdminTaskEvent current = taskService.find(taskId).orElse(null);
+            AdminTaskDTO current = taskService.find(taskId).orElse(null);
             if (current != null && isTerminal(current)) {
                 cleanup.run();
                 emitter.complete();
@@ -134,16 +135,23 @@ public class AdminTaskController {
         }
     }
 
-    private AdminTaskEvent findAuthorized(UUID taskId) {
-        AdminTaskEvent event = taskService.find(taskId).orElseThrow(() -> new DataNotFoundException("管理端任务不存在"));
-        StpUtil.checkPermission(
-            taskService.requiredPermission(taskId).orElseThrow(() -> new DataNotFoundException("管理端任务不存在")));
+    private AdminTaskDTO findAuthorized(UUID taskId) {
+        AdminTaskDTO event =
+            taskService.find(taskId).orElseThrow(() -> new BusinessException(AdminTaskErrorCode.NOT_FOUND));
+        StpUtil.checkPermission(taskService.requiredPermission(taskId)
+            .orElseThrow(() -> new BusinessException(AdminTaskErrorCode.NOT_FOUND)));
         return event;
     }
 
-    private static boolean isTerminal(AdminTaskEvent event) {
+    private static boolean isTerminal(AdminTaskDTO event) {
         return event.status() == AdminTaskStatus.COMPLETED || event.status() == AdminTaskStatus.FAILED
             || event.status() == AdminTaskStatus.CANCELLED;
+    }
+
+    private static AdminTaskVO toVO(AdminTaskDTO event) {
+        return new AdminTaskVO(event.taskId(), event.taskType(), event.status(), event.stage(), event.message(),
+            event.current(), event.total(), event.percent(), event.result(), event.error(), event.errorCode(),
+            event.errorType(), event.sequence(), event.updatedAt());
     }
 
     private static void disconnect(SseEmitter emitter, UUID taskId, Runnable cleanup, String operation,

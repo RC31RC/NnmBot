@@ -31,7 +31,6 @@ public final class WarframeCommandCodes {
     public static final String HEX_ARCHIMEDEAS = "hex-archimedeas";
     public static final String DESCENTS = "descents";
     public static final String CALENDAR_1999 = "calendar-1999";
-    public static final String CONCLAVE = "conclave";
     public static final String CONCLAVE_RULES = "conclave-rules";
     public static final String ARCHON_SHARDS = "archon-shards";
     public static final String STEEL_PATH_CATALOG = "steel-path-catalog";
@@ -163,7 +162,7 @@ public final class WarframeCommandCodes {
         DEEP_ARCHIMEDEAS(WarframeCommandCodes.DEEP_ARCHIMEDEAS, "深层科研", 59),
         HEX_ARCHIMEDEAS(WarframeCommandCodes.HEX_ARCHIMEDEAS, "时光科研", 60),
         UPDATE_SISTER(WarframeCommandCodes.UPDATE_SISTER, "更新信条", 60), CAVIA(WarframeCommandCodes.CAVIA, "科维兽赏金", 61),
-        CONCLAVE(WarframeCommandCodes.CONCLAVE, "竞技场", 61), DESCENTS(WarframeCommandCodes.DESCENTS, "深层下降", 61),
+        DESCENTS(WarframeCommandCodes.DESCENTS, "深层下降", 61),
         UPDATE_LICHES(WarframeCommandCodes.UPDATE_LICHES, "更新赤毒", 61),
         HOLDFASTS(WarframeCommandCodes.HOLDFASTS, "扎里曼赏金", 62),
         UPDATE_PERRIN_SEQUENCE(WarframeCommandCodes.UPDATE_PERRIN_SEQUENCE, "更新终幕", 62),

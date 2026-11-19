@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.rawdata.worldstate;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -148,6 +149,11 @@ public class OfficialWorldStateRawData {
     @JsonAlias({"flashSales"})
     private List<FlashSaleRawData> flashSales;
 
+    /** 官方商城当前落地页，分类和商品身份随动态快照更新。 */
+    @JsonProperty("InGameMarket")
+    @JsonAlias("inGameMarket")
+    private InGameMarketRawData inGameMarket;
+
     /** 持续追猎敌人。 */
     @JsonProperty("PersistentEnemies")
     @JsonAlias({"persistentEnemies"})
@@ -157,11 +163,6 @@ public class OfficialWorldStateRawData {
     @JsonProperty("Conquests")
     @JsonAlias({"conquests", "archimedeas", "Archimedeas"})
     private List<ConquestRawData> conquests;
-
-    /** PVP 挑战。 */
-    @JsonProperty("PVPChallengeInstances")
-    @JsonAlias({"pvpChallengeInstances", "conclaveChallenges", "ConclaveChallenges"})
-    private List<ConclaveChallengeRawData> pvpChallengeInstances;
 
     /** 建造项目进度，官方以有序数值数组提供。 */
     @JsonProperty("ProjectPct")
@@ -397,6 +398,14 @@ public class OfficialWorldStateRawData {
         @JsonAlias({"completed"})
         private Boolean completed;
 
+        /** 官方进攻方阵营，用于补充协议逐方对齐。 */
+        @JsonProperty("Faction")
+        private String attackerFaction;
+
+        /** 官方防守方阵营，用于补充协议逐方对齐。 */
+        @JsonProperty("DefenderFaction")
+        private String defenderFaction;
+
         /** 攻击方任务信息。 */
         @JsonProperty("AttackerMissionInfo")
         @JsonAlias({"attackerMissionInfo"})
@@ -604,7 +613,7 @@ public class OfficialWorldStateRawData {
     @Getter
     @Setter
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class NightwaveChallengeRawData {
+    public static class NightwaveChallengeRawData extends TimedRawData {
         /** 挑战标识。 */
         @JsonProperty("_id")
         @JsonAlias({"id"})
@@ -729,6 +738,11 @@ public class OfficialWorldStateRawData {
         @JsonProperty("Icon")
         @JsonAlias({"imageLink", "imageUrl", "image", "icon"})
         private String imageLink;
+
+        /** 常驻社区入口不作为当期新闻；有实际发布时间的社区公告仍按语言筛选。 */
+        @JsonProperty("Community")
+        @JsonAlias("community")
+        private Boolean community;
 
         /** 是否置顶。 */
         @JsonProperty("Priority")
@@ -1087,113 +1101,6 @@ public class OfficialWorldStateRawData {
         private List<String> risks;
     }
 
-    /** PVP 挑战。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class ConclaveChallengeRawData extends TimedRawData {
-        /** 挑战类型。 */
-        @JsonProperty("PVPMode")
-        @JsonAlias({"mode", "Mode", "type"})
-        private String mode;
-
-        /** 挑战名称。 */
-        @JsonProperty("challengeTypeRefID")
-        @JsonAlias({"title", "Title"})
-        private String title;
-
-        /** 挑战目标次数。 */
-        @JsonProperty("requiredCount")
-        @JsonAlias("RequiredCount")
-        private Integer requiredCount;
-
-        /** 挑战进度次数。 */
-        @JsonProperty("progress")
-        @JsonAlias("Progress")
-        private Integer progress;
-
-        /** 挑战分类代码。 */
-        @JsonProperty("Category")
-        @JsonAlias({"category"})
-        private String category;
-
-        /** 挑战参数。 */
-        @JsonProperty("params")
-        private List<ConclaveParameterRawData> params;
-
-        /** 子挑战。 */
-        @JsonProperty("subChallenges")
-        private List<ConclaveChallengeRawData> subChallenges;
-    }
-
-    /** Conclave 挑战参数。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class ConclaveParameterRawData {
-        /** 参数名。 */
-        @JsonProperty("n")
-        private String name;
-
-        /** 参数值。 */
-        @JsonProperty("v")
-        private Integer value;
-    }
-
-    /** 建造进度的命名结构。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class ConstructionProgressRawData {
-        /** Fomorian 建造进度。 */
-        @JsonProperty("fomorianProgress")
-        private Double fomorianProgress;
-
-        /** Razorback 建造进度。 */
-        @JsonProperty("razorbackProgress")
-        private Double razorbackProgress;
-
-        /** 其他建造进度。 */
-        @JsonProperty("unknownProgress")
-        private Double unknownProgress;
-    }
-
-    /** Simaris 官方数据。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class LibraryInfoRawData {
-        /** 最近完成的目标静态路径。 */
-        @JsonProperty("LastCompletedTargetType")
-        @JsonAlias({"lastCompletedTargetType"})
-        private String lastCompletedTargetType;
-    }
-
-    /** Simaris 简化状态。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class SimarisRawData {
-        /** 当前扫描目标。 */
-        @JsonProperty("target")
-        private String target;
-
-        /** 目标是否有效。 */
-        @JsonProperty("isTargetActive")
-        private Boolean targetActive;
-    }
-
-    /** Sentient 前哨。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class SentientOutpostRawData extends TimedRawData {
-        /** 前哨任务节点。 */
-        @JsonProperty("node")
-        @JsonAlias("location")
-        private String node;
-    }
-
     /** 氏族每周行动。 */
     @Getter
     @Setter
@@ -1523,16 +1430,6 @@ public class OfficialWorldStateRawData {
         private List<String> choices;
     }
 
-    /** 官方 Tmp 字符串中内嵌的 JSON 结构。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class TmpRawData {
-        /** Sentient 前哨的节点序号。 */
-        @JsonProperty("sfn")
-        private Integer sentientFleetNode;
-    }
-
     /** 新闻协议中的已知语言标题，未支持语言仍可从快照原文排查。 */
     @Getter
     @Setter
@@ -1557,4 +1454,139 @@ public class OfficialWorldStateRawData {
         @JsonProperty("_faction")
         private String faction;
     }
+
+    /** 建造进度的命名结构。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ConstructionProgressRawData {
+        /** Fomorian 建造进度。 */
+        @JsonProperty("fomorianProgress")
+        private Double fomorianProgress;
+
+        /** Razorback 建造进度。 */
+        @JsonProperty("razorbackProgress")
+        private Double razorbackProgress;
+
+        /** 其他建造进度。 */
+        @JsonProperty("unknownProgress")
+        private Double unknownProgress;
+    }
+
+    /** Simaris 官方数据。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class LibraryInfoRawData {
+        /** 最近完成的目标静态路径。 */
+        @JsonProperty("LastCompletedTargetType")
+        @JsonAlias({"lastCompletedTargetType"})
+        private String lastCompletedTargetType;
+    }
+
+    /** Simaris 简化状态。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SimarisRawData {
+        /** 当前扫描目标。 */
+        @JsonProperty("target")
+        private String target;
+
+        /** 目标是否有效。 */
+        @JsonProperty("isTargetActive")
+        private Boolean targetActive;
+    }
+
+    /** Sentient 前哨。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SentientOutpostRawData extends TimedRawData {
+        /** 前哨任务节点。 */
+        @JsonProperty("node")
+        @JsonAlias("location")
+        private String node;
+    }
+
+    /** 官方 Tmp 字符串中内嵌的 JSON 结构。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class TmpRawData {
+        /** Sentient 前哨的节点序号。 */
+        @JsonProperty("sfn")
+        private Integer sentientFleetNode;
+        @JsonProperty("pgr")
+        private PagerRawData pager;
+        private final java.util.Map<String, Long> qtcc = new java.util.LinkedHashMap<>();
+
+        /** 仅采集带物品键的活动计数，其它 Tmp 实验字段仍保留在原始快照中。 */
+        @JsonAnySetter
+        public void acceptField(String key, Object value) {
+            if ((key.startsWith("QTCCFloofCount:") || key.startsWith("QTCCFloofLimit:"))
+                && value instanceof Number number)
+                qtcc.put(key, number.longValue());
+        }
+    }
+
+    /** Tmp.pgr 多语言寻呼机文本。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class PagerRawData {
+        @JsonProperty("ts")
+        private String timestamp;
+        @JsonProperty("zh")
+        private String chinese;
+        @JsonProperty("en")
+        private String english;
+    }
+
+    /** 官方商城入口结构。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class InGameMarketRawData {
+        /** 当前商城落地页。 */
+        @JsonProperty("LandingPage")
+        private MarketLandingPageRawData landingPage;
+    }
+
+    /** 商城落地页中的有序分类。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class MarketLandingPageRawData {
+        /** 上游给出的分类顺序。 */
+        @JsonProperty("Categories")
+        private List<MarketCategoryRawData> categories;
+    }
+
+    /** 商城分类的动态身份和菜单属性。 */
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class MarketCategoryRawData {
+        /** 分类语言键。 */
+        @JsonProperty("Name")
+        private String name;
+
+        /** 分类稳定代码。 */
+        @JsonProperty("CategoryName")
+        private String categoryName;
+
+        /** 上游图标代号，不是可以直接展示的图片 URL。 */
+        @JsonProperty("Icon")
+        private String icon;
+
+        /** 是否加入游戏商城菜单。 */
+        @JsonProperty("AddToMenu")
+        private Boolean addToMenu;
+
+        /** 商品游戏身份，名称和图标另由受管静态数据补全。 */
+        @JsonProperty("Items")
+        private List<String> items;
+    }
+
 }

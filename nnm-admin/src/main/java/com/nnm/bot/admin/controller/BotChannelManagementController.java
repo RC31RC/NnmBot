@@ -11,7 +11,7 @@ import com.nnm.bot.admin.pojo.dto.bot.channel.OneBotInstanceSaveDTO;
 import com.nnm.bot.admin.pojo.dto.bot.channel.QqOfficialInstanceSaveDTO;
 import com.nnm.bot.admin.service.bot.channel.BotChannelManagementService;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 管理 OneBot 与 QQ 官方渠道实例配置和连接生命周期。 */
 @RestController
 @RequestMapping("/api/admin/bot-instances")
 public class BotChannelManagementController {
@@ -31,7 +32,7 @@ public class BotChannelManagementController {
 
     @PostMapping("/query")
     @SaCheckPermission("bot:instance:view")
-    public ApiResponse<List<BotChannelInstanceVO>> instances(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<BotChannelInstanceVO>> instances(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminBotChannelViewAssembler.toBotChannelInstanceVO(service.instances()));
     }
 

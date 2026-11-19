@@ -1,11 +1,12 @@
 package com.nnm.bot.core.group.service;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.BotGroupErrorCode;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.group.adapter.BotGroupMemberIdentityAdapters;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.group.constant.BotGroupErrorCode;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.Optional;

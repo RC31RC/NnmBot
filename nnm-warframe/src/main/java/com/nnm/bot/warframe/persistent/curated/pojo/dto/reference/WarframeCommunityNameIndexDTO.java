@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.dto.reference;
 
-import com.nnm.bot.warframe.config.cache.DatasetSnapshotMetrics;
+import com.nnm.bot.warframe.runtime.cache.dataset.DatasetSnapshotMetrics;
 import java.util.List;
 import java.util.Map;
 

@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.vo.bot.command;
 
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 
 import java.time.LocalDateTime;
 import java.util.List;

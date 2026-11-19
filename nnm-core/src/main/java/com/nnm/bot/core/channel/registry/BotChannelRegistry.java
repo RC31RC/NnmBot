@@ -4,12 +4,12 @@ import java.util.Objects;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
-import com.nnm.bot.core.constant.BotChannelCapability;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
-import com.nnm.bot.core.constant.BotChannelStatus;
+import com.nnm.bot.core.channel.constant.BotChannelCapability;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
+import com.nnm.bot.core.channel.constant.BotChannelStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -43,14 +43,13 @@ public class BotChannelRegistry {
             String normalizedInstanceId = instanceId.trim();
             BotChannelKey existingKey = instanceKeys.get(normalizedInstanceId);
             if (ObjectUtil.isNotNull(existingKey) && !existingKey.equals(key)) {
-                throw new BusinessException(BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT,
-                    "机器人实例标识已注册到其他渠道: " + normalizedInstanceId);
+                throw new BusinessException(BotChannelErrorCode.INSTANCE_KEY_CONFLICT);
             }
             MutableChannel newChannel = new MutableChannel(normalizedInstanceId, key, safeCapabilities,
                 enabled ? BotChannelStatus.DISCONNECTED : BotChannelStatus.DISABLED);
             MutableChannel previous = channels.putIfAbsent(key, newChannel);
             if (ObjectUtil.isNotNull(previous) && !previous.instanceId.equals(newChannel.instanceId)) {
-                throw new BusinessException(BotChannelErrorCode.CHANNEL_REGISTRATION_CONFLICT, "机器人账号已注册到其他实例: " + key);
+                throw new BusinessException(BotChannelErrorCode.ACCOUNT_KEY_CONFLICT);
             }
             instanceKeys.putIfAbsent(normalizedInstanceId, key);
         } finally {

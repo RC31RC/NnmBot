@@ -52,7 +52,5 @@ public class OfficialRegionMissionRewardCountedItemsItems extends OfficialChildR
     private OfficialRegionRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRegionMissionRewardCountedItemsItemsItemReferencesItems> officialRegionMissionRewardCountedItemsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialRegionMissionRewardCountedItemsItemsItemReferencesItems> officialRegionMissionRewardCountedItemsItemsItemReferencesItemsRows = new ArrayList<>();
 }

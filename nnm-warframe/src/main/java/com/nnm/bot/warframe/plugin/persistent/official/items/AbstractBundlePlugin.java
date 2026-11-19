@@ -1,11 +1,13 @@
 package com.nnm.bot.warframe.plugin.persistent.official.items;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.items.WarframeBundleVO;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.items.WarframeItemPageCommandDTO;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 import com.nnm.bot.warframe.persistent.official.service.items.WarframeBundleService;
 import jakarta.annotation.Resource;
@@ -37,8 +39,8 @@ public abstract class AbstractBundlePlugin extends BotPlugin<Void, WarframeItemP
         }
         if (page < 1 || OPTION.matcher(query).find())
             return new WarframeItemPageCommandDTO(query, page, "礼包参数不合法");
-        if (query.length() > 200)
-            return new WarframeItemPageCommandDTO(query, page, "查询内容过长，请缩短到 200 字以内");
+        if (query.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)
+            return new WarframeItemPageCommandDTO(query, page, OfficialCommandErrorCode.QUERY_TOO_LONG.getMessage());
         return new WarframeItemPageCommandDTO(query, page, null);
     }
 

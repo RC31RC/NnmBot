@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.arbitration.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.warframe.runtime.constant.WarframeArbitrationErrorCode;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
@@ -111,9 +111,10 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
     public WarframeArbitrationManagementVO page(WarframeArbitrationQuery query) {
         int current = query.current() == null ? 1 : query.current();
         int size = query.size() == null ? DEFAULT_PAGE_SIZE : query.size();
-        BusinessAssert.isTrue(current > 0 && size > 0 && size <= MAX_PAGE_SIZE, CommonErrorCode.PARAM_INVALID);
+        BusinessAssert.isTrue(current > 0 && size > 0 && size <= MAX_PAGE_SIZE,
+            WarframeArbitrationErrorCode.QUERY_INVALID);
         BusinessAssert.isTrue(query.from() == null || query.until() == null || query.from().isBefore(query.until()),
-            CommonErrorCode.PARAM_INVALID, "结束时间必须晚于开始时间");
+            WarframeArbitrationErrorCode.TIME_RANGE_INVALID);
         String keyword = query.keyword() == null ? "" : query.keyword().trim().toLowerCase(Locale.ROOT);
         Snapshot snapshot = snapshots.current();
         List<ArbitrationScheduleEntryDTO> matches =

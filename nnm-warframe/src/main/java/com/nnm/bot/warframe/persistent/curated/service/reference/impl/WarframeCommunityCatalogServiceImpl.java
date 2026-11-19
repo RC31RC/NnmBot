@@ -1,19 +1,22 @@
 package com.nnm.bot.warframe.persistent.curated.service.reference.impl;
 
-import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityTermGroup;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityNameIndexDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO.*;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityTermIndexDTO;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityAliasRepository;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityArbitrationEssenceRepository;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityRivenAliasRepository;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityTermRepository;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityCatalogService;
-import com.nnm.bot.warframe.util.WarframeNameNormalizer;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,15 +69,46 @@ public class WarframeCommunityCatalogServiceImpl implements WarframeCommunityCat
     }
 
     /** @return 当前社区表独立的不可变名称跳板。 */
-    private WarframeCommunityNameIndexDTO<TermDTO> termsIndex() {
+    private WarframeCommunityTermIndexDTO termsIndex() {
         return cache.snapshot(WarframeDatasetCacheNames.community(WarframeCommunityDataset.TERM),
-            WarframeDatasetCacheNames.CATALOG,
-            () -> index(
-                terms.findAllProjectedByOrderByRecordKeyAsc().stream()
+            WarframeDatasetCacheNames.CATALOG, () -> {
+                var records = terms.findAllProjectedByOrderByRecordKeyAsc().stream()
                     .map(row -> new WarframeCommunityRecordDTO<>(row.getId(), row.getRecordKey(),
                         new TermDTO(row.getTermGroup(), row.getEnglishText(), row.getChineseText())))
-                    .toList(),
-                row -> row.chineseText(), row -> row.englishText()));
+                    .toList();
+                var ordinary = index(records,
+                    row -> WarframeCommunityTermGroup.displayOnly(row.termGroup()) ? null : row.chineseText(),
+                    row -> row.englishText());
+                Map<WarframeCommunityTermGroup, Map<String, List<String>>> grouped =
+                    new EnumMap<>(WarframeCommunityTermGroup.class);
+                for (var group : WarframeCommunityTermGroup.values()) {
+                    Map<String, List<String>> names = new LinkedHashMap<>();
+                    for (var row : records) {
+                        var term = row.details();
+                        if (!group.code().equals(term.termGroup()) || term.chineseText() == null
+                            || term.chineseText().isBlank())
+                            continue;
+                        String key = WarframeNameNormalizer.phrase(term.englishText());
+                        if (!key.isBlank())
+                            names.computeIfAbsent(key, ignored -> new ArrayList<>()).add(term.chineseText());
+                    }
+                    Map<String, List<String>> frozen = new LinkedHashMap<>();
+                    names.forEach((key, values) -> frozen.put(key, values.stream().distinct().toList()));
+                    grouped.put(group, Map.copyOf(frozen));
+                }
+                return new WarframeCommunityTermIndexDTO(records, ordinary.targets(), Map.copyOf(grouped));
+            });
+    }
+
+    /**
+     * 在社区术语自身的缓存代际内建立分组精确索引，普通物品索引不包含它。
+     *
+     * @param group 明确业务用途的分组。
+     * @return 英文整词到去重中文候选。
+     */
+    @Override
+    public Map<String, List<String>> displayTerms(WarframeCommunityTermGroup group) {
+        return termsIndex().displayTerms().getOrDefault(group, Map.of());
     }
 
     /**

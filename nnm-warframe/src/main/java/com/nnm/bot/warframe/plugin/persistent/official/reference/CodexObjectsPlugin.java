@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.plugin.persistent.official.reference;
 
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;

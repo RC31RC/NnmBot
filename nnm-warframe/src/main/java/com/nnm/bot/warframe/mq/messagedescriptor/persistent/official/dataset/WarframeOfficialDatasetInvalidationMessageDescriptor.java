@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.mq.messagedescriptor.persistent.official.dataset;
 
-import com.nnm.bot.warframe.config.cache.DatasetRevisionDTO;
+import com.nnm.bot.warframe.mq.message.dataset.DatasetRevisionDTO;
 import com.nnm.bot.warframe.mq.consumerdescriptor.persistent.official.dataset.WarframeOfficialDatasetInvalidationConsumerDescriptor;
 import io.github.rdt.queue.ConsumerDescriptor;
 import io.github.rdt.queue.MessageDescriptor;

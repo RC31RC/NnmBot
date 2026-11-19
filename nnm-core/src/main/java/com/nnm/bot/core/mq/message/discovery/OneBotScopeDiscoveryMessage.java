@@ -6,7 +6,7 @@ import com.nnm.bot.core.mq.messagedescriptor.discovery.OneBotScopeDiscoveryMessa
 public final class OneBotScopeDiscoveryMessage extends OneBotScopeDiscoveryMessageDescriptor {
     public OneBotScopeDiscoveryMessage() {}
 
-    public OneBotScopeDiscoveryMessage(OneBotScopeDiscoveryRequest payload) {
+    public OneBotScopeDiscoveryMessage(OneBotScopeDiscoveryDTO payload) {
         super(payload);
     }
 }

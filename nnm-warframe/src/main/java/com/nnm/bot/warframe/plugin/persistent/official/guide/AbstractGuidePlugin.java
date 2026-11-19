@@ -1,12 +1,13 @@
 package com.nnm.bot.warframe.plugin.persistent.official.guide;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.guide.WarframeGuideCommandDTO;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -53,30 +54,30 @@ abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideCommandD
             while (StrUtil.isNotBlank(remaining)) {
                 Matcher matcher = OPTION.matcher(remaining);
                 if (!matcher.find())
-                    throw new BusinessException(CommonErrorCode.PARAM_INVALID, "攻略参数不合法");
+                    throw new BusinessException(OfficialCommandErrorCode.GUIDE_OPTION_INVALID);
                 String key = matcher.group(1);
                 if (!Set.of("world", "layer", "page").contains(key) || !map && key.equals("layer")
                     || options.putIfAbsent(key, matcher.group(2)) != null) {
-                    throw new BusinessException(CommonErrorCode.PARAM_INVALID, "攻略参数不合法或重复");
+                    throw new BusinessException(OfficialCommandErrorCode.GUIDE_OPTION_DUPLICATE);
                 }
                 remaining = remaining.substring(matcher.end()).trim();
             }
         }
-        if (keyword.length() > 200)
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "查询内容过长，请缩短到 200 字以内");
+        if (keyword.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)
+            throw new BusinessException(OfficialCommandErrorCode.QUERY_TOO_LONG);
         String world = options.get("world");
         if (world != null && !Set.of("plains", "vallis", "deimos").contains(world)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "开放世界参数不合法");
+            throw new BusinessException(OfficialCommandErrorCode.WORLD_INVALID);
         }
         String layer = options.get("layer");
         if (layer != null && !layer.matches("[a-z][a-z0-9-]{0,79}")) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "地图图层参数不合法");
+            throw new BusinessException(OfficialCommandErrorCode.MAP_LAYER_INVALID);
         }
         int page = 1;
         String pageText = options.get("page");
         if (pageText != null) {
             if (!pageText.matches("[0-9]+") || pageText.matches("0+")) {
-                throw new BusinessException(CommonErrorCode.PARAM_INVALID, "页码必须为正整数");
+                throw new BusinessException(OfficialCommandErrorCode.GUIDE_PAGE_INVALID);
             }
             try {
                 page = Integer.parseInt(pageText);

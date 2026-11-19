@@ -2,11 +2,23 @@ package com.nnm.bot.render;
 
 import java.util.Map;
 
+/** 将 HTML 模板与变量转换为图片的应用服务。 */
 public interface ImageService {
 
-    /** 将数据库 HTML 模板处理后转换为图片。 */
+    /** 使用默认参数渲染 HTML。
+     *
+     * @param html HTML 模板
+     * @param data 模板变量
+     * @return PNG 图片字节
+     */
     byte[] generateHtml(String html, Map<String, Object> data);
 
-    /** 将数据库 HTML 模板处理后按指定参数转换为图片。 */
+    /** 按指定参数渲染 HTML。
+     *
+     * @param html HTML 模板
+     * @param data 模板变量
+     * @param options 图片尺寸与输出选项
+     * @return 图片字节
+     */
     byte[] generateHtml(String html, Map<String, Object> data, RenderOptions options);
 }

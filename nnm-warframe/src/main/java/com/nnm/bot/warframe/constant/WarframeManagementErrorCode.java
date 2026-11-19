@@ -10,10 +10,10 @@ import org.springframework.http.HttpStatus;
 public enum WarframeManagementErrorCode implements ErrorCode {
 
     INVALID_COMMUNITY_DATASET(400, "纯自维护数据集不在白名单内", HttpStatus.BAD_REQUEST),
+    COMMUNITY_CONFIGURATION_INVALID(50056, "社区资料导入配置不合法，请联系管理员", HttpStatus.INTERNAL_SERVER_ERROR),
     COMMUNITY_INVALID_INPUT(400, "纯自维护输入不符合数据集字段契约", HttpStatus.BAD_REQUEST),
     COMMUNITY_PREVIEW_NOT_FOUND(404, "纯自维护预览不存在或已过期", HttpStatus.NOT_FOUND),
     COMMUNITY_PREVIEW_CONFLICT(409, "所选记录在预览后已变化，请重新预览", HttpStatus.CONFLICT),
-    COMMUNITY_SOURCE_REJECTED(400, "raw URL 不符合协议、域名或网络地址限制", HttpStatus.BAD_REQUEST),
     ITEM_NOT_FOUND(404, "Warframe 物品不存在", HttpStatus.NOT_FOUND),
     ALIAS_NOT_FOUND(404, "Warframe 物品别名不存在", HttpStatus.NOT_FOUND),
     ALIAS_DUPLICATED(400, "该物品已存在相同别名", HttpStatus.BAD_REQUEST),

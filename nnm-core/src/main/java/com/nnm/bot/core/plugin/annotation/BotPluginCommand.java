@@ -1,6 +1,6 @@
 package com.nnm.bot.core.plugin.annotation;
 
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Documented;

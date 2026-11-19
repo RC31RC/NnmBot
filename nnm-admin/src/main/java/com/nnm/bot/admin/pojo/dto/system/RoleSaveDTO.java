@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.dto.system;
 
-import com.nnm.bot.admin.constant.DataScope;
+import com.nnm.bot.admin.constant.rbac.DataScope;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+/** HTTP 与多个业务域共用的基础错误语义。 */
 @Getter
 @RequiredArgsConstructor
 public enum CommonErrorCode implements ErrorCode {

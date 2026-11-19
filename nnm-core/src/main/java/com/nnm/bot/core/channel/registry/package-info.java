@@ -1,8 +1,8 @@
 /**
- * 渠道运行状态注册表。
+ * 渠道实例状态与扩展点注册表。
  *
  * <p>
- * 注册表只保存实例的运行身份、能力和易变状态，作为发送路由、 管理端状态查询与连接器之间的轻量协调点。
+ * BotChannelRegistry 保存实例运行状态；ChannelProviderRegistry 在启动时校验并索引渠道 Provider。
  * </p>
  */
 package com.nnm.bot.core.channel.registry;

@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.service.watch.impl;
 
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeWatchErrorCode;
 import com.nnm.bot.core.group.domain.BotGroupMember;
-import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
 import com.nnm.bot.core.group.repository.BotGroupRepository;
@@ -92,11 +92,11 @@ public class WarframeSubscriptionManagementServiceImpl implements WarframeSubscr
      * @return 当前操作计算或读取的数值。
      */
     private long requireMember(long groupId, long memberId, boolean forWrite) {
-        BusinessAssert.isTrue(groups.existsById(groupId), CommonErrorCode.DATA_NOT_FOUND, "群组不存在");
+        BusinessAssert.isTrue(groups.existsById(groupId), WarframeWatchErrorCode.GROUP_NOT_FOUND);
         long canonicalId = canonicalMembers.resolve(groupId, memberId);
         BotGroupMember member = (forWrite ? members.findByIdAndGroupId(canonicalId, groupId)
             : members.findById(canonicalId).filter(value -> value.getGroupId().equals(groupId))).orElse(null);
-        BusinessAssert.notNull(member, CommonErrorCode.DATA_NOT_FOUND, "成员不存在或不属于当前群组");
+        BusinessAssert.notNull(member, WarframeWatchErrorCode.MEMBER_NOT_FOUND);
         return canonicalId;
     }
 
@@ -111,6 +111,6 @@ public class WarframeSubscriptionManagementServiceImpl implements WarframeSubscr
     private WarframeGroupWatchRule requireRule(long groupId, long memberId, long ruleId) {
         WarframeGroupWatchRule rule = rules.findFirstById(ruleId)
             .filter(value -> value.getGroupId().equals(groupId) && value.getMemberId().equals(memberId)).orElse(null);
-        return BusinessAssert.notNull(rule, CommonErrorCode.DATA_NOT_FOUND, "订阅不存在或不属于当前成员");
+        return BusinessAssert.notNull(rule, WarframeWatchErrorCode.SUBSCRIPTION_NOT_FOUND);
     }
 }

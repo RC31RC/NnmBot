@@ -52,7 +52,5 @@ public class OfficialVendorItemsItemsItemPricesItems extends OfficialChildRow {
     private OfficialVendorItemsItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialVendorItemsItemsItemPricesItemsItemReferencesItems> officialVendorItemsItemsItemPricesItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialVendorItemsItemsItemPricesItemsItemReferencesItems> officialVendorItemsItemsItemPricesItemsItemReferencesItemsRows = new ArrayList<>();
 }

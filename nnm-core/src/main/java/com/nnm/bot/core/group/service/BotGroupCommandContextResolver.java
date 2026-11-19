@@ -1,13 +1,14 @@
 package com.nnm.bot.core.group.service;
 
+import com.nnm.bot.core.group.context.BotGroupCommandContext;
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot.Binding;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.topology.BotTopologyStore;
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot.Scope;
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot;
-import com.nnm.bot.core.plugin.model.CommandExecutionContext;
+import com.nnm.bot.core.plugin.execution.CommandExecutionContext;
 import com.nnm.bot.core.group.domain.BotGroupBot;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 

@@ -1,7 +1,7 @@
 package com.nnm.bot.core.channel.model;
 
-import com.nnm.bot.core.constant.BotChannelCapability;
-import com.nnm.bot.core.constant.BotChannelStatus;
+import com.nnm.bot.core.channel.constant.BotChannelCapability;
+import com.nnm.bot.core.channel.constant.BotChannelStatus;
 
 import java.time.Instant;
 import java.util.Set;

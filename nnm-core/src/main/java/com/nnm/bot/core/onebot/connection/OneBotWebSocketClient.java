@@ -1,6 +1,6 @@
 package com.nnm.bot.core.onebot.connection;
 
-import com.nnm.bot.core.constant.onebot.OneBotConstants.StatusAction;
+import com.nnm.bot.core.onebot.constant.OneBotConstants.StatusAction;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -12,9 +12,9 @@ import org.springframework.beans.factory.ObjectProvider;
 import java.util.function.BooleanSupplier;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.core.onebot.constant.OneBotErrorCode;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.onebot.config.OneBotProperties;
 import com.mikuac.shiro.common.utils.JsonObjectWrapper;
 import com.mikuac.shiro.common.utils.JsonUtils;
@@ -108,8 +108,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
         lifecycleLock.lock();
         try {
             if (record.platform() != BotPlatform.ONEBOT) {
-                throw new BusinessException(BotChannelErrorCode.PLATFORM_MISMATCH,
-                    "OneBot 客户端不能启动协议: " + record.platform());
+                throw new BusinessException(OneBotErrorCode.PLATFORM_MISMATCH);
             }
             this.validate(record);
             ManagedConnection replacement = new ManagedConnection(List.of(record));
@@ -317,14 +316,13 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                 }
                 return value;
             } catch (NumberFormatException exception) {
-                throw new BusinessException(BotChannelErrorCode.INVALID_ACCOUNT_ID,
-                    "OneBot self_id 不是有效的 QQ 账号: " + accountId, exception);
+                throw new BusinessException(OneBotErrorCode.SELF_ACCOUNT_INVALID, exception);
             }
         }
 
         private String normalizeAccountId(String accountId) {
             if (StrUtil.isBlank(accountId)) {
-                throw new BusinessException(BotChannelErrorCode.MESSAGE_PARSE_FAILED, "OneBot self_id 不能为空");
+                throw new BusinessException(OneBotErrorCode.SELF_ACCOUNT_MISSING);
             }
             return accountId.trim();
         }
@@ -365,7 +363,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                     String normalizedAccount = normalizeAccountId(actualAccount);
                     parseAccountId(normalizedAccount);
                     if (!accepts(normalizedAccount)) {
-                        rejectUnknownAccount(concurrentSession, normalizedAccount);
+                        rejectUnknownAccount(concurrentSession);
                         return;
                     }
                     registerAccount(normalizedAccount);
@@ -410,7 +408,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                     return null;
                 }
                 if (!JsonUtils.isValid(payload)) {
-                    throw new BusinessException(BotChannelErrorCode.MESSAGE_PARSE_FAILED, "OneBot 消息不是合法 JSON");
+                    throw new BusinessException(OneBotErrorCode.MESSAGE_JSON_INVALID);
                 }
                 try {
                     Object value = JsonObjectWrapper.parseObject(payload).get("self_id");
@@ -420,14 +418,12 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                     String accountId = value.toString().trim();
                     return accountId.isBlank() ? null : accountId;
                 } catch (RuntimeException exception) {
-                    throw new BusinessException(BotChannelErrorCode.MESSAGE_PARSE_FAILED, "解析 OneBot 消息中的 self_id 失败",
-                        exception);
+                    throw new BusinessException(OneBotErrorCode.SELF_ACCOUNT_PARSE_FAILED, exception);
                 }
             }
 
-            private void rejectUnknownAccount(WebSocketSession session, String actualAccount) throws IOException {
-                BusinessException error = new BusinessException(BotChannelErrorCode.ACCOUNT_NOT_ALLOWED,
-                    "OneBot 连接上报了未授权的机器人账号: " + actualAccount);
+            private void rejectUnknownAccount(WebSocketSession session) throws IOException {
+                BusinessException error = new BusinessException(OneBotErrorCode.ACCOUNT_NOT_AUTHORIZED);
                 log.warn("OneBot account rejected, instanceIds={}", instanceIds(), error);
                 session.close(CloseStatus.POLICY_VIOLATION);
             }
@@ -436,21 +432,21 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
 
     private void validate(BotChannelInstanceRecord record) {
         if (ObjectUtil.isNull(record)) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot 机器人实例记录不能为空");
+            throw new BusinessException(OneBotErrorCode.INSTANCE_REQUIRED);
         }
         if (StrUtil.isBlank(record.instanceId())) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot 机器人实例标识不能为空");
+            throw new BusinessException(OneBotErrorCode.INSTANCE_ID_REQUIRED);
         }
         if (StrUtil.isBlank(record.botAccountId())) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot 机器人账号不能为空");
+            throw new BusinessException(OneBotErrorCode.INSTANCE_ACCOUNT_REQUIRED);
         }
         this.validateAccountId(record.botAccountId());
         if (StrUtil.isBlank(record.connectionUrl())) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot WebSocket 地址不能为空");
+            throw new BusinessException(OneBotErrorCode.CONNECTION_URL_REQUIRED);
         }
         if (ObjectUtil.isNull(record.reconnectInterval()) || record.reconnectInterval().isZero()
             || record.reconnectInterval().isNegative()) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "OneBot 重连间隔必须为正数");
+            throw new BusinessException(OneBotErrorCode.RECONNECT_INTERVAL_INVALID);
         }
     }
 
@@ -461,8 +457,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                 throw new NumberFormatException("account id must be positive");
             }
         } catch (NumberFormatException exception) {
-            throw new BusinessException(BotChannelErrorCode.INVALID_ACCOUNT_ID, "OneBot 账号不是有效的 QQ 账号: " + accountId,
-                exception);
+            throw new BusinessException(OneBotErrorCode.INSTANCE_ACCOUNT_INVALID, exception);
         }
     }
 }

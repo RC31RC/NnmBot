@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.dto.bot.group;
 
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

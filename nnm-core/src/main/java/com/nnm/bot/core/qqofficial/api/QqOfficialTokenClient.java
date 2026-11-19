@@ -4,8 +4,8 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.common.http.HttpClient;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.core.qqofficial.constant.QqOfficialErrorCode;
 import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialTokenDTO;
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialTokenRequestDTO;
@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+/** 串行刷新并缓存 QQ 官方应用访问令牌。 */
 @Slf4j
 public class QqOfficialTokenClient {
     private final ReentrantLock tokenLock = new ReentrantLock();
@@ -32,6 +33,10 @@ public class QqOfficialTokenClient {
         this.connection = connection;
     }
 
+    /** 返回有效令牌；进入提前刷新窗口后同步请求新令牌。
+     *
+     * @return 当前访问令牌
+     */
     public String getAccessToken() {
         tokenLock.lock();
         try {
@@ -45,8 +50,7 @@ public class QqOfficialTokenClient {
                 QqOfficialTokenDTO.class);
             String token = response == null ? null : response.accessToken();
             if (StrUtil.isBlank(token)) {
-                throw new BusinessException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID,
-                    "QQ 官方机器人 Token 响应缺少 access_token");
+                throw new BusinessException(QqOfficialErrorCode.TOKEN_MISSING);
             }
             long expiresIn = response.expiresIn() == null ? DEFAULT_EXPIRES_IN_SECONDS : response.expiresIn();
             accessToken = token;
@@ -57,6 +61,7 @@ public class QqOfficialTokenClient {
         }
     }
 
+    /** 清除令牌缓存，使下一次调用重新认证。 */
     public void clear() {
         tokenLock.lock();
         try {

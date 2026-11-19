@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/** 查询和维护逻辑群组到机器人实例的绑定。 */
 public interface BotGroupBotRepository extends JpaRepository<BotGroupBot, Long> {
 
     List<BotGroupBot> findAllByGroupIdOrderByPlatformAscScopeKeyAsc(Long groupId);

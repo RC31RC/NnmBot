@@ -1,7 +1,7 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.core.constant.BotChannelCapability;
-import com.nnm.bot.core.constant.BotMessageConstants.PartKind;
+import com.nnm.bot.core.channel.constant.BotChannelCapability;
+import com.nnm.bot.core.messaging.constant.BotMessageConstants.PartKind;
 import java.util.List;
 
 /** 规划仅使用目标能力与预算；主动目标无需构造入站消息或借用回复回执。 */

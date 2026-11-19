@@ -10,7 +10,7 @@ import com.mikuac.shiro.dto.event.notice.GroupDecreaseNoticeEvent;
 import com.mikuac.shiro.dto.event.notice.GroupIncreaseNoticeEvent;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
 import com.nnm.bot.core.channel.port.BotGroupMemberEventSink;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

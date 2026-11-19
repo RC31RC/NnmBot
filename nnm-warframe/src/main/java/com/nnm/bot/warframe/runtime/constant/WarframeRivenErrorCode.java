@@ -10,7 +10,8 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum WarframeRivenErrorCode implements ErrorCode {
     INPUT_REQUIRED(422, "紫卡分析需要图片或完整紫卡文本输入", HttpStatus.UNPROCESSABLE_ENTITY),
-    INPUT_UNREADABLE(422, "紫卡图片无法下载或 OCR 未识别出文字", HttpStatus.UNPROCESSABLE_ENTITY);
+    INPUT_UNREADABLE(422, "紫卡图片无法下载或 OCR 未识别出文字", HttpStatus.UNPROCESSABLE_ENTITY),
+    WEEKLY_QUERY_INVALID(400194, "无效的裂罅周统计平台或页码", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

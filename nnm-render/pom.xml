@@ -15,10 +15,12 @@
     <description>Image rendering engine - SPI pluggable (openhtmltopdf / Playwright)</description>
 
     <dependencies>
+        <!-- 实现 Core 暴露的机器人图片渲染端口与渲染异常类型。 -->
         <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-core</artifactId>
         </dependency>
+        <!-- 复用有界任务执行器和稳定错误模型。 -->
         <dependency>
             <groupId>com.nnm</groupId>
             <artifactId>nnm-common</artifactId>

@@ -1,28 +1,27 @@
 package com.nnm.bot.core.group.service.impl;
 
-import com.nnm.bot.core.constant.BotGroupErrorCode;
-import com.nnm.bot.core.constant.GroupPointConstants.PointErrorCode;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.group.constant.BotGroupErrorCode;
+import com.nnm.bot.core.group.constant.GroupPointConstants.PointErrorCode;
+import com.nnm.bot.common.error.SystemException;
 
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import cn.hutool.core.util.ObjectUtil;
 
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.core.constant.BotPlatform;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.channel.constant.BotPlatform;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.group.pojo.dto.GroupCommandOutcomeDTO;
 import com.nnm.bot.core.group.domain.BotGroup;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.repository.BotGroupMemberRepository;
-import com.nnm.bot.core.group.service.BotGroupCommandContext;
+import com.nnm.bot.core.group.context.BotGroupCommandContext;
 import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
 import com.nnm.bot.core.group.service.GroupCommandService;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
-import com.nnm.bot.core.group.service.BotGroupMemberIdentityAdapters;
+import com.nnm.bot.core.group.adapter.BotGroupMemberIdentityAdapters;
 import com.nnm.bot.core.group.service.BotGroupMemberMergeService;
 import com.nnm.bot.core.group.service.PointAccountService;
-import com.nnm.bot.core.group.service.PointBalance;
+import com.nnm.bot.core.group.pojo.dto.PointBalanceDTO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +59,7 @@ public class GroupCommandServiceImpl implements GroupCommandService {
             return GroupCommandOutcomeDTO.rejected("当前用户还未加入该逻辑群组");
         }
 
-        PointBalance balance = pointAccountService.balance(groupContext.group().getId(), member.getId())
+        PointBalanceDTO balance = pointAccountService.balance(groupContext.group().getId(), member.getId())
             .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "成员存在但积分账户不存在"));
         // 签到奖励由命令积分守卫统一结算，这里只提供成员和当前账户快照。
         return GroupCommandOutcomeDTO.withBalance("当前积分：" + balance.points(), balance);
@@ -76,7 +75,7 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         if (ObjectUtil.isNull(member)) {
             return GroupCommandOutcomeDTO.rejected("当前用户还未加入该逻辑群组");
         }
-        PointBalance balance = pointAccountService.balance(groupContext.group().getId(), member.getId())
+        PointBalanceDTO balance = pointAccountService.balance(groupContext.group().getId(), member.getId())
             .orElseThrow(() -> new SystemException(PointErrorCode.LEDGER_INCONSISTENT, "成员存在但积分账户不存在"));
         return GroupCommandOutcomeDTO.withBalance("当前积分：" + balance.points(), balance);
     }
@@ -160,14 +159,14 @@ public class GroupCommandServiceImpl implements GroupCommandService {
     private void ensureMergeCompatible(BotGroupMember byQqId, BotGroupMember byOpenId, String qqUserId,
         String memberOpenid) {
         if (StrUtil.isNotBlank(byQqId.getMemberOpenid()) && !memberOpenid.equals(byQqId.getMemberOpenid())) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "QQ号已经绑定其他 QQ 官方成员身份");
+            throw new BusinessException(BotGroupErrorCode.QQ_ID_ALREADY_BOUND);
         }
         if (StrUtil.isNotBlank(byOpenId.getQqId()) && !qqUserId.equals(byOpenId.getQqId())) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "当前平台身份已经绑定其他 QQ 号");
+            throw new BusinessException(BotGroupErrorCode.PLATFORM_ID_ALREADY_BOUND);
         }
         if (StrUtil.isNotBlank(byQqId.getKookId()) && StrUtil.isNotBlank(byOpenId.getKookId())
             && !byQqId.getKookId().equals(byOpenId.getKookId())) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "成员已有冲突的其他平台身份，不能自动合并");
+            throw new BusinessException(BotGroupErrorCode.MEMBER_IDENTITY_CONFLICT);
         }
     }
 

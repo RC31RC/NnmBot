@@ -33,6 +33,11 @@
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-spring-boot4-starter</artifactId>
         </dependency>
+        <!-- JustAuth 2.x 登录客户端；现有 JustAuth starter 依赖 1.x/Boot 2，暂不适用于 Boot 4。 -->
+        <dependency>
+            <groupId>org.dromara.justauth</groupId>
+            <artifactId>JustAuth</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>

@@ -1,8 +1,8 @@
 package com.nnm.bot.core.channel.port;
 
-import com.nnm.bot.core.constant.BotPlatform;
-import com.nnm.bot.core.message.model.BotIncomingAttachment;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.channel.constant.BotPlatform;
+import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import java.util.List;
 
 /** 与群组发现并列的消息读取端口，能力按具体会话及实际连接判断。 */

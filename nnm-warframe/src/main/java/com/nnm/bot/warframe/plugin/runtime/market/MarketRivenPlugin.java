@@ -1,21 +1,22 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.util.WarframeNameNormalizer;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenAttributeDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketAuctionPageDTO;
 import java.util.Optional;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.RelatedCommand;
-import com.nnm.bot.core.plugin.model.RelatedParameter;
-import com.nnm.bot.core.constant.CommandPresentationConstants.ParameterType;
-import com.nnm.bot.core.plugin.model.ReplyBlock;
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.api.RelatedCommand;
+import com.nnm.bot.core.plugin.api.RelatedParameter;
+import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.ParameterType;
+import com.nnm.bot.core.plugin.api.ReplyBlock;
+import com.nnm.bot.core.messaging.model.BotMarkdownMessage;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.pojo.vo.market.WarframeMarketAuctionVO;
 import com.nnm.bot.warframe.runtime.pojo.query.market.WarframeMarketAuctionQuery;
@@ -51,7 +52,9 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
         if (StrUtil.isBlank(weapon))
             return List.of();
         return List.of(new RelatedCommand(WarframeCommandCodes.RIVEN_WEEKLY, "裂罅走势",
-            List.of(new RelatedCommand.Argument(new RelatedParameter("weapon", ParameterType.TEXT, 200), weapon))));
+            List.of(new RelatedCommand.Argument(
+                new RelatedParameter("weapon", ParameterType.TEXT, WarframeCommandInputConstants.MAX_QUERY_LENGTH),
+                weapon))));
     }
 
     /**

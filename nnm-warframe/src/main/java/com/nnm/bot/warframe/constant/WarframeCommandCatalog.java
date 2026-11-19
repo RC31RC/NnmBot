@@ -1,7 +1,10 @@
 package com.nnm.bot.warframe.constant;
 
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.ErrorCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import com.nnm.bot.common.error.BusinessException;
 
 import java.util.List;
 import java.util.Locale;
@@ -12,6 +15,16 @@ public final class WarframeCommandCatalog {
      * 禁止实例化，仅通过本类的静态方法使用此能力。
      */
     private WarframeCommandCatalog() {}
+
+    @Getter
+    @RequiredArgsConstructor
+    public enum CommandCatalogErrorCode implements ErrorCode {
+        CATEGORY_UNSUPPORTED(400150, "不支持的资料分类", HttpStatus.BAD_REQUEST);
+
+        private final int code;
+        private final String message;
+        private final HttpStatus status;
+    }
 
     public enum Category {
         RULE_CONCLAVE("rule_conclave", "武形秘仪规则"), RULE_ARCHON_SHARD("rule_archon_shard", "源力石"),
@@ -90,7 +103,7 @@ public final class WarframeCommandCatalog {
                         return dataset;
                 }
             }
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "不支持的资料分类：" + value);
+            throw new BusinessException(CommandCatalogErrorCode.CATEGORY_UNSUPPORTED);
         }
     }
 

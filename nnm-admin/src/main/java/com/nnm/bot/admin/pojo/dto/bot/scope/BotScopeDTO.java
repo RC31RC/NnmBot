@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.dto.bot.scope;
 
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 
 /** 平台作用域管理列表项。 */
 public record BotScopeDTO(

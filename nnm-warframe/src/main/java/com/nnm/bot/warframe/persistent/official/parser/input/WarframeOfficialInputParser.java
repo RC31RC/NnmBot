@@ -4,10 +4,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordDTO;
 import java.io.IOException;
 
@@ -29,15 +30,15 @@ public final class WarframeOfficialInputParser {
     public static OfficialRecordDTO parseCompleteJson(ObjectMapper mapper, WarframeOfficialDataDomain domain,
         String input) {
         BusinessAssert.isTrue(domain != null && domain != WarframeOfficialDataDomain.OTHER,
-            WarframeManagementErrorCode.DATASET_INVALID, "官方数据集尚未登记类型化字段合同");
+            OfficialDataErrorCode.INPUT_TYPE_UNREGISTERED);
         try {
             OfficialRecordDTO result = mapper.readerFor(OfficialInputTypes.type(domain))
                 .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(input);
-            BusinessAssert.isTrue(result != null, WarframeManagementErrorCode.DATASET_INVALID, "官方记录必须是非空对象");
+            BusinessAssert.isTrue(result != null, OfficialDataErrorCode.RECORD_EMPTY);
             return result;
         } catch (IOException exception) {
-            throw invalid(domain, exception);
+            throw invalid(exception);
         }
     }
 
@@ -53,35 +54,26 @@ public final class WarframeOfficialInputParser {
     public static OfficialRecordDTO parseCurrentValue(ObjectMapper mapper, WarframeOfficialDataDomain domain,
         JsonParser parser) throws IOException {
         BusinessAssert.isTrue(domain != null && domain != WarframeOfficialDataDomain.OTHER,
-            WarframeManagementErrorCode.DATASET_INVALID, "官方数据集尚未登记类型化字段合同");
+            OfficialDataErrorCode.INPUT_TYPE_UNREGISTERED);
         try {
             OfficialRecordDTO result = mapper.readerFor(OfficialInputTypes.type(domain))
                 .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .without(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(parser);
-            BusinessAssert.isTrue(result != null, WarframeManagementErrorCode.DATASET_INVALID, "官方记录必须是非空对象");
+            BusinessAssert.isTrue(result != null, OfficialDataErrorCode.RECORD_EMPTY);
             return result;
         } catch (JsonMappingException exception) {
-            throw invalid(domain, exception);
+            throw invalid(exception);
         }
     }
 
     /**
-     * 将绑定失败转换为包含官方文件路径与字段位置的业务异常。
+     * 将绑定失败转换为安全的业务异常，字段路径保留在 Jackson cause 供内部诊断。
      *
-     * @param domain 官方数据文件所属的业务领域。
-     * @param exception 需要保留原因和字段定位的原始异常。
-     * @return 保留失败原因的业务异常。
+     * @param exception 带字段路径的原始绑定异常。
+     * @return 保留原始失败原因但不回显 JSON 内容的业务异常。
      */
-    private static BusinessException invalid(WarframeOfficialDataDomain domain, Exception exception) {
-        StringBuilder pointer = new StringBuilder();
-        if (exception instanceof JsonMappingException mapping) {
-            for (var reference : mapping.getPath()) {
-                String segment = reference.getFieldName() == null ? Integer.toString(reference.getIndex())
-                    : reference.getFieldName();
-                pointer.append('/').append(segment.replace("~", "~0").replace("/", "~1"));
-            }
-        }
-        return new BusinessException(WarframeManagementErrorCode.DATASET_INVALID,
-            "官方 JSON 与类型化输入合同不符：" + domain.productPath() + "#" + pointer + "：" + exception.getMessage(), exception);
+    private static BusinessException invalid(Exception exception) {
+        return new BusinessException(OfficialDataErrorCode.RECORD_JSON_INVALID, exception);
     }
+
 }

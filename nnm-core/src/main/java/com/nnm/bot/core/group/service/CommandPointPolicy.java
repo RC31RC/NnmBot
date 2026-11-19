@@ -1,13 +1,16 @@
 package com.nnm.bot.core.group.service;
 
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.core.constant.GroupPointConstants.TransactionType;
-import com.nnm.bot.core.constant.SystemCommandCodes;
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.plugin.model.PointCommandDisplay;
-import com.nnm.bot.core.plugin.model.ReplyBlock;
+import com.nnm.bot.core.group.constant.GroupPointConstants.TransactionType;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
+import com.nnm.bot.core.group.pojo.dto.PointBalanceDTO;
+import com.nnm.bot.core.group.pojo.dto.PointChangeResultDTO;
+import com.nnm.bot.core.group.pojo.dto.PointOperationDTO;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.group.pojo.vo.PointCommandVO;
+import com.nnm.bot.core.plugin.api.ReplyBlock;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -41,21 +44,21 @@ public class CommandPointPolicy {
         return isSignIn(descriptor);
     }
 
-    public PointOperation rewardOperation(long groupId, long memberId, CommandDescriptor descriptor, long rewardPoints,
-        String idempotencyKey) {
+    public PointOperationDTO rewardOperation(long groupId, long memberId, CommandDescriptor descriptor,
+        long rewardPoints, String idempotencyKey) {
         boolean signIn = isSignIn(descriptor);
-        return new PointOperation(groupId, memberId, descriptor.code(),
+        return new PointOperationDTO(groupId, memberId, descriptor.code(),
             signIn ? TransactionType.SIGN_IN : TransactionType.COMMAND_REWARD, rewardPoints, idempotencyKey,
             signIn ? "群组签到" : "命令成功奖励");
     }
 
-    public CommandResult completeReward(CommandDescriptor descriptor, CommandResult result, PointChangeResult change) {
+    public CommandResult completeReward(CommandDescriptor descriptor, CommandResult result,
+        PointChangeResultDTO change) {
         if (!isSignIn(descriptor)) {
             return result;
         }
-        PointBalance balance = change.balance();
-        PointCommandDisplay data =
-            new PointCommandDisplay(balance.points(), balance.totalEarned(), balance.totalSpent());
+        PointBalanceDTO balance = change.balance();
+        PointCommandVO data = new PointCommandVO(balance.points(), balance.totalEarned(), balance.totalSpent());
         String text = change.applied() ? "签到成功，当前积分：" + balance.points() : "今天已经签到，当前积分：" + balance.points();
         ArrayList<ReplyBlock> blocks = new ArrayList<>(result.blocks());
         if (blocks.getFirst() instanceof ReplyBlock.Text)

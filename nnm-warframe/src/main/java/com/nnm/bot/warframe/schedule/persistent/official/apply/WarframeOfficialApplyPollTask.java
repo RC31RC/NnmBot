@@ -13,6 +13,7 @@ public class WarframeOfficialApplyPollTask {
     @Resource
     private WarframeOfficialApplyWorkService work;
 
+    /** 轮询并处理当前实例可认领的官方数据审批工作项。 */
     @Scheduled(fixedDelayString = "${nnm.warframe.pull.dataset.apply-poll-interval:5s}")
     public void poll() {
         try {

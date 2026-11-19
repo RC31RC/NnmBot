@@ -2,17 +2,18 @@ package com.nnm.bot.warframe.persistent.curated.service.reference.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO.AliasDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemResolutionDTO;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityCatalogService;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeItemResolverService;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialReferenceKeys;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameIndexDTO;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
-import com.nnm.bot.warframe.util.WarframeNameNormalizer;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import jakarta.annotation.Resource;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -22,8 +23,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -249,12 +250,19 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
     private SearchIndex searchIndex() {
         List<WarframeOfficialNameIndexDTO> official = Arrays.stream(WarframeOfficialDataDomain.values())
             .filter(WarframeOfficialDataDomain::itemIndex).map(officialLookup::nameIndex).toList();
+        var localizations = officialLookup.nameIndex(WarframeOfficialDataDomain.ITEM_LOCALIZATION);
         Map<String, WarframeOfficialNameDTO> items =
-            view(() -> official.stream().flatMap(index -> index.items().keySet().stream()), key -> official.stream()
-                .map(index -> index.items().get(key)).filter(Objects::nonNull).findFirst().orElse(null));
-        Map<String, List<String>> names =
-            view(() -> official.stream().flatMap(index -> index.names().keySet().stream()), key -> official.stream()
-                .flatMap(index -> index.names().getOrDefault(key, List.of()).stream()).distinct().toList());
+            view(() -> official.stream().flatMap(index -> index.items().keySet().stream()),
+                key -> official.stream().map(index -> index.items().get(key)).filter(Objects::nonNull)
+                    .map(row -> localize(row, localizations)).findFirst().orElse(null));
+        Map<String,
+            List<String>> names = view(
+                () -> Stream.concat(official.stream().flatMap(index -> index.names().keySet().stream()),
+                    localizations.names().keySet().stream()),
+                key -> Stream
+                    .concat(official.stream().flatMap(index -> index.names().getOrDefault(key, List.of()).stream()),
+                        localizedKeys(official, localizations, key))
+                    .distinct().toList());
         Map<String, List<String>> aliasTargets = communityCatalogService.aliasTargets();
         Map<String, List<String>> termTargets = communityCatalogService.termTargets();
         Map<String, List<String>> aliases =
@@ -265,6 +273,48 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
                     .flatMap(target -> names.getOrDefault(WarframeNameNormalizer.item(target), List.of()).stream())
                     .distinct().toList());
         return new SearchIndex(items, names, aliases);
+    }
+
+    /**
+     * 将本地化名称关联回真实业务对象，不把文本词条变成缺少属性的物品候选。
+     *
+     * @param official 本次读取的独立业务表名称索引。
+     * @param localizations 同一请求读取的独立本地化索引。
+     * @param name 已规范化的名称。
+     * @return 能对应实际业务记录的候选身份流。
+     */
+    private static Stream<String> localizedKeys(List<WarframeOfficialNameIndexDTO> official,
+        WarframeOfficialNameIndexDTO localizations, String name) {
+        return localizations.names().getOrDefault(name, List.of()).stream().map(localizations.items()::get)
+            .filter(Objects::nonNull).flatMap(row -> WarframeOfficialReferenceKeys.candidates(row.bkey()).stream())
+            .flatMap(bkey -> official.stream().map(index -> {
+                if (index.items().isEmpty())
+                    return null;
+                String domain = index.items().values().iterator().next().domainCode();
+                String key = WarframeOfficialNameIndexDTO.identity(domain, bkey);
+                return index.items().containsKey(key) ? key : null;
+            }).filter(Objects::nonNull));
+    }
+
+    /**
+     * 只在本次查询补齐缺失名称，完整属性仍由原业务主表及其子树提供。
+     *
+     * @param row 真实业务记录的轻量名称投影。
+     * @param localizations 独立本地化表索引，不缓存跨表派生结果。
+     * @return 保留原业务身份及详情路由的名称投影。
+     */
+    private static WarframeOfficialNameDTO localize(WarframeOfficialNameDTO row,
+        WarframeOfficialNameIndexDTO localizations) {
+        if (WarframeNameNormalizer.hasChinese(row.localizedName()))
+            return row;
+        for (String bkey : WarframeOfficialReferenceKeys.candidates(row.bkey())) {
+            var text = localizations.items().get(
+                WarframeOfficialNameIndexDTO.identity(WarframeOfficialDataDomain.ITEM_LOCALIZATION.domainCode(), bkey));
+            if (text != null && StrUtil.isNotBlank(text.localizedName()))
+                return new WarframeOfficialNameDTO(row.databaseId(), row.bkey(), row.domainCode(), row.officialName(),
+                    text.localizedName(), row.parentName(), row.productCategory(), row.wikiSlug(), row.marketSlug());
+        }
+        return row;
     }
 
     /**
@@ -288,19 +338,40 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      */
     private static <V> Map<String, V> view(Supplier<Stream<String>> keys, Function<String, V> lookup) {
         return new AbstractMap<>() {
+            /**
+             * 按需从来源索引查找指定键。
+             *
+             * @param key 待查找的键。
+             * @return 命中值；键不是字符串或未命中时返回 {@code null}。
+             */
             @Override
             public V get(Object key) {
                 return key instanceof String text ? lookup.apply(text) : null;
             }
 
+            /**
+             * 暴露当前来源键组成的只读条目集合。
+             *
+             * @return 按需解析值的条目集合。
+             */
             @Override
             public Set<Entry<String, V>> entrySet() {
                 return new AbstractSet<>() {
+                    /**
+                     * 遍历当前不同键，并在访问时解析对应值。
+                     *
+                     * @return 当前视图的条目迭代器。
+                     */
                     @Override
                     public Iterator<Entry<String, V>> iterator() {
                         return keys.get().distinct().map(key -> Map.entry(key, lookup.apply(key))).iterator();
                     }
 
+                    /**
+                     * 计算当前去重键的数量。
+                     *
+                     * @return 当前视图中的条目数。
+                     */
                     @Override
                     public int size() {
                         return Math.toIntExact(keys.get().distinct().count());

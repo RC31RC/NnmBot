@@ -6,7 +6,7 @@ import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandCost;
 import com.nnm.bot.admin.repository.bot.command.BotCommandCostRepository;
 import com.nnm.bot.admin.repository.bot.command.BotCommandRepository;
-import com.nnm.bot.core.plugin.model.CommandCostConfiguration;
+import com.nnm.bot.core.plugin.api.CommandCostConfigurationDTO;
 import com.nnm.bot.core.plugin.api.CommandCostConfigurationProvider;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -23,16 +23,16 @@ public class DatabaseCommandCostConfigurationProvider implements CommandCostConf
     private BotCommandCostRepository costRepository;
 
     @Override
-    public CommandCostConfiguration configuration(String commandCode) {
+    public CommandCostConfigurationDTO configuration(String commandCode) {
         BotCommand command = commandRepository.findByCodeIgnoreCase(commandCode).orElse(null);
         if (ObjectUtil.isNull(command)) {
-            return CommandCostConfiguration.free();
+            return CommandCostConfigurationDTO.free();
         }
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElse(null);
         if (ObjectUtil.isNull(cost)) {
-            return CommandCostConfiguration.free();
+            return CommandCostConfigurationDTO.free();
         }
-        return new CommandCostConfiguration(cost.isEnabled(), cost.getCostPoints(), cost.isRewardEnabled(),
+        return new CommandCostConfigurationDTO(cost.isEnabled(), cost.getCostPoints(), cost.isRewardEnabled(),
             cost.getRewardPoints());
     }
 }

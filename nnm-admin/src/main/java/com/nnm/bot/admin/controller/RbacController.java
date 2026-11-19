@@ -22,7 +22,7 @@ import com.nnm.bot.admin.service.auth.AuthService;
 import com.nnm.bot.admin.service.system.RbacQueryService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 提供当前用户可见的菜单、权限和会话视图。 */
 @RestController
 @RequestMapping("/api/admin")
 public class RbacController {
@@ -41,7 +42,7 @@ public class RbacController {
     private RbacQueryService rbacQueryService;
 
     @PostMapping("/me")
-    public ApiResponse<UserInfoVO> me(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<UserInfoVO> me(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminAuthViewAssembler.toUserInfoVO(authService.currentUser(StpUtil.getLoginIdAsLong())));
     }
 
@@ -63,18 +64,18 @@ public class RbacController {
 
     @PostMapping("/permissions/query")
     @SaCheckPermission("system:role:assign")
-    public ApiResponse<List<PermissionVO>> permissions(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<PermissionVO>> permissions(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toPermissionVO(rbacQueryService.permissions()));
     }
 
     @PostMapping("/menus/query")
-    public ApiResponse<List<MenuVO>> menus(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<MenuVO>> menus(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toMenuVO(rbacQueryService.menus(StpUtil.getLoginIdAsLong())));
     }
 
     @PostMapping("/menus/all/query")
     @SaCheckPermission("system:menu:view")
-    public ApiResponse<List<MenuVO>> allMenus(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<MenuVO>> allMenus(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toMenuVO(rbacQueryService.allMenus()));
     }
 }

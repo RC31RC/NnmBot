@@ -1,27 +1,25 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
-import com.nnm.bot.core.plugin.model.ReplyBlock.File;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Image;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Markdown;
-import com.nnm.bot.core.plugin.model.ReplyBlock.Text;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.core.plugin.api.ReplyBlock.File;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Image;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Markdown;
+import com.nnm.bot.core.plugin.api.ReplyBlock.Text;
 import com.nnm.bot.core.config.ReplyProperties;
-import com.nnm.bot.core.constant.BotChannelCapability;
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.constant.BotMessageConstants.PartKind;
-import com.nnm.bot.core.message.sender.BotMessageSenderRouter;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.plugin.model.CommandResult;
-import com.nnm.bot.core.constant.CommandPresentationConstants.CompositionPolicy;
-import com.nnm.bot.core.constant.CommandPresentationConstants.InteractionPolicy;
-import com.nnm.bot.core.plugin.model.PresentationPolicy;
-import com.nnm.bot.core.plugin.model.PlannedReplyAction;
-import com.nnm.bot.core.constant.CommandDeliveryConstants.Presentation;
-import com.nnm.bot.core.plugin.model.ReplyAction;
-import com.nnm.bot.core.plugin.model.ReplyBlock;
-import com.nnm.bot.core.plugin.model.ReplyMessage;
-import com.nnm.bot.core.plugin.model.ResponsePlan;
+import com.nnm.bot.core.channel.constant.BotChannelCapability;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.messaging.constant.BotMessageConstants.PartKind;
+import com.nnm.bot.core.messaging.sender.BotMessageSenderRouter;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.CompositionPolicy;
+import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.InteractionPolicy;
+import com.nnm.bot.core.plugin.api.PresentationPolicy;
+import com.nnm.bot.core.plugin.constant.CommandDeliveryConstants.Presentation;
+import com.nnm.bot.core.plugin.api.ReplyAction;
+import com.nnm.bot.core.plugin.api.ReplyBlock;
+import com.nnm.bot.core.plugin.api.ReplyMessage;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import com.nnm.bot.core.message.model.BotMarkdownMessage;
+import com.nnm.bot.core.messaging.model.BotMarkdownMessage;
 
 /** 候选评估只读元数据；所有渲染和上传都在选定实例后进行。 */
 @Component
@@ -39,7 +37,7 @@ public class ReplyPlanner {
     @Resource
     private ReplyProperties limits;
 
-    public Optional<List<ResponsePlan>> plan(BotMessageContext context, CommandExecutionConfiguration configuration,
+    public Optional<List<ResponsePlan>> plan(BotMessageContext context, CommandExecutionConfigurationDTO configuration,
         CommandResult result) {
         ReplyTarget target = target(context, configuration.mentionInvoker());
         PresentationPolicy presentation = PresentationPolicy.defaults();

@@ -1,17 +1,16 @@
 package com.nnm.bot.core.plugin.execution;
 
-import com.nnm.bot.common.exception.ExceptionCause;
-import com.nnm.bot.common.resource.ResourceScope;
-import com.nnm.bot.core.plugin.model.DeliveryReport;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.common.error.ExceptionCause;
+import com.nnm.bot.core.resource.ResourceScope;
+import com.nnm.bot.core.plugin.response.DeliveryReport;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
-import com.nnm.bot.core.plugin.model.CommandMatch;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.plugin.response.CommandResponseDispatcher;
 import com.nnm.bot.core.plugin.response.ReplyDeliveryException;
-import com.nnm.bot.core.constant.CommandExecutionConstants.FailurePropagation;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.FailurePropagation;
 import com.nnm.bot.core.plugin.execution.advice.BotExceptionResolver;
 import com.nnm.bot.core.plugin.execution.advice.BotFailureDecision;
 import com.nnm.bot.core.plugin.execution.advice.BotFailureReply;

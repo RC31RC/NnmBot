@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.command.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.stream.Collectors;
 import cn.hutool.core.util.ObjectUtil;
 
@@ -31,18 +32,15 @@ import com.nnm.bot.admin.repository.bot.command.BotCommandRoleRepository;
 import com.nnm.bot.admin.repository.system.SysRoleRepository;
 import com.nnm.bot.admin.service.bot.command.BotCommandManagementService;
 import com.nnm.bot.admin.validation.command.BotCommandPresentationValidator;
-import com.nnm.bot.core.constant.CommandBoundaryPolicy;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
+import com.nnm.bot.core.plugin.constant.CommandBoundaryPolicy;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandMetadata;
+import com.nnm.bot.core.plugin.api.CommandMetadataDTO;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
 import com.nnm.bot.admin.repository.bot.role.BotRobotRoleRepository;
-import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
-import com.nnm.bot.common.exception.DataNotFoundException;
+import com.nnm.bot.common.error.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +56,7 @@ import java.util.LinkedHashSet;
 import java.util.Comparator;
 import java.util.ArrayList;
 
+/** 读取命令定义并维护管理端命令配置、授权与成本。 */
 @Service
 public class BotCommandManagementServiceImpl implements BotCommandManagementService {
 
@@ -102,10 +101,10 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void update(String code, BotCommandSaveDTO request) {
-        BotPlugin<?, ?> plugin =
-            commandRegistry.plugin(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
+        BotPlugin<?, ?> plugin = commandRegistry.plugin(code)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         CommandDescriptor descriptor = commandRegistry.command(code).map(RuntimeCommand::descriptor).orElseGet(() -> {
-            CommandMetadata metadata = commandRegistry.metadata(plugin);
+            CommandMetadataDTO metadata = commandRegistry.metadata(plugin);
             return new CommandDescriptor(metadata.code(), metadata.name(), List.of(), "", "", metadata.matchType(),
                 metadata.order());
         });
@@ -132,8 +131,8 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
 
     @Override
     public List<BotCommandRoleDTO> roles(String code) {
-        BotCommand command =
-            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
+        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         Map<Long, BotCommandRobotRole> assigned = commandRoleRepository.findAllByCommandId(command.getId()).stream()
             .collect(Collectors.toMap(BotCommandRobotRole::getRobotRoleId, item -> item));
         return roleRepository.findAll().stream().sorted(Comparator.comparing(BotRobotRole::getCode))
@@ -145,12 +144,12 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void updateRoles(String code, BotCommandRoleSaveDTO request) {
-        BotCommand command =
-            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
+        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         Map<Long, BotRobotRole> roles = roleRepository.findAllById(request.roleIds()).stream()
             .collect(Collectors.toMap(BotRobotRole::getId, item -> item));
         if (roles.size() != request.roleIds().size()) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "命令角色包含不存在的角色");
+            throw new BusinessException(BotManagementErrorCode.COMMAND_ROLE_UNKNOWN);
         }
         List<BotCommandRobotRole> current = commandRoleRepository.findAllByCommandId(command.getId());
         Set<Long> currentIds = current.stream().map(BotCommandRobotRole::getRobotRoleId).collect(Collectors.toSet());
@@ -173,8 +172,8 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
 
     @Override
     public List<Long> systemRoleIds(String code) {
-        BotCommand command =
-            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
+        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         return systemRoleBindingRepository.findAllByCommandId(command.getId()).stream().map(BotCommandRole::getRoleId)
             .distinct().toList();
     }
@@ -182,14 +181,14 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void updateSystemRoles(String code, BotCommandSystemRoleSaveDTO request) {
-        BotCommand command =
-            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
+        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         List<Long> roleIds =
             CollUtil.isEmpty(request.roleIds()) ? List.of() : request.roleIds().stream().distinct().toList();
         Map<Long, SysRole> roles =
             systemRoleRepository.findAllById(roleIds).stream().collect(Collectors.toMap(SysRole::getId, item -> item));
         if (roles.size() != roleIds.size()) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "命令系统角色包含不存在的角色");
+            throw new BusinessException(BotManagementErrorCode.COMMAND_SYSTEM_ROLE_UNKNOWN);
         }
         List<BotCommandRole> current = systemRoleBindingRepository.findAllByCommandId(command.getId());
         Set<Long> currentIds = current.stream().map(BotCommandRole::getRoleId).collect(Collectors.toSet());
@@ -243,8 +242,8 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
 
     @Override
     public BotCommandCostDTO cost(String code) {
-        BotCommand command =
-            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
+        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElse(null);
         return new BotCommandCostDTO(command.getCode(), ObjectUtil.isNull(cost) ? 0 : cost.getCostPoints(),
             ObjectUtil.isNotNull(cost) && cost.isEnabled(), ObjectUtil.isNull(cost) ? 0 : cost.getRewardPoints(),
@@ -254,8 +253,8 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     @Override
     @Transactional
     public void updateCost(String code, BotCommandCostSaveDTO request) {
-        BotCommand command =
-            commandRepository.findByCodeIgnoreCase(code).orElseThrow(() -> new DataNotFoundException("命令不存在：" + code));
+        BotCommand command = commandRepository.findByCodeIgnoreCase(code)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElseGet(BotCommandCost::new);
         cost.setCommandId(command.getId());
         cost.setCostPoints(request.costPoints());
@@ -270,11 +269,11 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
             command.setTemplateId(null);
             return;
         }
-        BotCommandTemplate template =
-            templateRepository.findById(templateId).orElseThrow(() -> new DataNotFoundException("命令模板不存在"));
+        BotCommandTemplate template = templateRepository.findById(templateId)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_TEMPLATE_NOT_FOUND));
         BusinessAssert.isTrue(command.getId() != null && command.getId().equals(template.getCommandId()),
-            CommonErrorCode.PARAM_INVALID, "只能选择归属于当前命令的 HTML 模板");
-        BusinessAssert.isTrue(template.isEnabled(), CommonErrorCode.PARAM_INVALID, "不能选择已停用的 HTML 模板");
+            BotManagementErrorCode.TEMPLATE_COMMAND_MISMATCH);
+        BusinessAssert.isTrue(template.isEnabled(), BotManagementErrorCode.TEMPLATE_DISABLED);
         presentationValidator.validate(List.of(template));
         command.setTemplateId(template.getId());
     }
@@ -297,7 +296,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     }
 
     private BotCommandDTO toItem(BotPlugin<?, ?> plugin, BotCommand command) {
-        CommandMetadata metadata = ObjectUtil.isNull(plugin) ? null : commandRegistry.metadata(plugin);
+        CommandMetadataDTO metadata = ObjectUtil.isNull(plugin) ? null : commandRegistry.metadata(plugin);
         String code = ObjectUtil.isNull(command) ? metadata.code() : command.getCode();
         String gameCode = gameCode(command, plugin, code);
         List<BotCommandTriggerDTO> triggers = ObjectUtil.isNull(command) ? List.of()
@@ -343,7 +342,7 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         }
         String normalized = role.trim().toUpperCase(Locale.ROOT);
         if (!Set.of("OWNER", "ADMIN").contains(normalized)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "群组角色要求只能是 OWNER 或 ADMIN");
+            throw new BusinessException(BotManagementErrorCode.GROUP_ROLE_INVALID);
         }
         return normalized;
     }

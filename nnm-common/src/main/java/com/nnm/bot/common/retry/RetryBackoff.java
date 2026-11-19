@@ -10,6 +10,14 @@ public final class RetryBackoff {
 
     private RetryBackoff() {}
 
+    /** 根据失败次数计算指数退避时长，并限制在最大值内。
+     *
+     * @param initial 首次失败后的等待时长
+     * @param maximum 等待上限
+     * @param failedAttempt 从 1 开始的连续失败次数
+     * @return 当前尝试应等待的时长
+     * @throws IllegalArgumentException 时长为负、上限小于初始值或失败次数小于 1
+     */
     public static Duration exponential(Duration initial, Duration maximum, int failedAttempt) {
         Objects.requireNonNull(initial, "initial must not be null");
         Objects.requireNonNull(maximum, "maximum must not be null");

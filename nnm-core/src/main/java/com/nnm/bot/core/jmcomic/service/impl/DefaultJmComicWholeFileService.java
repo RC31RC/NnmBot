@@ -7,7 +7,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
 import com.nnm.bot.core.jmcomic.constant.JmComicErrorCode;
 import com.nnm.bot.core.jmcomic.exception.JmComicWholeFileException;
@@ -126,14 +126,16 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             }
             long contentLength = body.contentLength();
             if (contentLength > this.properties.getMaxDownloadBytes()) {
-                throw new BusinessException(JmComicErrorCode.DOWNLOAD_TOO_LARGE,
-                    "JM 整本文件大小为 " + contentLength + " 字节，超过限制 " + this.properties.getMaxDownloadBytes() + " 字节");
+                throw new BusinessException(JmComicErrorCode.WHOLE_FILE_SIZE_LIMIT,
+                    JmComicErrorCode.WHOLE_FILE_SIZE_LIMIT.getMessage().formatted(contentLength,
+                        this.properties.getMaxDownloadBytes()));
             }
             Files.createDirectories(target.getParent());
             try (InputStream input = new BufferedInputStream(body.byteStream());
                 OutputStream output = new BufferedOutputStream(Files.newOutputStream(target, StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE))) {
-                this.copyWithLimit(input, output, this.properties.getMaxDownloadBytes(), "JM 整本文件超过下载大小限制");
+                this.copyWithLimit(input, output, this.properties.getMaxDownloadBytes(),
+                    JmComicErrorCode.WHOLE_STREAM_SIZE_LIMIT);
             }
         }
     }
@@ -173,13 +175,13 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
     private JmComicDocument usePdf(String albumId, String title, Path source, Path workspace) throws IOException {
         long pdfBytes = Files.size(source);
         if (pdfBytes > this.properties.getMaxPdfBytes()) {
-            throw new BusinessException(JmComicErrorCode.PDF_TOO_LARGE,
-                "JM 整本 PDF 大小为 " + pdfBytes + " 字节，超过限制 " + this.properties.getMaxPdfBytes() + " 字节");
+            throw new BusinessException(JmComicErrorCode.WHOLE_PDF_SIZE_LIMIT, JmComicErrorCode.WHOLE_PDF_SIZE_LIMIT
+                .getMessage().formatted(pdfBytes, this.properties.getMaxPdfBytes()));
         }
         int pageCount = this.readPdfPageCount(source);
         if (pageCount > this.properties.getMaxPages()) {
-            throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE,
-                "JM 整本 PDF 共 " + pageCount + " 页，超过限制 " + this.properties.getMaxPages() + " 页");
+            throw new BusinessException(JmComicErrorCode.WHOLE_PDF_PAGE_LIMIT,
+                JmComicErrorCode.WHOLE_PDF_PAGE_LIMIT.getMessage().formatted(pageCount, this.properties.getMaxPages()));
         }
         Path target = workspace.resolve(this.safePdfFileName(title, albumId));
         this.moveAtomically(source, target);
@@ -210,7 +212,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             while (ObjectUtil.isNotNull(entry = input.getNextEntry())) {
                 inspectedEntries++;
                 if (inspectedEntries > maxEntries) {
-                    throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE, "JM 整本压缩包文件项过多");
+                    throw new BusinessException(JmComicErrorCode.ARCHIVE_ENTRY_LIMIT);
                 }
                 if (entry.isDirectory() || !this.isImageEntry(entry.getName())) {
                     input.closeEntry();
@@ -227,7 +229,8 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
                 }
                 try (OutputStream output = new BufferedOutputStream(
                     Files.newOutputStream(image, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE))) {
-                    extractedBytes += this.copyWithLimit(input, output, remaining, "JM 整本压缩包解压后超过大小限制");
+                    extractedBytes +=
+                        this.copyWithLimit(input, output, remaining, JmComicErrorCode.ARCHIVE_UNPACK_SIZE_LIMIT);
                 }
                 images.add(image);
                 entryNames.put(image, entry.getName());
@@ -238,7 +241,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         return images;
     }
 
-    private long copyWithLimit(InputStream input, OutputStream output, long maxBytes, String limitMessage)
+    private long copyWithLimit(InputStream input, OutputStream output, long maxBytes, JmComicErrorCode limitError)
         throws IOException {
         byte[] buffer = new byte[COPY_BUFFER_BYTES];
         long copied = 0;
@@ -249,7 +252,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             }
             copied = Math.addExact(copied, read);
             if (copied > maxBytes) {
-                throw new BusinessException(JmComicErrorCode.DOWNLOAD_TOO_LARGE, limitMessage + " " + maxBytes + " 字节");
+                throw new BusinessException(limitError, limitError.getMessage().formatted(maxBytes));
             }
             output.write(buffer, 0, read);
         }

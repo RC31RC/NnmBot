@@ -1,24 +1,24 @@
 package com.nnm.bot.core.plugin.execution.impl;
 
-import com.nnm.bot.core.constant.CommandExecutionConstants.IngressEvent;
-import com.nnm.bot.core.constant.CommandExecutionConstants.IngressPhase;
-import com.nnm.bot.core.message.cache.MessageReferenceCache;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.IngressEvent;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.IngressPhase;
+import com.nnm.bot.core.messaging.cache.MessageReferenceCache;
 
-import com.nnm.bot.core.constant.CommandExecutionConstants.IngressState;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.IngressState;
 
 import com.nnm.bot.core.config.ExecutorProperties.CommandIngress;
 import java.util.Map.Entry;
 import com.nnm.bot.core.config.ExecutorProperties;
 import com.nnm.bot.core.config.CommandRoutingProperties;
-import com.nnm.bot.core.message.model.BotIncomingAttachment;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.execution.CommandDispatcher;
 import com.nnm.bot.core.plugin.execution.CommandCall;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandIngressResult;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandErrorCode;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandIngressResult;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.core.plugin.execution.CommandIngressService;
-import com.nnm.bot.core.plugin.model.CommandMatch;
+import com.nnm.bot.core.plugin.execution.CommandMatch;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;

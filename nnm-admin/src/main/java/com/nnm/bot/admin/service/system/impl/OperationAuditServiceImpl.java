@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/** 记录管理操作上下文并提供审计日志分页查询。 */
 @Service
 public class OperationAuditServiceImpl implements OperationAuditService {
 

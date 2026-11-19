@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.dto.bot.notification;
 
-import com.nnm.bot.core.constant.CommandDeliveryConstants.Presentation;
+import com.nnm.bot.core.plugin.constant.CommandDeliveryConstants.Presentation;
 import java.util.List;
 
 public record BotNotificationPreviewDTO(long groupId, String groupName, String platform, String botAccountId,

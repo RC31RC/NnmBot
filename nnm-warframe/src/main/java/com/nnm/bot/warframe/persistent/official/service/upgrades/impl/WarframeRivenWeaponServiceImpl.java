@@ -10,7 +10,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.OfficialRivenW
 import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.values;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
-import com.nnm.bot.warframe.util.WarframeNameNormalizer;
+import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;

@@ -3,6 +3,7 @@ package com.nnm.bot.warframe.runtime.mapper.worldstate;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO;
+import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.AlertVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ArbitrationMissionVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ArchimedeaVO;
@@ -16,7 +17,6 @@ import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.Chal
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.CircuitRewardVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ClanInitiativeVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ClanRewardVO;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ConclaveVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ConstructionVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.CycleVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.DealVO;
@@ -33,22 +33,17 @@ import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.Rewa
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.SimarisTargetVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.SortieVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.TraderVO;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.UnresolvedReferenceVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.VariantVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.VaultProductVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.VaultTraderVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.WorldStateEntryVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.WorldTimestampVO;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -63,31 +58,27 @@ public final class WarframeWorldStateDisplayMapper {
     private WarframeWorldStateDisplayMapper() {}
 
     /**
-     * 将输入对象转换为当前业务数据对象。
+     * 将当前动态数据转换为玩家可见内容，未命中的引用保留原值；未完全解析时附带待确认状态。
      *
      * @param command 命令。
-     * @param data 当前操作的数据。
-     * @return 世界状态的页面展示内容。
+     * @param data 已解析的当前动态数据。
+     * @return 世界状态的玩家展示内容。
      */
     public static WarframeWorldStateVO from(String command, Map<String, Object> data) {
-        List<UnresolvedReferenceVO> unresolved = new ArrayList<>();
-        Map<String, Object> cleanData = sanitize(data, command, "", unresolved);
-        return from(command, cleanData, unresolved);
+        return from(command, data, List.of());
     }
 
     /**
-     * 将输入对象转换为当前业务数据对象。
+     * 在保留字段级未完成状态的同时转换玩家命令展示数据。
      *
      * @param command 命令。
-     * @param data 当前操作的数据。
-     * @param unresolvedReferences 未解析引用集合。
-     * @return 世界状态的页面展示内容。
+     * @param data 最终解析投影。
+     * @param unresolved 静态引用解析保留的审核记录。
+     * @return 世界状态的玩家展示内容。
      */
     public static WarframeWorldStateVO from(String command, Map<String, Object> data,
-        List<UnresolvedReferenceVO> unresolvedReferences) {
-        List<UnresolvedReferenceVO> unresolved =
-            new ArrayList<>(unresolvedReferences == null ? List.of() : unresolvedReferences);
-        Map<String, Object> cleanData = sanitize(data, command, "", unresolved);
+        List<WarframeWorldStateUnresolvedReferenceDTO> unresolved) {
+        Map<String, Object> cleanData = sanitize(data);
         List<Map<?, ?>> rows = rows(cleanData.get("items"));
         List<?> items = switch (command) {
             case "alerts" -> map(rows,
@@ -125,8 +116,9 @@ public final class WarframeWorldStateDisplayMapper {
                 text(row, "platinum"), text(row, "stock"), text(row, "sold"), text(row, "remaining")));
             case "invasions" -> map(rows.stream().filter(row -> !Boolean.TRUE.equals(row.get("completed"))).toList(),
                 row -> new InvasionVO(readable(text(row, "node"), "未知节点"), text(row, "completion"),
-                    reward(row, "attackerReward", "attackerRewards"),
-                    reward(row, "defenderReward", "defenderRewards")));
+                    reward(row, "attackerReward", "attackerRewards"), reward(row, "defenderReward", "defenderRewards"),
+                    String.join("、", values(row.get("attackerMissions")).stream().map(Object::toString).toList()),
+                    String.join("、", values(row.get("defenderMissions")).stream().map(Object::toString).toList())));
             case "steel-path" -> map(rows, row -> new OfferingVO(readable(text(row, "node"), "未知节点"),
                 readable(text(row, "reward"), "未知奖励"), text(row, "expiry"), text(row, "remaining")));
             case "ostrons", "solaris", "entrati", "cavia", "holdfasts", "hex-bounties",
@@ -146,11 +138,6 @@ public final class WarframeWorldStateDisplayMapper {
                 row -> new ChallengeVO(readable(text(row, "title"), "未命名任务"),
                     readable(text(row, "description"), "暂无任务说明"), text(row, "reputation"),
                     Boolean.TRUE.equals(row.get("daily")) ? "每日" : "每周"));
-            case "conclave" -> map(rows,
-                row -> new ConclaveVO(readable(text(row, "title"), "未命名挑战"),
-                    readable(text(row, "description"), "暂无挑战说明"), readable(text(row, "mode"), "未知模式"),
-                    readable(text(row, "category"), Boolean.TRUE.equals(row.get("daily")) ? "每日" : "每周"),
-                    text(row, "amount"), text(row, "standing"), text(row, "expiry"), text(row, "remaining")));
             case "news" ->
                 map(rows, row -> new NewsVO(text(row, "title"), text(row, "link"), text(row, "publishedAt")));
             case "construction-progress" ->
@@ -165,12 +152,7 @@ public final class WarframeWorldStateDisplayMapper {
                         text(reward, "count"), text(reward, "points"), text(reward, "claimed")))));
             case "circuit-normal", "circuit-hard" ->
                 map(rows, row -> new CircuitRewardVO(readable(text(row, "item"), "未知选项")));
-            case "calendar" -> map(rows,
-                row -> new CalendarDayVO(text(row, "date"), text(row, "iteration"),
-                    map(rows(row.get("events")),
-                        event -> new CalendarEventVO(readable(text(event, "title"), null),
-                            readable(text(event, "description"), null), readable(text(event, "reward"), null),
-                            readable(text(event, "dialogueName"), null)))));
+            case "calendar" -> map(rows, row -> new CalendarDayVO(text(row, "date"), calendarEvents(row)));
             case "vault-trader" -> map(rows,
                 row -> new VaultTraderVO(readable(text(row, "location"), "未知地点"), text(row, "activation"),
                     text(row, "expiry"),
@@ -220,7 +202,28 @@ public final class WarframeWorldStateDisplayMapper {
         };
         return new WarframeWorldStateVO(items,
             first(text(cleanData, "notice"), Boolean.TRUE.equals(cleanData.get("stale")) ? "上游刷新暂未成功，当前为缓存数据" : null),
-            distinct(unresolved));
+            WarframeWorldStateResolutionMapper.pending(cleanData, unresolved));
+    }
+
+    /**
+     * 将同日挑战与互斥奖励保留为同一个日历日的事件列表。
+     *
+     * @param day 已解析的游戏内日期。
+     * @return 当日有效事件；没有原始内部物品键的假译名。
+     */
+    private static List<CalendarEventVO> calendarEvents(Map<?, ?> day) {
+        List<CalendarEventVO> events = new java.util.ArrayList<>();
+        for (Map<?, ?> challenge : rows(day.get("challenges"))) {
+            String title = text(challenge, "title");
+            if ("未收录数据".equals(title))
+                title = null;
+            events.add(new CalendarEventVO(readable(first(title, text(challenge, "challenge")), "未收录挑战"),
+                text(challenge, "description"), null));
+        }
+        for (Map<?, ?> reward : rows(day.get("rewards")))
+            events.add(
+                new CalendarEventVO(null, text(reward, "description"), readable(text(reward, "item"), "奖励名称尚未收录")));
+        return List.copyOf(events);
     }
 
     /**
@@ -302,10 +305,19 @@ public final class WarframeWorldStateDisplayMapper {
                 }
                 return readable(value.toString(), "未知奖励");
             }).filter(Objects::nonNull).distinct().toList();
-        if (summaryText != null && CollUtil.isNotEmpty(itemNames)) {
-            summaryText = replaceInternalRewardReferences(summaryText, itemNames);
+        // 部分物品仍是原始键时，不能按顺序把已解析名称错配给未解析奖励。
+        if (summaryText != null && itemNames.size() == 1 && !isInternalReference(itemNames.getFirst())
+            && INTERNAL_REWARD_REFERENCE.matcher(summaryText).results().count() == 1) {
+            summaryText = WarframeRewardSummaryFormatter.replaceInternalReferences(summaryText, itemNames);
         }
         String itemText = String.join("、", itemNames);
+        if (summaryText != null && INTERNAL_REWARD_REFERENCE.matcher(summaryText).find()) {
+            String currentSummary = summaryText;
+            List<String> parsedNames = itemNames.stream().filter(name -> !isInternalReference(name))
+                .filter(name -> !currentSummary.contains(name.replaceFirst(" x\\d+$", ""))).toList();
+            if (!parsedNames.isEmpty())
+                return summaryText + "；已解析物品：" + String.join("、", parsedNames);
+        }
         return first(summaryText, itemText);
     }
 
@@ -355,124 +367,66 @@ public final class WarframeWorldStateDisplayMapper {
         if (StrUtil.isBlank(value)) {
             return fallback;
         }
-        String normalized = value.trim();
-        return isInternalReference(normalized) ? fallback : normalized;
+        return value.trim();
     }
 
     /**
-     * 清洗不应暴露给展示调用方的内部字段。
+     * 清理玩家展示数据的游戏颜色标记，并以已解析物品替换奖励摘要内的内部键。
      *
-     * @param data 当前操作的数据。
-     * @param command 命令。
-     * @param path 当前文件或业务资源的路径。
-     * @param unresolved 未解析集合。
-     * @return 以本方法约定的业务键组织的数据映射。
+     * @param data 已解析的动态数据。
+     * @return 清理后的展示数据。
      */
-    private static Map<String, Object> sanitize(Map<String, Object> data, String command, String path,
-        List<UnresolvedReferenceVO> unresolved) {
-        if (CollUtil.isEmpty(data)) {
+    private static Map<String, Object> sanitize(Map<String, Object> data) {
+        if (CollUtil.isEmpty(data))
             return data == null ? Map.of() : data;
-        }
         Map<String, Object> result = new LinkedHashMap<>();
-        data.forEach((key, value) -> {
-            String childPath = StrUtil.isBlank(path) ? key : path + "." + key;
-            result.put(key, sanitizeValue(value, key, childPath, command, unresolved));
-        });
+        data.forEach((key, value) -> result.put(key, sanitizeValue(value, key)));
         return result;
     }
 
     /**
-     * 递归清洗展示值中的内部字段。
+     * 递归处理展示字段；未命中的原始引用仍作为字段值展示。
      *
-     * @param value 待处理的字段值。
-     * @param field 已经声明的字段或字段标识。
-     * @param path 当前文件或业务资源的路径。
-     * @param command 命令。
-     * @param unresolved 未解析集合。
-     * @return 按当前字段合同转换的值，保留允许的缺省状态。
+     * @param value 展示字段值。
+     * @param field 字段名。
+     * @return 清理后的展示字段值。
      */
-    private static Object sanitizeValue(Object value, String field, String path, String command,
-        List<UnresolvedReferenceVO> unresolved) {
+    private static Object sanitizeValue(Object value, String field) {
         if (value instanceof Map<?, ?> map) {
             Map<String, Object> result = new LinkedHashMap<>();
             map.forEach((key, entry) -> {
                 String name = String.valueOf(key);
-                result.put(name, sanitizeValue(entry, name, path + "." + name, command, unresolved));
+                result.put(name, sanitizeValue(resolvedRewardSummary(map, name, entry), name));
             });
             return result;
         }
-        if (value instanceof List<?> list) {
-            List<Object> result = new ArrayList<>(list.size());
-            for (int index = 0; index < list.size(); index++) {
-                result.add(sanitizeValue(list.get(index), field, path + "[" + index + "]", command, unresolved));
-            }
-            return List.copyOf(result);
-        }
-        if (!(value instanceof String text) || !isReferenceField(field)) {
-            return value;
-        }
-        if (field.toLowerCase(Locale.ROOT).contains("reward")) {
-            Matcher matcher = INTERNAL_REWARD_REFERENCE.matcher(text);
-            StringBuffer output = new StringBuffer();
-            boolean changed = false;
-            while (matcher.find()) {
-                String reference = matcher.group();
-                if (!isInternalReference(reference)) {
-                    continue;
-                }
-                unresolved.add(new UnresolvedReferenceVO(command, path, reference, "未解析", List.of()));
-                matcher.appendReplacement(output, "未收录奖励");
-                changed = true;
-            }
-            if (changed) {
-                matcher.appendTail(output);
-                return output.toString();
-            }
-        }
-        if (isInternalReference(text)
-            || ("rewardNotice".equals(field) && text.toLowerCase(Locale.ROOT).contains("reference"))) {
-            unresolved.add(new UnresolvedReferenceVO(command, path, text, "未解析", List.of()));
-            return unresolvedPlaceholder(field);
-        }
-        return text;
+        if (value instanceof List<?> list)
+            return list.stream().map(entry -> sanitizeValue(entry, field)).toList();
+        return value instanceof String text ? WarframeWorldStateMarkupCleaner.clean(text) : value;
     }
 
     /**
-     * 按未解析字段的业务含义选择中文占位提示。
+     * 当奖励条目已有可读名称时，优先使用同条记录中已解析物品替换奖励摘要内的内部键。
      *
-     * @param field 已经声明的字段或字段标识。
-     * @return 未解析占位内容对应的文本。
+     * @param row 同一条任务的全部展示字段。
+     * @param field 当前字段名。
+     * @param value 当前字段值。
+     * @return 已解析的摘要或原值。
      */
-    private static String unresolvedPlaceholder(String field) {
-        String key = field == null ? "" : field.toLowerCase(Locale.ROOT);
-        if (key.contains("reward") || key.equals("item")) {
-            return "未收录奖励";
-        }
-        if (key.contains("description")) {
-            return "未收录说明";
-        }
-        if (key.contains("location") || key.equals("node") || key.equals("nodes")) {
-            return "未收录地点";
-        }
-        if (key.contains("mission") || key.equals("type") || key.equals("jobtype")) {
-            return "未收录任务";
-        }
-        if (key.contains("faction")) {
-            return "未收录阵营";
-        }
-        if (key.contains("modifier")) {
-            return "未收录条件";
-        }
-        if (key.equals("tier")) {
-            return "未收录纪元";
-        }
-        if (key.contains("syndicate")) {
-            return "未收录集团";
-        }
-        if (key.equals("boss")) {
-            return "未收录目标";
-        }
-        return "未收录数据";
+    private static Object resolvedRewardSummary(Map<?, ?> row, String field, Object value) {
+        if (!(value instanceof String text) || !("reward".equals(field) || field.endsWith("Reward"))
+            || !INTERNAL_REWARD_REFERENCE.matcher(text).find())
+            return value;
+        String itemsField = "reward".equals(field) ? "rewardItems" : field + "s";
+        List<?> items = values(row.get(itemsField));
+        List<String> names = items.stream().map(
+            item -> item instanceof Map<?, ?> product ? text(product, "item") : item instanceof String raw ? raw : null)
+            .toList();
+        // 仅单个结构化物品与单个内部键一一对应时，才允许按顺序替换。
+        if (names.size() != 1 || names.stream().anyMatch(name -> StrUtil.isBlank(name) || isInternalReference(name))
+            || INTERNAL_REWARD_REFERENCE.matcher(text).results().count() != 1)
+            return value;
+        return WarframeRewardSummaryFormatter.replaceInternalReferences(text, names);
     }
 
     /**
@@ -487,56 +441,6 @@ public final class WarframeWorldStateDisplayMapper {
             || normalized.startsWith("VoidT") || normalized.startsWith("OSTRONS_") || normalized.startsWith("SOLARIS_")
             || normalized.startsWith("ENTRATI_") || normalized.startsWith("Narmer") || normalized.startsWith("PVP")
             || normalized.endsWith("Reference") || normalized.matches("[A-Z][A-Z0-9_]+");
-    }
-
-    /**
-     * 判断字段是否承载需要解析的业务引用。
-     *
-     * @param field 已经声明的字段或字段标识。
-     * @return 满足字段是否承载需要解析的业务引用时为真，否则为假。
-     */
-    private static boolean isReferenceField(String field) {
-        if (field == null) {
-            return false;
-        }
-        return switch (field.toLowerCase(Locale.ROOT)) {
-            case "item", "reward", "rewarditems", "attackerreward", "defenderreward", "attackerrewards",
-                "defenderrewards", "node", "nodes", "location", "boss", "type", "mission", "missiontype", "modifier",
-                "syndicate", "faction", "upgradetype", "operationtype", "agenttype", "jobtype", "locationtag",
-                "lastdiscoveredlocation", "mode", "category", "title", "tier", "description", "rewardnotice" -> true;
-            default -> false;
-        };
-    }
-
-    /**
-     * 按业务身份去重并保留稳定顺序。
-     *
-     * @param references 引用集合。
-     * @return 按当前条件筛选或转换后的数据集合。
-     */
-    private static List<UnresolvedReferenceVO> distinct(List<UnresolvedReferenceVO> references) {
-        return new ArrayList<>(new LinkedHashSet<>(references));
-    }
-
-    /**
-     * 替换内部奖励引用。
-     *
-     * @param summary 摘要。
-     * @param itemNames 物品名称集合。
-     * @return 替换内部奖励引用对应的文本。
-     */
-    private static String replaceInternalRewardReferences(String summary, List<String> itemNames) {
-        Matcher matcher = INTERNAL_REWARD_REFERENCE.matcher(summary);
-        StringBuffer result = new StringBuffer();
-        int itemIndex = 0;
-        while (matcher.find()) {
-            if (itemIndex >= itemNames.size()) {
-                break;
-            }
-            matcher.appendReplacement(result, Matcher.quoteReplacement(itemNames.get(itemIndex++)));
-        }
-        matcher.appendTail(result);
-        return result.toString();
     }
 
     /**

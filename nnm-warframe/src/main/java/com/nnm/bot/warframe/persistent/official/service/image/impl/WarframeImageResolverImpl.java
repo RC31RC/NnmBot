@@ -1,8 +1,8 @@
 package com.nnm.bot.warframe.persistent.official.service.image.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.warframe.config.cache.DatasetSnapshotMetrics;
-import com.nnm.bot.warframe.config.cache.WarframeDatasetCache;
+import com.nnm.bot.warframe.runtime.cache.dataset.DatasetSnapshotMetrics;
+import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.official.config.image.WarframeImageDataProperties;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -110,15 +110,6 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
         if (StrUtil.isBlank(path))
             path = mapping.getDitAgnostic();
         return resolve(path, null);
-    }
-
-    /**
-     * 获取当前上游数据并更新本地有效状态。
-     */
-    @Override
-    public void refresh() {
-        snapshot(WarframeOfficialDataDomain.IMAGE);
-        snapshot(WarframeOfficialDataDomain.TEXT_ICON);
     }
 
     /**

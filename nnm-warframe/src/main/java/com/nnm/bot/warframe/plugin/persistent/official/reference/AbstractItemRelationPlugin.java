@@ -1,13 +1,14 @@
 package com.nnm.bot.warframe.plugin.persistent.official.reference;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeItemRelationCommandDTO;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.reference.WarframeItemRelationVO;
 import com.nnm.bot.warframe.persistent.official.service.reference.WarframeItemRelationService;
@@ -81,27 +82,27 @@ abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRe
             while (StrUtil.isNotBlank(remaining)) {
                 Matcher option = OPTION.matcher(remaining);
                 if (!option.find() || options.putIfAbsent(option.group(1), option.group(2)) != null) {
-                    throw new BusinessException(CommonErrorCode.PARAM_INVALID, "仅支持末尾 --type 和 --page 参数，不能重复");
+                    throw new BusinessException(OfficialCommandErrorCode.RELATION_OPTION_INVALID);
                 }
                 remaining = remaining.substring(option.end()).trim();
             }
         }
-        if (keyword.length() > 200)
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "查询内容过长，请缩短到 200 字以内");
+        if (keyword.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)
+            throw new BusinessException(OfficialCommandErrorCode.QUERY_TOO_LONG);
         Category type = options.containsKey("type") ? Category.parse(options.get("type")) : null;
         if (type != null && !WarframeCommandCatalog.relationParents().contains(type)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "物品类型不支持组件或掉落查询");
+            throw new BusinessException(OfficialCommandErrorCode.RELATION_TYPE_INVALID);
         }
         int page = 1;
         if (options.containsKey("page")) {
             String value = options.get("page");
             if (!value.matches("[0-9]+") || value.matches("0+")) {
-                throw new BusinessException(CommonErrorCode.PARAM_INVALID, "页码必须为有效的正整数");
+                throw new BusinessException(OfficialCommandErrorCode.RELATION_PAGE_INVALID);
             }
             try {
                 page = Integer.parseInt(value);
             } catch (NumberFormatException exception) {
-                throw new BusinessException(CommonErrorCode.PARAM_INVALID, "页码必须为有效的正整数");
+                throw new BusinessException(OfficialCommandErrorCode.RELATION_PAGE_INVALID);
             }
         }
         return new WarframeItemRelationCommandDTO(keyword, type, page, null);

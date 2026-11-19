@@ -1,11 +1,13 @@
 package com.nnm.bot.warframe.plugin.persistent.official.rewards;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicDetailsDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicCommandDTO;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeRelicVO;
 import com.nnm.bot.warframe.persistent.official.service.rewards.WarframeRelicService;
 import com.nnm.bot.warframe.persistent.official.service.image.WarframeImageResolver;
@@ -53,8 +55,8 @@ abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicCommandD
         if (query == null) {
             return CommandResult.rejected("页码必须为正整数：--page 2");
         }
-        if (query.keyword().length() > 200) {
-            return CommandResult.rejected("查询内容过长，请缩短到 200 字以内");
+        if (query.keyword().length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH) {
+            return CommandResult.rejected(OfficialCommandErrorCode.QUERY_TOO_LONG.getMessage());
         }
         List<WarframeRelicDetailsDTO> details = relicService.findDetails(query.keyword());
         WarframeRelicVO display = WarframeRelicVO.relics(query.keyword(), details, query.page(),

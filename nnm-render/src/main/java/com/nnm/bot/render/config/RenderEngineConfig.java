@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-/** 选择 NnmBot 渲染提供者；外部 JAR 通过 ServiceLoader 发现。 */
+/** 校验渲染配置并选择适用的渲染提供者；外部 JAR 通过 ServiceLoader 发现。 */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({RenderProperties.class, RenderPluginProperties.class})
@@ -30,15 +30,21 @@ public class RenderEngineConfig {
     /** 为 Chromium 保留足够内存余量；4GB 部署配置优先使用轻量渲染引擎。 */
     private static final long PLAYWRIGHT_MIN_PHYSICAL_MEMORY = 8L * 1024 * 1024 * 1024;
 
+    /** 引擎与模板处理的运行参数。 */
     @Resource
     private RenderProperties properties;
+    /** 外部插件发现开关与目录。 */
     @Resource
     private RenderPluginProperties pluginProperties;
+    /** 负责发现、排序并管理提供者类加载器。 */
     @Resource
     private RenderEngineProviderLoader providerLoader;
+    /** 初始化后可用的内置和外部引擎。 */
     private List<RenderEngineProvider> providers = List.of();
+    /** 可选的显式引擎覆盖值。 */
     private String configuredProvider;
 
+    /** 校验配置并发现可用提供者。 */
     @PostConstruct
     void initialize() {
         properties.validate();
@@ -46,6 +52,7 @@ public class RenderEngineConfig {
         this.configuredProvider = pluginProperties.getProvider();
     }
 
+    /** 创建按当前配置选定的渲染引擎。 */
     @Bean
     public RenderEngine renderEngine() {
         RenderEngineProviderContext context =
@@ -61,6 +68,7 @@ public class RenderEngineConfig {
         };
     }
 
+    /** 自动模式优先选择可用且符合内存预算的引擎。 */
     private RenderEngine autoSelect(RenderEngineProviderContext context) {
         boolean enoughMemoryForPlaywright = hasEnoughMemoryForPlaywright();
         for (RenderEngineProvider provider : providers) {
@@ -79,6 +87,10 @@ public class RenderEngineConfig {
         return create("openhtmltopdf", context);
     }
 
+    /** 按标识创建明确指定的提供者。
+     *
+     * @throws IllegalStateException 提供者不存在或当前不可用时
+     */
     private RenderEngine create(String id, RenderEngineProviderContext context) {
         RenderEngineProvider provider = find(id);
         if (ObjectUtil.isNull(provider) || !provider.isAvailable(context)) {
@@ -98,6 +110,7 @@ public class RenderEngineConfig {
             .orElse(null);
     }
 
+    /** Chromium 占用较高，自动选择时要求机器具备最低物理内存预算。 */
     private boolean hasEnoughMemoryForPlaywright() {
         try {
             OperatingSystemMXBean osBean = (OperatingSystemMXBean)ManagementFactory.getOperatingSystemMXBean();

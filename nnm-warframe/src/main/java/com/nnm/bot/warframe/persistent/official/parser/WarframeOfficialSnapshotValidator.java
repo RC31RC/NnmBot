@@ -6,10 +6,12 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+import com.nnm.bot.common.error.ErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialSnapshotErrorCode;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialSnapshotProtocol;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest;
 import jakarta.annotation.Resource;
@@ -76,31 +78,40 @@ public class WarframeOfficialSnapshotValidator {
     public WarframeOfficialManifest manifest(Path path) {
         try (JsonParser parser = strictParser(path)) {
             WarframeOfficialManifest manifest = objectMapper.readValue(parser, WarframeOfficialManifest.class);
-            check(parser.nextToken() == null, "manifest 后存在额外 JSON 文档");
-            check(manifest != null, "manifest 不能为空");
-            check(manifest.schemaVersion() == 3, "不支持的 manifest schemaVersion");
-            check("warframe-datasource-nnm".equals(manifest.producer()), "不合法的成品 producer");
-            check(manifest.buildId() != null && manifest.buildId().matches("[A-Za-z0-9._-]{1,160}"), "缺少有效 buildId");
-            check(manifest.createdAt() != null, "缺少构建时间");
+            check(parser.nextToken() == null, OfficialSnapshotErrorCode.MANIFEST_TRAILING_JSON);
+            check(manifest != null, OfficialSnapshotErrorCode.MANIFEST_EMPTY);
+            check(manifest.schemaVersion() == OfficialSnapshotProtocol.SCHEMA_VERSION,
+                OfficialSnapshotErrorCode.MANIFEST_VERSION_UNSUPPORTED);
+            check(OfficialSnapshotProtocol.PRODUCER.equals(manifest.producer()),
+                OfficialSnapshotErrorCode.MANIFEST_PRODUCER_INVALID);
+            check(
+                manifest.buildId() != null
+                    && OfficialSnapshotProtocol.BUILD_ID_PATTERN.matcher(manifest.buildId()).matches(),
+                OfficialSnapshotErrorCode.MANIFEST_BUILD_ID_INVALID);
+            check(manifest.createdAt() != null, OfficialSnapshotErrorCode.MANIFEST_CREATED_AT_MISSING);
             check(CollUtil.isNotEmpty(manifest.files()) && manifest.files().size() <= properties.getMaxFiles(),
-                "成品文件数量不合法");
+                OfficialSnapshotErrorCode.MANIFEST_FILE_COUNT_INVALID);
             Set<String> paths = new HashSet<>();
             for (FileEntry entry : manifest.files()) {
-                check(entry != null, "成品条目不能为空");
+                check(entry != null, OfficialSnapshotErrorCode.MANIFEST_FILE_EMPTY);
                 validatePath(entry.path());
-                check(REQUIRED_PATHS.contains(entry.path()), "未登记的业务文件：" + entry.path());
-                check(paths.add(entry.path()), "重复成品路径：" + entry.path());
-                check(entry.sha256() != null && entry.sha256().matches("[a-f0-9]{64}"), "SHA-256 不合法：" + entry.path());
-                check(entry.bytes() > 0 && entry.bytes() <= properties.getMaxFileBytes(), "成品字节数超限：" + entry.path());
-                check("application/gzip".equals(entry.mediaType()), "成品媒体类型不合法：" + entry.path());
-                check(entry.recordCount() == null || entry.recordCount() >= 0, "记录数不合法：" + entry.path());
+                check(REQUIRED_PATHS.contains(entry.path()), OfficialSnapshotErrorCode.FILE_UNREGISTERED);
+                check(paths.add(entry.path()), OfficialSnapshotErrorCode.FILE_PATH_DUPLICATE);
+                check(entry.sha256() != null && entry.sha256().matches("[a-f0-9]{64}"),
+                    OfficialSnapshotErrorCode.FILE_DIGEST_INVALID);
+                check(entry.bytes() > 0 && entry.bytes() <= properties.getMaxFileBytes(),
+                    OfficialSnapshotErrorCode.FILE_SIZE_LIMIT);
+                check(OfficialSnapshotProtocol.GZIP_MEDIA_TYPE.equals(entry.mediaType()),
+                    OfficialSnapshotErrorCode.FILE_MEDIA_TYPE_INVALID);
+                check(entry.recordCount() == null || entry.recordCount() >= 0,
+                    OfficialSnapshotErrorCode.FILE_RECORD_COUNT_INVALID);
             }
             Set<String> missing = new HashSet<>(REQUIRED_PATHS);
             missing.removeAll(paths);
-            check(CollUtil.isEmpty(missing), "缺少必需业务文件：" + missing.stream().sorted().toList());
+            check(CollUtil.isEmpty(missing), OfficialSnapshotErrorCode.MANIFEST_REQUIRED_FILES_MISSING);
             return manifest;
         } catch (IOException | IllegalArgumentException exception) {
-            throw invalid("manifest 不是有效发布清单", exception);
+            throw new BusinessException(OfficialSnapshotErrorCode.MANIFEST_INVALID, exception);
         }
     }
 
@@ -113,12 +124,13 @@ public class WarframeOfficialSnapshotValidator {
     public void file(FileEntry entry, Path path) {
         try {
             check(Files.isRegularFile(path) && Files.size(path) == entry.bytes()
-                && entry.bytes() <= properties.getMaxFileBytes(), "成品字节数不匹配：" + entry.path());
+                && entry.bytes() <= properties.getMaxFileBytes(), OfficialSnapshotErrorCode.FILE_SIZE_MISMATCH);
             MessageDigest digest = sha256();
             try (InputStream input = new DigestInputStream(Files.newInputStream(path), digest)) {
                 input.transferTo(OutputStream.nullOutputStream());
             }
-            check(HexFormat.of().formatHex(digest.digest()).equals(entry.sha256()), "成品 SHA-256 不匹配：" + entry.path());
+            check(HexFormat.of().formatHex(digest.digest()).equals(entry.sha256()),
+                OfficialSnapshotErrorCode.FILE_DIGEST_MISMATCH);
             try (InputStream compressed = Files.newInputStream(path);
                 InputStream input = new GZIPInputStream(compressed);
                 JsonParser parser = objectMapper.getFactory().createParser(input)) {
@@ -126,18 +138,18 @@ public class WarframeOfficialSnapshotValidator {
                 JsonToken root = parser.nextToken();
                 boolean expectedArray = ARRAY_PATHS.contains(entry.path());
                 check(root == (expectedArray ? JsonToken.START_ARRAY : JsonToken.START_OBJECT),
-                    "成品根结构不匹配：" + entry.path());
+                    OfficialSnapshotErrorCode.FILE_ROOT_INVALID);
                 Map<String, JsonToken> required = WRAPPERS.getOrDefault(entry.path(), Map.of());
                 Set<String> seen = new HashSet<>();
                 Set<String> countedPaths = COUNT_PATHS.getOrDefault(entry.path(), Set.of());
                 long count = 0;
                 while (parser.nextToken() != (expectedArray ? JsonToken.END_ARRAY : JsonToken.END_OBJECT)) {
-                    check(parser.currentToken() != null, "成品 JSON 提前结束：" + entry.path());
+                    check(parser.currentToken() != null, OfficialSnapshotErrorCode.FILE_TRUNCATED);
                     if (parser.currentToken() == JsonToken.FIELD_NAME) {
                         String field = parser.currentName();
                         JsonToken value = parser.nextToken();
                         if (required.containsKey(field)) {
-                            check(required.get(field) == value, "成品字段结构不匹配：" + entry.path() + "/" + field);
+                            check(required.get(field) == value, OfficialSnapshotErrorCode.FILE_WRAPPER_FIELD_INVALID);
                             seen.add(field);
                         }
                         count += "rewards/drop-tables.json.gz".equals(entry.path()) && "contexts".equals(field)
@@ -149,12 +161,12 @@ public class WarframeOfficialSnapshotValidator {
                     parser.skipChildren();
                 }
                 check(entry.recordCount() == null || entry.recordCount() == count,
-                    "成品记录数不匹配：" + entry.path() + " manifest=" + entry.recordCount() + " actual=" + count);
-                check(seen.containsAll(required.keySet()), "成品缺少必需结构：" + entry.path());
-                check(parser.nextToken() == null, "成品包含尾随 JSON：" + entry.path());
+                    OfficialSnapshotErrorCode.FILE_RECORD_COUNT_MISMATCH);
+                check(seen.containsAll(required.keySet()), OfficialSnapshotErrorCode.FILE_WRAPPER_MISSING);
+                check(parser.nextToken() == null, OfficialSnapshotErrorCode.FILE_TRAILING_JSON);
             }
         } catch (IOException exception) {
-            throw invalid("成品 JSON 无法读取：" + entry.path(), exception);
+            throw new BusinessException(OfficialSnapshotErrorCode.FILE_READ_FAILED, exception);
         }
     }
 
@@ -174,11 +186,12 @@ public class WarframeOfficialSnapshotValidator {
             return 0;
         }
         JsonToken token = parser.currentToken();
-        check(token == JsonToken.START_ARRAY || token == JsonToken.START_OBJECT, "记录集合结构不合法：" + pointer);
+        check(token == JsonToken.START_ARRAY || token == JsonToken.START_OBJECT,
+            OfficialSnapshotErrorCode.RECORD_COLLECTION_INVALID);
         boolean array = token == JsonToken.START_ARRAY;
         long size = 0;
         while (parser.nextToken() != (array ? JsonToken.END_ARRAY : JsonToken.END_OBJECT)) {
-            check(parser.currentToken() != null, "记录集合提前结束：" + pointer);
+            check(parser.currentToken() != null, OfficialSnapshotErrorCode.RECORD_COLLECTION_TRUNCATED);
             String child = "*";
             if (!array) {
                 child = targets.stream()
@@ -206,7 +219,7 @@ public class WarframeOfficialSnapshotValidator {
         boolean array = token == JsonToken.START_ARRAY;
         long count = 0;
         while (parser.nextToken() != (array ? JsonToken.END_ARRAY : JsonToken.END_OBJECT)) {
-            check(parser.currentToken() != null, "掉落集合提前结束");
+            check(parser.currentToken() != null, OfficialSnapshotErrorCode.REWARD_COLLECTION_TRUNCATED);
             String field = array ? "" : parser.currentName();
             if (!array)
                 parser.nextToken();
@@ -221,8 +234,10 @@ public class WarframeOfficialSnapshotValidator {
      * @param path 当前文件或业务资源的路径。
      */
     public void validatePath(String path) {
-        check(path != null && path.matches("[a-z][a-z0-9-]*/[a-z0-9][a-z0-9-]*\\.json\\.gz")
-            && DIRECTORIES.contains(path.substring(0, path.indexOf('/'))), "不合法的完整业务路径：" + path);
+        check(
+            path != null && OfficialSnapshotProtocol.BUSINESS_PATH_PATTERN.matcher(path).matches()
+                && DIRECTORIES.contains(path.substring(0, path.indexOf('/'))),
+            OfficialSnapshotErrorCode.FILE_PATH_INVALID);
     }
 
     /**
@@ -234,7 +249,7 @@ public class WarframeOfficialSnapshotValidator {
      */
     private JsonParser strictParser(Path path) throws IOException {
         check(path != null && Files.isRegularFile(path) && Files.size(path) > 0
-            && Files.size(path) <= properties.getMaxFileBytes(), "manifest 压缩字节数不合法");
+            && Files.size(path) <= properties.getMaxFileBytes(), OfficialSnapshotErrorCode.MANIFEST_SIZE_INVALID);
         InputStream compressed = Files.newInputStream(path);
         try {
             JsonParser parser = objectMapper.getFactory().createParser(new GZIPInputStream(compressed));
@@ -267,20 +282,10 @@ public class WarframeOfficialSnapshotValidator {
      * 校验当前输入边界，不满足条件时直接失败。
      *
      * @param expression 表达式。
-     * @param message 待发送或处理的消息。
+     * @param errorCode 对应结构错误的稳定错误码。
      */
-    private static void check(boolean expression, String message) {
-        BusinessAssert.isTrue(expression, WarframeManagementErrorCode.DATASET_INVALID, message);
+    private static void check(boolean expression, ErrorCode errorCode) {
+        BusinessAssert.isTrue(expression, errorCode);
     }
 
-    /**
-     * 构造包含明确输入位置的解析失败异常。
-     *
-     * @param message 待发送或处理的消息。
-     * @param cause 失败原因。
-     * @return 保留失败原因的业务异常。
-     */
-    private static BusinessException invalid(String message, Exception cause) {
-        return new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, message, cause);
-    }
 }

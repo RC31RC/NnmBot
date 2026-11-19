@@ -11,10 +11,22 @@ public record OfficialChangeCountsDTO(Map<String, Map<String, Integer>> files) {
         files = Map.copyOf(copy);
     }
 
+    /**
+     * 查询指定文件和差异分类的数量。
+     *
+     * @param path 官方 JSON 相对路径。
+     * @param category 差异分类编码。
+     * @return 对应记录数；没有计数时返回零。
+     */
     public int count(String path, String category) {
         return files.getOrDefault(path, Map.of()).getOrDefault(category, 0);
     }
 
+    /**
+     * 汇总所有文件中各差异分类的数量。
+     *
+     * @return 分类编码到总记录数的不可变映射。
+     */
     public Map<String, Integer> totals() {
         Map<String, Integer> totals = new HashMap<>();
         files.values()

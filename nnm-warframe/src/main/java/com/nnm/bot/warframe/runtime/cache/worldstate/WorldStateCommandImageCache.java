@@ -2,11 +2,11 @@ package com.nnm.bot.warframe.runtime.cache.worldstate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateErrorCode;
-import com.nnm.bot.core.message.render.BotImageRenderer;
-import com.nnm.bot.core.plugin.model.RuntimeCommand;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration.CommandTemplate;
+import com.nnm.bot.core.messaging.render.BotImageRenderer;
+import com.nnm.bot.core.plugin.registry.RuntimeCommand;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO.CommandTemplateDTO;
 import com.nnm.bot.core.plugin.response.CommandImageCache;
 import com.nnm.bot.warframe.constant.WarframeCacheNames;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
@@ -65,7 +65,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
     @Override
     public Optional<byte[]> renderIfSupported(RuntimeCommand command, Map<String, Object> data,
         BotImageRenderer renderer) {
-        CommandTemplate template = command.configuration().template();
+        CommandTemplateDTO template = command.configuration().template();
         if (template == null) {
             return Optional.empty();
         }

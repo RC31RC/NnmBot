@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.client;
 
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.http.HttpClient.TextResult;
 import com.nnm.bot.common.http.HttpDiagnostics;
@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -44,7 +43,6 @@ public class WarframeRuntimeDataClient {
      * @return 拉取时间文本对象。
      */
     public FetchedText fetch(String sourceCode, List<URI> candidates) {
-        List<String> failures = new ArrayList<>();
         for (int index = 0; index < candidates.size(); index++) {
             URI url = candidates.get(index);
             long startedAt = System.nanoTime();
@@ -62,17 +60,13 @@ public class WarframeRuntimeDataClient {
                     && (contentType == null || !contentType.toLowerCase(Locale.ROOT).contains("html"))) {
                     return new FetchedText(url, result.body());
                 }
-                failures.add(safeEndpoint(url) + " -> HTTP " + result.statusCode()
-                    + (StrUtil.isBlank(contentType) ? "" : " " + contentType)
-                    + (result.error() == null ? "" : " " + failureMessage(result.error())));
+
             } catch (RuntimeException exception) {
-                failures.add(safeEndpoint(url) + " -> " + failureMessage(exception));
                 log.warn("Runtime source request failed, source={}, endpoint={}, attempt={}/{}, message={}", sourceCode,
                     safeEndpoint(url), index + 1, candidates.size(), failureMessage(exception));
             }
         }
-        throw new BusinessException(WarframeManagementErrorCode.EXTERNAL_DATA_SOURCE_UNAVAILABLE,
-            "Warframe 外部数据来源拉取失败：" + sourceCode + "；" + String.join("；", failures));
+        throw new BusinessException(WarframeManagementErrorCode.EXTERNAL_DATA_SOURCE_UNAVAILABLE);
     }
 
     public record FetchedText(URI endpoint, String body) {

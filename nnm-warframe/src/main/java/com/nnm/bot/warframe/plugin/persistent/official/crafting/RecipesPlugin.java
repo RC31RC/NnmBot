@@ -1,15 +1,17 @@
 package com.nnm.bot.warframe.plugin.persistent.official.crafting;
 
+import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.crafting.WarframeRecipeVO;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.crafting.WarframeRecipeVO.EntryVO;
 import java.util.regex.Matcher;
-import com.nnm.bot.core.constant.MatchType;
+import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.crafting.WarframeRecipeCommandDTO;
-import com.nnm.bot.core.plugin.model.CommandInvocation;
-import com.nnm.bot.core.plugin.model.CommandResult;
+import com.nnm.bot.core.plugin.api.CommandInvocation;
+import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.official.service.crafting.WarframeRecipeService;
 import jakarta.annotation.Resource;
@@ -58,8 +60,9 @@ public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeCommandDT
         }
         if (page < 1 || UNKNOWN_OPTION.matcher(query).find())
             return new WarframeRecipeCommandDTO(query, kind, page, "配方参数不合法");
-        if (query.length() > 200)
-            return new WarframeRecipeCommandDTO(query, kind, page, "查询内容过长，请缩短到 200 字以内");
+        if (query.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)
+            return new WarframeRecipeCommandDTO(query, kind, page,
+                OfficialCommandErrorCode.QUERY_TOO_LONG.getMessage());
         return new WarframeRecipeCommandDTO(query, kind, page, null);
     }
 

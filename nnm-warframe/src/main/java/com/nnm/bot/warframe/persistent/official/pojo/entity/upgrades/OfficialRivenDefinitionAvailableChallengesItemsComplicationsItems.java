@@ -67,7 +67,5 @@ public class OfficialRivenDefinitionAvailableChallengesItemsComplicationsItems e
     private OfficialRivenDefinitionAvailableChallengesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<
-        OfficialRivenDefinitionAvailableChallengesItemsComplicationsItemsItemReferencesItems> officialRivenDefinitionAvailableChallengesItemsComplicationsItemsItemReferencesItemsRows =
-            new ArrayList<>();
+    private List<OfficialRivenDefinitionAvailableChallengesItemsComplicationsItemsItemReferencesItems> officialRivenDefinitionAvailableChallengesItemsComplicationsItemsItemReferencesItemsRows = new ArrayList<>();
 }

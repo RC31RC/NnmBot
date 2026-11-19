@@ -32,10 +32,17 @@ import java.util.stream.Stream;
 @Component
 public class RenderEngineProviderLoader {
 
+    /** 限制损坏的 ServiceLoader 实现造成无限发现循环。 */
     private static final int MAX_DISCOVERY_ERRORS = 100;
 
+    /** 持有外部插件类加载器，直到 Spring 容器关闭。 */
     private final List<URLClassLoader> classLoaders = new ArrayList<>();
 
+    /** 加载内置提供者并按优先级和标识稳定排序。
+     *
+     * @param properties 插件发现配置
+     * @return 去重后的提供者列表
+     */
     public List<RenderEngineProvider> load(RenderPluginProperties properties) {
         properties.validate();
         LinkedHashMap<String, RenderEngineProvider> providers = new LinkedHashMap<>();
@@ -49,6 +56,11 @@ public class RenderEngineProviderLoader {
             .toList();
     }
 
+    /** 从插件目录创建独立类加载器并发现外部 SPI 实现。
+     *
+     * @param directory 外部 JAR 目录
+     * @param providers 已发现的提供者集合
+     */
     private void loadExternal(Path directory, LinkedHashMap<String, RenderEngineProvider> providers) {
         if (!Files.isDirectory(directory)) {
             return;
@@ -61,6 +73,7 @@ public class RenderEngineProviderLoader {
             }
             URLClassLoader loader =
                 new URLClassLoader(jars.toArray(URL[]::new), RenderEngineProvider.class.getClassLoader());
+            // 延长插件类加载器的生命周期，直到应用关闭时统一释放。
             classLoaders.add(loader);
             Iterator<Provider<RenderEngineProvider>> discovered =
                 ServiceLoader.load(RenderEngineProvider.class, loader).stream().iterator();
@@ -92,6 +105,11 @@ public class RenderEngineProviderLoader {
         }
     }
 
+    /** 校验提供者并按忽略大小写的 ID 去重。
+     *
+     * @param providers 已发现的提供者集合
+     * @param provider 待注册的提供者
+     */
     private void add(LinkedHashMap<String, RenderEngineProvider> providers, RenderEngineProvider provider) {
         if (ObjectUtil.isNull(provider)) {
             log.warn("Ignoring null render provider");
@@ -104,6 +122,7 @@ public class RenderEngineProviderLoader {
                 return;
             }
             String id = rawId.trim().toLowerCase(Locale.ROOT);
+            // 统一 ID 后再去重，避免不同大小写的重复实现进入选择列表。
             RenderEngineProvider registered = new RegisteredProvider(id, provider.order(), provider);
             if (ObjectUtil.isNotNull(providers.putIfAbsent(id, registered))) {
                 log.warn("Ignoring duplicate render provider id [{}]", id);
@@ -113,6 +132,7 @@ public class RenderEngineProviderLoader {
         }
     }
 
+    /** 关闭外部 JAR 类加载器，释放打开的文件句柄。 */
     @PreDestroy
     void closeClassLoaders() {
         for (URLClassLoader classLoader : classLoaders) {
@@ -125,6 +145,7 @@ public class RenderEngineProviderLoader {
         classLoaders.clear();
     }
 
+    /** 为默认轻量引擎提供 SPI 适配。 */
     private static final class OpenHtmlToPdfProvider implements RenderEngineProvider {
         @Override
         public String id() {
@@ -147,6 +168,7 @@ public class RenderEngineProviderLoader {
         }
     }
 
+    /** 为高保真浏览器引擎提供 SPI 适配。 */
     private static final class PlaywrightProvider implements RenderEngineProvider {
         @Override
         public String id() {
@@ -169,6 +191,7 @@ public class RenderEngineProviderLoader {
         }
     }
 
+    /** 保存规范化标识和排序值，同时委托引擎能力给实际提供者。 */
     private record RegisteredProvider(String id, int order,
         RenderEngineProvider delegate) implements RenderEngineProvider {
 

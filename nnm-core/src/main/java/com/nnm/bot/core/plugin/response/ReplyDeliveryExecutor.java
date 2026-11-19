@@ -1,10 +1,9 @@
 package com.nnm.bot.core.plugin.response;
 
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.message.model.PreparedBotMessage;
-import com.nnm.bot.core.message.model.BotMessageSendPermit;
-import com.nnm.bot.core.message.sender.BotMessageSenderRouter;
-import com.nnm.bot.core.plugin.model.ResponsePlan;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.messaging.model.PreparedBotMessage;
+import com.nnm.bot.core.messaging.model.BotMessageSendPermit;
+import com.nnm.bot.core.messaging.sender.BotMessageSenderRouter;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 

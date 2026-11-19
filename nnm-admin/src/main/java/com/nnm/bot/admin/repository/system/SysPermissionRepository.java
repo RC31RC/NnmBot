@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
+/** 查询角色绑定的稳定权限码集合。 */
 public interface SysPermissionRepository extends JpaRepository<SysPermission, Long> {
 
     Optional<SysPermission> findByCode(String code);

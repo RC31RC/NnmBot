@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/** 控制开发环境首次启动时的管理员账号初始化。 */
 @ConfigurationProperties(prefix = "nnm.admin.bootstrap")
 public class AdminBootstrapProperties {
 

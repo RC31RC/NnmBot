@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.group.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.Locale;
 import java.util.UUID;
 import cn.hutool.core.util.ObjectUtil;
@@ -25,10 +26,8 @@ import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDiscoveryDTO;
 import com.nnm.bot.admin.pojo.dto.bot.scope.BotScopeDiscoveryScopeDTO;
 import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
 import com.nnm.bot.admin.service.bot.group.BotGroupManagementService;
-import com.nnm.bot.common.exception.DataNotFoundException;
-import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelKey;
@@ -38,8 +37,8 @@ import com.nnm.bot.core.channel.model.BotMemberQueryResult;
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 import com.nnm.bot.core.channel.runtime.BotScopeDiscoveryRouter;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
-import com.nnm.bot.core.constant.BotPlatform;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
+import com.nnm.bot.core.channel.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import com.nnm.bot.core.group.domain.BotGroup;
 import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.domain.BotGroupMember;
@@ -51,9 +50,8 @@ import com.nnm.bot.core.group.event.BotGroupDeletingEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import com.nnm.bot.core.group.repository.BotGroupRepository;
 import com.nnm.bot.core.group.service.PointAccountService;
-import com.nnm.bot.core.group.service.BotGroupMemberIdentityAdapters;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.group.adapter.BotGroupMemberIdentityAdapters;
+import com.nnm.bot.common.error.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -219,7 +217,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         topologyInvalidator.invalidateAfterCommit();
         String code = request.code().trim().toLowerCase(Locale.ROOT);
         if (groupRepository.findByCodeIgnoreCase(code).isPresent()) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "群组编码已存在");
+            throw new BusinessException(BotManagementErrorCode.GROUP_CODE_CONFLICT);
         }
         BotGroup group = new BotGroup();
         group.setCode(code);
@@ -309,17 +307,15 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     private BotGroupBot binding(long groupId, BotGroupBotSaveDTO request) {
         group(groupId);
         BotChannelInstance instance = instanceRepository.findById(request.botInstanceId())
-            .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
         if (instance.getPlatform() != request.platform()) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "机器人实例平台与群组绑定平台不一致");
+            throw new BusinessException(BotManagementErrorCode.GROUP_INSTANCE_PLATFORM_MISMATCH);
         }
         String scopeType = request.scopeType().trim().toUpperCase();
         String scopeKey = request.scopeKey().trim();
         BusinessAssert
-            .isTrue(
-                botRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(request.platform().name(),
-                    scopeType, scopeKey, instance.getId()).isEmpty(),
-                CommonErrorCode.DATA_CONFLICT, "该机器人作用域已经绑定到逻辑群组");
+            .isTrue(botRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(request.platform().name(),
+                scopeType, scopeKey, instance.getId()).isEmpty(), BotManagementErrorCode.GROUP_SCOPE_ALREADY_BOUND);
         BotGroupBot binding = new BotGroupBot();
         binding.setGroupId(groupId);
         binding.setBotInstanceId(instance.getId());
@@ -363,14 +359,14 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         groupRepository.lockTopology();
         group(groupId);
         BotGroupBot binding = botRepository.findById(bindingId).filter(item -> item.getGroupId().equals(groupId))
-            .orElseThrow(() -> new DataNotFoundException("群组机器人绑定不存在"));
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_INSTANCE_BINDING_NOT_FOUND));
         botRepository.delete(binding);
     }
 
     private BotGroupBot bindingUpdate(long groupId, long bindingId, BotGroupBotUpdateDTO request) {
         group(groupId);
         BotGroupBot existing = botRepository.findById(bindingId).filter(item -> item.getGroupId().equals(groupId))
-            .orElseThrow(() -> new DataNotFoundException("群组机器人绑定不存在"));
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_INSTANCE_BINDING_NOT_FOUND));
         // 比较当前与拟议拓扑时保持受管实体不变，避免比较过程触发脏检查写入。
         BotGroupBot candidate = new BotGroupBot();
         candidate.setId(existing.getId());
@@ -413,10 +409,10 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     public void updateMember(long groupId, long memberId, BotGroupMemberUpdateDTO request) {
         group(groupId);
         BotGroupMember member = memberRepository.findById(memberId).filter(item -> item.getGroupId().equals(groupId))
-            .orElseThrow(() -> new DataNotFoundException("群组成员不存在"));
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_MEMBER_NOT_FOUND));
         String role = request.memberRole().trim().toUpperCase();
         if (!role.equals("OWNER") && !role.equals("ADMIN") && !role.equals("MEMBER")) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "群组成员角色不合法");
+            throw new BusinessException(BotManagementErrorCode.GROUP_MEMBER_ROLE_INVALID);
         }
         member.setDisplayName(trimToNull(request.displayName()));
         member.setMemberRole(role);
@@ -617,7 +613,8 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     }
 
     private BotGroup group(long id) {
-        return groupRepository.findById(id).orElseThrow(() -> new DataNotFoundException("逻辑群组不存在"));
+        return groupRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_NOT_FOUND));
     }
 
     private String trimToNull(String value) {

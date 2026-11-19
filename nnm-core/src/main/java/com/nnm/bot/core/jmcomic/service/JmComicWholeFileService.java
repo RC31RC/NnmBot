@@ -6,6 +6,7 @@ import io.github.jukomu.jmcomic.core.client.AbstractJmClient;
 import java.nio.file.Path;
 import java.util.Optional;
 
+/** 优先尝试上游整本文件下载，并提供可区分的回退结果。 */
 public interface JmComicWholeFileService {
 
     /**

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 import java.util.Optional;
 
+/** 查询群组并为拓扑变更提供串行写锁。 */
 public interface BotGroupRepository extends JpaRepository<BotGroup, Long> {
 
     // 群组拓扑写入串行保护至事务提交，覆盖不同群组之间的变更。

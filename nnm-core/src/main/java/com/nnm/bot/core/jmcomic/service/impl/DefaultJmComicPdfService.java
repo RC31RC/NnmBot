@@ -3,7 +3,7 @@ package com.nnm.bot.core.jmcomic.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
 import com.nnm.bot.core.jmcomic.constant.JmComicErrorCode;
 import com.nnm.bot.core.jmcomic.service.JmComicPdfService;
@@ -43,12 +43,12 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
     @Override
     public Path createCompressedPdf(List<Path> imageFiles, Path outputFile) {
         if (CollUtil.isEmpty(imageFiles)) {
-            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
+            throw new BusinessException(JmComicErrorCode.PDF_INPUT_EMPTY);
         }
         List<Path> imagesInCallerOrder = imageFiles.stream().filter(ObjectUtil::isNotNull).toList();
         // ZIP 图片落盘名只用于隔离条目，不能覆盖调用方按原始章节、页码确定的顺序。
         if (imagesInCallerOrder.isEmpty()) {
-            throw new BusinessException(JmComicErrorCode.DOWNLOAD_INCOMPLETE, "没有可用于生成 PDF 的图片");
+            throw new BusinessException(JmComicErrorCode.PDF_INPUT_EMPTY);
         }
         if (imagesInCallerOrder.size() > this.properties.getMaxPages()) {
             throw new BusinessException(JmComicErrorCode.ALBUM_TOO_LARGE);
@@ -66,14 +66,13 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
             long pdfBytes = Files.size(normalizedOutput);
             if (pdfBytes > this.properties.getMaxPdfBytes()) {
                 Files.deleteIfExists(normalizedOutput);
-                throw new BusinessException(JmComicErrorCode.PDF_TOO_LARGE,
-                    "生成的 PDF 大小为 " + pdfBytes + " 字节，超过限制 " + this.properties.getMaxPdfBytes() + " 字节");
+                throw new BusinessException(JmComicErrorCode.PDF_OUTPUT_TOO_LARGE, JmComicErrorCode.PDF_OUTPUT_TOO_LARGE
+                    .getMessage().formatted(pdfBytes, this.properties.getMaxPdfBytes()));
             }
             return normalizedOutput;
         } catch (IOException exception) {
             deleteOutputAfterFailure(normalizedOutput, exception);
-            throw new BusinessException(JmComicErrorCode.PDF_CREATE_FAILED, "生成 JM 漫画 PDF 失败: " + normalizedOutput,
-                exception);
+            throw new BusinessException(JmComicErrorCode.PDF_GENERATION_FAILED, exception);
         }
     }
 
@@ -81,12 +80,12 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
         ImageMetadata metadata = this.readMetadata(imageFile);
         long pixels = (long)metadata.width() * metadata.height();
         if (pixels > this.properties.getMaxImagePixels()) {
-            throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "图片像素超过限制: " + imageFile.getFileName());
+            throw new BusinessException(JmComicErrorCode.IMAGE_PIXEL_LIMIT);
         }
 
         BufferedImage source = ImageIO.read(imageFile.toFile());
         if (ObjectUtil.isNull(source)) {
-            throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "无法识别图片格式: " + imageFile.getFileName());
+            throw new BusinessException(JmComicErrorCode.IMAGE_FORMAT_INVALID);
         }
         BufferedImage compressedImage = null;
         try {
@@ -110,15 +109,15 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
 
     private ImageMetadata readMetadata(Path imageFile) throws IOException {
         if (!Files.isRegularFile(imageFile) || !Files.isReadable(imageFile)) {
-            throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "图片文件不存在或不可读: " + imageFile);
+            throw new BusinessException(JmComicErrorCode.IMAGE_FILE_UNREADABLE);
         }
         try (ImageInputStream input = ImageIO.createImageInputStream(imageFile.toFile())) {
             if (ObjectUtil.isNull(input)) {
-                throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "无法读取图片: " + imageFile.getFileName());
+                throw new BusinessException(JmComicErrorCode.IMAGE_READ_FAILED);
             }
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) {
-                throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "无法识别图片格式: " + imageFile.getFileName());
+                throw new BusinessException(JmComicErrorCode.IMAGE_FORMAT_INVALID);
             }
             ImageReader reader = readers.next();
             try {
@@ -126,7 +125,7 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
                 if (width <= 0 || height <= 0) {
-                    throw new BusinessException(JmComicErrorCode.INVALID_IMAGE, "图片尺寸无效: " + imageFile.getFileName());
+                    throw new BusinessException(JmComicErrorCode.IMAGE_DIMENSIONS_INVALID);
                 }
                 return new ImageMetadata(width, height);
             } finally {

@@ -1,14 +1,15 @@
 package com.nnm.bot.core.qqofficial.gateway;
 
-import com.nnm.bot.core.message.model.BotMessageContext;
-import com.nnm.bot.core.constant.CommandExecutionConstants.CommandIngressResult;
+import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
+import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandIngressResult;
 import java.util.Optional;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.http.HttpClient;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
 import com.nnm.bot.core.channel.port.BotChannelConnector;
@@ -16,17 +17,17 @@ import com.nnm.bot.core.channel.port.BotGroupMemberEventSink;
 import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
-import com.nnm.bot.core.constant.BotChannelErrorCode;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.qqofficial.constant.QqOfficialErrorCode;
+import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.plugin.execution.CommandIngressService;
 import com.nnm.bot.core.qqofficial.api.QqOfficialApiClient;
 import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayFrameDTO;
-import com.nnm.bot.core.qqofficial.message.dto.QqOfficialGatewayEventDTO;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayEventDTO;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.core.qqofficial.api.QqOfficialTokenClient;
-import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
 import com.nnm.bot.core.qqofficial.discovery.QqOfficialObservedScopeStore;
-import com.nnm.bot.core.qqofficial.message.QqOfficialMessageContextFactory;
+import com.nnm.bot.core.qqofficial.message.inbound.QqOfficialMessageContextFactory;
 import jakarta.annotation.Resource;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -91,8 +92,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
         return this.connections.values().stream()
             .filter(connection -> connection.instance.botAccountId().equals(botAccountId)).findFirst()
             .map(connection -> connection.apiClient)
-            .orElseThrow(() -> new BusinessException(BotChannelErrorCode.CHANNEL_NOT_REGISTERED,
-                "未注册 QQ 官方机器人渠道: " + botAccountId));
+            .orElseThrow(() -> new BusinessException(QqOfficialErrorCode.GATEWAY_CHANNEL_NOT_REGISTERED));
     }
 
     @Override
@@ -128,8 +128,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
         lifecycleLock.lock();
         try {
             if (record.platform() != BotPlatform.QQ_OFFICIAL) {
-                throw new BusinessException(BotChannelErrorCode.PLATFORM_MISMATCH,
-                    "QQ 官方客户端不能启动协议: " + record.platform());
+                throw new BusinessException(QqOfficialErrorCode.GATEWAY_PLATFORM_MISMATCH);
             }
             this.validate(record);
             OfficialConnection replacement = new OfficialConnection(record);
@@ -692,29 +691,29 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
 
     private void validate(BotChannelInstanceRecord record) {
         if (ObjectUtil.isNull(record)) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "QQ 官方机器人实例记录不能为空");
+            throw new BusinessException(QqOfficialErrorCode.GATEWAY_INSTANCE_REQUIRED);
         }
-        this.requireText(record.instanceId(), "QQ 官方机器人实例标识");
-        this.requireText(record.botAccountId(), "QQ 官方机器人 App ID");
-        this.requireText(record.appId(), "QQ 官方机器人 App ID");
-        this.requireText(record.clientSecret(), "QQ 官方机器人 Client Secret");
-        this.requireText(record.tokenUrl(), "QQ 官方机器人 Token 地址");
-        this.requireText(record.apiBaseUrl(), "QQ 官方机器人 API 地址");
+        this.requireText(record.instanceId());
+        this.requireText(record.botAccountId());
+        this.requireText(record.appId());
+        this.requireText(record.clientSecret());
+        this.requireText(record.tokenUrl());
+        this.requireText(record.apiBaseUrl());
         if (record.intents() < 0) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "QQ 官方机器人 intents 不能为负数");
+            throw new BusinessException(QqOfficialErrorCode.GATEWAY_INTENTS_INVALID);
         }
         if (ObjectUtil.isNull(record.gatewayConnectTimeout()) || record.gatewayConnectTimeout().isZero()
             || record.gatewayConnectTimeout().isNegative()) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "QQ 官方机器人 Gateway 连接超时必须为正数");
+            throw new BusinessException(QqOfficialErrorCode.GATEWAY_TIMEOUT_INVALID);
         }
         if (ObjectUtil.isNull(record.reconnectDelay()) || record.reconnectDelay().isNegative()) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, "QQ 官方机器人重连延迟不能为负数");
+            throw new BusinessException(QqOfficialErrorCode.GATEWAY_RECONNECT_INVALID);
         }
     }
 
-    private void requireText(String value, String field) {
+    private void requireText(String value) {
         if (StrUtil.isBlank(value)) {
-            throw new BusinessException(BotChannelErrorCode.INSTANCE_CONFIG_INVALID, field + "不能为空");
+            throw new BusinessException(QqOfficialErrorCode.GATEWAY_FIELD_REQUIRED);
         }
     }
 }

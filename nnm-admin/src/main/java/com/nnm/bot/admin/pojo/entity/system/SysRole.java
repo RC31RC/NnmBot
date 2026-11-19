@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.entity.system;
 
-import com.nnm.bot.admin.constant.DataScope;
+import com.nnm.bot.admin.constant.rbac.DataScope;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

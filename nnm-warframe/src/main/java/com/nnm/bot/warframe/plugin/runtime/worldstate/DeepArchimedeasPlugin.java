@@ -2,6 +2,7 @@ package com.nnm.bot.warframe.plugin.runtime.worldstate;
 
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
+import com.nnm.bot.warframe.runtime.constant.WarframeConquestType;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
 
 /** 深层科研命令。 */
@@ -14,16 +15,7 @@ public class DeepArchimedeasPlugin extends AbstractWorldStateCommandPlugin {
      */
     public DeepArchimedeasPlugin() {
         super(state -> WarframeWorldStateProjector.archimedeas(state, "深层科研",
-            conquest -> "CT_LAB".equalsIgnoreCase(normalize(conquest.typeKey()))));
+            conquest -> WarframeConquestType.DEEP.matches(conquest.typeKey())));
     }
 
-    /**
-     * 规范化输入，消除查询或比较时的格式差异。
-     *
-     * @param value 待校验或规范化的文本。
-     * @return 规范化后的文本，供比较或查找使用。
-     */
-    private static String normalize(String value) {
-        return value == null ? "" : value.replaceAll("\\s+", "");
-    }
 }

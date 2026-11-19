@@ -2,6 +2,7 @@ package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
 import java.util.stream.Collectors;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ImportStatus;
+import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ChangeType;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
 import cn.hutool.core.util.StrUtil;
@@ -10,9 +11,9 @@ import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialMan
 import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialRecordSource;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.response.PageResult;
-import com.nnm.bot.common.task.TaskProgressReporter;
+import com.nnm.bot.core.task.service.TaskProgressReporter;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.persistent.official.client.source.WarframeOfficialSourceClient;
 import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportProperties;
@@ -124,7 +125,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
     @RdtLock
     public WarframeOfficialPreviewDTO refresh(String ref, String productPath, TaskProgressReporter reporter) {
         BusinessAssert.notNull(WarframeOfficialDataDomain.fromPath(productPath),
-            WarframeManagementErrorCode.DATASET_INVALID, "未登记的静态文件路径：" + productPath);
+            OfficialApprovalErrorCode.STATIC_PATH_UNKNOWN);
         return refreshFiles(ref, productPath, Set.of(productPath), reporter);
     }
 
@@ -255,7 +256,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
                 stored.changedRecords(), stored.removedRecords(), stored.unmappedPaths(), stored.files(),
                 batch.getApplyError(), batch.getRetryExpiresAt());
         } catch (JsonProcessingException exception) {
-            throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "已保存预览损坏", exception);
+            throw new BusinessException(OfficialApprovalErrorCode.SAVED_PREVIEW_CORRUPTED, exception);
         }
     }
 
@@ -306,14 +307,15 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
     @Override
     public PageResult<WarframeOfficialRecordChangeDTO> changes(String id, String path, int current, int size,
         String changeType) {
-        BusinessAssert.isTrue(Set.of("ADDED", "CHANGED", "REMOVED").contains(changeType),
-            WarframeManagementErrorCode.DATASET_INVALID, "变更分类不合法");
+        BusinessAssert.isTrue(
+            Set.of(ChangeType.ADDED.name(), ChangeType.CHANGED.name(), ChangeType.REMOVED.name()).contains(changeType),
+            OfficialApprovalErrorCode.CHANGE_TYPE_INVALID);
         WarframeOfficialImportBatch batch = requireBatch(id);
         BusinessAssert.isTrue(
             ImportStatus.PENDING.name().equals(batch.getStatus()) && WarframeOfficialDataDomain.fromPath(path) != null
                 && manifest(batch).files().stream().anyMatch(file -> path.equals(file.path()))
                 && (batch.getProductPath() == null || batch.getProductPath().equals(path)),
-            WarframeManagementErrorCode.DATASET_INVALID, "所选文件不属于待审核预览");
+            OfficialApprovalErrorCode.FILE_NOT_IN_PREVIEW);
         try {
             return objects.changes(batch.getChangeObjectKey(), path, current, size, changeType);
         } catch (IOException exception) {
@@ -424,7 +426,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
         try {
             return objectMapper.readValue(batch.getManifestJson(), WarframeOfficialManifest.class);
         } catch (JsonProcessingException exception) {
-            throw new BusinessException(WarframeManagementErrorCode.DATASET_INVALID, "已保存清单损坏", exception);
+            throw new BusinessException(OfficialApprovalErrorCode.SAVED_MANIFEST_CORRUPTED, exception);
         }
     }
 
@@ -435,7 +437,6 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
      * @return 保留失败原因的业务异常。
      */
     private static BusinessException unavailable(IOException exception) {
-        return new BusinessException(WarframeManagementErrorCode.DATASET_UNAVAILABLE, "官方成品暂存或读取失败；未完成的批次不会成为生效数据",
-            exception);
+        return new BusinessException(OfficialApprovalErrorCode.ARTIFACT_READ_FAILED, exception);
     }
 }

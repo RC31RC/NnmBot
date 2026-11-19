@@ -1,11 +1,11 @@
 package com.nnm.bot.admin.service.system.impl;
 
-import com.nnm.bot.common.constant.CommonErrorCode;
+import com.nnm.bot.admin.constant.AdminAuthErrorCode;
 import com.nnm.bot.admin.repository.system.SysUserRepository.IdOnly;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 
-import com.nnm.bot.admin.constant.DataScope;
+import com.nnm.bot.admin.constant.rbac.DataScope;
 import com.nnm.bot.admin.pojo.entity.system.SysMenu;
 import com.nnm.bot.admin.pojo.entity.system.SysPermission;
 import com.nnm.bot.admin.pojo.entity.system.SysRole;
@@ -22,7 +22,7 @@ import com.nnm.bot.admin.repository.system.SysUserRepository;
 import com.nnm.bot.admin.repository.system.SysMenuRepository;
 import com.nnm.bot.admin.service.system.RbacHierarchyService;
 import com.nnm.bot.admin.service.system.RbacQueryService;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.response.PageResult;
 import jakarta.annotation.Resource;
 import org.springframework.data.domain.Page;
@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** 按操作人数据范围组装 RBAC 管理端查询结果。 */
 @Service
 public class RbacQueryServiceImpl implements RbacQueryService {
 
@@ -54,7 +55,7 @@ public class RbacQueryServiceImpl implements RbacQueryService {
     @Override
     public PageResult<UserListDTO> users(long operatorId, String username, int current, int size) {
         SysUser operator = userRepository.findWithAuthoritiesById(operatorId).filter(SysUser::isEnabled)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
+            .orElseThrow(() -> new BusinessException(AdminAuthErrorCode.ACCOUNT_UNAVAILABLE));
         boolean canViewAll = operator.getRoles().stream().filter(SysRole::isEnabled)
             .anyMatch(role -> role.getDataScope() == DataScope.ALL);
         if (!canViewAll) {
@@ -103,7 +104,7 @@ public class RbacQueryServiceImpl implements RbacQueryService {
     @Override
     public List<MenuDTO> menus(long userId) {
         SysUser user = userRepository.findWithAuthoritiesById(userId).filter(SysUser::isEnabled)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED, "账号不可用"));
+            .orElseThrow(() -> new BusinessException(AdminAuthErrorCode.ACCOUNT_UNAVAILABLE));
 
         Set<SysMenu> menus = user.getRoles().stream().filter(SysRole::isEnabled)
             .flatMap(role -> role.getMenus().stream()).filter(SysMenu::isEnabled).collect(Collectors.toSet());

@@ -1,7 +1,7 @@
 package com.nnm.bot.core.group.service;
 
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.core.group.constant.BotGroupErrorCode;
+import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.domain.BotGroupMemberMerge;
 import com.nnm.bot.core.group.port.BotGroupMemberMergeHandler;
@@ -35,10 +35,10 @@ public class BotGroupMemberMergeService {
     @Transactional
     public BotGroupMember merge(long groupId, BotGroupMember target, BotGroupMember source) {
         if (target.getId() == null || source.getId() == null || target.getId().equals(source.getId())) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "成员合并必须提供两个不同的持久成员");
+            throw new BusinessException(BotGroupErrorCode.MEMBER_MERGE_IDS_INVALID);
         }
         if (!Long.valueOf(groupId).equals(target.getGroupId()) || !Long.valueOf(groupId).equals(source.getGroupId())) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "只能合并同一逻辑群组的成员");
+            throw new BusinessException(BotGroupErrorCode.MEMBER_MERGE_GROUP_INVALID);
         }
 
         // 所有合并按主键升序获取两行锁，避免两次反向合并形成死锁。
@@ -76,9 +76,9 @@ public class BotGroupMemberMergeService {
 
     private BotGroupMember load(long groupId, long memberId) {
         long lockedId = memberRepository.lockIdByIdAndGroupId(memberId, groupId)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "群组成员不存在: " + memberId));
+            .orElseThrow(() -> new BusinessException(BotGroupErrorCode.MEMBER_NOT_FOUND));
         BotGroupMember member = memberRepository.findById(lockedId)
-            .orElseThrow(() -> new BusinessException(CommonErrorCode.DATA_NOT_FOUND, "群组成员不存在: " + memberId));
+            .orElseThrow(() -> new BusinessException(BotGroupErrorCode.MEMBER_NOT_FOUND));
         entityManager.refresh(member);
         return member;
     }
@@ -87,7 +87,7 @@ public class BotGroupMemberMergeService {
         if (conflicts(target.getQqId(), source.getQqId())
             || conflicts(target.getMemberOpenid(), source.getMemberOpenid())
             || conflicts(target.getKookId(), source.getKookId())) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "成员存在冲突的平台身份，不能自动合并");
+            throw new BusinessException(BotGroupErrorCode.MEMBER_MERGE_IDENTITY_CONFLICT);
         }
     }
 

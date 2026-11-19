@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.command.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
@@ -11,12 +12,10 @@ import com.nnm.bot.admin.pojo.dto.bot.command.BotTemplateSaveDTO;
 import com.nnm.bot.admin.repository.bot.command.BotCommandTemplateRepository;
 import com.nnm.bot.admin.repository.bot.command.BotCommandRepository;
 import com.nnm.bot.admin.service.bot.command.BotTemplateManagementService;
-import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
 import com.nnm.bot.admin.validation.command.BotCommandPresentationValidator;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Objects;
 
+/** 管理命令展示模板，并在事务提交后刷新运行时注册表。 */
 @Service
 public class BotTemplateManagementServiceImpl implements BotTemplateManagementService {
 
@@ -52,7 +52,7 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
     public long create(BotTemplateSaveDTO request) {
         String code = normalize(request.templateCode());
         if (templateRepository.findAll().stream().anyMatch(item -> item.getTemplateCode().equalsIgnoreCase(code))) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "模板编码已存在");
+            throw new BusinessException(BotManagementErrorCode.TEMPLATE_CODE_CONFLICT);
         }
         BotCommandTemplate template = new BotCommandTemplate();
         apply(template, request, code);
@@ -65,13 +65,13 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
     @Override
     @Transactional
     public void update(long id, BotTemplateSaveDTO request) {
-        BotCommandTemplate template =
-            templateRepository.findById(id).orElseThrow(() -> new DataNotFoundException("模板不存在"));
+        BotCommandTemplate template = templateRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.TEMPLATE_NOT_FOUND));
         Long previousCommandId = template.getCommandId();
         String code = normalize(request.templateCode());
         if (templateRepository.findAll().stream()
             .anyMatch(item -> !item.getId().equals(id) && item.getTemplateCode().equalsIgnoreCase(code))) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "模板编码已存在");
+            throw new BusinessException(BotManagementErrorCode.TEMPLATE_CODE_CONFLICT);
         }
         apply(template, request, code);
         presentationValidator.validate(List.of(template));
@@ -83,17 +83,17 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
     @Override
     @Transactional
     public void delete(long id) {
-        BotCommandTemplate template =
-            templateRepository.findById(id).orElseThrow(() -> new DataNotFoundException("模板不存在"));
+        BotCommandTemplate template = templateRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.TEMPLATE_NOT_FOUND));
         if (commandRepository.findAll().stream().anyMatch(command -> Objects.equals(command.getTemplateId(), id)))
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "模板仍被命令选用，不能删除");
+            throw new BusinessException(BotManagementErrorCode.TEMPLATE_IN_USE);
         templateRepository.delete(template);
         commandRegistry.refreshAfterCommit();
     }
 
     private void apply(BotCommandTemplate template, BotTemplateSaveDTO request, String code) {
         if (request.commandId() != null && commandRepository.findById(request.commandId()).isEmpty()) {
-            throw new DataNotFoundException("所属命令不存在");
+            throw new BusinessException(BotManagementErrorCode.TEMPLATE_COMMAND_NOT_FOUND);
         }
         template.setTemplateCode(code);
         template.setName(request.name().trim());
@@ -101,7 +101,7 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
         template.setSortOrder(
             request.commandId() == null || request.sortOrder() == null ? 0 : Math.max(0, request.sortOrder()));
         if (request.htmlContent() == null || request.htmlContent().isBlank())
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "请提供 HTML 模板");
+            throw new BusinessException(BotManagementErrorCode.HTML_TEMPLATE_REQUIRED);
         template.setHtmlContent(request.htmlContent() == null ? "" : request.htmlContent());
         template.setEnabled(Boolean.TRUE.equals(request.enabled()));
     }
@@ -111,8 +111,8 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
             return;
         if (Objects.equals(previousCommandId, template.getCommandId()) && template.isEnabled())
             return;
-        BotCommand previous =
-            commandRepository.findById(previousCommandId).orElseThrow(() -> new DataNotFoundException("原所属命令不存在"));
+        BotCommand previous = commandRepository.findById(previousCommandId)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.PREVIOUS_TEMPLATE_COMMAND_NOT_FOUND));
         if (Objects.equals(previous.getTemplateId(), template.getId())) {
             previous.setTemplateId(null);
             commandRepository.save(previous);

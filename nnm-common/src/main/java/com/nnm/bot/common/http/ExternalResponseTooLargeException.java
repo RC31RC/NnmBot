@@ -1,6 +1,7 @@
 package com.nnm.bot.common.http;
 
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.common.constant.ExternalHttpErrorCode;
 
 /** 外部服务响应超过配置上限时抛出，避免异常响应耗尽应用内存或磁盘。 */
 public class ExternalResponseTooLargeException extends SystemException {
@@ -10,7 +11,8 @@ public class ExternalResponseTooLargeException extends SystemException {
     private final long maxBytes;
 
     public ExternalResponseTooLargeException(String method, String url, long maxBytes, Throwable cause) {
-        super("External HTTP response is larger than " + maxBytes + " bytes: " + method + " " + url, cause);
+        super(ExternalHttpErrorCode.RESPONSE_TOO_LARGE,
+            "External HTTP response is larger than " + maxBytes + " bytes: " + method + " " + url, cause);
         this.method = method;
         this.url = url;
         this.maxBytes = maxBytes;

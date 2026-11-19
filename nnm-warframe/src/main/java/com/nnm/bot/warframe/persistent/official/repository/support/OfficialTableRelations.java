@@ -1,12 +1,11 @@
 package com.nnm.bot.warframe.persistent.official.repository.support;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.FieldState;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRecord;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialRow;
 import com.nnm.bot.warframe.persistent.official.pojo.entity.support.OfficialChildRow;
@@ -208,8 +207,7 @@ public class OfficialTableRelations {
         if (state == FieldState.MISSING || state == FieldState.NULL)
             return;
         String type = state.jsonType();
-        BusinessAssert.isTrue(field.types().contains(type), WarframeManagementErrorCode.DATASET_INVALID,
-            "官方字段类型不符合已建模合同：" + model.definition().domain() + field.path());
+        BusinessAssert.isTrue(field.types().contains(type), OfficialDataErrorCode.FIELD_TYPE_CONTRACT_INVALID);
         String property = field.values().get(type);
         if (property != null)
             model.set(row, property, value);

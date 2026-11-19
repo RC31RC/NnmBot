@@ -20,6 +20,7 @@ public record RenderEngineProviderContext(String templateBaseUri, List<String> c
         this(templateBaseUri, chromiumArgs, List.of());
     }
 
+    /** 规范化空值并复制集合，避免插件修改调用方持有的配置。 */
     public RenderEngineProviderContext {
         templateBaseUri = ObjectUtil.isNull(templateBaseUri) ? "file:///templates/" : templateBaseUri;
         chromiumArgs = CollUtil.isEmpty(chromiumArgs) ? List.of() : List.copyOf(chromiumArgs);

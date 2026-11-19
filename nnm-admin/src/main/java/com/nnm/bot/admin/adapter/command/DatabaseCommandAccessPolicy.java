@@ -18,13 +18,13 @@ import com.nnm.bot.admin.repository.bot.role.BotRobotRoleRepository;
 import com.nnm.bot.admin.repository.system.SysUserIdentityRepository;
 import com.nnm.bot.admin.repository.system.SysUserRepository;
 import com.nnm.bot.core.channel.port.BotChannelInstanceIdentityResolver;
-import com.nnm.bot.core.constant.BotPlatform;
-import com.nnm.bot.core.message.model.BotMessageContext;
+import com.nnm.bot.core.channel.constant.BotPlatform;
+import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.CommandAccessPolicy;
-import com.nnm.bot.core.plugin.model.CommandAccessDecision;
-import com.nnm.bot.core.plugin.model.CommandDescriptor;
-import com.nnm.bot.core.plugin.model.CommandExecutionConfiguration;
-import com.nnm.bot.core.constant.SystemCommandCodes;
+import com.nnm.bot.core.plugin.api.CommandAccessDecision;
+import com.nnm.bot.core.plugin.api.CommandDescriptor;
+import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO;
+import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.service.BotGroupMemberIdentityResolver;
 import com.nnm.bot.core.group.service.BotGroupCommandContextResolver;
@@ -71,7 +71,7 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
 
     @Override
     public CommandAccessDecision check(BotMessageContext context, CommandDescriptor descriptor,
-        CommandExecutionConfiguration configuration) {
+        CommandExecutionConfigurationDTO configuration) {
         BotCommand command = this.commandRepository.findByCodeIgnoreCase(descriptor.code()).orElse(null);
         if (ObjectUtil.isNull(command)) {
             String commandCode = descriptor.code().strip().toLowerCase(Locale.ROOT);

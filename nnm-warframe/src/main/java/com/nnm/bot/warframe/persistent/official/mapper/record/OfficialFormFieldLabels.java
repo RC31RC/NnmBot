@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.mapper.record;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.nnm.bot.common.exception.SystemException;
+import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialFormErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;

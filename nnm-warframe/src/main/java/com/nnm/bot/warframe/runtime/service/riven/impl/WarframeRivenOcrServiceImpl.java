@@ -5,7 +5,7 @@ import com.nnm.bot.common.config.ocr.OcrProperties;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.ocr.OcrService;
 import com.nnm.bot.common.ocr.OcrTextResult;
-import com.nnm.bot.core.message.model.BotIncomingAttachment;
+import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
 import com.nnm.bot.warframe.runtime.service.riven.WarframeRivenOcrService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

@@ -14,7 +14,7 @@ import com.nnm.bot.admin.pojo.dto.system.UserSaveDTO;
 import com.nnm.bot.admin.pojo.dto.system.UserStatusDTO;
 import com.nnm.bot.admin.service.system.RbacManagementService;
 import com.nnm.bot.common.response.ApiResponse;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** 提供受权限保护的用户、角色、菜单与权限管理接口。 */
 @RestController
 @RequestMapping("/api/admin")
 public class RbacManagementController {
@@ -80,7 +81,7 @@ public class RbacManagementController {
     @PostMapping("/roles/{roleId}/grants/query")
     @SaCheckPermission("system:role:assign")
     public ApiResponse<RoleGrantVO> roleGrants(@PathVariable long roleId,
-        @RequestBody(required = false) EmptyRequest ignored) {
+        @RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(
             AdminSystemViewAssembler.toRoleGrantVO(managementService.roleGrants(StpUtil.getLoginIdAsLong(), roleId)));
     }

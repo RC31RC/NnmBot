@@ -144,11 +144,6 @@
   "gameCode" : "warframe",
   "matchType" : "PREFIX"
 }, {
-  "code" : "conclave",
-  "name" : "竞技场",
-  "gameCode" : "warframe",
-  "matchType" : "EXACT"
-}, {
   "code" : "conclave-rules",
   "name" : "武形秘仪规则",
   "gameCode" : "warframe",

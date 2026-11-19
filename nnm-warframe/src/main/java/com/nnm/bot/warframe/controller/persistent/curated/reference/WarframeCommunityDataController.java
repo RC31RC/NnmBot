@@ -1,35 +1,29 @@
 package com.nnm.bot.warframe.controller.persistent.curated.reference;
 
-import com.nnm.bot.warframe.persistent.curated.mapper.reference.WarframeCommunityViewMapper;
-import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeCommunityQuery;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
-import com.nnm.bot.common.task.AdminTaskService;
-import com.nnm.bot.common.task.AdminTaskSubmission;
-import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
+import com.nnm.bot.warframe.persistent.curated.mapper.reference.WarframeCommunityViewMapper;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeCommunityQuery;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityDatasetVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityPendingPreviewVO;
-import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityPreviewDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityPreviewPageVO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
-import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunitySourceDTO;
-import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityDataService;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
+import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityDataService;
 import jakarta.annotation.Resource;
+import java.util.List;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/warframe/community")
 public class WarframeCommunityDataController {
     @Resource
     private WarframeCommunityDataService service;
-    @Resource
-    private AdminTaskService tasks;
 
     /**
      * 列出当前支持的数据文件。
@@ -109,26 +103,6 @@ public class WarframeCommunityDataController {
     }
 
     /**
-     * 获取当前配置的外部输入。
-     *
-     * @param dataset 本次操作所属的数据文件或社区资料类型。
-     * @return 以统一接口响应包装的本次操作结果。
-     */
-    @PostMapping("/{dataset}/pull-preview")
-    @SaCheckPermission("warframe:community:sync")
-    public ApiResponse<AdminTaskSubmission> pull(@PathVariable String dataset) {
-        String code = WarframeCommunityDataset.parse(dataset).code();
-        String type = "WARFRAME_COMMUNITY_PULL:" + code;
-        return ApiResponse.ok(tasks.findActive(type).map(id -> new AdminTaskSubmission(id, type))
-            .orElseGet(() -> tasks.submit(type, "warframe:community:sync", reporter -> {
-                reporter.report("DOWNLOAD", "正在拉取社区资料");
-                WarframeCommunityPreviewDTO preview = service.pullPreview(code);
-                reporter.report("PREVIEW", "社区资料差异预览已生成");
-                return WarframeCommunityViewMapper.preview(service.previewPage(code, preview.id(), 1, 20));
-            })));
-    }
-
-    /**
      * 丢弃未采纳的社区数据预览。
      *
      * @param dataset 社区数据集代码。
@@ -200,17 +174,4 @@ public class WarframeCommunityDataController {
         return ApiResponse.ok();
     }
 
-    /**
-     * 取得或更新当前业务使用的数据来源。
-     *
-     * @param dataset 本次操作所属的数据文件或社区资料类型。
-     * @param request 本次新增、修改或执行操作使用的已接收参数。
-     * @return 以统一接口响应包装的本次操作结果。
-     */
-    @PostMapping("/{dataset}/source")
-    @SaCheckPermission("warframe:community:update")
-    public ApiResponse<Void> source(@PathVariable String dataset, @RequestBody WarframeCommunitySourceDTO request) {
-        service.source(dataset, request.rawUrl());
-        return ApiResponse.ok();
-    }
 }

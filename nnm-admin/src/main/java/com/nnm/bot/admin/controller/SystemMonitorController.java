@@ -11,7 +11,7 @@ import com.nnm.bot.admin.service.system.OperationAuditService;
 import com.nnm.bot.common.response.ApiResponse;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.admin.pojo.query.system.OperationLogQuery;
-import com.nnm.bot.common.web.EmptyRequest;
+import com.nnm.bot.common.web.EmptyDTO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 汇总管理端运行状态、任务和在线会话信息。 */
 @RestController
 @RequestMapping("/api/admin")
 public class SystemMonitorController {
@@ -39,7 +40,7 @@ public class SystemMonitorController {
 
     @PostMapping("/sessions/query")
     @SaCheckPermission("system:session:view")
-    public ApiResponse<List<SessionVO>> sessions(@RequestBody(required = false) EmptyRequest ignored) {
+    public ApiResponse<List<SessionVO>> sessions(@RequestBody(required = false) EmptyDTO ignored) {
         return ApiResponse.ok(AdminSystemViewAssembler.toSessionVO(onlineSessionService.sessions()));
     }
 

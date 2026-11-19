@@ -1,10 +1,9 @@
 package com.nnm.bot.core.group.pojo.dto;
 
-import com.nnm.bot.core.group.service.PointBalance;
 import java.util.Objects;
 
 /** 群组命令的业务结果，不含渲染或渠道消息模型。 */
-public record GroupCommandOutcomeDTO(String text, PointBalance balance, boolean rejected) {
+public record GroupCommandOutcomeDTO(String text, PointBalanceDTO balance, boolean rejected) {
     public GroupCommandOutcomeDTO {
         Objects.requireNonNull(text, "text");
     }
@@ -17,7 +16,7 @@ public record GroupCommandOutcomeDTO(String text, PointBalance balance, boolean 
         return new GroupCommandOutcomeDTO(text, null, false);
     }
 
-    public static GroupCommandOutcomeDTO withBalance(String text, PointBalance balance) {
+    public static GroupCommandOutcomeDTO withBalance(String text, PointBalanceDTO balance) {
         return new GroupCommandOutcomeDTO(text, Objects.requireNonNull(balance, "balance"), false);
     }
 }

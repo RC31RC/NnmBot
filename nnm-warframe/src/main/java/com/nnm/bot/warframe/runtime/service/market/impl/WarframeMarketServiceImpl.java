@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.market.impl;
 
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.AuctionType;
 import com.nnm.bot.warframe.runtime.exception.market.WarframeMarketDataException;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketOrderPageDTO;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
@@ -7,8 +9,7 @@ import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketAuctionEntryDT
 import com.fasterxml.jackson.core.type.TypeReference;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.nnm.bot.warframe.runtime.rawdata.market.MarketResponseRawData;
@@ -22,7 +23,7 @@ import com.nnm.bot.warframe.runtime.rawdata.market.MarketResponseRawData.Statist
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.warframe.constant.WarframeCacheNames;
-import com.nnm.bot.warframe.config.cache.WarframeCacheReader;
+import com.nnm.bot.warframe.runtime.cache.WarframeCacheReader;
 import com.nnm.bot.warframe.runtime.client.market.WarframeMarketApiClient;
 import com.nnm.bot.warframe.runtime.config.market.WarframeMarketApiProperties;
 import com.nnm.bot.warframe.runtime.mapper.market.WarframeMarketItemMapper;
@@ -291,8 +292,8 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
     @Override
     public List<WarframeMarketItemDTO> fetchAuctionWeapons(String type) {
         String normalized = norm(type);
-        if (!List.of("riven", "lich", "sister").contains(normalized)) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "不支持的拍卖类型: " + type);
+        if (!AuctionType.supports(normalized)) {
+            throw new BusinessException(MarketErrorCode.UNSUPPORTED_AUCTION_TYPE);
         }
         return cached(WarframeCacheNames.METADATA, List.of("market:auction-weapons", normalized), () -> {
             List<WarframeMarketItemDTO> items = parseCatalog(apiClient.fetchAuctionWeaponsResult(normalized));

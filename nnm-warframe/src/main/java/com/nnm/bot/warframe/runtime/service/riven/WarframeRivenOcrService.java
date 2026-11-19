@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.riven;
 
 import com.nnm.bot.common.ocr.OcrTextResult;
-import com.nnm.bot.core.message.model.BotIncomingAttachment;
+import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
 
 /** 紫卡图片输入的下载和 OCR 适配边界。 */
 public interface WarframeRivenOcrService {

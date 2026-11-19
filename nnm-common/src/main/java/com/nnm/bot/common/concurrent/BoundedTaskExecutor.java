@@ -1,8 +1,8 @@
 package com.nnm.bot.common.concurrent;
 
 import com.nnm.bot.common.constant.ComputationErrorCode;
-import com.nnm.bot.common.exception.SystemException;
-import com.nnm.bot.common.exception.ExceptionCause;
+import com.nnm.bot.common.error.SystemException;
+import com.nnm.bot.common.error.ExceptionCause;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;

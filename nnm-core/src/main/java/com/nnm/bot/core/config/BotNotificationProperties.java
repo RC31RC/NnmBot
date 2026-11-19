@@ -5,6 +5,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.util.Assert;
 
+/** 群通知等待、结果轮询及通知资源的保留策略。
+ *
+ * @param responseTimeout 等待单个接收方回复的最长时长
+ * @param retention 通知结果的保留时长
+ * @param pollInterval 管理端进度轮询间隔
+ * @param resourceRetention 通知附件的保留时长
+ * @param maxScheduleDelay 允许预约的最远时长，限制为 1 到 90 天
+ */
 @ConfigurationProperties("nnm.bot.notifications")
 public record BotNotificationProperties(@DefaultValue("60s") Duration responseTimeout,
     @DefaultValue("15m") Duration retention, @DefaultValue("300ms") Duration pollInterval,

@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.scope.impl;
 
+import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import com.nnm.bot.admin.pojo.entity.system.SysUserIdentity;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -19,7 +20,6 @@ import com.nnm.bot.admin.repository.bot.channel.BotChannelInstanceRepository;
 import com.nnm.bot.admin.repository.bot.scope.BotScopeMemberRepository;
 import com.nnm.bot.admin.repository.bot.scope.BotScopeRepository;
 import com.nnm.bot.admin.service.bot.scope.BotScopeManagementService;
-import com.nnm.bot.common.exception.DataNotFoundException;
 import com.nnm.bot.core.channel.port.BotChannelInstanceProvider;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.registry.BotChannelRegistry;
@@ -27,10 +27,9 @@ import com.nnm.bot.core.channel.model.BotChannelSnapshot;
 import com.nnm.bot.core.channel.runtime.BotScopeDiscoveryRouter;
 import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 import com.nnm.bot.core.channel.model.BotChannelKey;
-import com.nnm.bot.core.constant.BotPlatform;
+import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.admin.repository.system.SysUserIdentityRepository;
-import com.nnm.bot.common.constant.CommonErrorCode;
-import com.nnm.bot.common.exception.BusinessException;
+import com.nnm.bot.common.error.BusinessException;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +39,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/** 管理人工确认的机器人作用域及其平台成员资料。 */
 @Service
 public class BotScopeManagementServiceImpl implements BotScopeManagementService {
 
@@ -75,15 +75,15 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
     @Transactional
     public long create(BotScopeCreateDTO request) {
         BotChannelInstance instance = instanceRepository.findById(request.botInstanceId())
-            .orElseThrow(() -> new DataNotFoundException("机器人实例不存在"));
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
         if (instance.getPlatform() != request.platform()) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "机器人实例平台与作用域平台不一致");
+            throw new BusinessException(BotManagementErrorCode.SCOPE_PLATFORM_MISMATCH);
         }
         String scopeType = request.scopeType().trim().toUpperCase();
         String scopeKey = request.scopeKey().trim();
         if (scopeRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(request.platform().name(), scopeType,
             scopeKey, instance.getId()).isPresent()) {
-            throw new BusinessException(CommonErrorCode.DATA_CONFLICT, "该机器人已经配置了相同的群组作用域");
+            throw new BusinessException(BotManagementErrorCode.SCOPE_CONFLICT);
         }
         BotScope scope = new BotScope();
         scope.setPlatform(request.platform().name());
@@ -112,7 +112,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
     @Transactional
     public void delete(long id) {
         if (!scopeRepository.existsById(id)) {
-            throw new DataNotFoundException("群组作用域不存在");
+            throw new BusinessException(BotManagementErrorCode.GROUP_SCOPE_NOT_FOUND);
         }
         memberRepository.deleteAllByScopeId(id);
         memberRepository.flush();
@@ -133,10 +133,10 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
     public void updateMember(long scopeId, long memberId, BotScopeMemberUpdateDTO request) {
         scope(scopeId);
         BotScopeMember member = memberRepository.findById(memberId).filter(item -> item.getScopeId().equals(scopeId))
-            .orElseThrow(() -> new DataNotFoundException("群组成员不存在"));
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_MEMBER_NOT_FOUND));
         String role = request.memberRole().trim().toUpperCase();
         if (!role.equals("OWNER") && !role.equals("ADMIN") && !role.equals("MEMBER")) {
-            throw new BusinessException(CommonErrorCode.PARAM_INVALID, "群组成员角色不合法");
+            throw new BusinessException(BotManagementErrorCode.GROUP_MEMBER_ROLE_INVALID);
         }
         member.setMemberRole(role);
         member.setEnabled(request.enabled());
@@ -201,7 +201,8 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
     }
 
     private BotScope scope(long id) {
-        return scopeRepository.findById(id).orElseThrow(() -> new DataNotFoundException("群组作用域不存在"));
+        return scopeRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_SCOPE_NOT_FOUND));
     }
 
     private String trimToNull(String value) {

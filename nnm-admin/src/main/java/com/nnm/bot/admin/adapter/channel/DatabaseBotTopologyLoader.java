@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 
+/** 从管理数据库读取并组装核心运行所需的渠道拓扑快照。 */
 @Component
 public class DatabaseBotTopologyLoader implements BotTopologyLoader {
     @Resource
