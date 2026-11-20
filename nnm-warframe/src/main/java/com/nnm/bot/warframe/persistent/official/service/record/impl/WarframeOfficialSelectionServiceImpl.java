@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.world.OfficialRegionDTO;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -80,7 +81,7 @@ public class WarframeOfficialSelectionServiceImpl implements WarframeOfficialSel
         List<WarframeOfficialRecordReadDTO> result = new ArrayList<>();
         for (var system : values(((OfficialRegionDTO)root.data()).getSystems())) {
             String key = first(system.getSystemIndex(), system.getIndex());
-            if (StrUtil.isBlank(key))
+            if (CharSequenceUtil.isBlank(key))
                 continue;
             result.add(new WarframeOfficialRecordReadDTO(root.databaseId(), root.domain(), "systems/" + key,
                 root.productPath(), root.domainCode(), first(system.getNameEn(), system.getName()), system.getZhName(),
@@ -108,8 +109,8 @@ public class WarframeOfficialSelectionServiceImpl implements WarframeOfficialSel
      * @return 满足数据是否符合指定匹配条件时为真，否则为假。
      */
     public boolean matches(WarframeOfficialRecordReadDTO row, String keyword) {
-        String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
-        return StrUtil.isEmpty(query) || (row.bkey() + " " + row.officialName() + " " + row.localizedName())
+        String query = keyword == null ? "" : CharSequenceUtil.trim(keyword).toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.isEmpty(query) || (row.bkey() + " " + row.officialName() + " " + row.localizedName())
             .toLowerCase(Locale.ROOT).contains(query);
     }
 

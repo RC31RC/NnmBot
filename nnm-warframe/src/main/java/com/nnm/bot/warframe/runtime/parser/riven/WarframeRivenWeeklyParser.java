@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.runtime.parser.riven;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -48,7 +48,7 @@ public class WarframeRivenWeeklyParser {
         List<RivenWeeklyEntryDTO> entries = new ArrayList<>();
         Set<List<Object>> identities = new HashSet<>();
         for (RivenWeeklyRawData row : rows) {
-            Assert.isTrue(row != null && StrUtil.isNotBlank(row.getItemType()) && row.getRerolled() != null,
+            Assert.isTrue(row != null && CharSequenceUtil.isNotBlank(row.getItemType()) && row.getRerolled() != null,
                 "周紫卡记录缺少类别或洗练标记");
             String weapon = row.getCompatibility();
             String type = row.getItemType();

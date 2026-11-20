@@ -7,7 +7,8 @@ import com.nnm.bot.core.messaging.model.BotMessageContext;
  */
 public interface CommandCooldownGuard {
 
-    /** 原子占用当前消息对应的冷却窗口。
+    /**
+     * 原子占用当前消息对应的冷却窗口。
      *
      * @param context 当前调用上下文
      * @param descriptor 命令元数据

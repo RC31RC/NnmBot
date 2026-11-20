@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.persistent.official.repository.rewards.custom.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.official.repository.rewards.custom.OfficialRelicRepositoryCustom;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialQueryAliases;
@@ -41,8 +42,8 @@ public class OfficialRelicRepositoryCustomImpl implements OfficialRelicRepositor
         BooleanExpression preferred = preferred(root, self);
         BooleanExpression predicate = root.enabled.isTrue().and(root.bkey.ne(METADATA_BKEY)).and(preferred);
 
-        if (StrUtil.isNotBlank(keyword)) {
-            String queryText = keyword.trim().toLowerCase(Locale.ROOT);
+        if (CharSequenceUtil.isNotBlank(keyword)) {
+            String queryText = CharSequenceUtil.trim(keyword).toLowerCase(Locale.ROOT);
             BooleanExpression rootMatch =
                 root.bkey.containsIgnoreCase(queryText).or(root.officialName.containsIgnoreCase(queryText))
                     .or(root.localizedName.containsIgnoreCase(queryText)).or(root.name.containsIgnoreCase(queryText))

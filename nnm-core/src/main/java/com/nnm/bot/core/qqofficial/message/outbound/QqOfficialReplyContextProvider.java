@@ -1,5 +1,7 @@
 package com.nnm.bot.core.qqofficial.message.outbound;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.qqofficial.message.context.QqOfficialMessageSource;
 import com.nnm.bot.core.channel.model.BotChannelInstanceMetadata;
 import com.nnm.bot.core.channel.port.BotReplyContextProvider;
@@ -35,7 +37,7 @@ public class QqOfficialReplyContextProvider implements BotReplyContextProvider {
         QqOfficialMessageSource source = new QqOfficialMessageSource("PROACTIVE_GROUP_MESSAGE",
             QqOfficialChatType.GROUP, binding.getScopeKey(), null, instance.botAccountId(), null, null);
         BotMessageContext context = BotMessageContext.of(BotPlatform.QQ_OFFICIAL, BotMessageScope.GROUP,
-            instance.botAccountId(), senderId == null || senderId.isBlank() ? "system" : senderId,
+            instance.botAccountId(), senderId == null || CharSequenceUtil.isBlank(senderId) ? "system" : senderId,
             binding.getScopeKey(), null, origin.rawMessage(), origin.message(), source, origin.attachments());
         return Optional.of(origin.dispatchId() == null ? context : context.withDispatchId(origin.dispatchId()));
     }

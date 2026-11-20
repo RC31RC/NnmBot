@@ -1,7 +1,9 @@
 package com.nnm.bot.core.channel.registry;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Objects;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.common.error.BusinessException;
@@ -40,15 +42,15 @@ public class BotChannelRegistry {
             Assert.notNull(key, "key must not be null");
             Set<BotChannelCapability> safeCapabilities =
                 CollUtil.isEmpty(capabilities) ? Set.of() : Set.copyOf(capabilities);
-            String normalizedInstanceId = instanceId.trim();
+            String normalizedInstanceId = CharSequenceUtil.trim(instanceId);
             BotChannelKey existingKey = instanceKeys.get(normalizedInstanceId);
-            if (ObjectUtil.isNotNull(existingKey) && !existingKey.equals(key)) {
+            if (ObjUtil.isNotNull(existingKey) && !existingKey.equals(key)) {
                 throw new BusinessException(BotChannelErrorCode.INSTANCE_KEY_CONFLICT);
             }
             MutableChannel newChannel = new MutableChannel(normalizedInstanceId, key, safeCapabilities,
                 enabled ? BotChannelStatus.DISCONNECTED : BotChannelStatus.DISABLED);
             MutableChannel previous = channels.putIfAbsent(key, newChannel);
-            if (ObjectUtil.isNotNull(previous) && !previous.instanceId.equals(newChannel.instanceId)) {
+            if (ObjUtil.isNotNull(previous) && !previous.instanceId.equals(newChannel.instanceId)) {
                 throw new BusinessException(BotChannelErrorCode.ACCOUNT_KEY_CONFLICT);
             }
             instanceKeys.putIfAbsent(normalizedInstanceId, key);
@@ -83,7 +85,7 @@ public class BotChannelRegistry {
 
     public void stopped(String instanceId) {
         BotChannelKey key = instanceKeys.get(normalizeInstanceId(instanceId));
-        if (ObjectUtil.isNotNull(key)) {
+        if (ObjUtil.isNotNull(key)) {
             update(key, BotChannelStatus.STOPPED, null);
         }
     }
@@ -93,18 +95,18 @@ public class BotChannelRegistry {
     }
 
     public void startFailed(BotChannelKey key, Throwable error) {
-        update(key, BotChannelStatus.START_FAILED, ObjectUtil.isNull(error) ? null : error.getMessage());
+        update(key, BotChannelStatus.START_FAILED, ObjUtil.isNull(error) ? null : error.getMessage());
     }
 
     public void failed(BotChannelKey key, Throwable error) {
-        update(key, BotChannelStatus.ERROR, ObjectUtil.isNull(error) ? null : error.getMessage());
+        update(key, BotChannelStatus.ERROR, ObjUtil.isNull(error) ? null : error.getMessage());
     }
 
     public void unregister(String instanceId) {
         registrationLock.lock();
         try {
             BotChannelKey key = instanceKeys.remove(normalizeInstanceId(instanceId));
-            if (ObjectUtil.isNotNull(key)) {
+            if (ObjUtil.isNotNull(key)) {
                 channels.remove(key);
             }
         } finally {
@@ -120,13 +122,13 @@ public class BotChannelRegistry {
         Assert.notNull(key, "key must not be null");
         Assert.notNull(capability, "capability must not be null");
         MutableChannel channel = channels.get(key);
-        return ObjectUtil.isNotNull(channel) && channel.capabilities.contains(capability);
+        return ObjUtil.isNotNull(channel) && channel.capabilities.contains(capability);
     }
 
     public Optional<BotChannelSnapshot> find(BotChannelKey key) {
         Assert.notNull(key, "key must not be null");
         MutableChannel channel = channels.get(key);
-        return ObjectUtil.isNull(channel) ? Optional.empty() : Optional.of(channel.snapshot());
+        return ObjUtil.isNull(channel) ? Optional.empty() : Optional.of(channel.snapshot());
     }
 
     public List<BotChannelSnapshot> snapshots() {
@@ -145,11 +147,11 @@ public class BotChannelRegistry {
 
     private void update(BotChannelKey key, BotChannelStatus status, String error) {
         MutableChannel channel = channels.get(key);
-        if (ObjectUtil.isNull(channel)) {
+        if (ObjUtil.isNull(channel)) {
             return;
         }
         BotChannelSnapshot snapshot = channel.update(status, error);
-        if (ObjectUtil.isNull(snapshot)) {
+        if (ObjUtil.isNull(snapshot)) {
             return;
         }
         listeners.forEach(listener -> {
@@ -163,7 +165,7 @@ public class BotChannelRegistry {
 
     private static String normalizeInstanceId(String instanceId) {
         Assert.hasText(instanceId, "instanceId must not be blank");
-        return instanceId.trim();
+        return CharSequenceUtil.trim(instanceId);
     }
 
     private static final class MutableChannel {
@@ -199,7 +201,7 @@ public class BotChannelRegistry {
                     this.lastError = null;
                 } else if (status == BotChannelStatus.STOPPED) {
                     this.lastError = null;
-                } else if (ObjectUtil.isNotNull(error)) {
+                } else if (ObjUtil.isNotNull(error)) {
                     this.lastError = error;
                 }
                 return snapshot();

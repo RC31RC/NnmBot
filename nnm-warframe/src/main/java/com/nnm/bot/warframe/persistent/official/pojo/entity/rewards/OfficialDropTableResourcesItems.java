@@ -115,5 +115,7 @@ public class OfficialDropTableResourcesItems extends OfficialChildRow {
     private OfficialDropTableRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialDropTableResourcesItemsItemReferencesItems> officialDropTableResourcesItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialDropTableResourcesItemsItemReferencesItems> officialDropTableResourcesItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

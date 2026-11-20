@@ -1,8 +1,8 @@
 package com.nnm.bot.core.jmcomic.config;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -132,7 +132,7 @@ public class JmComicProperties {
     }
 
     public void setUsername(String username) {
-        this.username = StrUtil.trimToNull(username);
+        this.username = CharSequenceUtil.trimToNull(username);
     }
 
     public String getPassword() {
@@ -140,7 +140,7 @@ public class JmComicProperties {
     }
 
     public void setPassword(String password) {
-        this.password = StrUtil.isEmpty(password) ? null : password;
+        this.password = CharSequenceUtil.isEmpty(password) ? null : password;
     }
 
     public int getDownloadThreads() {
@@ -221,7 +221,7 @@ public class JmComicProperties {
 
     public void setApiDomains(List<String> apiDomains) {
         this.apiDomains = CollUtil.isEmpty(apiDomains) ? new ArrayList<>()
-            : apiDomains.stream().filter(StrUtil::isNotBlank).map(String::trim).toList();
+            : apiDomains.stream().filter(CharSequenceUtil::isNotBlank).map(CharSequenceUtil::trim).toList();
     }
 
     public String getProxyHost() {
@@ -229,7 +229,7 @@ public class JmComicProperties {
     }
 
     public void setProxyHost(String proxyHost) {
-        this.proxyHost = StrUtil.trimToNull(proxyHost);
+        this.proxyHost = CharSequenceUtil.trimToNull(proxyHost);
     }
 
     public Integer getProxyPort() {
@@ -242,17 +242,16 @@ public class JmComicProperties {
 
     @PostConstruct
     void validate() {
-        if (ObjectUtil.isNull(this.temporaryDirectory)) {
+        if (ObjUtil.isNull(this.temporaryDirectory)) {
             throw new IllegalStateException("nnm.jmcomic.temporary-directory must be configured");
         }
-        if (ObjectUtil.isNull(this.requestTimeout) || this.requestTimeout.isNegative()
-            || this.requestTimeout.isZero()) {
+        if (ObjUtil.isNull(this.requestTimeout) || this.requestTimeout.isNegative() || this.requestTimeout.isZero()) {
             throw new IllegalStateException("nnm.jmcomic.request-timeout must be positive");
         }
-        if (ObjectUtil.isNull(this.imageTimeout) || this.imageTimeout.isNegative() || this.imageTimeout.isZero()) {
+        if (ObjUtil.isNull(this.imageTimeout) || this.imageTimeout.isNegative() || this.imageTimeout.isZero()) {
             throw new IllegalStateException("nnm.jmcomic.image-timeout must be positive");
         }
-        if (ObjectUtil.isNull(this.wholeFileTimeout) || this.wholeFileTimeout.isNegative()
+        if (ObjUtil.isNull(this.wholeFileTimeout) || this.wholeFileTimeout.isNegative()
             || this.wholeFileTimeout.isZero()) {
             throw new IllegalStateException("nnm.jmcomic.whole-file-timeout must be positive");
         }
@@ -266,13 +265,13 @@ public class JmComicProperties {
         if (this.jpegQuality <= 0 || this.jpegQuality > 1) {
             throw new IllegalStateException("nnm.jmcomic.jpeg-quality must be in (0, 1]");
         }
-        if (StrUtil.isBlank(this.proxyHost) != ObjectUtil.isNull(this.proxyPort)) {
+        if (CharSequenceUtil.isBlank(this.proxyHost) != ObjUtil.isNull(this.proxyPort)) {
             throw new IllegalStateException("nnm.jmcomic proxy-host and proxy-port must be configured together");
         }
-        if (ObjectUtil.isNotNull(this.proxyPort) && (this.proxyPort <= 0 || this.proxyPort > 65535)) {
+        if (ObjUtil.isNotNull(this.proxyPort) && (this.proxyPort <= 0 || this.proxyPort > 65535)) {
             throw new IllegalStateException("nnm.jmcomic.proxy-port is invalid");
         }
-        if (StrUtil.isBlank(this.username) != StrUtil.isBlank(this.password)) {
+        if (CharSequenceUtil.isBlank(this.username) != CharSequenceUtil.isBlank(this.password)) {
             throw new IllegalStateException("nnm.jmcomic username and password must be configured together");
         }
     }

@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.constant;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Locale;
 
 /** Warframe 物品别名的维护来源。 */
@@ -14,9 +15,9 @@ public enum WarframeAliasSourceType {
      * @return 游戏资料别名来源类型对象。
      */
     public static WarframeAliasSourceType parse(String value) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             return MANUAL;
         }
-        return valueOf(value.trim().toUpperCase(Locale.ROOT));
+        return valueOf(CharSequenceUtil.trim(value).toUpperCase(Locale.ROOT));
     }
 }

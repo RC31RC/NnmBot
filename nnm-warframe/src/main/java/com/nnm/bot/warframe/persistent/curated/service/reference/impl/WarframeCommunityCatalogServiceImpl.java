@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.service.reference.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
@@ -86,10 +88,10 @@ public class WarframeCommunityCatalogServiceImpl implements WarframeCommunityCat
                     for (var row : records) {
                         var term = row.details();
                         if (!group.code().equals(term.termGroup()) || term.chineseText() == null
-                            || term.chineseText().isBlank())
+                            || CharSequenceUtil.isBlank(term.chineseText()))
                             continue;
                         String key = WarframeNameNormalizer.phrase(term.englishText());
-                        if (!key.isBlank())
+                        if (!CharSequenceUtil.isBlank(key))
                             names.computeIfAbsent(key, ignored -> new ArrayList<>()).add(term.chineseText());
                     }
                     Map<String, List<String>> frozen = new LinkedHashMap<>();
@@ -168,7 +170,7 @@ public class WarframeCommunityCatalogServiceImpl implements WarframeCommunityCat
         for (var row : rows) {
             String key = WarframeNameNormalizer.item(name.apply(row.details()));
             String value = target.apply(row.details());
-            if (key.isBlank() || value == null || value.isBlank())
+            if (CharSequenceUtil.isBlank(key) || value == null || CharSequenceUtil.isBlank(value))
                 continue;
             targets.computeIfAbsent(key, ignored -> new ArrayList<>()).add(value);
         }

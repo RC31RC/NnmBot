@@ -197,8 +197,10 @@ public class OfficialInboxRoot extends OfficialRecord {
     private List<OfficialInboxMessageAttachmentsItems> officialInboxMessageAttachmentsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialInboxMessageCountedAttachmentsItems> officialInboxMessageCountedAttachmentsItemsRows = new ArrayList<>();
+    private List<OfficialInboxMessageCountedAttachmentsItems> officialInboxMessageCountedAttachmentsItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialInboxMessageItemReferencesItems> officialInboxMessageItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialInboxMessageItemReferencesItems> officialInboxMessageItemReferencesItemsRows =
+        new ArrayList<>();
 }

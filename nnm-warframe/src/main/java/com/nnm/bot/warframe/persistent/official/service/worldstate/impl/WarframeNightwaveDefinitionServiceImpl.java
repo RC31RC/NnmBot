@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.persistent.official.service.worldstate.impl;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.progression.OfficialNightwaveDTO;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.worldstate.WarframeNightwaveDefinitionVO;
@@ -51,6 +51,6 @@ public class WarframeNightwaveDefinitionServiceImpl implements WarframeNightwave
                 first(value.getTipZh(), value.getTipEn(), value.getTip()), first(value.getTipIcon()), ""));
         }
         return WarframeNightwaveDefinitionVO.page(keyword, section,
-            StrUtil.isBlank(season) ? List.of() : List.of(season), result, page);
+            CharSequenceUtil.isBlank(season) ? List.of() : List.of(season), result, page);
     }
 }

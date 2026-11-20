@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.system.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.admin.constant.rbac.RbacErrorCode;
 import com.nnm.bot.admin.constant.AdminAuthErrorCode;
 import com.nnm.bot.admin.service.system.RbacHierarchyService;
@@ -40,7 +41,7 @@ public class RbacHierarchyServiceImpl implements RbacHierarchyService {
     }
 
     public Map<Long, Integer> assignedLevels(Collection<Long> userIds) {
-        if (userIds == null || userIds.isEmpty()) {
+        if (CollUtil.isEmpty(userIds)) {
             return Map.of();
         }
         return userRepository.findAllWithRolesByIdIn(userIds).stream()

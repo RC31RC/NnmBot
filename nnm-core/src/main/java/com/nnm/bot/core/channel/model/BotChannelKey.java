@@ -1,5 +1,7 @@
 package com.nnm.bot.core.channel.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.channel.constant.BotPlatform;
 import org.springframework.util.Assert;
 
@@ -14,6 +16,6 @@ public record BotChannelKey(BotPlatform platform, String botAccountId) {
     public BotChannelKey {
         Assert.notNull(platform, "platform must not be null");
         Assert.hasText(botAccountId, "botAccountId must not be blank");
-        botAccountId = botAccountId.trim();
+        botAccountId = CharSequenceUtil.trim(botAccountId);
     }
 }

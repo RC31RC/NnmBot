@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -61,7 +62,7 @@ public record WarframeMarketUserDTO(String id, String ingameName, String slug, I
      * @return 满足当前数据是否提供了可用的业务身份时为真，否则为假。
      */
     public boolean present() {
-        return StrUtil.isNotBlank(id) || StrUtil.isNotBlank(ingameName);
+        return CharSequenceUtil.isNotBlank(id) || CharSequenceUtil.isNotBlank(ingameName);
     }
 
     /**
@@ -71,7 +72,7 @@ public record WarframeMarketUserDTO(String id, String ingameName, String slug, I
      * @return 去除首尾空白的文本；输入缺省时返回空文本。
      */
     private static String trim(String value) {
-        return StrUtil.emptyIfNull(value).trim();
+        return CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(value));
     }
 
     /**

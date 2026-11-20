@@ -5,7 +5,7 @@ import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.I
 import com.nnm.bot.warframe.persistent.official.constant.OfficialApprovalErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.ChangeType;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest.FileEntry;
 import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialRecordSource;
@@ -148,7 +148,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
         lockManager.lockAll(selectedPaths.stream().map(WarframeOfficialImportServiceImpl::datasetLock).toList());
         String baseline = heads.findById(IMPORT_HEAD_ID).map(WarframeOfficialImportHead::getBatchId).orElse(null);
         String selectedRef = ref;
-        if (StrUtil.isBlank(selectedRef)) {
+        if (CharSequenceUtil.isBlank(selectedRef)) {
             List<WarframeOfficialVersionDTO> versions = client.versions();
             BusinessAssert.notEmpty(versions, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
             selectedRef = versions.getFirst().ref();
@@ -339,7 +339,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             WarframeManagementErrorCode.DATASET_PREVIEW_NOT_FOUND);
         WarframeOfficialDataDomain domain = WarframeOfficialDataDomain.fromPath(path);
         BusinessAssert.notNull(domain, WarframeManagementErrorCode.DATASET_INVALID);
-        BusinessAssert.isTrue(StrUtil.isNotBlank(recordKey), WarframeManagementErrorCode.DATASET_INVALID);
+        BusinessAssert.isTrue(CharSequenceUtil.isNotBlank(recordKey), WarframeManagementErrorCode.DATASET_INVALID);
         FileEntry candidate =
             manifest(batch).files().stream().filter(file -> path.equals(file.path())).findFirst().orElse(null);
         BusinessAssert.notNull(candidate, WarframeManagementErrorCode.DATASET_INVALID);

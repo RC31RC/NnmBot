@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.reference;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -30,7 +31,7 @@ public class WikiPlugin extends BotPlugin<Void, String> {
      */
     @Override
     protected String parse(CommandInvocation invocation, Void prepared) {
-        return invocation.arguments() == null ? "" : invocation.arguments().trim();
+        return invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
     }
 
     private static final String WIKI_BASE_URL = "https://warframe.huijiwiki.com/wiki/";
@@ -47,7 +48,7 @@ public class WikiPlugin extends BotPlugin<Void, String> {
      */
     @Override
     public CommandResult handle(CommandInvocation invocation, Void prepared, String parsed) {
-        if (StrUtil.isBlank(parsed)) {
+        if (CharSequenceUtil.isBlank(parsed)) {
             return CommandResult.rejected("Wiki 命令格式：wk 物品名称，例如：wk 电池");
         }
         WarframeItemResolutionDTO resolution = this.itemResolver.resolve(parsed);
@@ -59,12 +60,13 @@ public class WikiPlugin extends BotPlugin<Void, String> {
             return CommandResult.rejected("没有找到对应的 Warframe Wiki 物品：" + parsed);
         }
         WarframeItemDTO item = resolution.item();
-        String wikiSlug = StrUtil.firstNonBlank(item.getWikiSlug(), item.getLocalizedName(), item.getOfficialName());
-        if (StrUtil.isBlank(wikiSlug)) {
+        String wikiSlug =
+            CharSequenceUtil.firstNonBlank(item.getWikiSlug(), item.getLocalizedName(), item.getOfficialName());
+        if (CharSequenceUtil.isBlank(wikiSlug)) {
             return CommandResult.rejected("没有找到对应的 Warframe Wiki 物品：" + parsed);
         }
         String encodedSlug = URLEncoder.encode(wikiSlug, StandardCharsets.UTF_8).replace("+", "%20");
-        String displayName = StrUtil.firstNonBlank(item.getLocalizedName(), item.getOfficialName(), parsed);
+        String displayName = CharSequenceUtil.firstNonBlank(item.getLocalizedName(), item.getOfficialName(), parsed);
         return CommandResult.text("Warframe Wiki：" + displayName + "\n" + WIKI_BASE_URL + encodedSlug);
     }
 

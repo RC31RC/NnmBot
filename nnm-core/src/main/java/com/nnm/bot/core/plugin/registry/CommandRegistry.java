@@ -1,8 +1,10 @@
 package com.nnm.bot.core.plugin.registry;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Map.Entry;
 import java.lang.Character.UnicodeScript;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.core.plugin.constant.CommandBoundaryPolicy;
 import com.nnm.bot.core.plugin.constant.MatchType;
@@ -107,18 +109,18 @@ public class CommandRegistry {
     public Optional<CommandMatch> match(BotMessageContext context) {
         Objects.requireNonNull(context, "context must not be null");
         String message = normalize(context.message());
-        if (message.isEmpty()) {
+        if (CharSequenceUtil.isEmpty(message)) {
             return Optional.empty();
         }
 
         Snapshot current = snapshot;
         Lookup exact = current.exactCommands().get(message);
-        if (ObjectUtil.isNotNull(exact)) {
+        if (ObjUtil.isNotNull(exact)) {
             return Optional.of(toMatch(context, exact, ""));
         }
         for (Lookup lookup : current.prefixCommands()) {
             String arguments = prefixArguments(message, lookup.normalizedAlias(), lookup.boundaryPolicy());
-            if (ObjectUtil.isNotNull(arguments)) {
+            if (ObjUtil.isNotNull(arguments)) {
                 return Optional.of(toMatch(context, lookup, arguments));
             }
         }
@@ -144,7 +146,7 @@ public class CommandRegistry {
     }
 
     public Optional<BotPlugin<?, ?>> plugin(String code) {
-        if (ObjectUtil.isNull(code)) {
+        if (ObjUtil.isNull(code)) {
             return Optional.empty();
         }
         String normalized = normalize(code);
@@ -184,7 +186,7 @@ public class CommandRegistry {
     }
 
     public Optional<RuntimeCommand> command(String code) {
-        if (ObjectUtil.isNull(code)) {
+        if (ObjUtil.isNull(code)) {
             return Optional.empty();
         }
         return Optional.ofNullable(snapshot.commandsByCode().get(normalize(code)));
@@ -205,12 +207,12 @@ public class CommandRegistry {
 
         CommandConfigurationProvider provider = this.configurationProvider.getIfAvailable();
         Map<String, CommandDefinitionDTO> definitions =
-            ObjectUtil.isNull(provider) ? Map.of() : Objects.requireNonNullElse(provider.loadAll(), Map.of());
+            ObjUtil.isNull(provider) ? Map.of() : Objects.requireNonNullElse(provider.loadAll(), Map.of());
         Map<String, CommandDefinitionDTO> definitionsByCode = new HashMap<>();
         definitions.forEach((key, definition) -> {
-            if (ObjectUtil.isNotNull(definition)) {
+            if (ObjUtil.isNotNull(definition)) {
                 CommandDefinitionDTO previous = definitionsByCode.put(normalize(definition.code()), definition);
-                if (ObjectUtil.isNotNull(previous)) {
+                if (ObjUtil.isNotNull(previous)) {
                     throw new IllegalStateException("Duplicate database command code: " + definition.code());
                 }
             }
@@ -226,7 +228,7 @@ public class CommandRegistry {
         for (Entry<String, BotPlugin<?, ?>> entry : pluginsByCode.entrySet()) {
             BotPlugin<?, ?> plugin = entry.getValue();
             CommandDefinitionDTO definition = definitionsByCode.remove(entry.getKey());
-            if (ObjectUtil.isNull(definition)) {
+            if (ObjUtil.isNull(definition)) {
                 // 插件是稳定实现，数据库只负责覆盖可变配置；未配置时使用安全默认值。
                 definition = defaultDefinition(plugin);
                 log.debug("Bot plugin [{}] has no database command definition; using defaults",
@@ -272,7 +274,7 @@ public class CommandRegistry {
         CommandMetadataDTO metadata = metadata(plugin);
         String code = requireText(metadata.code(), "plugin code");
         BotPlugin<?, ?> previous = plugins.put(normalize(code), plugin);
-        if (ObjectUtil.isNotNull(previous)) {
+        if (ObjUtil.isNotNull(previous)) {
             throw new IllegalStateException("Duplicate bot command code [%s]: %s / %s".formatted(code,
                 previous.getClass().getName(), plugin.getClass().getName()));
         }
@@ -280,7 +282,7 @@ public class CommandRegistry {
 
     private static void registerLookup(Map<String, Lookup> lookups, Lookup lookup) {
         Lookup previous = lookups.put(lookup.normalizedAlias(), lookup);
-        if (ObjectUtil.isNotNull(previous) && previous.command() != lookup.command()) {
+        if (ObjUtil.isNotNull(previous) && previous.command() != lookup.command()) {
             throw new IllegalStateException("Duplicate bot command lookup name [%s]: %s / %s".formatted(lookup.alias(),
                 previous.command().plugin().getClass().getName(), lookup.command().plugin().getClass().getName()));
         }
@@ -303,7 +305,7 @@ public class CommandRegistry {
         if (!allowsBoundary(boundaryPolicy, next)) {
             return null;
         }
-        return message.substring(alias.length()).trim();
+        return CharSequenceUtil.trim(message.substring(alias.length()));
     }
 
     private static boolean allowsBoundary(CommandBoundaryPolicy policy, int next) {
@@ -329,15 +331,15 @@ public class CommandRegistry {
     }
 
     private static String requireText(String value, String field) {
-        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
-        if (normalized.isEmpty()) {
+        String normalized = CharSequenceUtil.trim(Objects.requireNonNull(value, field + " must not be null"));
+        if (CharSequenceUtil.isEmpty(normalized)) {
             throw new IllegalStateException(field + " must not be blank");
         }
         return normalized;
     }
 
     private static String normalize(String value) {
-        return ObjectUtil.isNull(value) ? "" : value.trim().toLowerCase(Locale.ROOT);
+        return ObjUtil.isNull(value) ? "" : CharSequenceUtil.trim(value).toLowerCase(Locale.ROOT);
     }
 
     private record Lookup(RuntimeCommand command, String alias, String normalizedAlias,

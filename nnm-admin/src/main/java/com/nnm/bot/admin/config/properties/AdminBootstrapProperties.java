@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.config.properties;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -40,10 +40,10 @@ public class AdminBootstrapProperties {
         if (!enabled) {
             return;
         }
-        if (StrUtil.isBlank(username)) {
+        if (CharSequenceUtil.isBlank(username)) {
             throw new IllegalStateException("nnm.admin.bootstrap.username must be configured");
         }
-        if (StrUtil.isBlank(password)) {
+        if (CharSequenceUtil.isBlank(password)) {
             throw new IllegalStateException("nnm.admin.bootstrap.password must be configured");
         }
     }

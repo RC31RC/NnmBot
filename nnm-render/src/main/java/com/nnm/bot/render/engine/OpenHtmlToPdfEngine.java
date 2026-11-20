@@ -1,7 +1,7 @@
 package com.nnm.bot.render.engine;
 
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.render.RenderEngine;
@@ -31,7 +31,8 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
     /** 可用于 PDF 排版的字体候选路径。 */
     private final List<Path> fontPaths;
 
-    /** 创建不额外注册字体的轻量渲染器。
+    /**
+     * 创建不额外注册字体的轻量渲染器。
      *
      * @param baseUri HTML 相对资源的基准地址
      */
@@ -39,7 +40,8 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
         this(baseUri, List.of());
     }
 
-    /** 创建带指定字体候选的渲染器。
+    /**
+     * 创建带指定字体候选的渲染器。
      *
      * @param baseUri HTML 相对资源的基准地址
      * @param fontPaths 可用字体文件路径
@@ -89,7 +91,7 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
 
     private void registerFonts(PdfRendererBuilder builder) {
         for (Path fontPath : fontPaths) {
-            if (ObjectUtil.isNull(fontPath) || !Files.isRegularFile(fontPath)) {
+            if (ObjUtil.isNull(fontPath) || !Files.isRegularFile(fontPath)) {
                 continue;
             }
             builder.useFont(fontPath.toFile(), "Noto Sans SC");

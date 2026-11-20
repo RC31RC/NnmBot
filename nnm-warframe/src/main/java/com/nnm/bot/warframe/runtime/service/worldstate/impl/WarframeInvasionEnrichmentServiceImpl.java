@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nnm.bot.common.http.HttpClient;
@@ -78,7 +79,7 @@ public class WarframeInvasionEnrichmentServiceImpl implements WarframeInvasionEn
         List<String> defense = new ArrayList<>();
         for (Invasion row : entries) {
             if (row == null || !official.id().equals(row.id()) || !official.node().equals(row.node())
-                || row.missions() == null || row.missions().isEmpty() || row.missions().size() > MAX_MISSIONS_PER_SIDE
+                || CollUtil.isEmpty(row.missions()) || row.missions().size() > MAX_MISSIONS_PER_SIDE
                 || row.missions().stream().anyMatch(Objects::isNull))
                 continue;
             if (official.attackerFaction() != null && official.attackerFaction().equals(row.ally())

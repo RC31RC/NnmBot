@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.persistent.curated.cache.watch;
 
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeWatchErrorCode;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +45,7 @@ public class WarframeSubscriptionEventMemory {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<WarframeWatchMatchDTO> pending(String json, List<WarframeWatchMatchDTO> matches) {
-        if (StrUtil.isBlank(json))
+        if (CharSequenceUtil.isBlank(json))
             return matches;
         Map<String,
             Long> remembered = cacheReader
@@ -135,7 +135,7 @@ public class WarframeSubscriptionEventMemory {
      * @return 以本方法约定的业务键组织的数据映射。
      */
     private Map<String, Long> decode(String json) {
-        if (StrUtil.isBlank(json))
+        if (CharSequenceUtil.isBlank(json))
             return Map.of();
         try {
             Map<String, Long> values = objectMapper.readValue(json, new TypeReference<>() {});

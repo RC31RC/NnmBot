@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.entity.watch;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -95,9 +95,9 @@ public class WarframeGroupWatchRule {
      * 规范化输入，消除查询或比较时的格式差异。
      */
     private void normalize() {
-        watchType = StrUtil.trim(watchType);
-        watchKey = StrUtil.trim(watchKey);
-        watchValue = StrUtil.trim(watchValue);
+        watchType = CharSequenceUtil.trim(watchType);
+        watchKey = CharSequenceUtil.trim(watchKey);
+        watchValue = CharSequenceUtil.trim(watchValue);
 
     }
 }

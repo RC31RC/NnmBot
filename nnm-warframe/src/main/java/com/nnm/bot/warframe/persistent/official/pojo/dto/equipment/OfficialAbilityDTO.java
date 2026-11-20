@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** ABILITY 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialAbilityDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 技能图标地址；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("abilityIconUrl")
@@ -323,7 +323,9 @@ public class OfficialAbilityDTO extends OfficialObjectDTO implements OfficialRec
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, abilityName, name), OfficialInputText.first(nameZh, abilityNameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, abilityName, name),
+            OfficialInputText.first(nameZh, abilityNameZh), null, null,
+            OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**

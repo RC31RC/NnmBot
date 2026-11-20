@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.persistent.curated.service.reference.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO.AliasDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemDTO;
@@ -66,13 +67,13 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      */
     public WarframeItemResolutionDTO resolve(String input) {
         String normalized = WarframeNameNormalizer.item(input);
-        if (StrUtil.isBlank(normalized)) {
+        if (CharSequenceUtil.isBlank(normalized)) {
             return WarframeItemResolutionDTO.notFound();
         }
 
         SearchIndex index = searchIndex();
         WarframeItemResolutionDTO exact = exactResolution(index, input, normalized);
-        if (input.trim().startsWith("/") || exact.found() || exact.ambiguous()) {
+        if (CharSequenceUtil.trim(input).startsWith("/") || exact.found() || exact.ambiguous()) {
             return exact;
         }
 
@@ -94,7 +95,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      */
     public WarframeItemResolutionDTO resolveExact(String input) {
         String normalized = WarframeNameNormalizer.item(input);
-        return StrUtil.isBlank(normalized) ? WarframeItemResolutionDTO.notFound()
+        return CharSequenceUtil.isBlank(normalized) ? WarframeItemResolutionDTO.notFound()
             : exactResolution(searchIndex(), input, normalized);
     }
 
@@ -107,7 +108,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 游戏资料物品解析状态对象。
      */
     private static WarframeItemResolutionDTO exactResolution(SearchIndex index, String input, String normalized) {
-        String raw = input.trim();
+        String raw = CharSequenceUtil.trim(input);
         if (raw.startsWith("/")) {
             return resolveKeys(index, index.names().getOrDefault(normalized, List.of()).stream()
                 .filter(key -> raw.equals(index.items().get(key).bkey())).toList());
@@ -127,8 +128,8 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<String> marketSearchTerms(String input) {
-        String raw = StrUtil.nullToEmpty(input).trim();
-        if (StrUtil.isBlank(raw)) {
+        String raw = CharSequenceUtil.trim(CharSequenceUtil.nullToEmpty(input));
+        if (CharSequenceUtil.isBlank(raw)) {
             return List.of();
         }
         LinkedHashMap<String, Boolean> terms = new LinkedHashMap<>();
@@ -136,7 +137,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
         addResolvedTerms(terms, raw);
         // P 是版本后缀，不是物品名的一部分；只展开词尾，保留原输入的精确命中机会。
         if (raw.matches("(?i).+[^a-z]p$")) {
-            String base = raw.substring(0, raw.length() - 1).trim();
+            String base = CharSequenceUtil.trim(raw.substring(0, raw.length() - 1));
             LinkedHashMap<String, Boolean> bases = new LinkedHashMap<>();
             addResolvedTerms(bases, base);
             addSearchTerm(terms, base + " Prime");
@@ -149,7 +150,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
         }
         boolean setRequested = raw.matches("(?s).+(?:一套|套装)$");
         if (setRequested) {
-            String base = raw.replaceFirst("(?:一套|套装)$", "").trim();
+            String base = CharSequenceUtil.trim(raw.replaceFirst("(?:一套|套装)$", ""));
             addSearchTerm(terms, base);
             addResolvedTerms(terms, base);
         }
@@ -199,11 +200,11 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<String> auctionWeaponSearchTerms(String input) {
-        String raw = StrUtil.nullToEmpty(input).trim();
+        String raw = CharSequenceUtil.trim(CharSequenceUtil.nullToEmpty(input));
         LinkedHashMap<String, Boolean> terms = new LinkedHashMap<>();
         addExactAuctionTerms(terms, raw);
-        String base = raw.replaceFirst("(?i)(?:\\s+prime|(?<=[^a-z])p)$", "").trim();
-        if (!base.equals(raw) && StrUtil.isNotBlank(base)) {
+        String base = CharSequenceUtil.trim(raw.replaceFirst("(?i)(?:\\s+prime|(?<=[^a-z])p)$", ""));
+        if (!base.equals(raw) && CharSequenceUtil.isNotBlank(base)) {
             LinkedHashMap<String, Boolean> bases = new LinkedHashMap<>();
             addExactAuctionTerms(bases, base);
             bases.keySet().forEach(value -> addSearchTerm(terms, value + " Prime"));
@@ -310,7 +311,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
         for (String bkey : WarframeOfficialReferenceKeys.candidates(row.bkey())) {
             var text = localizations.items().get(
                 WarframeOfficialNameIndexDTO.identity(WarframeOfficialDataDomain.ITEM_LOCALIZATION.domainCode(), bkey));
-            if (text != null && StrUtil.isNotBlank(text.localizedName()))
+            if (text != null && CharSequenceUtil.isNotBlank(text.localizedName()))
                 return new WarframeOfficialNameDTO(row.databaseId(), row.bkey(), row.domainCode(), row.officialName(),
                     text.localizedName(), row.parentName(), row.productCategory(), row.wikiSlug(), row.marketSlug());
         }
@@ -324,8 +325,8 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      */
     private Stream<MarketName> marketNames() {
         return officialLookup.nameIndex(WarframeOfficialDataDomain.MARKET_ITEM).items().values().stream()
-            .map(row -> new MarketName(StrUtil.blankToDefault(row.marketSlug(), row.bkey()),
-                Stream.of(row.officialName(), row.localizedName()).filter(StrUtil::isNotBlank).distinct().toList()));
+            .map(row -> new MarketName(CharSequenceUtil.blankToDefault(row.marketSlug(), row.bkey()), Stream
+                .of(row.officialName(), row.localizedName()).filter(CharSequenceUtil::isNotBlank).distinct().toList()));
     }
 
     /**
@@ -390,7 +391,8 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
     private String replaceAliases(String input) {
         String result = input;
         List<AliasDTO> aliases = communityCatalogService.aliases().stream().map(WarframeCommunityRecordDTO::details)
-            .filter(alias -> StrUtil.isNotBlank(alias.aliasName()) && StrUtil.isNotBlank(alias.targetName()))
+            .filter(alias -> CharSequenceUtil.isNotBlank(alias.aliasName())
+                && CharSequenceUtil.isNotBlank(alias.targetName()))
             .sorted(Comparator.comparingInt((AliasDTO alias) -> alias.aliasName().length()).reversed()).toList();
         Map<String, Set<String>> targets = new LinkedHashMap<>();
         for (AliasDTO alias : aliases) {
@@ -429,8 +431,8 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @param value 待校验或规范化的文本。
      */
     private static void addSearchTerm(Map<String, Boolean> terms, String value) {
-        if (StrUtil.isNotBlank(value)) {
-            terms.putIfAbsent(value.trim(), Boolean.TRUE);
+        if (CharSequenceUtil.isNotBlank(value)) {
+            terms.putIfAbsent(CharSequenceUtil.trim(value), Boolean.TRUE);
         }
     }
 
@@ -443,7 +445,7 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      */
     private static WarframeItemResolutionDTO resolveLocalizedContains(SearchIndex index, String normalizedInput) {
         List<String> candidates = index.items().entrySet().stream()
-            .filter(entry -> StrUtil.isNotBlank(entry.getValue().localizedName()))
+            .filter(entry -> CharSequenceUtil.isNotBlank(entry.getValue().localizedName()))
             .filter(entry -> WarframeNameNormalizer.item(entry.getValue().localizedName()).contains(normalizedInput))
             .map(Map.Entry::getKey).toList();
         return resolveKeys(index, candidates);
@@ -538,9 +540,10 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
      * @return 比较器对象。
      */
     private static Comparator<WarframeItemDTO> itemComparator() {
-        return Comparator.comparing((WarframeItemDTO item) -> StrUtil.blankToDefault(item.getLocalizedName(), ""))
-            .thenComparing(item -> StrUtil.blankToDefault(item.getOfficialName(), ""))
-            .thenComparing(item -> StrUtil.blankToDefault(item.getSourceKey(), ""));
+        return Comparator
+            .comparing((WarframeItemDTO item) -> CharSequenceUtil.blankToDefault(item.getLocalizedName(), ""))
+            .thenComparing(item -> CharSequenceUtil.blankToDefault(item.getOfficialName(), ""))
+            .thenComparing(item -> CharSequenceUtil.blankToDefault(item.getSourceKey(), ""));
     }
 
     /**

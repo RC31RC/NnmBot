@@ -6,7 +6,8 @@ import com.nnm.bot.core.channel.constant.BotPlatform;
 /** 接收成员增量事件，不自动创建作用域或系统用户。 */
 public interface BotGroupMemberEventSink {
 
-    /** 接收平台通知的成员加入事件。
+    /**
+     * 接收平台通知的成员加入事件。
      *
      * @param platform 平台类型
      * @param botAccountId 接收事件的机器人账号
@@ -15,7 +16,8 @@ public interface BotGroupMemberEventSink {
      */
     void handleMemberJoined(BotPlatform platform, String botAccountId, String scopeKey, BotDiscoveredMember member);
 
-    /** 接收平台通知的成员退出事件。
+    /**
+     * 接收平台通知的成员退出事件。
      *
      * @param platform 平台类型
      * @param botAccountId 接收事件的机器人账号

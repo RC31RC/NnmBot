@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.riven.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.runtime.pojo.query.riven.WarframeRivenWeeklyQuery;
@@ -132,7 +133,7 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
         if (snapshot.entries().isEmpty()) {
             return List.of();
         }
-        String keyword = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        String keyword = query == null ? "" : CharSequenceUtil.trim(query).toLowerCase(Locale.ROOT);
         Map<String, WarframeReferenceResolutionDTO> names =
             itemNameService.resolveAll(snapshot.entries().stream().map(RivenWeeklyEntryDTO::compatibility)
                 .filter(Objects::nonNull).map(WarframeTranslationKey::name).distinct().toList());
@@ -141,14 +142,14 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
             WarframeReferenceResolutionDTO translated =
                 entry.compatibility() == null ? null : names.get(WarframeTranslationKey.name(entry.compatibility()));
             WarframeRivenWeaponDTO weapon = weapons.get(WarframeNameNormalizer.weeklyWeapon(entry.compatibility()));
-            String name = weapon != null && StrUtil.isNotBlank(weapon.nameZh()) ? weapon.nameZh()
+            String name = weapon != null && CharSequenceUtil.isNotBlank(weapon.nameZh()) ? weapon.nameZh()
                 : translated != null && translated.resolved() ? translated.displayName()
                     : entry.compatibility() == null ? entry.itemType() : entry.compatibility();
             return new EntryVO(name, entry.compatibility(), entry.itemType(), entry.rerolled(), entry.avg(),
                 entry.median(), entry.min(), entry.max(), entry.stddev(), entry.pop(),
                 weapon == null ? null : weapon.uniqueName());
         }).filter(entry -> (rerolled == null || entry.rerolled() == rerolled)
-            && (StrUtil.isEmpty(keyword) || contains(entry.weaponName(), keyword)
+            && (CharSequenceUtil.isEmpty(keyword) || contains(entry.weaponName(), keyword)
                 || contains(entry.compatibility(), keyword) || contains(entry.itemType(), keyword)))
             .sorted(Comparator.comparing(EntryVO::weaponName).thenComparing(EntryVO::itemType)
                 .thenComparing(EntryVO::rerolled))

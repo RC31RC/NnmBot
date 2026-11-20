@@ -1,7 +1,8 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,7 +15,7 @@ public record CommandExecutionConfigurationDTO(boolean enabled, boolean showInHe
 
     public CommandExecutionConfigurationDTO {
         triggers = immutableTriggers(triggers);
-        permissionOverride = StrUtil.blankToDefault(permissionOverride, "").trim();
+        permissionOverride = CharSequenceUtil.trim(CharSequenceUtil.blankToDefault(permissionOverride, ""));
         cooldownSeconds = Math.max(0, cooldownSeconds);
     }
 
@@ -28,9 +29,9 @@ public record CommandExecutionConfigurationDTO(boolean enabled, boolean showInHe
 
     public record CommandTemplateDTO(String code, String html) {
         public CommandTemplateDTO {
-            if (StrUtil.isBlank(code) || StrUtil.isBlank(html))
+            if (CharSequenceUtil.isBlank(code) || CharSequenceUtil.isBlank(html))
                 throw new IllegalArgumentException("HTML template code and content must not be blank");
-            code = code.trim();
+            code = CharSequenceUtil.trim(code);
         }
     }
 

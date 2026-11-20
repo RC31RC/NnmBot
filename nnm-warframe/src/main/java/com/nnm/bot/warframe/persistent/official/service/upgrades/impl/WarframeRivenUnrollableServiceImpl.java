@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.upgrades.impl;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.OfficialRivenWeaponDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.OfficialRivenAttributeDTO;
@@ -41,7 +41,7 @@ public class WarframeRivenUnrollableServiceImpl implements WarframeRivenUnrollab
             var weaponData = (OfficialRivenWeaponDTO)weapon.data();
             for (var listing : values(weaponData.getMarketListings())) {
                 String group = first(listing.getRivenType());
-                if (StrUtil.isNotEmpty(group))
+                if (CharSequenceUtil.isNotEmpty(group))
                     groups.add(group);
             }
             if (groups.size() != 1)

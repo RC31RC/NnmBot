@@ -68,5 +68,7 @@ public class OfficialBundleComponentsItems extends OfficialChildRow {
     private OfficialBundleRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialBundleComponentsItemsItemReferencesItems> officialBundleComponentsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialBundleComponentsItemsItemReferencesItems> officialBundleComponentsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

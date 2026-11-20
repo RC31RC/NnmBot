@@ -1,23 +1,22 @@
 package com.nnm.bot.warframe.runtime.service.arbitration.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import com.nnm.bot.warframe.runtime.constant.WarframeArbitrationErrorCode;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
-import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
-import com.nnm.bot.warframe.runtime.pojo.query.arbitration.WarframeArbitrationQuery;
-import com.nnm.bot.warframe.runtime.pojo.vo.arbitration.WarframeArbitrationManagementVO;
-import com.nnm.bot.warframe.runtime.pojo.vo.arbitration.WarframeArbitrationManagementVO.EntryVO;
-import java.util.Locale;
-import java.util.stream.Stream;
-import static com.nnm.bot.warframe.runtime.constant.WarframeRuntimeQueryConstants.*;
 import com.nnm.bot.warframe.runtime.cache.arbitration.WarframeArbitrationSnapshotStore;
 import com.nnm.bot.warframe.runtime.cache.arbitration.WarframeArbitrationSnapshotStore.Snapshot;
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationProperties;
+import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.runtime.constant.ArbitrationConstants.QueryType;
+import com.nnm.bot.warframe.runtime.constant.WarframeArbitrationErrorCode;
 import com.nnm.bot.warframe.runtime.parser.arbitration.WarframeArbitrationScheduleParser;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
+import com.nnm.bot.warframe.runtime.pojo.query.arbitration.WarframeArbitrationQuery;
+import com.nnm.bot.warframe.runtime.pojo.vo.arbitration.WarframeArbitrationManagementVO;
+import com.nnm.bot.warframe.runtime.pojo.vo.arbitration.WarframeArbitrationManagementVO.EntryVO;
 import com.nnm.bot.warframe.runtime.service.arbitration.WarframeArbitrationService;
 import jakarta.annotation.Resource;
 import java.time.Clock;
@@ -25,8 +24,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import static com.nnm.bot.warframe.runtime.constant.WarframeRuntimeQueryConstants.DEFAULT_PAGE_SIZE;
+import static com.nnm.bot.warframe.runtime.constant.WarframeRuntimeQueryConstants.MAX_PAGE_SIZE;
 
 /** 仲裁视图只读取 JVM 内存快照，并按每次查询的当前时刻重新筛选。 */
 @Service
@@ -82,7 +85,7 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
                 : query == QueryType.CURRENT ? 1 : properties.getPreviewLimit())
             .toList();
         String notice = "第三方预测排期；以游戏内实际任务为准。";
-        if (fetchedAt != null && !fetchedAt.plus(properties.getRefreshInterval()).isAfter(now)) {
+        if (fetchedAt != null && !fetchedAt.plus(properties.getStaleAfter()).isAfter(now)) {
             notice += " 数据已过刷新周期，当前展示最近一次成功获取的本地快照。";
         }
         if (query == QueryType.TODAY) {
@@ -109,20 +112,20 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
      */
     @Override
     public WarframeArbitrationManagementVO page(WarframeArbitrationQuery query) {
-        int current = query.current() == null ? 1 : query.current();
-        int size = query.size() == null ? DEFAULT_PAGE_SIZE : query.size();
+        int current = ObjUtil.defaultIfNull(query.current(), 1);
+        int size = ObjUtil.defaultIfNull(query.size(), DEFAULT_PAGE_SIZE);
         BusinessAssert.isTrue(current > 0 && size > 0 && size <= MAX_PAGE_SIZE,
             WarframeArbitrationErrorCode.QUERY_INVALID);
         BusinessAssert.isTrue(query.from() == null || query.until() == null || query.from().isBefore(query.until()),
             WarframeArbitrationErrorCode.TIME_RANGE_INVALID);
-        String keyword = query.keyword() == null ? "" : query.keyword().trim().toLowerCase(Locale.ROOT);
+        String keyword = CharSequenceUtil.trimToEmpty(query.keyword());
         Snapshot snapshot = snapshots.current();
         List<ArbitrationScheduleEntryDTO> matches =
             snapshot.entries().stream().filter(entry -> query.from() == null || entry.expiry().isAfter(query.from()))
                 .filter(entry -> query.until() == null || entry.activation().isBefore(query.until()))
-                .filter(entry -> keyword.isEmpty() || Stream
+                .filter(entry -> CharSequenceUtil.isEmpty(keyword) || Stream
                     .of(entry.node(), entry.missionType(), entry.enemy(), entry.planet(), entry.nodeReference())
-                    .anyMatch(value -> value != null && value.toLowerCase(Locale.ROOT).contains(keyword)))
+                    .anyMatch(value -> CharSequenceUtil.containsIgnoreCase(value, keyword)))
                 .toList();
         int start = (int)Math.min((current - 1L) * size, matches.size());
         List<ArbitrationScheduleEntryDTO> page = matches.subList(start, Math.min(start + size, matches.size()));
@@ -140,8 +143,8 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
         Instant fetchedAt = snapshot.fetchedAt();
         boolean stale = fetchedAt != null
             && !warframeClock.instant().isBefore(fetchedAt.plus(sourceProperties.getRefreshInterval()));
-        Instant from = snapshot.entries().isEmpty() ? null : snapshot.entries().getFirst().activation();
-        Instant until = snapshot.entries().isEmpty() ? null : snapshot.entries().getLast().expiry();
+        Instant from = CollUtil.isEmpty(snapshot.entries()) ? null : snapshot.entries().getFirst().activation();
+        Instant until = CollUtil.isEmpty(snapshot.entries()) ? null : snapshot.entries().getLast().expiry();
         return new WarframeArbitrationManagementVO(fetchedAt != null, stale, sourceProperties.getUrl().toString(),
             fetchedAt, from, until, PageResult.of(records, current, size, matches.size()),
             "第三方预测排期，以游戏内实际任务为准；当前页面只查询本实例快照。");
@@ -186,7 +189,8 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
      * @return 满足数据是否符合指定匹配条件时为真，否则为假。
      */
     private boolean matches(List<String> values, String value) {
-        return value != null && values.stream().anyMatch(candidate -> candidate.equalsIgnoreCase(value.trim()));
+        return CollUtil.isNotEmpty(values) && CharSequenceUtil.isNotBlank(value) && values.stream()
+            .anyMatch(candidate -> CharSequenceUtil.equalsIgnoreCase(candidate, CharSequenceUtil.trim(value)));
     }
 
 }

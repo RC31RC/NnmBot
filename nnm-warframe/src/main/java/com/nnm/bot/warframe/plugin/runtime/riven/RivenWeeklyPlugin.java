@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.runtime.riven;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenWeeklyVO;
 import com.nnm.bot.warframe.runtime.pojo.dto.riven.WarframeRivenWeeklyCommandDTO;
@@ -30,7 +32,7 @@ public final class RivenWeeklyPlugin extends BotPlugin<Void, WarframeRivenWeekly
      */
     @Override
     protected WarframeRivenWeeklyCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         Boolean rerolled = null;
         int page = 1;
         Set<String> seen = new HashSet<>();
@@ -60,7 +62,7 @@ public final class RivenWeeklyPlugin extends BotPlugin<Void, WarframeRivenWeekly
                 }
                 default -> throw new IllegalStateException("Unsupported weekly Riven option");
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
             matcher = OPTION.matcher(query);
         }
         if (query.contains("--") || query.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH) {

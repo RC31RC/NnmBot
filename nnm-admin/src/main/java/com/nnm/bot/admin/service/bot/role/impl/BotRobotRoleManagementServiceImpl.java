@@ -1,15 +1,16 @@
 package com.nnm.bot.admin.service.bot.role.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.ArrayList;
 import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
 
 import com.nnm.bot.admin.constant.bot.BotRobotRoleLockPurpose;
 import java.util.Comparator;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.admin.pojo.entity.bot.role.BotRobotRole;
 import com.nnm.bot.admin.pojo.entity.bot.role.BotRobotRoleInstance;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
@@ -111,7 +112,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
                 throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_CODE_CONFLICT);
             });
         apply(role, request, code);
-        if (ObjectUtil.isNotNull(request.botInstanceIds())) {
+        if (ObjUtil.isNotNull(request.botInstanceIds())) {
             saveInstanceBindings(role, request.botInstanceIds());
         }
         saveCommandBindings(role, request.commandCodes());
@@ -127,7 +128,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         instanceRepository.findById(instanceId)
             .orElseThrow(() -> new BusinessException(BotManagementErrorCode.INSTANCE_NOT_FOUND));
         Set<Long> targetRoleIds = CollUtil.isEmpty(roleIds) ? Set.of()
-            : roleIds.stream().filter(ObjectUtil::isNotNull).collect(Collectors.toSet());
+            : roleIds.stream().filter(ObjUtil::isNotNull).collect(Collectors.toSet());
         if (roleRepository.findAllById(targetRoleIds).size() != targetRoleIds.size()) {
             throw new BusinessException(BotManagementErrorCode.ROBOT_ROLE_UNKNOWN);
         }
@@ -204,11 +205,11 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         return new BotRobotRoleDTO(role.getId(), role.getCode(), role.getName(), role.getDescription(),
             role.isEnabled(),
             instanceBindings.stream().map(binding -> instances.get(binding.getBotInstanceId()))
-                .filter(ObjectUtil::isNotNull).sorted(Comparator.comparing(BotChannelInstance::getId))
+                .filter(ObjUtil::isNotNull).sorted(Comparator.comparing(BotChannelInstance::getId))
                 .map(instance -> new BotRobotRoleDTO.ListItemBindingDTO(instance.getId(), instance.getInstanceId(),
                     instance.getDisplayName()))
                 .toList(),
-            commandBindings.stream().map(binding -> commands.get(binding.getCommandId())).filter(ObjectUtil::isNotNull)
+            commandBindings.stream().map(binding -> commands.get(binding.getCommandId())).filter(ObjUtil::isNotNull)
                 .sorted(Comparator.comparing(BotCommand::getGameCode).thenComparing(BotCommand::getCode))
                 .map(command -> new BotRobotRoleDTO.CommandBindingDTO(command.getCode(), command.getName(),
                     command.getGameCode()))
@@ -223,7 +224,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
 
     private void apply(BotRobotRole role, BotRobotRoleSaveDTO request, String code) {
         role.setCode(code);
-        role.setName(request.name().trim());
+        role.setName(CharSequenceUtil.trim(request.name()));
         role.setDescription(trimToNull(request.description()));
         role.setEnabled(Boolean.TRUE.equals(request.enabled()));
     }
@@ -231,8 +232,8 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     private void saveCommandBindings(BotRobotRole role, List<String> commandCodes) {
         Set<String> codeSet = new HashSet<>(SystemCommandCodes.ALL);
         if (!CollUtil.isEmpty(commandCodes)) {
-            commandCodes.stream().filter(StrUtil::isNotBlank).map(code -> code.trim().toLowerCase(Locale.ROOT))
-                .forEach(codeSet::add);
+            commandCodes.stream().filter(CharSequenceUtil::isNotBlank)
+                .map(code -> CharSequenceUtil.trim(code).toLowerCase(Locale.ROOT)).forEach(codeSet::add);
         }
         List<String> codes = codeSet.stream().sorted().toList();
         Map<String,
@@ -278,10 +279,10 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
     }
 
     private String normalize(String value) {
-        return StrUtil.trim(value).toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.trim(value).toLowerCase(Locale.ROOT);
     }
 
     private String trimToNull(String value) {
-        return StrUtil.isBlank(value) ? null : value.trim();
+        return CharSequenceUtil.isBlank(value) ? null : CharSequenceUtil.trim(value);
     }
 }

@@ -10,7 +10,8 @@ public interface BotGroupMemberQueryProvider {
     /** 返回此成员查询实现所属的平台。 */
     BotPlatform platform();
 
-    /** 查询平台作用域的成员列表。
+    /**
+     * 查询平台作用域的成员列表。
      *
      * @param instance 执行查询的渠道实例
      * @param scopeKey 平台群组或作用域标识

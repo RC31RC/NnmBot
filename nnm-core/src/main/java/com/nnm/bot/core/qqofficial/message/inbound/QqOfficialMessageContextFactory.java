@@ -1,8 +1,10 @@
 package com.nnm.bot.core.qqofficial.message.inbound;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.collection.CollUtil;
+
 import com.nnm.bot.core.qqofficial.message.context.QqOfficialMessageSource;
 import com.nnm.bot.core.qqofficial.message.context.QqOfficialMessageAttachmentMapper;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.ReferenceKind;
 import com.nnm.bot.core.messaging.constant.BotMessageScope;
 import com.nnm.bot.core.channel.constant.BotPlatform;
@@ -41,7 +43,7 @@ public final class QqOfficialMessageContextFactory {
             case DIRECT -> text(event.guildId());
         };
         String messageId = text(event.id());
-        if (StrUtil.isBlank(appId) || senderId == null || targetId == null || messageId == null)
+        if (CharSequenceUtil.isBlank(appId) || senderId == null || targetId == null || messageId == null)
             return Optional.empty();
         String content = normalizeContent(event.content() == null ? "" : event.content(), appId);
         BotMessageScope scope = switch (chatType) {
@@ -60,8 +62,7 @@ public final class QqOfficialMessageContextFactory {
 
     static BotMessageReference reference(QqOfficialGatewayEventDTO event) {
         String id = index(event, "ref_msg_idx");
-        ReferencedMessageDTO element =
-            event.msgElements() == null || event.msgElements().isEmpty() ? null : event.msgElements().getFirst();
+        ReferencedMessageDTO element = CollUtil.isEmpty(event.msgElements()) ? null : event.msgElements().getFirst();
         if (id == null && Integer.valueOf(REFERENCE_MESSAGE_TYPE).equals(event.messageType()) && element != null)
             id = text(element.msgIdx());
         if (id != null) {
@@ -82,9 +83,9 @@ public final class QqOfficialMessageContextFactory {
             if (entry == null)
                 continue;
             int separator = entry.indexOf('=');
-            if (separator > 0 && key.equals(entry.substring(0, separator).trim())) {
-                String id = entry.substring(separator + 1).trim();
-                if (!id.isEmpty())
+            if (separator > 0 && key.equals(CharSequenceUtil.trim(entry.substring(0, separator)))) {
+                String id = CharSequenceUtil.trim(entry.substring(separator + 1));
+                if (CharSequenceUtil.isNotEmpty(id))
                     return id;
             }
         }
@@ -102,7 +103,7 @@ public final class QqOfficialMessageContextFactory {
     }
 
     private static String text(String value) {
-        return StrUtil.isBlank(value) ? null : value;
+        return CharSequenceUtil.isBlank(value) ? null : value;
     }
 
     private static String firstText(String... values) {
@@ -114,7 +115,7 @@ public final class QqOfficialMessageContextFactory {
     }
 
     private static String normalizeContent(String content, String appId) {
-        if (StrUtil.isBlank(content) || StrUtil.isBlank(appId))
+        if (CharSequenceUtil.isBlank(content) || CharSequenceUtil.isBlank(appId))
             return content;
         return content.replace("<@!" + appId + ">", "").replace("<@" + appId + ">", "");
     }

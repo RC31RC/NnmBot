@@ -24,7 +24,8 @@ public class SystemException extends RuntimeException {
         this(errorCode, message, null);
     }
 
-    /** 保留内部原因，对外文案仍取自错误码。
+    /**
+     * 保留内部原因，对外文案仍取自错误码。
      *
      * @param errorCode 稳定系统错误码
      * @param cause 内部诊断原因
@@ -36,7 +37,8 @@ public class SystemException extends RuntimeException {
         this.status = errorCode.getStatus();
     }
 
-    /** 分离内部诊断文案与对外稳定描述。
+    /**
+     * 分离内部诊断文案与对外稳定描述。
      *
      * @param errorCode 稳定系统错误码
      * @param message 内部日志诊断文案

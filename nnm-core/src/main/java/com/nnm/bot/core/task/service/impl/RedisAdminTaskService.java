@@ -1,5 +1,7 @@
 package com.nnm.bot.core.task.service.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.core.task.constant.TaskConstants.AdminTaskStatus;
 import com.nnm.bot.common.error.BusinessException;
@@ -58,7 +60,8 @@ public class RedisAdminTaskService implements AdminTaskService {
 
     @Override
     public AdminTaskSubmissionDTO submit(String type, String permission, AdminTaskWork work) {
-        if (type == null || type.isBlank() || permission == null || permission.isBlank() || work == null) {
+        if (type == null || CharSequenceUtil.isBlank(type) || permission == null || CharSequenceUtil.isBlank(permission)
+            || work == null) {
             throw new IllegalArgumentException("Task type, permission and work are required");
         }
         // 在分布式锁之外提交，有界执行器可能阻塞提交线程。

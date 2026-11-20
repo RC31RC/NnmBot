@@ -7,7 +7,8 @@ import com.nnm.bot.core.messaging.model.BotMessageContext;
  */
 public interface CommandCostGuard {
 
-    /** 在命令处理前预留配置要求的群组积分。
+    /**
+     * 在命令处理前预留配置要求的群组积分。
      *
      * @param context 当前调用上下文
      * @param descriptor 命令元数据
@@ -15,7 +16,8 @@ public interface CommandCostGuard {
      */
     CommandCostReservationDTO reserve(BotMessageContext context, CommandDescriptor descriptor);
 
-    /** 根据业务结果结算积分，并返回可能附带结算说明的结果。
+    /**
+     * 根据业务结果结算积分，并返回可能附带结算说明的结果。
      *
      * @param context 当前调用上下文
      * @param descriptor 命令元数据
@@ -28,7 +30,8 @@ public interface CommandCostGuard {
         return result;
     }
 
-    /** 仅补偿已提交且必要回复确定未发送的消耗；业务失败由外层事务回滚。
+    /**
+     * 仅补偿已提交且必要回复确定未发送的消耗；业务失败由外层事务回滚。
      *
      * @param reservation 预留凭据
      * @param cause 触发补偿的投递失败

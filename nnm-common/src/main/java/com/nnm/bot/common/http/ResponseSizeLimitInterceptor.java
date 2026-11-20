@@ -1,5 +1,7 @@
 package com.nnm.bot.common.http;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.config.http.HttpClientProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRequest;
@@ -35,8 +37,8 @@ public final class ResponseSizeLimitInterceptor implements ClientHttpRequestInte
             // HEAD 的 Content-Length 描述 GET 实体，而非本次响应体，不能据此拒绝。
             String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
             if (!"HEAD".equals(request.getMethod().name())
-                && (contentEncoding == null || contentEncoding.isBlank()
-                    || "identity".equalsIgnoreCase(contentEncoding.trim()))
+                && (contentEncoding == null || CharSequenceUtil.isBlank(contentEncoding)
+                    || "identity".equalsIgnoreCase(CharSequenceUtil.trim(contentEncoding)))
                 && response.getHeaders().getContentLength() > limit) {
                 throw tooLarge(request, limit);
             }

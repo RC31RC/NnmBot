@@ -16,7 +16,8 @@ public interface BotMessageSendPermit extends AutoCloseable {
     @Override
     void close();
 
-    /** 创建不执行额度管理的生命周期句柄。
+    /**
+     * 创建不执行额度管理的生命周期句柄。
      *
      * @return 所有操作均为空操作的许可
      */

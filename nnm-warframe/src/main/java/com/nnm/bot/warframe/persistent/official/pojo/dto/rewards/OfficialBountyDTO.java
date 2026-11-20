@@ -16,8 +16,8 @@ import lombok.Getter;
 
 /** BOUNTY 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 描述；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("description")
@@ -206,7 +206,8 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -222,7 +223,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StageReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StageReferencesDTO extends OfficialObjectDTO {
         /** 阶段引用列表的图标状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("iconStatus")
@@ -274,7 +275,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsGroupsGroupsGroupsRewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsGroupsGroupsGroupsRewardsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的分组列表的分组列表的分组列表的奖励的几率解析状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("chanceResolution")
@@ -476,7 +477,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsGroupsGroupsGroupsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsGroupsGroupsGroupsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的分组列表的分组列表的分组列表的分组列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("groups")
@@ -559,7 +560,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsGroupsGroupsRewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsGroupsGroupsRewardsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的分组列表的分组列表的奖励的几率解析状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("chanceResolution")
@@ -821,7 +822,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsGroupsGroupsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsGroupsGroupsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的分组列表的分组列表的分组列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("groups")
@@ -903,7 +904,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsGroupsRewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsGroupsRewardsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的分组列表的奖励的几率解析状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("chanceResolution")
@@ -1180,7 +1181,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsGroupsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsGroupsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的分组列表的分组列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("groups")
@@ -1262,7 +1263,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsRewardsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsRewardsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的奖励的几率解析状态；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("chanceResolution")
@@ -1539,7 +1540,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 StagesGroupsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesGroupsDTO extends OfficialObjectDTO {
         /** 阶段列表的分组列表的分组列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("groups")
@@ -1621,7 +1622,7 @@ public class OfficialBountyDTO extends OfficialObjectDTO implements OfficialReco
     /** 官方嵌套对象 RewardPoolDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RewardPoolDTO extends OfficialObjectDTO {
         /** 阶段列表的启动概率；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("activationProbability")

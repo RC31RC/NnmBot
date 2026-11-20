@@ -16,9 +16,10 @@ public class WarframeArbitrationSourceProperties {
     private URI url = URI.create("https://browse.wf/arbys.txt");
     /** 成功拉取后的刷新间隔；失败使用独立重试间隔。 */
     private Duration refreshInterval = Duration.ofDays(10);
-    /** 本实例检查刷新状态的间隔，同时作为失败后的重试等待时间。 */
+    /** 定时任务检查间隔，也是失败后再次尝试的最迟等待时长。 */
     private Duration retryInterval = Duration.ofMinutes(1);
-    private Duration historyRetention = Duration.ofDays(90);
+    /** 每次仅解析并保留 UTC 今日起的排期窗口。 */
+    private Duration dataWindow = Duration.ofDays(20);
     private int maxRecords = 50_000;
     private long maxResponseBytes = 5 * 1024 * 1024L;
 
@@ -29,8 +30,9 @@ public class WarframeArbitrationSourceProperties {
     public void validate() {
         if (url == null || url.getScheme() == null || !List.of("http", "https").contains(url.getScheme())
             || url.getHost() == null || url.getUserInfo() != null || url.getFragment() != null
-            || invalid(refreshInterval) || invalid(retryInterval) || invalid(historyRetention) || maxRecords < 1
-            || maxRecords > 100_000 || maxResponseBytes < 1 || maxResponseBytes >= Integer.MAX_VALUE) {
+            || invalid(refreshInterval) || invalid(retryInterval) || invalid(dataWindow)
+            || dataWindow.compareTo(Duration.ofDays(60)) > 0 || maxRecords < 1 || maxRecords > 100_000
+            || maxResponseBytes < 1 || maxResponseBytes >= Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.arbitration configuration");
         }
     }

@@ -1,10 +1,11 @@
 package com.nnm.bot.common.ocr;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.SystemException;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.benjaminwan.ocrlibrary.OcrResult;
 import com.benjaminwan.ocrlibrary.TextBlock;
@@ -114,7 +115,7 @@ public class RapidOcrService implements OcrService {
         }
         try {
             BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(image));
-            if (ObjectUtil.isNull(decoded)) {
+            if (ObjUtil.isNull(decoded)) {
                 throw new BusinessException(OcrErrorCode.INVALID_IMAGE);
             }
             return decoded;
@@ -125,7 +126,7 @@ public class RapidOcrService implements OcrService {
 
     private ImageMetadata readMetadata(byte[] image) {
         try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(image))) {
-            if (ObjectUtil.isNull(input)) {
+            if (ObjUtil.isNull(input)) {
                 throw new BusinessException(OcrErrorCode.INVALID_IMAGE);
             }
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
@@ -205,7 +206,7 @@ public class RapidOcrService implements OcrService {
     }
 
     private InferenceEngine engine() {
-        if (ObjectUtil.isNull(this.engine)) {
+        if (ObjUtil.isNull(this.engine)) {
             this.engine = InferenceEngine.getInstance(Model.ONNX_PPOCR_V4);
         }
         return this.engine;
@@ -224,12 +225,12 @@ public class RapidOcrService implements OcrService {
     private record OcrCandidate(String text, List<String> lines, double confidence) {
 
         private static OcrCandidate from(OcrResult result) {
-            if (ObjectUtil.isNull(result)) {
+            if (ObjUtil.isNull(result)) {
                 return new OcrCandidate("", List.of(), 0D);
             }
-            String rawText = StrUtil.nullToEmpty(result.getStrRes()).replace("\r", "").trim();
-            List<String> lines =
-                Arrays.stream(rawText.split("\n")).map(String::trim).filter(StrUtil::isNotBlank).toList();
+            String rawText = CharSequenceUtil.trim(CharSequenceUtil.nullToEmpty(result.getStrRes()).replace("\r", ""));
+            List<String> lines = Arrays.stream(rawText.split("\n")).map(CharSequenceUtil::trim)
+                .filter(CharSequenceUtil::isNotBlank).toList();
             String text = String.join("\n", lines);
             return new OcrCandidate(text, lines, confidence(result.getTextBlocks()));
         }
@@ -251,7 +252,7 @@ public class RapidOcrService implements OcrService {
             double score = 0D;
             int count = 0;
             for (TextBlock block : blocks) {
-                if (ObjectUtil.isNull(block) || StrUtil.isBlank(block.getText())) {
+                if (ObjUtil.isNull(block) || CharSequenceUtil.isBlank(block.getText())) {
                     continue;
                 }
                 score += block.getBoxScore() * 0.45D + average(block.getCharScores()) * 0.55D;

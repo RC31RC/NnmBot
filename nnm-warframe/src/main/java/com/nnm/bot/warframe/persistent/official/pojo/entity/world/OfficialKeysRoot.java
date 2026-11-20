@@ -221,13 +221,16 @@ public class OfficialKeysRoot extends OfficialRecord {
     private List<OfficialKeysItemReferencesItems> officialKeysItemReferencesItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysMissionRewardCountedItemsItems> officialKeysMissionRewardCountedItemsItemsRows = new ArrayList<>();
+    private List<OfficialKeysMissionRewardCountedItemsItems> officialKeysMissionRewardCountedItemsItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysMissionRewardCountedStoreItemsItems> officialKeysMissionRewardCountedStoreItemsItemsRows = new ArrayList<>();
+    private List<OfficialKeysMissionRewardCountedStoreItemsItems> officialKeysMissionRewardCountedStoreItemsItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysMissionRewardItemReferencesItems> officialKeysMissionRewardItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialKeysMissionRewardItemReferencesItems> officialKeysMissionRewardItemReferencesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialKeysMissionRewardItemsItems> officialKeysMissionRewardItemsItemsRows = new ArrayList<>();

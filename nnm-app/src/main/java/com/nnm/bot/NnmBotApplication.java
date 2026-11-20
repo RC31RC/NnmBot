@@ -11,7 +11,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class NnmBotApplication {
 
-    /** 启动 Spring Boot 应用。
+    /**
+     * 启动 Spring Boot 应用。
      *
      * @param args 命令行参数
      */

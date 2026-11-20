@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Objects;
 
 /**
@@ -18,13 +20,13 @@ public record CommandDefinitionDTO(String code, String name, String gameCode, St
         code = requireText(code, "code");
         name = requireText(name, "name");
         gameCode = requireText(gameCode, "gameCode");
-        description = Objects.requireNonNullElse(description, "").trim();
+        description = CharSequenceUtil.trim(Objects.requireNonNullElse(description, ""));
         configuration = Objects.requireNonNull(configuration, "configuration must not be null");
     }
 
     private static String requireText(String value, String field) {
-        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
-        if (normalized.isEmpty()) {
+        String normalized = CharSequenceUtil.trim(Objects.requireNonNull(value, field + " must not be null"));
+        if (CharSequenceUtil.isEmpty(normalized)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return normalized;

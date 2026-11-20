@@ -1,5 +1,7 @@
 package com.nnm.bot.core.messaging.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.channel.constant.BotPlatform;
 import java.util.List;
 import java.util.Objects;
@@ -9,7 +11,8 @@ public record BotProactiveTarget(BotPlatform platform, String botAccountId, Stri
     List<String> mentionUserIds) {
     public BotProactiveTarget {
         Objects.requireNonNull(platform, "platform");
-        if (botAccountId == null || botAccountId.isBlank() || conversationId == null || conversationId.isBlank()) {
+        if (botAccountId == null || CharSequenceUtil.isBlank(botAccountId) || conversationId == null
+            || CharSequenceUtil.isBlank(conversationId)) {
             throw new IllegalArgumentException("Proactive account and conversation are required");
         }
         mentionUserIds = List.copyOf(mentionUserIds);

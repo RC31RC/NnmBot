@@ -8,7 +8,8 @@ import java.util.concurrent.ExecutionException;
 public final class ExceptionCause {
     private ExceptionCause() {}
 
-    /** 返回调用方应处理的异常，不沿任意 cause 链一路剥离。
+    /**
+     * 返回调用方应处理的异常，不沿任意 cause 链一路剥离。
      *
      * @param failure 捕获到的异常
      * @return 去除已知异步或代理包装后的异常；没有可拆包装时返回原异常

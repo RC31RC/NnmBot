@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.pojo.vo.reference;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import java.math.BigDecimal;
 import java.util.List;
@@ -116,7 +116,7 @@ public record WarframeItemRelationVO(String query, String category, int page, in
      * @return 在主要数据缺省时选择明确允许的替代值对应的文本。
      */
     private static String fallback(String value, String missing) {
-        return StrUtil.isBlank(value) ? missing : value;
+        return CharSequenceUtil.isBlank(value) ? missing : value;
     }
 
     public record ComponentVO(String parentKey, String parentName, String parentType, String itemKey, String name,

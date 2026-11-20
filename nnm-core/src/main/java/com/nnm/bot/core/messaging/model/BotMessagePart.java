@@ -1,5 +1,7 @@
 package com.nnm.bot.core.messaging.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Objects;
 import java.util.List;
 
@@ -36,8 +38,9 @@ public sealed interface BotMessagePart {
         public Button {
             Objects.requireNonNull(label, "label");
             Objects.requireNonNull(value, "value");
-            if (label.isBlank() || label.length() > 80 || value.isBlank() || value.length() > 2048 || row < 0 || row > 4
-                || label.chars().anyMatch(Character::isISOControl) || value.chars().anyMatch(Character::isISOControl)) {
+            if (CharSequenceUtil.isBlank(label) || label.length() > 80 || CharSequenceUtil.isBlank(value)
+                || value.length() > 2048 || row < 0 || row > 4 || label.chars().anyMatch(Character::isISOControl)
+                || value.chars().anyMatch(Character::isISOControl)) {
                 throw new IllegalArgumentException("Invalid keyboard button");
             }
         }

@@ -17,7 +17,8 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "wf_official_riven_definition_availablechallenges_ite_915f85dea9")
-public class OfficialRivenDefinitionAvailableChallengesItemsComplicationsItemsItemReferencesItems extends OfficialChildRow {
+public class OfficialRivenDefinitionAvailableChallengesItemsComplicationsItemsItemReferencesItems
+    extends OfficialChildRow {
     /** 本表记录是否缺失、为空或属于特定 JSON 类型。 */
     @Column(name = "root_state")
     private Short rootState;

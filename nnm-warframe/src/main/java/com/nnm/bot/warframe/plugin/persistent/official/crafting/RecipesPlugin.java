@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.crafting;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import cn.hutool.core.collection.CollUtil;
@@ -31,7 +33,7 @@ public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeCommandDT
      */
     @Override
     protected WarframeRecipeCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         String kind = null;
         HashSet<String> options = new HashSet<String>();
@@ -56,7 +58,7 @@ public final class RecipesPlugin extends BotPlugin<Void, WarframeRecipeCommandDT
                     page = Integer.MAX_VALUE;
                 }
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || UNKNOWN_OPTION.matcher(query).find())
             return new WarframeRecipeCommandDTO(query, kind, page, "配方参数不合法");

@@ -1,7 +1,8 @@
 package com.nnm.bot.core.onebot.connection;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
+import cn.hutool.core.util.ObjUtil;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.error.BusinessException;
@@ -53,10 +54,10 @@ public class OneBotAccountProbe {
         CompletableFuture<WebSocketSession> connection =
             client.execute(new ProbeHandler(echo, result, sessionRef), headers, uri);
         connection.whenComplete((session, error) -> {
-            if (ObjectUtil.isNotNull(session)) {
+            if (ObjUtil.isNotNull(session)) {
                 sessionRef.set(session);
             }
-            if (ObjectUtil.isNotNull(error)) {
+            if (ObjUtil.isNotNull(error)) {
                 result.completeExceptionally(error);
             }
         });
@@ -70,7 +71,7 @@ public class OneBotAccountProbe {
             Thread.currentThread().interrupt();
             throw new OneBotAccountProbeException("OneBot 账号探测被中断", exception);
         } catch (ExecutionException exception) {
-            Throwable cause = ObjectUtil.isNull(exception.getCause()) ? exception : exception.getCause();
+            Throwable cause = ObjUtil.isNull(exception.getCause()) ? exception : exception.getCause();
             throw new OneBotAccountProbeException("无法从 OneBot WebSocket 获取登录账号: " + safeMessage(cause), cause);
         } finally {
             close(sessionRef.get());
@@ -86,8 +87,8 @@ public class OneBotAccountProbe {
             throw new OneBotAccountProbeException(
                 "OneBot " + OneBotProtocolConstants.ACTION_GET_LOGIN_INFO + " 调用失败，retcode=" + response.retcode());
         }
-        String accountId =
-            response.data() == null || response.data().userId() == null ? "" : response.data().userId().trim();
+        String accountId = response.data() == null || response.data().userId() == null ? ""
+            : CharSequenceUtil.trim(response.data().userId());
         try {
             if (Long.parseLong(accountId) <= 0L) {
                 throw new NumberFormatException("account id must be positive");
@@ -123,7 +124,7 @@ public class OneBotAccountProbe {
         protected void handleTextMessage(WebSocketSession session, TextMessage message) {
             try {
                 String accountId = accountId(message.getPayload(), echo);
-                if (ObjectUtil.isNotNull(accountId)) {
+                if (ObjUtil.isNotNull(accountId)) {
                     result.complete(accountId);
                 }
             } catch (Exception exception) {
@@ -145,12 +146,12 @@ public class OneBotAccountProbe {
     }
 
     private static URI websocketUri(String connectionUrl) {
-        if (StrUtil.isBlank(connectionUrl)) {
+        if (CharSequenceUtil.isBlank(connectionUrl)) {
             throw new BusinessException(OneBotErrorCode.PROBE_URL_REQUIRED);
         }
         URI uri;
         try {
-            uri = URI.create(connectionUrl.trim());
+            uri = URI.create(CharSequenceUtil.trim(connectionUrl));
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(OneBotErrorCode.PROBE_URL_INVALID, exception);
         }
@@ -158,7 +159,7 @@ public class OneBotAccountProbe {
             && !OneBotProtocolConstants.WSS_SCHEME.equalsIgnoreCase(uri.getScheme())) {
             throw new BusinessException(OneBotErrorCode.PROBE_URL_SCHEME_INVALID);
         }
-        if (ObjectUtil.isNull(uri.getHost())) {
+        if (ObjUtil.isNull(uri.getHost())) {
             throw new BusinessException(OneBotErrorCode.PROBE_URL_HOST_INVALID);
         }
         return uri;
@@ -166,7 +167,7 @@ public class OneBotAccountProbe {
 
     private static WebSocketHttpHeaders headers(String accessToken) {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
-        if (StrUtil.isNotBlank(accessToken)) {
+        if (CharSequenceUtil.isNotBlank(accessToken)) {
             headers.set(HttpHeaders.AUTHORIZATION, accessToken.startsWith(OneBotProtocolConstants.BEARER_PREFIX)
                 ? accessToken : OneBotProtocolConstants.BEARER_PREFIX + accessToken);
         }
@@ -174,7 +175,7 @@ public class OneBotAccountProbe {
     }
 
     private static void close(WebSocketSession session) {
-        if (ObjectUtil.isNull(session) || !session.isOpen()) {
+        if (ObjUtil.isNull(session) || !session.isOpen()) {
             return;
         }
         try {
@@ -185,6 +186,6 @@ public class OneBotAccountProbe {
     }
 
     private static String safeMessage(Throwable error) {
-        return StrUtil.isBlank(error.getMessage()) ? error.getClass().getSimpleName() : error.getMessage();
+        return CharSequenceUtil.isBlank(error.getMessage()) ? error.getClass().getSimpleName() : error.getMessage();
     }
 }

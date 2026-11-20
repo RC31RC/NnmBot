@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.service.worldstate.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.worldstate.SteelPathRotationDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.worldstate.SteelPathRotationRowDTO;
 import com.nnm.bot.warframe.persistent.curated.repository.worldstate.WarframeCommunitySteelPathRotationRepository;
@@ -32,7 +34,7 @@ public class WarframeSteelPathRotationServiceImpl implements WarframeSteelPathRo
         for (int index = 0; index < rows.size(); index++) {
             SteelPathRotationRowDTO row = rows.get(index);
             if (row.getRotationIndex() == null || row.getRotationIndex() != index || !anchor.equals(row.getAnchorWeek())
-                || row.getStoreItem() == null || row.getStoreItem().isBlank())
+                || row.getStoreItem() == null || CharSequenceUtil.isBlank(row.getStoreItem()))
                 return null;
         }
         LocalDate monday = LocalDate.ofInstant(asOf == null ? Instant.now() : asOf, ZoneOffset.UTC)

@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.reference.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.OfficialLanguageStringDTO;
 import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.first;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -26,9 +27,9 @@ public class WarframeTranslationServiceImpl implements WarframeTranslationServic
      */
     @Override
     public WarframeTranslationCommandVO translations(String keyword) {
-        String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        String query = keyword == null ? "" : CharSequenceUtil.trim(keyword).toLowerCase(Locale.ROOT);
         var selected = catalog.records(WarframeOfficialDataDomain.LANGUAGE_STRING).stream()
-            .filter(item -> StrUtil.isBlank(query)
+            .filter(item -> CharSequenceUtil.isBlank(query)
                 || (item.bkey() + " " + first(((OfficialLanguageStringDTO)item.data()).getText()) + " "
                     + first(((OfficialLanguageStringDTO)item.data()).getZhText())).toLowerCase(Locale.ROOT)
                     .contains(query))
@@ -38,7 +39,7 @@ public class WarframeTranslationServiceImpl implements WarframeTranslationServic
             for (String locale : new String[] {"en", "zh"}) {
                 String text = first(locale.equals("en") ? ((OfficialLanguageStringDTO)item.data()).getText()
                     : ((OfficialLanguageStringDTO)item.data()).getZhText());
-                if (StrUtil.isNotBlank(text))
+                if (CharSequenceUtil.isNotBlank(text))
                     entries.add(new TranslationVO(item.bkey(), locale, text));
             }
         });

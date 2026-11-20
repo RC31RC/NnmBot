@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.security;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.admin.config.properties.BotCredentialProperties;
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
@@ -39,7 +39,7 @@ public class BotCredentialCipher {
     }
 
     public String encrypt(String plaintext) {
-        if (StrUtil.isBlank(plaintext)) {
+        if (CharSequenceUtil.isBlank(plaintext)) {
             return null;
         }
         try {
@@ -56,7 +56,7 @@ public class BotCredentialCipher {
     }
 
     public String decrypt(String ciphertext) {
-        if (StrUtil.isBlank(ciphertext)) {
+        if (CharSequenceUtil.isBlank(ciphertext)) {
             return null;
         }
         if (!ciphertext.startsWith(PREFIX)) {

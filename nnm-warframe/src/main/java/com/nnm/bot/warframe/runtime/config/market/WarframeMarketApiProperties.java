@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.config.market;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.net.URI;
@@ -197,7 +198,7 @@ public class WarframeMarketApiProperties {
         }
         requireHttpUrl(v1BaseUrl, "nnm.warframe.pull.market-api.v1-base-url");
         requireHttpUrl(v2BaseUrl, "nnm.warframe.pull.market-api.v2-base-url");
-        if (!"v1".equalsIgnoreCase(version) && !"v2".equalsIgnoreCase(version)) {
+        if (!CharSequenceUtil.equalsIgnoreCase("v1", version) && !CharSequenceUtil.equalsIgnoreCase("v2", version)) {
             throw new IllegalArgumentException("nnm.warframe.pull.market-api.version must be v1 or v2");
         }
         requireText(language, "nnm.warframe.pull.market-api.language");
@@ -225,7 +226,7 @@ public class WarframeMarketApiProperties {
      * @param name 当前业务对象的名称。
      */
     private static void requireText(String value, String name) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
     }

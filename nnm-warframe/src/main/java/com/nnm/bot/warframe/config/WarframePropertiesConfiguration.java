@@ -13,7 +13,8 @@ import com.nnm.bot.warframe.persistent.official.config.WarframeOfficialImportPro
 import com.nnm.bot.warframe.runtime.config.riven.WarframeRivenWeeklyProperties;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframeBountyCycleProperties;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframeInvasionProperties;
-import com.nnm.bot.warframe.runtime.config.worldstate.WarframeKuvaMissionProperties;
+import com.nnm.bot.warframe.runtime.config.kuva.WarframeKuvaMissionProperties;
+import com.nnm.bot.warframe.runtime.config.steelincursion.WarframeSteelIncursionProperties;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframeCycleProperties;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframePollingProperties;
 import com.nnm.bot.warframe.persistent.curated.config.watch.WarframeSubscriptionProperties;
@@ -117,6 +118,12 @@ public class WarframePropertiesConfiguration {
     @Bean
     public WarframeKuvaMissionProperties warframeKuvaMissionProperties() {
         return new WarframeKuvaMissionProperties();
+    }
+
+    /** @return browse.wf 钢铁侵袭来源及刷新周期配置。 */
+    @Bean
+    public WarframeSteelIncursionProperties warframeSteelIncursionProperties() {
+        return new WarframeSteelIncursionProperties();
     }
 
     /**

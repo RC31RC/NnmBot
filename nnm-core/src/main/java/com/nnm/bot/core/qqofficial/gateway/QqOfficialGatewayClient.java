@@ -4,8 +4,8 @@ import com.nnm.bot.core.qqofficial.config.QqOfficialConnection;
 import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandIngressResult;
 import java.util.Optional;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.http.HttpClient;
@@ -133,7 +133,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             this.validate(record);
             OfficialConnection replacement = new OfficialConnection(record);
             OfficialConnection previous = this.connections.put(record.instanceId(), replacement);
-            if (ObjectUtil.isNotNull(previous)) {
+            if (ObjUtil.isNotNull(previous)) {
                 previous.stop();
                 previous.webSocketClient.shutdownNow();
             }
@@ -148,7 +148,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
         lifecycleLock.lock();
         try {
             OfficialConnection connection = this.connections.get(instanceId);
-            if (ObjectUtil.isNotNull(connection)) {
+            if (ObjUtil.isNotNull(connection)) {
                 connection.stop();
                 connection.webSocketClient.shutdownNow();
                 this.connections.remove(instanceId, connection);
@@ -236,7 +236,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
                 ready = false;
                 WebSocket socket = webSocket;
                 webSocket = null;
-                if (ObjectUtil.isNotNull(socket)) {
+                if (ObjUtil.isNotNull(socket)) {
                     socket.abort();
                 }
                 incomingLock.lock();
@@ -391,7 +391,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
                 tokenClient.getAccessToken();
                 webSocketClient.newWebSocketBuilder().buildAsync(URI.create(apiClient.gatewayUrl()), this)
                     .whenComplete((socket, error) -> {
-                        if (ObjectUtil.isNotNull(error)) {
+                        if (ObjUtil.isNotNull(error)) {
                             connecting.set(false);
                             if (!active.get()) {
                                 return;
@@ -482,7 +482,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
             long interval =
                 Math.max(1000L, data == null || data.heartbeatInterval() == null ? 45000L : data.heartbeatInterval());
             String token = tokenClient.getAccessToken();
-            String payload = StrUtil.isNotBlank(sessionId) && ObjectUtil.isNotNull(sequence)
+            String payload = CharSequenceUtil.isNotBlank(sessionId) && ObjUtil.isNotNull(sequence)
                 ? QqOfficialGatewayPayloads.resume(objectMapper, token, sessionId, sequence)
                 : QqOfficialGatewayPayloads.identify(objectMapper, token, instance.intents());
             if (!accepts(socket))
@@ -616,7 +616,7 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
 
         private String text(String... values) {
             for (String value : values) {
-                if (StrUtil.isNotBlank(value))
+                if (CharSequenceUtil.isNotBlank(value))
                     return value;
             }
             return null;
@@ -684,13 +684,13 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
     }
 
     private static void cancel(ScheduledFuture<?> future) {
-        if (ObjectUtil.isNotNull(future)) {
+        if (ObjUtil.isNotNull(future)) {
             future.cancel(false);
         }
     }
 
     private void validate(BotChannelInstanceRecord record) {
-        if (ObjectUtil.isNull(record)) {
+        if (ObjUtil.isNull(record)) {
             throw new BusinessException(QqOfficialErrorCode.GATEWAY_INSTANCE_REQUIRED);
         }
         this.requireText(record.instanceId());
@@ -702,17 +702,17 @@ public class QqOfficialGatewayClient implements SmartLifecycle, BotChannelConnec
         if (record.intents() < 0) {
             throw new BusinessException(QqOfficialErrorCode.GATEWAY_INTENTS_INVALID);
         }
-        if (ObjectUtil.isNull(record.gatewayConnectTimeout()) || record.gatewayConnectTimeout().isZero()
+        if (ObjUtil.isNull(record.gatewayConnectTimeout()) || record.gatewayConnectTimeout().isZero()
             || record.gatewayConnectTimeout().isNegative()) {
             throw new BusinessException(QqOfficialErrorCode.GATEWAY_TIMEOUT_INVALID);
         }
-        if (ObjectUtil.isNull(record.reconnectDelay()) || record.reconnectDelay().isNegative()) {
+        if (ObjUtil.isNull(record.reconnectDelay()) || record.reconnectDelay().isNegative()) {
             throw new BusinessException(QqOfficialErrorCode.GATEWAY_RECONNECT_INVALID);
         }
     }
 
     private void requireText(String value) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             throw new BusinessException(QqOfficialErrorCode.GATEWAY_FIELD_REQUIRED);
         }
     }

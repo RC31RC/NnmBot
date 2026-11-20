@@ -43,5 +43,6 @@ public class OfficialSkinRandomisedUpgradesItems extends OfficialChildRow {
     private OfficialSkinRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSkinRandomisedUpgradesItemsRangeItems> officialSkinRandomisedUpgradesItemsRangeItemsRows = new ArrayList<>();
+    private List<OfficialSkinRandomisedUpgradesItemsRangeItems> officialSkinRandomisedUpgradesItemsRangeItemsRows =
+        new ArrayList<>();
 }

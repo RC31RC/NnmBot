@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.reference;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.pojo.vo.reference.WarframeDefinitionVO;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -22,7 +24,7 @@ abstract class AbstractDefinitionPlugin extends BotPlugin<Void, WarframeDefiniti
      */
     @Override
     protected WarframeDefinitionCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
         if (matcher.find()) {
@@ -33,7 +35,7 @@ abstract class AbstractDefinitionPlugin extends BotPlugin<Void, WarframeDefiniti
             } catch (NumberFormatException exception) {
                 page = Integer.MAX_VALUE;
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || OPTION.matcher(query).find())
             return new WarframeDefinitionCommandDTO(query, page, "定义查询参数不合法");

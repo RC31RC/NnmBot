@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.config.arbitration;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
@@ -15,10 +15,8 @@ import java.util.List;
 @Setter
 @ConfigurationProperties(prefix = "nnm.warframe.query.arbitration")
 public class WarframeArbitrationProperties {
-    /** 快照超过此周期时显示陈旧提示；刷新任务单独决定何时拉取来源。 */
-    private Duration refreshInterval = Duration.ofDays(7);
-    /** 查询侧有效历史范围，避免把来源缺口解释为没有任务。 */
-    private Duration historyRetention = Duration.ofDays(90);
+    /** 快照超过此周期时显示陈旧提示；不控制上游拉取时刻。 */
+    private Duration staleAfter = Duration.ofDays(7);
     /** 今日仲裁所用的自然日时区。 */
     private ZoneId zone = ZoneId.of("Asia/Shanghai");
     /** 未来查询覆盖天数。 */
@@ -35,8 +33,8 @@ public class WarframeArbitrationProperties {
     /** 查询日期、保留时长和完整筛选规则必须在启动时有效。 */
     @PostConstruct
     public void validate() {
-        if (zone == null || invalid(refreshInterval) || invalid(historyRetention) || previewDays < 1 || previewDays > 30
-            || previewLimit < 1 || previewLimit > 100 || empty(efficientMissionTypes) || empty(efficientPlanets)
+        if (zone == null || invalid(staleAfter) || previewDays < 1 || previewDays > 30 || previewLimit < 1
+            || previewLimit > 100 || empty(efficientMissionTypes) || empty(efficientPlanets)
             || empty(efficientEnemies)) {
             throw new IllegalArgumentException("Invalid nnm.warframe.query.arbitration configuration");
         }
@@ -59,6 +57,6 @@ public class WarframeArbitrationProperties {
      * @return 满足构造没有有效业务内容的缺省对象时为真，否则为假。
      */
     private boolean empty(List<String> values) {
-        return CollUtil.isEmpty(values) || values.stream().anyMatch(value -> StrUtil.isBlank(value));
+        return CollUtil.isEmpty(values) || values.stream().anyMatch(value -> CharSequenceUtil.isBlank(value));
     }
 }

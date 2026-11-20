@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.config.properties;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -22,13 +22,14 @@ public class BotCredentialProperties {
         this.encryptionKey = encryptionKey;
     }
 
-    /** 在创建凭据加密组件前验证密钥配置。
+    /**
+     * 在创建凭据加密组件前验证密钥配置。
      *
      * @throws IllegalArgumentException 密钥为空或长度不足
      */
     @PostConstruct
     void validate() {
-        if (StrUtil.isBlank(encryptionKey) || encryptionKey.length() < 16) {
+        if (CharSequenceUtil.isBlank(encryptionKey) || encryptionKey.length() < 16) {
             throw new IllegalArgumentException(
                 "nnm.bot.credentials.encryption-key must contain at least 16 characters");
         }

@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.plugin.persistent.curated.forum;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -34,8 +35,8 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
      */
     @Override
     protected ForumLoadoutCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String input = StrUtil.trim(invocation.arguments());
-        return StrUtil.isBlank(input) ? null : new ForumLoadoutCommandDTO(input, parseQuery(input));
+        String input = CharSequenceUtil.trim(invocation.arguments());
+        return CharSequenceUtil.isBlank(input) ? null : new ForumLoadoutCommandDTO(input, parseQuery(input));
     }
 
     @Resource
@@ -63,7 +64,8 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
         return CommandResult.html("找到 " + articles.size() + " 篇相关配装文章",
             articles.stream()
                 .map(article -> new ForumArticleLinkVO(article.title(),
-                    StrUtil.blankToDefault(article.category(), "未分类"), forumProperties.publicArticleUrl(article.id())))
+                    CharSequenceUtil.blankToDefault(article.category(), "未分类"),
+                    forumProperties.publicArticleUrl(article.id())))
                 .toList());
     }
 
@@ -87,9 +89,9 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
                 continue;
             }
             String prefix = token.substring(0, separator).toLowerCase(Locale.ROOT);
-            String value = token.substring(separator + 1).trim();
+            String value = CharSequenceUtil.trim(token.substring(separator + 1));
             // 兼容“标题: "带空格的标题"”这种写法；tokenizer 会把引号内容保留为一个 token。
-            if (StrUtil.isBlank(value) && index + 1 < tokens.size()) {
+            if (CharSequenceUtil.isBlank(value) && index + 1 < tokens.size()) {
                 value = tokens.get(++index);
             }
             switch (prefix) {
@@ -109,9 +111,9 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
      * @param target 本次操作的目标对象或路径。
      */
     private static void splitTags(String value, List<String> target) {
-        for (String tag : StrUtil.emptyIfNull(value).split("[,，、\\s]+")) {
-            if (StrUtil.isNotBlank(tag)) {
-                target.add(tag.trim());
+        for (String tag : CharSequenceUtil.emptyIfNull(value).split("[,，、\\s]+")) {
+            if (CharSequenceUtil.isNotBlank(tag)) {
+                target.add(CharSequenceUtil.trim(tag));
             }
         }
     }
@@ -127,7 +129,7 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
         StringBuilder token = new StringBuilder();
         char quote = 0;
         boolean escaped = false;
-        for (char current : StrUtil.emptyIfNull(raw).trim().toCharArray()) {
+        for (char current : CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(raw)).toCharArray()) {
             if (escaped) {
                 token.append(current);
                 escaped = false;
@@ -148,7 +150,7 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
             if (current == '\'' || current == '"') {
                 quote = current;
             } else if (Character.isWhitespace(current)) {
-                if (StrUtil.isNotEmpty(token)) {
+                if (CharSequenceUtil.isNotEmpty(token)) {
                     tokens.add(token.toString());
                     token.setLength(0);
                 }
@@ -159,7 +161,7 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
         if (escaped) {
             token.append('\\');
         }
-        if (StrUtil.isNotEmpty(token)) {
+        if (CharSequenceUtil.isNotEmpty(token)) {
             tokens.add(token.toString());
         }
         return tokens;
@@ -190,7 +192,7 @@ public class ForumLoadoutPlugin extends BotPlugin<Void, ForumLoadoutCommandDTO> 
      * @param value 待校验或规范化的文本。
      */
     private static void append(StringBuilder target, String value) {
-        if (StrUtil.isNotEmpty(target)) {
+        if (CharSequenceUtil.isNotEmpty(target)) {
             target.append(' ');
         }
         target.append(value);

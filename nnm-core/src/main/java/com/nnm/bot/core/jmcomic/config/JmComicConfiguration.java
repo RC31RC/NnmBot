@@ -2,8 +2,8 @@ package com.nnm.bot.core.jmcomic.config;
 
 import io.github.jukomu.jmcomic.core.config.JmConfiguration.Builder;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import io.github.jukomu.jmcomic.api.enums.ClientType;
 import io.github.jukomu.jmcomic.core.JmComic;
 import io.github.jukomu.jmcomic.core.client.AbstractJmClient;
@@ -30,7 +30,7 @@ public class JmComicConfiguration {
         if (CollUtil.isNotEmpty(properties.getApiDomains())) {
             builder.apiDomains(properties.getApiDomains());
         }
-        if (StrUtil.isNotBlank(properties.getProxyHost()) && ObjectUtil.isNotNull(properties.getProxyPort())) {
+        if (CharSequenceUtil.isNotBlank(properties.getProxyHost()) && ObjUtil.isNotNull(properties.getProxyPort())) {
             builder.proxy(properties.getProxyHost(), properties.getProxyPort());
         }
         return builder.build();

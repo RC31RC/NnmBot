@@ -1,6 +1,7 @@
 package com.nnm.bot.core.group.service;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.group.constant.GroupPointConstants.TransactionType;
 import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 import com.nnm.bot.core.group.pojo.dto.PointBalanceDTO;
@@ -82,7 +83,7 @@ public class CommandPointPolicy {
     private String messageIdempotencyKey(TransactionType type, BotMessageContext context, CommandDescriptor descriptor,
         long groupId, long memberId) {
         String eventId = context.messageId();
-        if (StrUtil.isBlank(eventId)) {
+        if (CharSequenceUtil.isBlank(eventId)) {
             // 没有平台事件身份时，不把相同文本永久当成同一条消息。
             eventId = context.invocationId();
         }

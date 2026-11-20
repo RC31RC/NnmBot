@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import java.util.regex.Matcher;
@@ -20,7 +22,7 @@ abstract class AbstractDucatsPlugin extends BotPlugin<Void, String> {
      */
     @Override
     protected String parse(CommandInvocation invocation, Void prepared) {
-        return invocation.arguments() == null ? "" : invocation.arguments().trim();
+        return invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
     }
 
     private static final Pattern PAGE = Pattern.compile("(?:^|\\s)--page(?:\\s+|=)([0-9]+)$");
@@ -37,7 +39,7 @@ abstract class AbstractDucatsPlugin extends BotPlugin<Void, String> {
      * @return 命令结果对象。
      */
     protected CommandResult ranking(boolean gold, String arguments) {
-        String keyword = arguments == null ? "" : arguments.trim();
+        String keyword = arguments == null ? "" : CharSequenceUtil.trim(arguments);
         int page = 1;
         Matcher matcher = PAGE.matcher(keyword);
         if (matcher.find()) {
@@ -46,7 +48,7 @@ abstract class AbstractDucatsPlugin extends BotPlugin<Void, String> {
             } catch (NumberFormatException exception) {
                 page = Integer.MAX_VALUE;
             }
-            keyword = keyword.substring(0, matcher.start()).trim();
+            keyword = CharSequenceUtil.trim(keyword.substring(0, matcher.start()));
         }
         if (page < 1 || INVALID_PAGE.matcher(keyword).find()) {
             return CommandResult.rejected("页码必须为正整数：--page 2");

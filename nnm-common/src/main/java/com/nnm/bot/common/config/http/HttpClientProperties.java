@@ -1,6 +1,8 @@
 package com.nnm.bot.common.config.http;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
+import cn.hutool.core.util.ObjUtil;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -206,19 +208,19 @@ public class HttpClientProperties {
     }
 
     private void requirePositive(Duration value, String name) {
-        if (ObjectUtil.isNull(value) || value.isZero() || value.isNegative()) {
+        if (ObjUtil.isNull(value) || value.isZero() || value.isNegative()) {
             throw new IllegalArgumentException(name + " must be positive");
         }
     }
 
     private void requireNotNegative(Duration value, String name) {
-        if (ObjectUtil.isNull(value) || value.isNegative()) {
+        if (ObjUtil.isNull(value) || value.isNegative()) {
             throw new IllegalArgumentException(name + " must not be negative");
         }
     }
 
     private void requireText(String value, String name) {
-        if (ObjectUtil.isNull(value) || value.isBlank()) {
+        if (ObjUtil.isNull(value) || CharSequenceUtil.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
     }

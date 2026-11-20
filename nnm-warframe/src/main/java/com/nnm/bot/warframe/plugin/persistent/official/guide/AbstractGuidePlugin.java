@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.plugin.persistent.official.guide;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.BusinessException;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -44,14 +45,14 @@ abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideCommandD
      * @return 查询对象。
      */
     protected WarframeGuideCommandDTO query(String arguments, boolean map) {
-        String input = arguments == null ? "" : arguments.trim();
+        String input = arguments == null ? "" : CharSequenceUtil.trim(arguments);
         Matcher start = OPTIONS_START.matcher(input);
         String keyword = input;
         Map<String, String> options = new HashMap<>();
         if (start.find()) {
-            keyword = input.substring(0, start.start()).trim();
+            keyword = CharSequenceUtil.trim(input.substring(0, start.start()));
             String remaining = input.substring(start.end() - 2);
-            while (StrUtil.isNotBlank(remaining)) {
+            while (CharSequenceUtil.isNotBlank(remaining)) {
                 Matcher matcher = OPTION.matcher(remaining);
                 if (!matcher.find())
                     throw new BusinessException(OfficialCommandErrorCode.GUIDE_OPTION_INVALID);
@@ -60,7 +61,7 @@ abstract class AbstractGuidePlugin extends BotPlugin<Void, WarframeGuideCommandD
                     || options.putIfAbsent(key, matcher.group(2)) != null) {
                     throw new BusinessException(OfficialCommandErrorCode.GUIDE_OPTION_DUPLICATE);
                 }
-                remaining = remaining.substring(matcher.end()).trim();
+                remaining = CharSequenceUtil.trim(remaining.substring(matcher.end()));
             }
         }
         if (keyword.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)

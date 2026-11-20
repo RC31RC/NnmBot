@@ -1,5 +1,7 @@
 package com.nnm.bot.core.mq.message.notification;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.channel.notification.constant.NotificationConstants.BlockType;
 
 import com.nnm.bot.core.channel.notification.constant.NotificationConstants.ActionType;
@@ -90,11 +92,11 @@ public record NotificationContent(List<Message> messages, CompositionPolicy comp
                 if (resourceId == null || text != null || plainText != null)
                     throw new IllegalArgumentException("图片仅引用上传资源 ID");
             } else {
-                if (text == null || text.isBlank() || resourceId != null
+                if (text == null || CharSequenceUtil.isBlank(text) || resourceId != null
                     || type == BlockType.TEXT && plainText != null) {
                     throw new IllegalArgumentException("无效通知文字块");
                 }
-                if (plainText != null && plainText.isBlank())
+                if (plainText != null && CharSequenceUtil.isBlank(plainText))
                     throw new IllegalArgumentException("Markdown 文字替代不能为空");
             }
         }

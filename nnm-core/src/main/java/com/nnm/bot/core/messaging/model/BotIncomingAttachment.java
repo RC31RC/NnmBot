@@ -2,7 +2,7 @@ package com.nnm.bot.core.messaging.model;
 
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.BotIncomingAttachmentType;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import java.util.Map;
 
@@ -30,10 +30,10 @@ public record BotIncomingAttachment(BotIncomingAttachmentType type, String fileN
         if (type == null) {
             throw new IllegalArgumentException("type must not be null");
         }
-        fileName = StrUtil.blankToDefault(fileName, "attachment");
-        contentType = StrUtil.blankToDefault(contentType, "application/octet-stream");
-        url = StrUtil.blankToDefault(url, null);
-        fileId = StrUtil.blankToDefault(fileId, null);
+        fileName = CharSequenceUtil.blankToDefault(fileName, "attachment");
+        contentType = CharSequenceUtil.blankToDefault(contentType, "application/octet-stream");
+        url = CharSequenceUtil.blankToDefault(url, null);
+        fileId = CharSequenceUtil.blankToDefault(fileId, null);
         size = size != null && size >= 0 ? size : null;
         width = width != null && width > 0 ? width : null;
         height = height != null && height > 0 ? height : null;
@@ -41,7 +41,7 @@ public record BotIncomingAttachment(BotIncomingAttachmentType type, String fileN
     }
 
     public boolean hasRemoteReference() {
-        return StrUtil.isNotBlank(url) || StrUtil.isNotBlank(fileId);
+        return CharSequenceUtil.isNotBlank(url) || CharSequenceUtil.isNotBlank(fileId);
     }
 
     public boolean isImage() {

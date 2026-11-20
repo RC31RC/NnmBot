@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.pojo.vo.crafting;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,7 +55,7 @@ public record WarframeMaterialVO(String query, String category, int page, int to
                 + (CollUtil.isEmpty(entry.attributes()) ? ""
                     : "\n" + entry.attributes().stream().map(attribute -> attribute.label() + "：" + attribute.value())
                         .collect(Collectors.joining(" · ")))
-                + (StrUtil.isBlank(entry.description()) ? "" : "\n" + entry.description()))
+                + (CharSequenceUtil.isBlank(entry.description()) ? "" : "\n" + entry.description()))
                 .collect(Collectors.joining("\n\n"));
     }
 

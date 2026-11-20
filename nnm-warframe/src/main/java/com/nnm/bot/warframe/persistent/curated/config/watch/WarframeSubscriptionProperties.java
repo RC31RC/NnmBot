@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.config.watch;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
@@ -29,7 +29,7 @@ public class WarframeSubscriptionProperties {
             || advanceNotice.compareTo(Duration.ofHours(1)) > 0 || matchRetention == null || matchRetention.isNegative()
             || matchRetention.isZero() || matchRetention.compareTo(Duration.ofDays(30)) > 0 || maxRememberedMatches < 1
             || maxRememberedMatches > 10000 || CollUtil.isEmpty(specialInvasionRewards)
-            || specialInvasionRewards.stream().anyMatch(value -> StrUtil.isBlank(value))) {
+            || specialInvasionRewards.stream().anyMatch(value -> CharSequenceUtil.isBlank(value))) {
             throw new IllegalArgumentException("Invalid nnm.warframe.query.subscriptions configuration");
         }
     }

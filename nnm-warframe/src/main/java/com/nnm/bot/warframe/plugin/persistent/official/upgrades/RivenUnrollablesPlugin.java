@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.upgrades;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
@@ -26,7 +28,7 @@ public final class RivenUnrollablesPlugin extends BotPlugin<Void, WarframeCatalo
      */
     @Override
     protected WarframeCatalogPageCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
         if (matcher.find()) {
@@ -35,7 +37,7 @@ public final class RivenUnrollablesPlugin extends BotPlugin<Void, WarframeCatalo
             } catch (NumberFormatException exception) {
                 return new WarframeCatalogPageCommandDTO(query, page, "页码必须为有效正整数");
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || OPTION.matcher(query).find() || query.length() > 200) {
             return new WarframeCatalogPageCommandDTO(query, page, "查询最多 200 字，仅支持末尾分页参数：--page 2");

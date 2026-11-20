@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.ParameterType;
 import java.util.List;
 import java.util.Objects;
@@ -8,7 +10,7 @@ import java.util.Objects;
 public record RelatedCommand(String targetCode, String title, List<Argument> arguments) {
     public RelatedCommand {
         if (targetCode == null || !targetCode.matches("[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}") || title == null
-            || title.isBlank() || title.length() > 80)
+            || CharSequenceUtil.isBlank(title) || title.length() > 80)
             throw new IllegalArgumentException("Invalid related command");
         arguments = List.copyOf(Objects.requireNonNull(arguments, "arguments"));
         if (arguments.size() > 8 || arguments.stream().limit(Math.max(0, arguments.size() - 1))

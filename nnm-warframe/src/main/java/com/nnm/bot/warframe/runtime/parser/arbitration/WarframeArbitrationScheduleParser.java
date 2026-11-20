@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.parser.arbitration;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeWorldStateCodebookEntryDTO;
@@ -13,8 +13,11 @@ import com.nnm.bot.warframe.runtime.rawdata.arbitration.ArbitrationScheduleRawDa
 import com.nnm.bot.warframe.runtime.rawdata.arbitration.ArbitrationScheduleRawData.EntryRawData;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -32,6 +35,8 @@ public class WarframeArbitrationScheduleParser {
     private WarframeArbitrationSourceProperties properties;
     @Resource
     private WarframeWorldStateCodebookService codebook;
+    @Resource
+    private Clock warframeClock;
 
     /** 独立绑定器只校验该输入，不影响共用的 HTTP 序列化配置。 */
     private ObjectMapper inputMapper;
@@ -51,10 +56,10 @@ public class WarframeArbitrationScheduleParser {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<ArbitrationScheduleEntryDTO> parse(String payload) {
-        if (StrUtil.isBlank(payload)) {
+        if (CharSequenceUtil.isBlank(payload)) {
             throw new IllegalArgumentException("Empty arbitration schedule");
         }
-        String body = payload.trim();
+        String body = CharSequenceUtil.trim(payload);
         return body.startsWith("[") || body.startsWith("{") ? parseJson(body) : parseText(body);
     }
 
@@ -69,20 +74,25 @@ public class WarframeArbitrationScheduleParser {
             List<EntryRawData> rows =
                 body.startsWith("[") ? inputMapper.readerForListOf(EntryRawData.class).readValue(body)
                     : inputMapper.readValue(body, ArbitrationScheduleRawData.class).getEntries();
-            if (CollUtil.isEmpty(rows) || rows.size() > properties.getMaxRecords()) {
-                throw new IllegalArgumentException("仲裁排期集合为空或超过上限");
-            }
-            List<ArbitrationScheduleEntryDTO> entries = new ArrayList<>(rows.size());
+            if (rows == null)
+                throw new IllegalArgumentException("仲裁排期集合缺失");
+            List<ArbitrationScheduleEntryDTO> entries = new ArrayList<>();
             Set<String> ids = new HashSet<>();
             Set<Instant> activations = new HashSet<>();
+            Instant windowStart = windowStart();
+            Instant windowEnd = windowStart.plus(properties.getDataWindow());
             for (EntryRawData row : rows) {
-                String id = required(row == null ? null : row.getId(), "id", 100);
+                if (ObjUtil.isNull(row))
+                    throw new IllegalArgumentException("仲裁排期包含空记录");
                 Instant activation = instant(row.getActivation(), "activation");
+                if (activation.isBefore(windowStart) || !activation.isBefore(windowEnd))
+                    continue;
                 Instant expiry = instant(row.getExpiry(), "expiry");
-                if (!ids.add(id) || !activations.add(activation)
-                    || !Duration.between(activation, expiry).equals(Duration.ofHours(1))) {
+                if (!Duration.between(activation, expiry).equals(Duration.ofHours(1)))
+                    throw new IllegalArgumentException("Invalid arbitration interval at " + activation);
+                String id = required(row.getId(), "id", 100);
+                if (!ids.add(id) || !activations.add(activation))
                     throw new IllegalArgumentException("Invalid or duplicate arbitration interval: " + id);
-                }
                 String node = display(row.getNodeZh(), row.getNode(), "node", 200);
                 String mission = display(row.getMissionTypeZh(), row.getMissionType(), "missionType", 100);
                 String enemy = display(row.getFactionZh(), row.getFaction(), "faction", 100);
@@ -90,6 +100,8 @@ public class WarframeArbitrationScheduleParser {
                 var bounds = row.getBounds();
                 entries.add(new ArbitrationScheduleEntryDTO(id, activation, expiry, node, mission, enemy, planet,
                     bounds == null ? "{}" : objectMapper.writeValueAsString(bounds), null));
+                if (entries.size() > properties.getMaxRecords())
+                    throw new IllegalArgumentException("仲裁排期窗口超过记录数上限");
             }
             return entries.stream().sorted(Comparator.comparing(ArbitrationScheduleEntryDTO::activation)).toList();
         } catch (JsonProcessingException exception) {
@@ -105,32 +117,41 @@ public class WarframeArbitrationScheduleParser {
      */
     private List<ArbitrationScheduleEntryDTO> parseText(String body) {
         TreeMap<Instant, String> rows = new TreeMap<>();
+        Instant windowStart = windowStart();
+        Instant windowEnd = windowStart.plus(properties.getDataWindow());
         int lineNumber = 0;
         for (String rawLine : body.split("\\R", -1)) {
             lineNumber++;
-            String line = rawLine.trim();
-            if (StrUtil.isEmpty(line) || line.startsWith("#") || line.startsWith("//"))
+            String line = CharSequenceUtil.trim(rawLine);
+            if (CharSequenceUtil.isEmpty(line) || line.startsWith("#") || line.startsWith("//"))
                 continue;
             String[] columns = line.split(",", -1);
-            if (columns.length != 2 || StrUtil.isBlank(columns[0]) || StrUtil.isBlank(columns[1])) {
+            if (columns.length != 2 || CharSequenceUtil.isBlank(columns[0]) || CharSequenceUtil.isBlank(columns[1])) {
                 throw new IllegalArgumentException("Invalid arbitration line " + lineNumber);
             }
             try {
-                Instant activation = Instant.ofEpochSecond(Long.parseLong(columns[0].trim()));
-                if (activation.getEpochSecond() <= 0 || rows.putIfAbsent(activation, columns[1].trim()) != null
-                    || rows.size() > properties.getMaxRecords()) {
+                Instant activation = Instant.ofEpochSecond(Long.parseLong(CharSequenceUtil.trim(columns[0])));
+                if (activation.getEpochSecond() <= 0) {
                     throw new IllegalArgumentException("Invalid or duplicate arbitration time at line " + lineNumber);
                 }
+                if (activation.isBefore(windowStart) || !activation.isBefore(windowEnd))
+                    continue;
+                if (rows.putIfAbsent(activation, CharSequenceUtil.trim(columns[1])) != null
+                    || rows.size() > properties.getMaxRecords())
+                    throw new IllegalArgumentException("Invalid or duplicate arbitration time at line " + lineNumber);
             } catch (NumberFormatException exception) {
                 throw new IllegalArgumentException("Invalid arbitration timestamp at line " + lineNumber, exception);
             }
         }
-        if (CollUtil.isEmpty(rows))
-            throw new IllegalArgumentException("Arbitration source contains no rows");
         List<ArbitrationScheduleEntryDTO> entries = new ArrayList<>(rows.size());
         for (var row : rows.entrySet())
             entries.add(resolveTextEntry(row.getKey(), row.getValue()));
         return List.copyOf(entries);
+    }
+
+    /** @return UTC 今日零点，作为本次数据窗口起点。 */
+    private Instant windowStart() {
+        return LocalDate.ofInstant(warframeClock.instant(), ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
     /**
@@ -148,7 +169,7 @@ public class WarframeArbitrationScheduleParser {
         WarframeWorldStateCodebookEntryDTO faction = codebook.findFaction(node.factionReference())
             .orElseThrow(() -> new IllegalArgumentException("Unknown arbitration faction: " + node.factionReference()));
         String planet = extractPlanet(node.displayName());
-        if (StrUtil.isBlank(planet))
+        if (CharSequenceUtil.isBlank(planet))
             throw new IllegalArgumentException("Arbitration node has no planet: " + nodeReference);
         return new ArbitrationScheduleEntryDTO("arbys:" + activation.getEpochSecond(), activation,
             activation.plus(Duration.ofHours(1)), node.displayName(), mission.displayName(), faction.displayName(),
@@ -166,15 +187,15 @@ public class WarframeArbitrationScheduleParser {
             if (entry.nodeReference() == null)
                 return entry;
             var node = codebook.findNode(entry.nodeReference()).orElse(null);
-            if (node == null)
+            if (ObjUtil.isNull(node))
                 return entry;
             var mission = codebook.findMissionType(node.relatedReference()).orElse(null);
             var faction = codebook.findFaction(node.factionReference()).orElse(null);
             String planet = extractPlanet(node.displayName());
             return new ArbitrationScheduleEntryDTO(entry.id(), entry.activation(), entry.expiry(), node.displayName(),
-                mission == null ? entry.missionType() : mission.displayName(),
-                faction == null ? entry.enemy() : faction.displayName(),
-                StrUtil.isBlank(planet) ? entry.planet() : planet, entry.boundsJson(), entry.nodeReference());
+                ObjUtil.isNull(mission) ? entry.missionType() : mission.displayName(),
+                ObjUtil.isNull(faction) ? entry.enemy() : faction.displayName(),
+                CharSequenceUtil.isBlank(planet) ? entry.planet() : planet, entry.boundsJson(), entry.nodeReference());
         }).toList();
     }
 
@@ -198,10 +219,10 @@ public class WarframeArbitrationScheduleParser {
      * @return 校验必填文本和最大长度对应的文本。
      */
     private String required(String value, String field, int maxLength) {
-        if (StrUtil.isBlank(value) || value.length() > maxLength) {
+        if (CharSequenceUtil.isBlank(value) || value.length() > maxLength) {
             throw new IllegalArgumentException("仲裁字段为空或过长：" + field);
         }
-        return value.trim();
+        return CharSequenceUtil.trim(value);
     }
 
     /**
@@ -214,7 +235,7 @@ public class WarframeArbitrationScheduleParser {
      * @return 优先选择有效本地化文本并校验显示字段对应的文本。
      */
     private String display(String localized, String original, String field, int maxLength) {
-        return required(StrUtil.isNotBlank(localized) ? localized : original, field, maxLength);
+        return required(CharSequenceUtil.isNotBlank(localized) ? localized : original, field, maxLength);
     }
 
     /**
@@ -227,6 +248,6 @@ public class WarframeArbitrationScheduleParser {
         String normalized = nodeName.replace('（', '(').replace('）', ')');
         int opening = normalized.lastIndexOf('(');
         return opening >= 0 && normalized.endsWith(")")
-            ? normalized.substring(opening + 1, normalized.length() - 1).trim() : "";
+            ? CharSequenceUtil.trim(normalized.substring(opening + 1, normalized.length() - 1)) : "";
     }
 }

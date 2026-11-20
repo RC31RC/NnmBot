@@ -1,7 +1,10 @@
 package com.nnm.bot.admin.adapter.command;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.collection.CollUtil;
+
 import com.nnm.bot.core.plugin.api.CommandExecutionConfigurationDTO.CommandTemplateDTO;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandAlias;
@@ -56,7 +59,7 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
                     command.getPermissionOverride(), command.getCooldownSeconds(), command.isMentionInvoker());
             CommandDefinitionDTO definition = new CommandDefinitionDTO(command.getCode(), command.getName(),
                 command.getGameCode(), command.getDescription(), configuration);
-            definitions.put(command.getCode().trim().toLowerCase(Locale.ROOT), definition);
+            definitions.put(CharSequenceUtil.trim(command.getCode()).toLowerCase(Locale.ROOT), definition);
         }
         return Map.copyOf(definitions);
     }
@@ -91,7 +94,7 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
     }
 
     private List<CommandTrigger> normalizedTriggers(List<CommandTrigger> triggers) {
-        if (triggers == null || triggers.isEmpty()) {
+        if (CollUtil.isEmpty(triggers)) {
             return List.of();
         }
         Map<String, CommandTrigger> unique = new LinkedHashMap<>();

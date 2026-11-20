@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import java.util.List;
 
 /**
@@ -41,12 +42,12 @@ public record WarframeMarketOrderSnapshotDTO(String itemName, Integer maxRank, S
      * @param error 错误。
      */
     public WarframeMarketOrderSnapshotDTO {
-        itemName = StrUtil.emptyIfNull(itemName).trim();
-        platform = StrUtil.emptyIfNull(platform).trim();
+        itemName = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(itemName));
+        platform = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(platform));
         orders = CollUtil.isEmpty(orders) ? List.of() : List.copyOf(orders);
-        rawJson = StrUtil.emptyIfNull(rawJson);
+        rawJson = CharSequenceUtil.emptyIfNull(rawJson);
         item = item == null ? new WarframeMarketItemDTO(itemName, maxRank) : item;
-        apiVersion = StrUtil.emptyIfNull(apiVersion).trim();
-        error = StrUtil.emptyIfNull(error).trim();
+        apiVersion = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(apiVersion));
+        error = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(error));
     }
 }

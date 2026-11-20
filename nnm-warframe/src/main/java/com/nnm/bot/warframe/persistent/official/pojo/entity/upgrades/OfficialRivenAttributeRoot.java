@@ -246,7 +246,8 @@ public class OfficialRivenAttributeRoot extends OfficialRecord {
     private List<OfficialRivenAttributeExclusiveToItems> officialRivenAttributeExclusiveToItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenAttributeOfficialEntriesItems> officialRivenAttributeOfficialEntriesItemsRows = new ArrayList<>();
+    private List<OfficialRivenAttributeOfficialEntriesItems> officialRivenAttributeOfficialEntriesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialRivenAttributeTemplatesZhItems> officialRivenAttributeTemplatesZhItemsRows = new ArrayList<>();

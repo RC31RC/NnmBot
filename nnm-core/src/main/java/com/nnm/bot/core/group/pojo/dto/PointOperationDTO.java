@@ -1,5 +1,7 @@
 package com.nnm.bot.core.group.pojo.dto;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.group.constant.GroupPointConstants.PointErrorCode;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.group.constant.GroupPointConstants.TransactionType;
@@ -19,13 +21,14 @@ public record PointOperationDTO(long groupId, long memberId, String commandCode,
     }
 
     private static String requireText(String value) {
-        return BusinessAssert.notBlank(value, PointErrorCode.IDEMPOTENCY_KEY_REQUIRED).trim();
+        return CharSequenceUtil.trim(BusinessAssert.notBlank(value, PointErrorCode.IDEMPOTENCY_KEY_REQUIRED));
     }
 
     private static String blankToNull(String value) {
-        if (value == null || value.trim().isEmpty()) {
+        if (value == null) {
             return null;
         }
-        return value.trim();
+        String normalized = CharSequenceUtil.trim(value);
+        return CharSequenceUtil.isEmpty(normalized) ? null : normalized;
     }
 }

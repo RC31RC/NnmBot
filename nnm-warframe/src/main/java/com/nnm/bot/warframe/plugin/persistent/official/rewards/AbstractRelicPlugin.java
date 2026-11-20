@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.rewards;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicDetailsDTO;
@@ -71,7 +73,7 @@ abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicCommandD
      * @return 查询对象。
      */
     private WarframeRelicCommandDTO parseQuery(String arguments) {
-        String value = arguments == null ? "" : arguments.trim();
+        String value = arguments == null ? "" : CharSequenceUtil.trim(arguments);
         Matcher matcher = PAGE_ARGUMENT.matcher(value);
         if (!matcher.find()) {
             return INVALID_PAGE_ARGUMENT.matcher(value).find() ? null : new WarframeRelicCommandDTO(value, 1);
@@ -82,7 +84,7 @@ abstract class AbstractRelicPlugin extends BotPlugin<Void, WarframeRelicCommandD
         } catch (NumberFormatException exception) {
             page = Integer.MAX_VALUE;
         }
-        String keyword = value.substring(0, matcher.start()).trim();
+        String keyword = CharSequenceUtil.trim(value.substring(0, matcher.start()));
         return page < 1 || INVALID_PAGE_ARGUMENT.matcher(keyword).find() ? null
             : new WarframeRelicCommandDTO(keyword, page);
     }

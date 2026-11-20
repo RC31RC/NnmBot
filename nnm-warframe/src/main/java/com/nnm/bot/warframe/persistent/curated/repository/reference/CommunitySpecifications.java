@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.repository.reference;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import java.util.List;
@@ -21,7 +21,7 @@ final class CommunitySpecifications {
      */
     static <T> Specification<T> contains(String keyword, List<String> fields) {
         return (root, query, builder) -> {
-            if (StrUtil.isBlank(keyword))
+            if (CharSequenceUtil.isBlank(keyword))
                 return builder.conjunction();
             String pattern = "%" + keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
             return builder.or(

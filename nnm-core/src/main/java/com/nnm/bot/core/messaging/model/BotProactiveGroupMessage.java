@@ -1,7 +1,7 @@
 package com.nnm.bot.core.messaging.model;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import java.util.List;
 
@@ -17,10 +17,10 @@ public record BotProactiveGroupMessage(String botAccountId, String conversationI
     List<String> mentionUserIds) {
 
     public BotProactiveGroupMessage {
-        botAccountId = StrUtil.trim(botAccountId);
-        conversationId = StrUtil.trim(conversationId);
-        text = StrUtil.trim(text);
-        mentionUserIds = CollUtil.isEmpty(mentionUserIds) ? List.of()
-            : mentionUserIds.stream().map(StrUtil::trim).filter(StrUtil::isNotBlank).distinct().toList();
+        botAccountId = CharSequenceUtil.trim(botAccountId);
+        conversationId = CharSequenceUtil.trim(conversationId);
+        text = CharSequenceUtil.trim(text);
+        mentionUserIds = CollUtil.isEmpty(mentionUserIds) ? List.of() : mentionUserIds.stream()
+            .map(CharSequenceUtil::trim).filter(CharSequenceUtil::isNotBlank).distinct().toList();
     }
 }

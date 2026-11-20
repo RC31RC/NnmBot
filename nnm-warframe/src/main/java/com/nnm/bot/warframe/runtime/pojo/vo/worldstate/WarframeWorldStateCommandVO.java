@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.runtime.pojo.vo.worldstate;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public record WarframeWorldStateCommandVO(String text, Map<String, Object> data,
      * @param unresolvedReferences 未解析引用集合。
      */
     public WarframeWorldStateCommandVO {
-        text = StrUtil.emptyIfNull(text).trim();
+        text = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(text));
         data = MapUtil.isEmpty(data) ? Map.of() : Map.copyOf(data);
         unresolvedReferences = unresolvedReferences == null ? List.of() : List.copyOf(unresolvedReferences);
     }

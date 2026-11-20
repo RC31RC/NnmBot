@@ -1,9 +1,10 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.SystemException;
 import cn.hutool.core.util.ArrayUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
@@ -38,14 +39,14 @@ public final class CommandAttachment implements AutoCloseable {
     }
 
     private CommandAttachment(String fileName, String contentType, byte[] content, Path path, Path cleanupRoot) {
-        if (StrUtil.isBlank(fileName)) {
+        if (CharSequenceUtil.isBlank(fileName)) {
             throw new IllegalArgumentException("fileName must not be blank");
         }
-        if (StrUtil.isBlank(contentType)) {
+        if (CharSequenceUtil.isBlank(contentType)) {
             throw new IllegalArgumentException("contentType must not be blank");
         }
         boolean hasContent = ArrayUtil.isNotEmpty(content);
-        boolean hasPath = ObjectUtil.isNotNull(path);
+        boolean hasPath = ObjUtil.isNotNull(path);
         if (hasContent == hasPath) {
             throw new IllegalArgumentException("exactly one of content or path is required");
         }
@@ -53,12 +54,12 @@ public final class CommandAttachment implements AutoCloseable {
             throw new IllegalArgumentException("attachment path must be a readable regular file: " + path);
         }
         Path normalizedPath = hasPath ? path.toAbsolutePath().normalize() : null;
-        Path normalizedRoot = ObjectUtil.isNull(cleanupRoot) ? null : cleanupRoot.toAbsolutePath().normalize();
-        if (ObjectUtil.isNotNull(normalizedRoot) && !normalizedPath.startsWith(normalizedRoot)) {
+        Path normalizedRoot = ObjUtil.isNull(cleanupRoot) ? null : cleanupRoot.toAbsolutePath().normalize();
+        if (ObjUtil.isNotNull(normalizedRoot) && !normalizedPath.startsWith(normalizedRoot)) {
             throw new IllegalArgumentException("cleanupRoot must contain attachment path");
         }
-        this.fileName = fileName.trim();
-        this.contentType = contentType.trim().toLowerCase();
+        this.fileName = CharSequenceUtil.trim(fileName);
+        this.contentType = CharSequenceUtil.trim(contentType).toLowerCase();
         this.content = hasContent ? Arrays.copyOf(content, content.length) : null;
         this.path = normalizedPath;
         this.cleanupRoot = normalizedRoot;
@@ -77,7 +78,7 @@ public final class CommandAttachment implements AutoCloseable {
     }
 
     public byte[] content() {
-        if (ObjectUtil.isNull(this.content)) {
+        if (ObjUtil.isNull(this.content)) {
             throw new IllegalStateException("attachment content is path-backed");
         }
         return Arrays.copyOf(this.content, this.content.length);
@@ -88,7 +89,7 @@ public final class CommandAttachment implements AutoCloseable {
     }
 
     public boolean pathBacked() {
-        return ObjectUtil.isNotNull(this.path);
+        return ObjUtil.isNotNull(this.path);
     }
 
     public BotFile toBotFile() {
@@ -98,7 +99,7 @@ public final class CommandAttachment implements AutoCloseable {
 
     @Override
     public void close() {
-        if (ObjectUtil.isNull(this.cleanupRoot) || !Files.exists(this.cleanupRoot)) {
+        if (ObjUtil.isNull(this.cleanupRoot) || !Files.exists(this.cleanupRoot)) {
             return;
         }
         try {
@@ -111,7 +112,7 @@ public final class CommandAttachment implements AutoCloseable {
 
                 @Override
                 public FileVisitResult postVisitDirectory(Path directory, IOException exception) throws IOException {
-                    if (ObjectUtil.isNotNull(exception)) {
+                    if (ObjUtil.isNotNull(exception)) {
                         throw exception;
                     }
                     Files.deleteIfExists(directory);

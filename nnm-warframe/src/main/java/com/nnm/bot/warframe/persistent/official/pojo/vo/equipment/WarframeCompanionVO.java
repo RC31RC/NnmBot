@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.pojo.vo.equipment;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import java.math.BigDecimal;
 import java.util.List;
@@ -74,7 +74,7 @@ public record WarframeCompanionVO(String query, int page, int totalPages, int to
             if (entry.offensiveDamage() != null) {
                 stat(text, "来源总伤害", entry.offensiveDamage());
             }
-            if (StrUtil.isNotBlank(entry.description())) {
+            if (CharSequenceUtil.isNotBlank(entry.description())) {
                 text.append("\n").append(entry.description());
             }
             return text.toString();

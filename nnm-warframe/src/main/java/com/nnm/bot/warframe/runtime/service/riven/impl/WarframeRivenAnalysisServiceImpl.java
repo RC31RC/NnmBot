@@ -1,12 +1,13 @@
 package com.nnm.bot.warframe.runtime.service.riven.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenAnalysisVO.AttributeVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenAnalysisVO.LineAnalysisVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenAnalysisVO.ReferenceRangeVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenAnalysisVO.TrendVO;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.ocr.OcrTextResult;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeItemResolutionDTO;
@@ -74,7 +75,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      */
     @Override
     public WarframeRivenAnalysisVO analyze(OcrTextResult ocr) {
-        String rawText = ocr == null ? "" : StrUtil.nullToEmpty(ocr.text());
+        String rawText = ocr == null ? "" : CharSequenceUtil.nullToEmpty(ocr.text());
         List<String> lines = cleanLines(ocr == null ? List.of() : ocr.lines(), rawText);
         AttributeIndex attributes = attributeIndex();
         WeaponMatch weapon = findWeapon(lines, attributes);
@@ -85,7 +86,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         List<TrendVO> trends = findTrends(parsed.attributes(), weapon, attributes);
         List<ReferenceRangeVO> ranges = referenceRanges(weapon, rank, parsed, attributes, negativeAny, lines);
         List<String> missing = new ArrayList<>();
-        if (StrUtil.isBlank(weapon.name())) {
+        if (CharSequenceUtil.isBlank(weapon.name())) {
             missing.add("weapon");
             if (CollUtil.isEmpty(weapon.candidates())) {
                 missing.add("weaponCandidate");
@@ -104,9 +105,9 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         if (parsed.ambiguous() && !missing.contains("attributesAmbiguous")) {
             missing.add("attributesAmbiguous");
         }
-        return new WarframeRivenAnalysisVO(rawText.trim(), lines, weapon.name(), weapon.type(), weapon.candidates(),
-            weapon.confirmed(), rank, masteryRank, parsed.attributes(), negativeAny, trends, parsed.lines(), missing,
-            ranges);
+        return new WarframeRivenAnalysisVO(CharSequenceUtil.trim(rawText), lines, weapon.name(), weapon.type(),
+            weapon.candidates(), weapon.confirmed(), rank, masteryRank, parsed.attributes(), negativeAny, trends,
+            parsed.lines(), missing, ranges);
     }
 
     /**
@@ -127,7 +128,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
                 WarframeItemResolutionDTO resolution = itemResolver.resolveExact(candidate);
                 if (resolution.found() && isWeapon(resolution.item())) {
                     WarframeItemDTO item = resolution.item();
-                    confirmed.putIfAbsent(StrUtil.blankToDefault(item.getSourceKey(), item.getOfficialName()), item);
+                    confirmed.putIfAbsent(CharSequenceUtil.blankToDefault(item.getSourceKey(), item.getOfficialName()),
+                        item);
                     matched = true;
                     break;
                 } else if (resolution.ambiguous()
@@ -149,9 +151,9 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         }
         if (confirmed.size() == 1 && !ambiguous) {
             WarframeItemDTO best = confirmed.values().iterator().next();
-            String name = StrUtil.blankToDefault(best.getLocalizedName(), best.getOfficialName());
+            String name = CharSequenceUtil.blankToDefault(best.getLocalizedName(), best.getOfficialName());
             String type = best.getProductCategory();
-            return new WeaponMatch(name, StrUtil.nullToEmpty(type), best.getSourceKey(), List.of(name), true);
+            return new WeaponMatch(name, CharSequenceUtil.nullToEmpty(type), best.getSourceKey(), List.of(name), true);
         }
         addWeaponCandidates(candidates, List.copyOf(confirmed.values()));
         return new WeaponMatch("", "", "", List.copyOf(candidates), false);
@@ -165,9 +167,9 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> weaponPrefixes(String line, AttributeIndex attributes) {
-        String text =
-            stripMetadata(Normalizer.normalize(StrUtil.nullToEmpty(line), Normalizer.Form.NFKC).replace('\u2212', '-'))
-                .replaceAll("\\s+", " ").trim();
+        String text = CharSequenceUtil.trim(stripMetadata(
+            Normalizer.normalize(CharSequenceUtil.nullToEmpty(line), Normalizer.Form.NFKC).replace('\u2212', '-'))
+            .replaceAll("\\s+", " "));
         LinkedHashSet<String> prefixes = new LinkedHashSet<>();
         addWeaponPrefixes(prefixes, text);
         List<Occurrence> matches = occurrences(text.toLowerCase(Locale.ROOT), attributes);
@@ -182,7 +184,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
             if (negative.find()) {
                 prefix = prefix.substring(0, negative.start());
             }
-            addWeaponPrefixes(prefixes, prefix.replaceFirst("[+-]\\s*$", "").trim());
+            addWeaponPrefixes(prefixes, CharSequenceUtil.trim(prefix.replaceFirst("[+-]\\s*$", "")));
         }
         return prefixes.stream().sorted(Comparator.comparingInt(String::length).reversed()).toList();
     }
@@ -194,7 +196,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @param text 待处理的文本。
      */
     private static void addWeaponPrefixes(Set<String> prefixes, String text) {
-        if (StrUtil.isBlank(text))
+        if (CharSequenceUtil.isBlank(text))
             return;
         prefixes.add(text);
         String[] words = text.split("\\s+");
@@ -210,9 +212,10 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 满足本方法说明的业务条件时返回真，否则返回假。
      */
     private static boolean isWeapon(WarframeItemDTO item) {
-        return Set.of("exportweapons", "exportrailjackweapons").contains(normalize(item.getDomainCode())) || Set
-            .of("weapon", "primary", "secondary", "sentinelweapons").contains(normalize(item.getProductCategory()))
-            || StrUtil.isNotBlank(normalizeType(item.getProductCategory()));
+        return Set.of("exportweapons", "exportrailjackweapons").contains(normalize(item.getDomainCode()))
+            || Set.of("weapon", "primary", "secondary", "sentinelweapons")
+                .contains(normalize(item.getProductCategory()))
+            || CharSequenceUtil.isNotBlank(normalizeType(item.getProductCategory()));
     }
 
     /**
@@ -223,8 +226,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      */
     private static void addWeaponCandidates(Set<String> names, List<WarframeItemDTO> items) {
         items.stream().filter(WarframeRivenAnalysisServiceImpl::isWeapon)
-            .map(item -> StrUtil.blankToDefault(item.getLocalizedName(), item.getOfficialName()))
-            .filter(StrUtil::isNotBlank).forEach(names::add);
+            .map(item -> CharSequenceUtil.blankToDefault(item.getLocalizedName(), item.getOfficialName()))
+            .filter(CharSequenceUtil::isNotBlank).forEach(names::add);
     }
 
     /**
@@ -355,7 +358,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
             double value = Double.parseDouble(matcher.group(2).replaceAll("\\h", "").replace(',', '.'));
             String suffix = normalize(matcher.group(3));
             String unit = matcher.group(1) != null || Set.of("x", "\u00d7").contains(suffix) ? "multiplier"
-                : "%".equals(suffix) ? "percent" : StrUtil.isBlank(suffix) ? "scalar" : "seconds";
+                : "%".equals(suffix) ? "percent" : CharSequenceUtil.isBlank(suffix) ? "scalar" : "seconds";
             tokens.add(new ValueToken(matcher.start(), matcher.end(), value, unit));
         }
         ValueToken[] assigned = new ValueToken[occurrences.size()];
@@ -428,7 +431,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
             return (value < 0) != reversed;
         }
         if (prefix.matches("(?s).*[-+]\\s*$")) {
-            return prefix.trim().endsWith("-") != reversed;
+            return CharSequenceUtil.trim(prefix).endsWith("-") != reversed;
         }
         return false;
     }
@@ -473,9 +476,10 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         return parsed.attributes().stream().map(attribute -> {
             WarframeRivenAttributeDTO definition = index.byCode().get(attribute.code());
             return new ReferenceRangeVO(attribute.code(), attribute.displayName(),
-                definition == null ? "" : StrUtil.nullToEmpty(definition.units()), null, null, null, "UNAVAILABLE",
-                "officialParameterConversionUnconfirmed", "OFFICIAL_PARAMETERS", StrUtil.nullToEmpty(weapon.key()),
-                weapon.confirmed() ? OFFICIAL_SOURCE_CODE : "", OFFICIAL_SOURCE_CODE);
+                definition == null ? "" : CharSequenceUtil.nullToEmpty(definition.units()), null, null, null,
+                "UNAVAILABLE", "officialParameterConversionUnconfirmed", "OFFICIAL_PARAMETERS",
+                CharSequenceUtil.nullToEmpty(weapon.key()), weapon.confirmed() ? OFFICIAL_SOURCE_CODE : "",
+                OFFICIAL_SOURCE_CODE);
         }).toList();
     }
 
@@ -488,7 +492,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         Map<String, List<AttributeMapping>> result = new LinkedHashMap<>();
         Map<String, WarframeRivenAttributeDTO> byCode = new LinkedHashMap<>();
         for (WarframeRivenAttributeDTO details : attributeService.definitions()) {
-            if (StrUtil.isBlank(details.code()) || Boolean.TRUE.equals(details.searchOnly())
+            if (CharSequenceUtil.isBlank(details.code()) || Boolean.TRUE.equals(details.searchOnly())
                 || Set.of("has", "none").contains(details.code())) {
                 continue;
             }
@@ -521,13 +525,13 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
     private static void addMapping(Map<String, List<AttributeMapping>> result, String alias, String code,
         String displayName) {
         String normalized = normalize(alias);
-        if (StrUtil.isBlank(normalized) || StrUtil.isBlank(code)) {
+        if (CharSequenceUtil.isBlank(normalized) || CharSequenceUtil.isBlank(code)) {
             return;
         }
         List<String> codes = codes(code);
         if (CollUtil.isEmpty(codes))
             return;
-        AttributeMapping mapping = new AttributeMapping(codes, StrUtil.blankToDefault(displayName, alias));
+        AttributeMapping mapping = new AttributeMapping(codes, CharSequenceUtil.blankToDefault(displayName, alias));
         List<AttributeMapping> values = result.computeIfAbsent(normalized, ignored -> new ArrayList<>());
         if (values.stream().noneMatch(value -> sameCodeSet(value.codes(), mapping.codes()))) {
             values.add(mapping);
@@ -553,8 +557,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> codes(String value) {
-        return Arrays.stream(StrUtil.nullToEmpty(value).split("[,+]")).map(String::trim)
-            .filter(code -> StrUtil.isNotBlank(code)).toList();
+        return Arrays.stream(CharSequenceUtil.nullToEmpty(value).split("[,+]")).map(CharSequenceUtil::trim)
+            .filter(code -> CharSequenceUtil.isNotBlank(code)).toList();
     }
 
     /**
@@ -573,8 +577,8 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
      * @return 规范化后的文本，供比较或查找使用。
      */
     private static String normalize(String value) {
-        return Normalizer.normalize(StrUtil.nullToEmpty(value), Normalizer.Form.NFKC).replace('\u2212', '-')
-            .replaceAll("[\\r\\n\\t]+", " ").replaceAll("\\s+", " ").trim().toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.trim(Normalizer.normalize(CharSequenceUtil.nullToEmpty(value), Normalizer.Form.NFKC)
+            .replace('\u2212', '-').replaceAll("[\\r\\n\\t]+", " ").replaceAll("\\s+", " ")).toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -604,13 +608,13 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
     private static List<String> cleanLines(List<String> lines, String rawText) {
         List<String> result = new ArrayList<>();
         if (lines != null) {
-            lines.stream().filter(Objects::nonNull).map(String::trim).filter(value -> StrUtil.isNotBlank(value))
-                .forEach(result::add);
+            lines.stream().filter(Objects::nonNull).map(CharSequenceUtil::trim)
+                .filter(value -> CharSequenceUtil.isNotBlank(value)).forEach(result::add);
         }
         if (CollUtil.isEmpty(result)) {
-            for (String line : StrUtil.nullToEmpty(rawText).split("\\R")) {
-                if (StrUtil.isNotBlank(line))
-                    result.add(line.trim());
+            for (String line : CharSequenceUtil.nullToEmpty(rawText).split("\\R")) {
+                if (CharSequenceUtil.isNotBlank(line))
+                    result.add(CharSequenceUtil.trim(line));
             }
         }
         return List.copyOf(result);

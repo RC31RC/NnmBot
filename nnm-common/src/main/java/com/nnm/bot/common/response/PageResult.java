@@ -12,7 +12,8 @@ import java.util.Objects;
 public record PageResult<T>(@JsonPropertyDescription("记录") List<T> records, @JsonPropertyDescription("当前页") int current,
     @JsonPropertyDescription("每页数量") int size, @JsonPropertyDescription("总数量") long total) {
 
-    /** 复制记录列表并校验分页元数据。
+    /**
+     * 复制记录列表并校验分页元数据。
      *
      * @param records 当前页记录
      * @param current 从 1 开始的页码
@@ -33,7 +34,8 @@ public record PageResult<T>(@JsonPropertyDescription("记录") List<T> records, 
         }
     }
 
-    /** 创建不可变分页结果。
+    /**
+     * 创建不可变分页结果。
      *
      * @param records 当前页记录
      * @param current 从 1 开始的页码

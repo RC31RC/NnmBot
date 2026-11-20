@@ -19,7 +19,8 @@ public class ApiResponse<T> {
         this.data = data;
     }
 
-    /** 构造带结果的成功响应。
+    /**
+     * 构造带结果的成功响应。
      *
      * @param data 业务结果
      * @param <T> 结果类型
@@ -29,7 +30,8 @@ public class ApiResponse<T> {
         return new ApiResponse<>(200, "success", data);
     }
 
-    /** 构造无业务数据的成功响应。
+    /**
+     * 构造无业务数据的成功响应。
      *
      * @param <T> 响应声明类型
      * @return data 为空的成功响应
@@ -38,7 +40,8 @@ public class ApiResponse<T> {
         return new ApiResponse<>(200, "success", null);
     }
 
-    /** 按指定错误编号和安全文案构造失败响应。
+    /**
+     * 按指定错误编号和安全文案构造失败响应。
      *
      * @param code 稳定错误编号
      * @param message 对调用方展示的文案
@@ -49,7 +52,8 @@ public class ApiResponse<T> {
         return new ApiResponse<>(code, message, null);
     }
 
-    /** 使用错误码中的编号和默认文案构造失败响应。
+    /**
+     * 使用错误码中的编号和默认文案构造失败响应。
      *
      * @param errorCode 稳定错误码
      * @param <T> 响应声明类型
@@ -59,7 +63,8 @@ public class ApiResponse<T> {
         return error(errorCode.getCode(), errorCode.getMessage());
     }
 
-    /** 构造通用服务端失败响应。
+    /**
+     * 构造通用服务端失败响应。
      *
      * @param message 对调用方展示的文案
      * @param <T> 响应声明类型

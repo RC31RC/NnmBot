@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 /**
  * 命令积分预处理结果只携带业务标识，不泄漏 JPA 实体或事务上下文。
  *
@@ -33,6 +35,6 @@ public record CommandCostReservationDTO(boolean allowed, boolean reserved, Strin
     }
 
     public boolean rewarding() {
-        return rewardPoints > 0 && rewardReference != null && !rewardReference.isBlank();
+        return rewardPoints > 0 && rewardReference != null && !CharSequenceUtil.isBlank(rewardReference);
     }
 }

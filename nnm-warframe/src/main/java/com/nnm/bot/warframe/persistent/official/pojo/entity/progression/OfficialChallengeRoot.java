@@ -294,8 +294,10 @@ public class OfficialChallengeRoot extends OfficialRecord {
     private List<OfficialChallengeCountedRewardsItems> officialChallengeCountedRewardsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialChallengeMessageAttachmentsItems> officialChallengeMessageAttachmentsItemsRows = new ArrayList<>();
+    private List<OfficialChallengeMessageAttachmentsItems> officialChallengeMessageAttachmentsItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialChallengeMessageCountedAttachmentsItems> officialChallengeMessageCountedAttachmentsItemsRows = new ArrayList<>();
+    private List<OfficialChallengeMessageCountedAttachmentsItems> officialChallengeMessageCountedAttachmentsItemsRows =
+        new ArrayList<>();
 }

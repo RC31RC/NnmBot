@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.service.upgrades.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.service.upgrades.WarframeRivenWeaponService;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenWeaponDTO;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -78,7 +78,7 @@ public class WarframeRivenWeaponServiceImpl implements WarframeRivenWeaponServic
     private static void add(Map<String, List<WarframeRivenWeaponDTO>> index, String name,
         WarframeRivenWeaponDTO weapon) {
         String key = WarframeNameNormalizer.weeklyWeapon(name);
-        if (StrUtil.isNotBlank(key) && StrUtil.isNotBlank(weapon.uniqueName())) {
+        if (CharSequenceUtil.isNotBlank(key) && CharSequenceUtil.isNotBlank(weapon.uniqueName())) {
             index.computeIfAbsent(key, ignored -> new ArrayList<>()).add(weapon);
         }
     }

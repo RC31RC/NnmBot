@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.market;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -112,7 +113,7 @@ public record WarframeMarketOrderDTO(String id, String orderType, int platinum, 
      * @return 去除首尾空白的文本；输入缺省时返回空文本。
      */
     private static String trim(String value) {
-        return value == null ? "" : value.trim();
+        return value == null ? "" : CharSequenceUtil.trim(value);
     }
 
     /**
@@ -122,6 +123,6 @@ public record WarframeMarketOrderDTO(String id, String orderType, int platinum, 
      * @return 解析后的整数；输入为空白时返回空值，格式错误直接抛出。
      */
     private static Integer parseInteger(String value) {
-        return StrUtil.isBlank(value) ? null : Integer.valueOf(value.trim());
+        return CharSequenceUtil.isBlank(value) ? null : Integer.valueOf(CharSequenceUtil.trim(value));
     }
 }

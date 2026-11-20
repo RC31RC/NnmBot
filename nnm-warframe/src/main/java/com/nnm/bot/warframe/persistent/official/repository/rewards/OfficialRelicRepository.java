@@ -6,7 +6,8 @@ import com.nnm.bot.warframe.persistent.official.repository.support.OfficialMainR
 import com.nnm.bot.warframe.persistent.official.repository.rewards.custom.OfficialRelicRepositoryCustom;
 
 /** rewards/relics.json.gz 主表数据访问；由生成器和契约测试共同维护。 */
-public interface OfficialRelicRepository extends OfficialMainRepository<OfficialRelicRoot>, OfficialRelicRepositoryCustom {
+public interface OfficialRelicRepository
+    extends OfficialMainRepository<OfficialRelicRoot>, OfficialRelicRepositoryCustom {
     /**
      * 取得本 Repository 对应的官方 JSON 领域。
      *

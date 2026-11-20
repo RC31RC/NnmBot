@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.plugin.persistent.official.reference;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.BusinessException;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -72,19 +73,19 @@ abstract class AbstractItemRelationPlugin extends BotPlugin<Void, WarframeItemRe
      * @return 查询对象。
      */
     private WarframeItemRelationCommandDTO parseQuery(String arguments) {
-        String input = arguments == null ? "" : arguments.trim();
+        String input = arguments == null ? "" : CharSequenceUtil.trim(arguments);
         String keyword = input;
         Map<String, String> options = new HashMap<>();
         Matcher start = OPTIONS_START.matcher(input);
         if (start.find()) {
-            keyword = input.substring(0, start.start()).trim();
+            keyword = CharSequenceUtil.trim(input.substring(0, start.start()));
             String remaining = input.substring(start.end() - 2);
-            while (StrUtil.isNotBlank(remaining)) {
+            while (CharSequenceUtil.isNotBlank(remaining)) {
                 Matcher option = OPTION.matcher(remaining);
                 if (!option.find() || options.putIfAbsent(option.group(1), option.group(2)) != null) {
                     throw new BusinessException(OfficialCommandErrorCode.RELATION_OPTION_INVALID);
                 }
-                remaining = remaining.substring(option.end()).trim();
+                remaining = CharSequenceUtil.trim(remaining.substring(option.end()));
             }
         }
         if (keyword.length() > WarframeCommandInputConstants.MAX_QUERY_LENGTH)

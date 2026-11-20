@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
@@ -341,7 +342,7 @@ public final class WarframeWorldStateDisplayMapper {
      * @return 按约定优先顺序取得的首个有效文本；均缺省时为空。
      */
     private static String first(String first, String second) {
-        return StrUtil.isBlank(first) ? second : first;
+        return CharSequenceUtil.isBlank(first) ? second : first;
     }
 
     /**
@@ -353,7 +354,7 @@ public final class WarframeWorldStateDisplayMapper {
      */
     private static String text(Map<?, ?> row, String key) {
         Object value = row.get(key);
-        return value == null || StrUtil.isBlank(value.toString()) ? null : value.toString();
+        return value == null || CharSequenceUtil.isBlank(value.toString()) ? null : value.toString();
     }
 
     /**
@@ -364,10 +365,10 @@ public final class WarframeWorldStateDisplayMapper {
      * @return 将已解析数据转换为可读的展示内容对应的文本。
      */
     private static String readable(String value, String fallback) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             return fallback;
         }
-        return value.trim();
+        return CharSequenceUtil.trim(value);
     }
 
     /**
@@ -423,7 +424,8 @@ public final class WarframeWorldStateDisplayMapper {
             item -> item instanceof Map<?, ?> product ? text(product, "item") : item instanceof String raw ? raw : null)
             .toList();
         // 仅单个结构化物品与单个内部键一一对应时，才允许按顺序替换。
-        if (names.size() != 1 || names.stream().anyMatch(name -> StrUtil.isBlank(name) || isInternalReference(name))
+        if (names.size() != 1
+            || names.stream().anyMatch(name -> CharSequenceUtil.isBlank(name) || isInternalReference(name))
             || INTERNAL_REWARD_REFERENCE.matcher(text).results().count() != 1)
             return value;
         return WarframeRewardSummaryFormatter.replaceInternalReferences(text, names);
@@ -436,7 +438,7 @@ public final class WarframeWorldStateDisplayMapper {
      * @return 满足输入是否为游戏内部资源引用时为真，否则为假。
      */
     private static boolean isInternalReference(String value) {
-        String normalized = value == null ? "" : value.trim();
+        String normalized = value == null ? "" : CharSequenceUtil.trim(value);
         return normalized.startsWith("/") || normalized.startsWith("MT_") || normalized.startsWith("SORTIE_")
             || normalized.startsWith("VoidT") || normalized.startsWith("OSTRONS_") || normalized.startsWith("SOLARIS_")
             || normalized.startsWith("ENTRATI_") || normalized.startsWith("Narmer") || normalized.startsWith("PVP")

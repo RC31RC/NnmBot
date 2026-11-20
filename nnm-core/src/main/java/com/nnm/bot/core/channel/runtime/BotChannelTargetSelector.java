@@ -1,5 +1,7 @@
 package com.nnm.bot.core.channel.runtime;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot.Binding;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelInstanceMetadata;
@@ -74,7 +76,7 @@ public class BotChannelTargetSelector {
         return values.stream().filter(BotGroupBot::isEnabled)
             .filter(binding -> topologySnapshot.enabled(binding.getGroupId()))
             .filter(binding -> "GROUP".equals(binding.getScopeType()))
-            .filter(binding -> binding.getScopeKey() != null && !binding.getScopeKey().isBlank())
+            .filter(binding -> binding.getScopeKey() != null && !CharSequenceUtil.isBlank(binding.getScopeKey()))
             .sorted(Comparator.comparingInt(BotGroupBot::getReplyPriority).thenComparing(BotGroupBot::getId))
             .map(binding -> {
                 BotChannelInstanceMetadata record = records.get(binding.getBotInstanceId());

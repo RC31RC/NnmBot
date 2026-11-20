@@ -1,9 +1,9 @@
 package com.nnm.bot.common.validation;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.common.error.ErrorCode;
 import com.nnm.bot.common.error.BusinessException;
 
@@ -42,7 +42,7 @@ public final class BusinessAssert {
     }
 
     public static <T> T notNull(T value, ErrorCode errorCode, String message) {
-        if (ObjectUtil.isNull(value)) {
+        if (ObjUtil.isNull(value)) {
             throw new BusinessException(errorCode, message);
         }
         return value;
@@ -53,7 +53,7 @@ public final class BusinessAssert {
     }
 
     public static String notBlank(String value, ErrorCode errorCode, String message) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             throw new BusinessException(errorCode, message);
         }
         return value;

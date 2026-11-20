@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +13,7 @@ import com.nnm.bot.warframe.persistent.curated.pojo.dto.worldstate.SteelPathRota
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.world.OfficialVendorDTO;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.warframe.runtime.constant.WarframeBountyCycleConstants.Syndicate;
 import com.nnm.bot.warframe.runtime.constant.WarframeConquestType;
 import com.nnm.bot.warframe.runtime.constant.WarframeOpenWorldSyndicate;
@@ -75,7 +77,7 @@ public class WarframeWorldStateManagementServiceImpl implements WarframeWorldSta
     @Override
     public WarframeWorldStateManagementVO current() {
         WorldStateDTO state = worldStateService.getCurrentState();
-        if (ObjectUtil.isNull(state)) {
+        if (ObjUtil.isNull(state)) {
             return new WarframeWorldStateManagementVO(false, null, null, null, false, null, Instant.now().toString(),
                 List.of());
         }
@@ -108,7 +110,7 @@ public class WarframeWorldStateManagementServiceImpl implements WarframeWorldSta
             Map.entry("circuitChoices", "回廊装备"), Map.entry("calendarSeasons", "1999 日历赛季"),
             Map.entry("vaultTraders", "Prime 宝库商人"), Map.entry("weeklyChallenges", "每周挑战"),
             Map.entry("darkSectors", "黑暗地带"), Map.entry("descents", "深层下降"), Map.entry("marketCategories", "商城分类"),
-            Map.entry("temporaryActivity", "社区活动与寻呼机"), Map.entry("kuvaMissions", "赤毒任务"));
+            Map.entry("temporaryActivity", "社区活动与寻呼机"));
 
     /**
      * 将已解析 DTO 转换为独立展示投影，保留所有嵌套字段。
@@ -322,7 +324,6 @@ public class WarframeWorldStateManagementServiceImpl implements WarframeWorldSta
             new SectionProjection("in-game-market", WarframeWorldStateProjector.market(state)),
             new SectionProjection("global-upgrades", WarframeWorldStateProjector.globalUpgrades(state)),
             new SectionProjection("temporary-activities", WarframeWorldStateProjector.temporaryActivities(state)),
-            new SectionProjection("kuva-missions", WarframeWorldStateProjector.kuvaMissions(state)),
             new SectionProjection("persistent-enemies", WarframeWorldStateProjector.persistentEnemies(state)),
             new SectionProjection("invasions", WarframeWorldStateProjector.invasions(state)),
             new SectionProjection("fissures",
@@ -540,7 +541,7 @@ public class WarframeWorldStateManagementServiceImpl implements WarframeWorldSta
     /** @param candidates 候选文本；@return 第一个非空文本。 */
     private static String firstText(String... candidates) {
         for (String candidate : candidates)
-            if (candidate != null && !candidate.isBlank())
+            if (candidate != null && !CharSequenceUtil.isBlank(candidate))
                 return candidate;
         return null;
     }

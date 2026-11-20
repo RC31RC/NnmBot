@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.runtime.pojo.query.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.AuctionType;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.BusinessException;
 import java.util.List;
 import java.util.Locale;
@@ -39,12 +40,13 @@ public record WarframeMarketAuctionQuery(String type, String weaponName, String 
      * @param requireNegative 取得负面。
      */
     public WarframeMarketAuctionQuery {
-        type = Objects.requireNonNullElse(type, AuctionType.RIVEN.getCode()).trim().toLowerCase(Locale.ROOT);
+        type = CharSequenceUtil.trim(Objects.requireNonNullElse(type, AuctionType.RIVEN.getCode()))
+            .toLowerCase(Locale.ROOT);
         if (!AuctionType.supports(type)) {
             throw new BusinessException(MarketErrorCode.UNSUPPORTED_AUCTION_TYPE);
         }
-        weaponName = Objects.requireNonNullElse(weaponName, "").trim();
-        weaponSlug = Objects.requireNonNullElse(weaponSlug, "").trim().toLowerCase(Locale.ROOT);
+        weaponName = CharSequenceUtil.trim(Objects.requireNonNullElse(weaponName, ""));
+        weaponSlug = CharSequenceUtil.trim(Objects.requireNonNullElse(weaponSlug, "")).toLowerCase(Locale.ROOT);
         positiveStats = normalized(positiveStats);
         negativeStats = normalized(negativeStats);
         page = Math.max(1, page);
@@ -57,7 +59,7 @@ public record WarframeMarketAuctionQuery(String type, String weaponName, String 
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> normalized(List<String> values) {
-        return values == null ? List.of() : values.stream().filter(value -> StrUtil.isNotBlank(value))
-            .map(value -> value.trim().toLowerCase(Locale.ROOT)).distinct().sorted().toList();
+        return values == null ? List.of() : values.stream().filter(value -> CharSequenceUtil.isNotBlank(value))
+            .map(value -> CharSequenceUtil.trim(value).toLowerCase(Locale.ROOT)).distinct().sorted().toList();
     }
 }

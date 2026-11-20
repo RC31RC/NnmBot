@@ -1,5 +1,7 @@
 package com.nnm.bot.core.group.service;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.group.constant.BotGroupErrorCode;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.group.domain.BotGroupMember;
@@ -92,7 +94,8 @@ public class BotGroupMemberMergeService {
     }
 
     private boolean conflicts(String target, String source) {
-        return target != null && !target.isBlank() && source != null && !source.isBlank() && !target.equals(source);
+        return target != null && !CharSequenceUtil.isBlank(target) && source != null
+            && !CharSequenceUtil.isBlank(source) && !target.equals(source);
     }
 
     private void mergeFields(BotGroupMember target, BotGroupMember source) {
@@ -124,6 +127,6 @@ public class BotGroupMemberMergeService {
     }
 
     private boolean isBlank(String value) {
-        return value == null || value.isBlank();
+        return value == null || CharSequenceUtil.isBlank(value);
     }
 }

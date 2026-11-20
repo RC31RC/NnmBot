@@ -75,8 +75,8 @@ public class WarframeDataManagementController {
      */
     @PostMapping("/refresh")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<WarframeOfficialTaskSubmissionVO> refreshOfficial(
-        @Valid @RequestBody WarframeOfficialRefreshDTO request) {
+    public ApiResponse<WarframeOfficialTaskSubmissionVO>
+        refreshOfficial(@Valid @RequestBody WarframeOfficialRefreshDTO request) {
         return ApiResponse.ok(taskVO(admission.submit(request.ref(), request.productPath())));
     }
 
@@ -88,8 +88,8 @@ public class WarframeDataManagementController {
      */
     @PostMapping("/refresh-all")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<WarframeOfficialTaskSubmissionVO> refreshAllOfficial(
-        @RequestBody WarframeOfficialRefreshAllDTO request) {
+    public ApiResponse<WarframeOfficialTaskSubmissionVO>
+        refreshAllOfficial(@RequestBody WarframeOfficialRefreshAllDTO request) {
         return ApiResponse.ok(taskVO(admission.submit(request.ref(), null)));
     }
 
@@ -104,8 +104,8 @@ public class WarframeDataManagementController {
     /** 管理员确认后丢弃覆盖范围内的预览并重新提交；写时仍原子复核任务。 */
     @PostMapping("/refresh/discard-and-restart")
     @SaCheckPermission("warframe:game:refresh")
-    public ApiResponse<WarframeOfficialTaskSubmissionVO> discardAndRestart(
-        @RequestBody WarframeOfficialRefreshDTO request) {
+    public ApiResponse<WarframeOfficialTaskSubmissionVO>
+        discardAndRestart(@RequestBody WarframeOfficialRefreshDTO request) {
         return ApiResponse.ok(taskVO(admission.discardAndSubmit(request.ref(), request.productPath())));
     }
 

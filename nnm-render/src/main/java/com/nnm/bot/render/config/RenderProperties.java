@@ -1,7 +1,7 @@
 package com.nnm.bot.render.config;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.render.constant.RenderEngineType;
 import lombok.Getter;
@@ -44,21 +44,22 @@ public class RenderProperties {
         return fonts;
     }
 
-    /** 校验配置值，避免无效限制在首次渲染时才暴露。
+    /**
+     * 校验配置值，避免无效限制在首次渲染时才暴露。
      *
      * @throws IllegalArgumentException 配置缺失或限制不为正数时
      */
     void validate() {
-        if (ObjectUtil.isNull(engine)) {
+        if (ObjUtil.isNull(engine)) {
             throw new IllegalArgumentException("render.engine must be configured");
         }
-        if (ObjectUtil.isNull(playwright.chromiumArgs)) {
+        if (ObjUtil.isNull(playwright.chromiumArgs)) {
             throw new IllegalArgumentException("render.playwright.chromium-args must not be null");
         }
-        if (playwright.chromiumArgs.stream().anyMatch(argument -> StrUtil.isBlank(argument))) {
+        if (playwright.chromiumArgs.stream().anyMatch(argument -> CharSequenceUtil.isBlank(argument))) {
             throw new IllegalArgumentException("render.playwright.chromium-args must not contain blank values");
         }
-        if (ObjectUtil.isNull(fonts.paths) || fonts.paths.stream().anyMatch(StrUtil::isBlank)) {
+        if (ObjUtil.isNull(fonts.paths) || fonts.paths.stream().anyMatch(CharSequenceUtil::isBlank)) {
             throw new IllegalArgumentException("render.fonts.paths must not contain blank values");
         }
         if (limits.maxInputBytes < 1 || limits.maxImagePixels < 1 || limits.maxResultBytes < 1) {

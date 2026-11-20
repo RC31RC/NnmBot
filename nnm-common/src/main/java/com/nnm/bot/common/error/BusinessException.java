@@ -12,7 +12,8 @@ public class BusinessException extends RuntimeException {
     /** HTTP 边界使用的响应状态，命令边界不依赖 HTTP。 */
     private final HttpStatus status;
 
-    /** 使用错误码中的稳定默认文案构造业务失败。
+    /**
+     * 使用错误码中的稳定默认文案构造业务失败。
      *
      * @param errorCode 业务错误码
      */
@@ -22,7 +23,8 @@ public class BusinessException extends RuntimeException {
         this.status = errorCode.getStatus();
     }
 
-    /** 保留内部原因，不把异常详情当作客户端文案。
+    /**
+     * 保留内部原因，不把异常详情当作客户端文案。
      *
      * @param errorCode 业务错误码
      * @param cause 内部诊断原因
@@ -33,7 +35,8 @@ public class BusinessException extends RuntimeException {
         this.status = errorCode.getStatus();
     }
 
-    /** 使用经业务边界确认的文案构造异常。
+    /**
+     * 使用经业务边界确认的文案构造异常。
      *
      * @param errorCode 业务错误码
      * @param message 对调用方展示的文案
@@ -44,7 +47,8 @@ public class BusinessException extends RuntimeException {
         this.status = errorCode.getStatus();
     }
 
-    /** 使用经业务边界确认的文案并保留内部原因。
+    /**
+     * 使用经业务边界确认的文案并保留内部原因。
      *
      * @param errorCode 业务错误码
      * @param message 对调用方展示的文案

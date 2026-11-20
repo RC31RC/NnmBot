@@ -15,7 +15,8 @@ import java.util.Map;
 public class AfterCommitExecutor {
     private static final Object BATCH_RESOURCE_KEY = new Object();
 
-    /** 在提交后执行动作；无活动事务时立即执行。
+    /**
+     * 在提交后执行动作；无活动事务时立即执行。
      *
      * @param action 事务提交后执行的动作
      * @throws IllegalStateException 存在事务但未启用事务同步
@@ -42,7 +43,8 @@ public class AfterCommitExecutor {
     /**
      * 按事务内的键登记一次动作；同键重复调用 共用已登记回调，不同键保持各自的异常 与执行边界。
      */
-    /** 在事务内按键去重，同一键只保留首次登记的动作。
+    /**
+     * 在事务内按键去重，同一键只保留首次登记的动作。
      *
      * @param key 当前事务中的去重键
      * @param action 提交后执行的动作

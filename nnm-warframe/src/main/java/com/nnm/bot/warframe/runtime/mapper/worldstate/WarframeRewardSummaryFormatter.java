@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
+import cn.hutool.core.collection.CollUtil;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -40,7 +41,7 @@ public final class WarframeRewardSummaryFormatter {
      */
     public static String replaceInternalReferences(String summary, List<String> names) {
         // 数量不一致时不能按顺序猜测未知引用对应哪个已解析物品。
-        if (names == null || names.isEmpty() || INTERNAL_REFERENCE.matcher(summary).results().count() != names.size())
+        if (CollUtil.isEmpty(names) || INTERNAL_REFERENCE.matcher(summary).results().count() != names.size())
             return summary;
         Matcher matcher = INTERNAL_REFERENCE.matcher(summary);
         StringBuffer result = new StringBuffer();

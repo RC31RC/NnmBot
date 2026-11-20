@@ -1,7 +1,8 @@
 package com.nnm.bot.render.config;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
+import cn.hutool.core.util.ObjUtil;
 
 import com.sun.management.OperatingSystemMXBean;
 import com.nnm.bot.render.RenderEngine;
@@ -58,8 +59,8 @@ public class RenderEngineConfig {
         RenderEngineProviderContext context =
             new RenderEngineProviderContext("file:///templates/", properties.getPlaywright().getChromiumArgs(),
                 properties.getFonts().getPaths().stream().map(Path::of).toList());
-        if (StrUtil.isNotBlank(configuredProvider)) {
-            return create(configuredProvider.trim(), context);
+        if (CharSequenceUtil.isNotBlank(configuredProvider)) {
+            return create(CharSequenceUtil.trim(configuredProvider), context);
         }
         return switch (properties.getEngine()) {
             case PLAYWRIGHT -> create("playwright", context);
@@ -72,7 +73,7 @@ public class RenderEngineConfig {
     private RenderEngine autoSelect(RenderEngineProviderContext context) {
         boolean enoughMemoryForPlaywright = hasEnoughMemoryForPlaywright();
         for (RenderEngineProvider provider : providers) {
-            if (provider.id().equalsIgnoreCase("playwright") && !enoughMemoryForPlaywright) {
+            if (CharSequenceUtil.equalsIgnoreCase(provider.id(), "playwright") && !enoughMemoryForPlaywright) {
                 continue;
             }
             try {
@@ -87,13 +88,14 @@ public class RenderEngineConfig {
         return create("openhtmltopdf", context);
     }
 
-    /** 按标识创建明确指定的提供者。
+    /**
+     * 按标识创建明确指定的提供者。
      *
      * @throws IllegalStateException 提供者不存在或当前不可用时
      */
     private RenderEngine create(String id, RenderEngineProviderContext context) {
         RenderEngineProvider provider = find(id);
-        if (ObjectUtil.isNull(provider) || !provider.isAvailable(context)) {
+        if (ObjUtil.isNull(provider) || !provider.isAvailable(context)) {
             throw new IllegalStateException("No available render provider: " + id);
         }
         return instantiate(provider, context);
@@ -106,8 +108,8 @@ public class RenderEngineConfig {
 
     private RenderEngineProvider find(String id) {
         String normalized = id.toLowerCase(Locale.ROOT);
-        return providers.stream().filter(provider -> provider.id().trim().equalsIgnoreCase(normalized)).findFirst()
-            .orElse(null);
+        return providers.stream().filter(provider -> CharSequenceUtil.trim(provider.id()).equalsIgnoreCase(normalized))
+            .findFirst().orElse(null);
     }
 
     /** Chromium 占用较高，自动选择时要求机器具备最低物理内存预算。 */

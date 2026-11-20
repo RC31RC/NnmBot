@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.messaging.model.BotMarkdownMessage;
 import java.util.Collection;
 import java.util.Collections;
@@ -13,7 +15,7 @@ public sealed interface ReplyBlock {
     record Text(String content) implements ReplyBlock {
         public Text {
             Objects.requireNonNull(content, "content");
-            if (content.isBlank())
+            if (CharSequenceUtil.isBlank(content))
                 throw new IllegalArgumentException("Empty text block");
         }
     }
@@ -40,7 +42,7 @@ public sealed interface ReplyBlock {
     record Markdown(BotMarkdownMessage message, String plainText) implements ReplyBlock {
         public Markdown {
             Objects.requireNonNull(message, "message");
-            if (plainText != null && plainText.isBlank()) {
+            if (plainText != null && CharSequenceUtil.isBlank(plainText)) {
                 throw new IllegalArgumentException("Declared Markdown fallback must be nonempty");
             }
             if (message.customTemplateId() != null && plainText == null) {

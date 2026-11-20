@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.execution;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.resource.ResourceScope;
@@ -87,7 +89,7 @@ public class CommandExecutionPipeline {
         if (reservation == null || !reservation.allowed()) {
             String message = reservation == null ? null : reservation.message();
             throw new CommandRejectedException(
-                message == null || message.isBlank() ? null : CommandResult.rejected(message));
+                message == null || CharSequenceUtil.isBlank(message) ? null : CommandResult.rejected(message));
         }
         CommandResult result = prepared.execute();
         if (result != null)

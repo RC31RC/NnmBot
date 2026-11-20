@@ -3,7 +3,8 @@ package com.nnm.bot.core.mq.message.notification;
 import java.time.Instant;
 import java.util.UUID;
 
-/** 通知消息引用的附件及其受限预览元数据。
+/**
+ * 通知消息引用的附件及其受限预览元数据。
  *
  * @param id 附件记录标识
  * @param ownerId 资源所有者

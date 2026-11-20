@@ -1,9 +1,10 @@
 package com.nnm.bot.core.messaging.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -28,17 +29,17 @@ public record BotMarkdownMessage(String content, String customTemplateId, Map<St
     List<Button> buttons) {
 
     public BotMarkdownMessage {
-        content = StrUtil.isBlank(content) ? null : content;
-        customTemplateId = StrUtil.isBlank(customTemplateId) ? null : customTemplateId.trim();
+        content = CharSequenceUtil.isBlank(content) ? null : content;
+        customTemplateId = CharSequenceUtil.isBlank(customTemplateId) ? null : CharSequenceUtil.trim(customTemplateId);
         params = immutableParams(params);
         buttons = buttons == null ? List.of() : List.copyOf(buttons);
-        if (ObjectUtil.isNull(content) && ObjectUtil.isNull(customTemplateId)) {
+        if (ObjUtil.isNull(content) && ObjUtil.isNull(customTemplateId)) {
             throw new IllegalArgumentException("content or customTemplateId must not be blank");
         }
-        if (ObjectUtil.isNotNull(content) && ObjectUtil.isNotNull(customTemplateId)) {
+        if (ObjUtil.isNotNull(content) && ObjUtil.isNotNull(customTemplateId)) {
             throw new IllegalArgumentException("content and customTemplateId cannot both be configured");
         }
-        if (ObjectUtil.isNull(customTemplateId) && !params.isEmpty()) {
+        if (ObjUtil.isNull(customTemplateId) && !params.isEmpty()) {
             throw new IllegalArgumentException("params require customTemplateId");
         }
         validateButtons(buttons);
@@ -130,8 +131,8 @@ public record BotMarkdownMessage(String content, String customTemplateId, Map<St
     }
 
     private static String requireText(String value, String field) {
-        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
-        if (normalized.isEmpty()) {
+        String normalized = CharSequenceUtil.trim(Objects.requireNonNull(value, field + " must not be null"));
+        if (CharSequenceUtil.isEmpty(normalized)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return normalized;

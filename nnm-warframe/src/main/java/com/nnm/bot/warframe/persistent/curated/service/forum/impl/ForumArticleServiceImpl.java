@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.persistent.curated.service.forum.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.forum.ForumPreparedContentDTO;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -95,8 +96,8 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         Set<String> categories = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         Set<String> tags = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (ForumArticleDTO article : articles) {
-            if (StrUtil.isNotBlank(article.getCategory())) {
-                categories.add(article.getCategory().trim());
+            if (CharSequenceUtil.isNotBlank(article.getCategory())) {
+                categories.add(CharSequenceUtil.trim(article.getCategory()));
             }
             splitTags(article.getTags()).forEach(tags::add);
         }
@@ -314,7 +315,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         List<String> tags = splitTags(article.getTags()).stream().map(ForumArticleServiceImpl::normalize).toList();
 
         int score = 0;
-        if (StrUtil.isNotBlank(query.title())) {
+        if (CharSequenceUtil.isNotBlank(query.title())) {
             String requested = normalize(query.title());
             if (title.equals(requested)) {
                 score += 100;
@@ -324,7 +325,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
                 return 0;
             }
         }
-        if (StrUtil.isNotBlank(query.category())) {
+        if (CharSequenceUtil.isNotBlank(query.category())) {
             String requested = normalize(query.category());
             if (category.equals(requested)) {
                 score += 45;
@@ -370,11 +371,11 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> splitTags(String tags) {
-        if (StrUtil.isBlank(tags)) {
+        if (CharSequenceUtil.isBlank(tags)) {
             return List.of();
         }
-        return Arrays.stream(tags.split("[,，、\\s]+")).map(String::trim).filter(value -> StrUtil.isNotBlank(value))
-            .distinct().toList();
+        return Arrays.stream(tags.split("[,，、\\s]+")).map(CharSequenceUtil::trim)
+            .filter(value -> CharSequenceUtil.isNotBlank(value)).distinct().toList();
     }
 
     /**
@@ -393,11 +394,11 @@ public class ForumArticleServiceImpl implements ForumArticleService {
         boolean allowInitialization = CollUtil.isEmpty(existingArticles);
         Map<String,
             String> categoryOptions = existingArticles.stream().map(ForumArticleContentDTO::getCategory)
-                .filter(StrUtil::isNotBlank).map(String::trim)
+                .filter(CharSequenceUtil::isNotBlank).map(CharSequenceUtil::trim)
                 .collect(Collectors.toMap(value -> normalize(value), value -> value, (first, ignored) -> first));
         Map<String,
             String> tagOptions = existingArticles.stream().flatMap(article -> splitTags(article.getTags()).stream())
-                .map(String::trim).filter(StrUtil::isNotBlank)
+                .map(CharSequenceUtil::trim).filter(CharSequenceUtil::isNotBlank)
                 .collect(Collectors.toMap(value -> normalize(value), value -> value, (first, ignored) -> first));
 
         String normalizedCategory = normalizeOption(category, categoryOptions, allowInitialization);
@@ -415,10 +416,10 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 规范化选项对应的文本。
      */
     private static String normalizeOption(String value, Map<String, String> options, boolean allowInitialization) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             return null;
         }
-        String trimmed = value.trim();
+        String trimmed = CharSequenceUtil.trim(value);
         if (allowInitialization) {
             return trimmed;
         }
@@ -460,7 +461,8 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 规范化后的文本，供比较或查找使用。
      */
     private static String normalize(String value) {
-        return StrUtil.emptyIfNull(value).trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+        return CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(value)).toLowerCase(Locale.ROOT).replaceAll("\\s+",
+            "");
     }
 
     /**
@@ -582,7 +584,7 @@ public class ForumArticleServiceImpl implements ForumArticleService {
      * @return 校验必需文本，并裁剪首尾空白对应的文本。
      */
     private static String requiredTrimmed(String value) {
-        return BusinessAssert.notBlank(value, ForumErrorCode.ARTICLE_SLUG_REQUIRED).trim();
+        return CharSequenceUtil.trim(BusinessAssert.notBlank(value, ForumErrorCode.ARTICLE_SLUG_REQUIRED));
     }
 
     /**

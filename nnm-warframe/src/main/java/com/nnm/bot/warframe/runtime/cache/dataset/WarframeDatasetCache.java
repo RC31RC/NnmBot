@@ -67,10 +67,13 @@ public class WarframeDatasetCache {
         Cache cache = region(dataset, WarframeDatasetCacheNames.SNAPSHOTS);
         Snapshot previous = cache.get(view, Snapshot.class);
         if (previous == null) {
-            synchronized (state.snapshots) {
+            state.snapshotLock.lock();
+            try {
                 previous = cache.get(view, Snapshot.class);
                 if (previous == null)
                     return (T)buildSnapshot(dataset, view, cache, state, loader).value();
+            } finally {
+                state.snapshotLock.unlock();
             }
         }
         if (previous.revision() != state.revision.get() && rebuildScheduled.compareAndSet(false, true)) {
@@ -109,7 +112,8 @@ public class WarframeDatasetCache {
         State state = state(dataset);
         Cache cache = region(dataset, WarframeDatasetCacheNames.RECORDS);
         // 同数据集并发冷查询在互斥内复核，避免每个调用者重复补查相同键。
-        synchronized (state.records) {
+        state.recordLock.lock();
+        try {
             while (true) {
                 long revision = state.revision.get();
                 Map<K, T> result = new LinkedHashMap<>();
@@ -141,6 +145,8 @@ public class WarframeDatasetCache {
                 if (revision == state.revision.get())
                     return Collections.unmodifiableMap(result);
             }
+        } finally {
+            state.recordLock.unlock();
         }
     }
 
@@ -192,8 +198,8 @@ public class WarframeDatasetCache {
 
     private static final class State {
         private final AtomicLong revision = new AtomicLong();
-        private final Object snapshots = new Object();
-        private final Object records = new Object();
+        private final ReentrantLock snapshotLock = new ReentrantLock();
+        private final ReentrantLock recordLock = new ReentrantLock();
     }
 
     private record Snapshot(long revision, Object value) {

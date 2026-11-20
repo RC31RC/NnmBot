@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.persistent.curated.service.reference.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.response.PageResult;
@@ -120,11 +121,11 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     @Override
     public List<WarframeCommunityRivenAttributeVO> rivenAttributes() {
         return officialRivenAttributes.definitions().stream()
-            .filter(attribute -> StrUtil.isNotBlank(attribute.code()) && !Boolean.TRUE.equals(attribute.searchOnly())
-                && !Set.of("has", "none").contains(attribute.code()))
+            .filter(attribute -> CharSequenceUtil.isNotBlank(attribute.code())
+                && !Boolean.TRUE.equals(attribute.searchOnly()) && !Set.of("has", "none").contains(attribute.code()))
             .map(attribute -> new WarframeCommunityRivenAttributeVO(attribute.code(),
-                StrUtil.isNotBlank(attribute.effect()) ? attribute.effect()
-                    : StrUtil.blankToDefault(attribute.effectEn(), attribute.code()),
+                CharSequenceUtil.isNotBlank(attribute.effect()) ? attribute.effect()
+                    : CharSequenceUtil.blankToDefault(attribute.effectEn(), attribute.code()),
                 attribute.effectEn(), attribute.negativeOnly(), attribute.exclusiveTo()))
             .sorted(Comparator.comparing(WarframeCommunityRivenAttributeVO::label)
                 .thenComparing(WarframeCommunityRivenAttributeVO::code))
@@ -179,7 +180,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         var dataset = WarframeCommunityDataset.parse(code);
         int page = request == null || request.current() == null ? 1 : Math.max(1, request.current());
         int size = request == null || request.size() == null ? 20 : Math.max(1, Math.min(100, request.size()));
-        String keyword = request == null || request.keyword() == null ? "" : request.keyword().trim();
+        String keyword = request == null || request.keyword() == null ? "" : CharSequenceUtil.trim(request.keyword());
         var pageable = PageRequest.of(page - 1, size, Sort.by("recordKey"));
         Page<? extends WarframeCommunityRowDTO> result = switch (dataset) {
             case ALIAS -> aliases.query(keyword, pageable);

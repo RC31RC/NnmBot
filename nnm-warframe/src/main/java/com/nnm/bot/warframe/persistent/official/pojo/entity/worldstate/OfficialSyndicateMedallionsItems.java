@@ -52,5 +52,7 @@ public class OfficialSyndicateMedallionsItems extends OfficialChildRow {
     private OfficialSyndicateRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSyndicateMedallionsItemsItemReferencesItems> officialSyndicateMedallionsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialSyndicateMedallionsItemsItemReferencesItems> officialSyndicateMedallionsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

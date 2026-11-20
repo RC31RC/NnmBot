@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.dto.reference;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import java.util.List;
 
 /**
@@ -57,7 +57,7 @@ public record WarframeItemResolutionDTO(WarframeItemDTO item, List<WarframeItemD
      * @return 满足本方法说明的业务条件时返回真，否则返回假。
      */
     public boolean found() {
-        return ObjectUtil.isNotNull(this.item);
+        return ObjUtil.isNotNull(this.item);
     }
 
     /**
@@ -66,6 +66,6 @@ public record WarframeItemResolutionDTO(WarframeItemDTO item, List<WarframeItemD
      * @return 满足本方法说明的业务条件时返回真，否则返回假。
      */
     public boolean ambiguous() {
-        return ObjectUtil.isNull(this.item) && CollUtil.isNotEmpty(this.candidates);
+        return ObjUtil.isNull(this.item) && !this.candidates.isEmpty();
     }
 }

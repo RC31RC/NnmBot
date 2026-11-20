@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** WARFRAME 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialWarframeDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 技能；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("abilities")
@@ -638,7 +638,9 @@ public class OfficialWarframeDTO extends OfficialObjectDTO implements OfficialRe
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), OfficialInputText.first(parentName), OfficialInputText.first(productCategory), OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh),
+            OfficialInputText.first(parentName), OfficialInputText.first(productCategory),
+            OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -654,7 +656,7 @@ public class OfficialWarframeDTO extends OfficialObjectDTO implements OfficialRe
     /** 官方嵌套对象 AbilitiesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class AbilitiesDTO extends OfficialObjectDTO {
         /** 技能的技能图标地址；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("abilityIconUrl")
@@ -946,7 +948,7 @@ public class OfficialWarframeDTO extends OfficialObjectDTO implements OfficialRe
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的字段；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("field")

@@ -12,8 +12,8 @@ import lombok.Getter;
 
 /** TILESET 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialTilesetDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 阵营；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("faction")
@@ -128,7 +128,7 @@ public class OfficialTilesetDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 MissionDefinitionsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionDefinitionsItemReferencesDTO extends OfficialObjectDTO {
         /** 任务定义列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -270,7 +270,7 @@ public class OfficialTilesetDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 MissionDefinitionsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class MissionDefinitionsDTO extends OfficialObjectDTO {
         /** 任务定义列表的高级敌人生成器列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("advancedSpawners")

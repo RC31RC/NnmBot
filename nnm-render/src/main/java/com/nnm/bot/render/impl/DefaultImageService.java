@@ -66,7 +66,8 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
         return taskExecutor.execute(() -> generateImage(html, variables, bounded));
     }
 
-    /** 在线程池任务内恢复变量并完成模板处理与图片转换。
+    /**
+     * 在线程池任务内恢复变量并完成模板处理与图片转换。
      *
      * @param html 原始模板
      * @param variables 已限长的变量 JSON
@@ -98,7 +99,8 @@ public class DefaultImageService implements ImageService, BotImageRenderer {
         }
     }
 
-    /** 在写入时限制变量 JSON 大小，避免先分配超限缓冲区。
+    /**
+     * 在写入时限制变量 JSON 大小，避免先分配超限缓冲区。
      *
      * @param data 模板变量
      * @param limit 最大序列化字节数

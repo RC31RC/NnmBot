@@ -1,6 +1,7 @@
 package com.nnm.bot.core.group.service.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.core.group.constant.GroupPointConstants.PointErrorCode;
@@ -98,7 +99,7 @@ public class PointAccountServiceImpl implements PointAccountService {
         transaction.setAmount(refund);
         transaction.setBalanceAfter(member.getPoints());
         transaction.setIdempotencyKey(refundKey);
-        transaction.setDescription(StrUtil.blankToDefault(description, "命令执行失败退款"));
+        transaction.setDescription(CharSequenceUtil.blankToDefault(description, "命令执行失败退款"));
         transaction.setCreatedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
         return PointChangeResultDTO.applied(snapshot(member), transaction.getId());
@@ -143,7 +144,8 @@ public class PointAccountServiceImpl implements PointAccountService {
 
     @Override
     public boolean existsByIdempotencyKey(String idempotencyKey) {
-        return StrUtil.isNotBlank(idempotencyKey) && transactionRepository.existsByIdempotencyKey(idempotencyKey);
+        return CharSequenceUtil.isNotBlank(idempotencyKey)
+            && transactionRepository.existsByIdempotencyKey(idempotencyKey);
     }
 
     private BotGroupMember lockedMember(long groupId, long memberId) {
@@ -189,10 +191,10 @@ public class PointAccountServiceImpl implements PointAccountService {
     }
 
     private String requireText(String value) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             throw new BusinessException(PointErrorCode.IDEMPOTENCY_KEY_REQUIRED);
         }
-        return value.trim();
+        return CharSequenceUtil.trim(value);
     }
 
     private PointChangeResultDTO repeated(String idempotencyKey, BotGroupMember member) {

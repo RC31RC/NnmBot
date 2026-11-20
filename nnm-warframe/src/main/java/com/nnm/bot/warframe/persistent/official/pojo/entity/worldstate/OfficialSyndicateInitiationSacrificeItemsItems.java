@@ -52,5 +52,7 @@ public class OfficialSyndicateInitiationSacrificeItemsItems extends OfficialChil
     private OfficialSyndicateRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialSyndicateInitiationSacrificeItemsItemsItemReferencesItems> officialSyndicateInitiationSacrificeItemsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialSyndicateInitiationSacrificeItemsItemsItemReferencesItems> officialSyndicateInitiationSacrificeItemsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

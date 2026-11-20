@@ -1,7 +1,7 @@
 package com.nnm.bot.core.qqofficial.api;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.error.BusinessException;
@@ -33,14 +33,15 @@ public class QqOfficialTokenClient {
         this.connection = connection;
     }
 
-    /** 返回有效令牌；进入提前刷新窗口后同步请求新令牌。
+    /**
+     * 返回有效令牌；进入提前刷新窗口后同步请求新令牌。
      *
      * @return 当前访问令牌
      */
     public String getAccessToken() {
         tokenLock.lock();
         try {
-            if (ObjectUtil.isNotNull(accessToken)
+            if (ObjUtil.isNotNull(accessToken)
                 && Instant.now().isBefore(expiresAt.minusSeconds(REFRESH_AHEAD_SECONDS))) {
                 return accessToken;
             }
@@ -49,7 +50,7 @@ public class QqOfficialTokenClient {
                 new QqOfficialTokenRequestDTO(connection.appId(), connection.clientSecret()), Map.of(),
                 QqOfficialTokenDTO.class);
             String token = response == null ? null : response.accessToken();
-            if (StrUtil.isBlank(token)) {
+            if (CharSequenceUtil.isBlank(token)) {
                 throw new BusinessException(QqOfficialErrorCode.TOKEN_MISSING);
             }
             long expiresIn = response.expiresIn() == null ? DEFAULT_EXPIRES_IN_SECONDS : response.expiresIn();

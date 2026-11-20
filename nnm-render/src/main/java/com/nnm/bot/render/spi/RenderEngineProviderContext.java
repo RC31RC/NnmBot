@@ -1,6 +1,6 @@
 package com.nnm.bot.render.spi;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.hutool.core.collection.CollUtil;
 
@@ -22,7 +22,7 @@ public record RenderEngineProviderContext(String templateBaseUri, List<String> c
 
     /** 规范化空值并复制集合，避免插件修改调用方持有的配置。 */
     public RenderEngineProviderContext {
-        templateBaseUri = ObjectUtil.isNull(templateBaseUri) ? "file:///templates/" : templateBaseUri;
+        templateBaseUri = ObjUtil.isNull(templateBaseUri) ? "file:///templates/" : templateBaseUri;
         chromiumArgs = CollUtil.isEmpty(chromiumArgs) ? List.of() : List.copyOf(chromiumArgs);
         fontPaths = CollUtil.isEmpty(fontPaths) ? List.of() : List.copyOf(fontPaths);
     }

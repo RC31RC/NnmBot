@@ -1,5 +1,8 @@
 package com.nnm.bot.warframe.persistent.curated.service.worldstate.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.collection.CollUtil;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -88,7 +91,7 @@ public class WarframeDescendiaRewardCatalogServiceImpl implements WarframeDescen
     private static RewardOptionDTO officialOption(RewardsDTO reward, Integer countOverride) {
         String name = first(reward.getItemNameZh(), reward.getItemNameEn(), reward.getItemName());
         String icon = https(reward.getItemIconUrl());
-        if (icon == null && reward.getItemCandidates() != null && !reward.getItemCandidates().isEmpty()) {
+        if (icon == null && CollUtil.isNotEmpty(reward.getItemCandidates())) {
             // 身份多解时只接受所有候选均相同的图片，不随意指定一种裂罅或蓝图。
             Set<String> candidates = new LinkedHashSet<>();
             reward.getItemCandidates().forEach(candidate -> candidates.add(https(candidate.getIconUrl())));
@@ -133,7 +136,7 @@ public class WarframeDescendiaRewardCatalogServiceImpl implements WarframeDescen
 
     private static String first(String... values) {
         for (String value : values)
-            if (value != null && !value.isBlank())
+            if (value != null && !CharSequenceUtil.isBlank(value))
                 return value;
         return null;
     }

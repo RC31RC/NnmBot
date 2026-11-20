@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.client;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.http.HttpClient.TextResult;
@@ -56,7 +56,7 @@ public class WarframeRuntimeDataClient {
                     sourceCode, safeEndpoint(url), index + 1, candidates.size(), result.statusCode(), contentType,
                     result.bytes(), result.body() == null ? 0 : result.body().length(),
                     Duration.ofNanos(System.nanoTime() - startedAt).toMillis(), failureMessage(result.error()));
-                if (result.isSuccess() && StrUtil.isNotBlank(result.body())
+                if (result.isSuccess() && CharSequenceUtil.isNotBlank(result.body())
                     && (contentType == null || !contentType.toLowerCase(Locale.ROOT).contains("html"))) {
                     return new FetchedText(url, result.body());
                 }
@@ -92,7 +92,7 @@ public class WarframeRuntimeDataClient {
         if (exception == null)
             return null;
         return HttpDiagnostics.safeFailureMessage(
-            StrUtil.blankToDefault(exception.getMessage(), exception.getClass().getSimpleName()), null);
+            CharSequenceUtil.blankToDefault(exception.getMessage(), exception.getClass().getSimpleName()), null);
     }
 
     /**

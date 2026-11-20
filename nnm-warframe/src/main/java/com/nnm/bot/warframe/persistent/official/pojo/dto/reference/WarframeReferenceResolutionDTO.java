@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.pojo.dto.reference;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
 import java.util.List;
 
@@ -22,8 +22,8 @@ public record WarframeReferenceResolutionDTO(String reference, String displayNam
      * @param candidates 候选集合。
      */
     public WarframeReferenceResolutionDTO {
-        reference = StrUtil.emptyIfNull(reference);
-        displayName = StrUtil.blankToDefault(displayName, reference);
+        reference = CharSequenceUtil.emptyIfNull(reference);
+        displayName = CharSequenceUtil.blankToDefault(displayName, reference);
         candidates = CollUtil.isEmpty(candidates) ? List.of() : List.copyOf(candidates);
     }
 

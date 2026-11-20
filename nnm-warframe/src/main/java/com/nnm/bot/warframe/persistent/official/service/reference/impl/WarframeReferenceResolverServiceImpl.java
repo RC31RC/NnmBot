@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.reference.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceType;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeReferenceResolutionDTO;
@@ -34,7 +34,7 @@ public class WarframeReferenceResolverServiceImpl implements WarframeReferenceRe
      */
     @Override
     public WarframeReferenceResolutionDTO resolve(String reference) {
-        if (StrUtil.isBlank(reference))
+        if (CharSequenceUtil.isBlank(reference))
             return unresolved(reference);
         return resolveAll(Map.of(reference, WarframeReferenceType.ITEM)).get(reference);
     }
@@ -53,11 +53,11 @@ public class WarframeReferenceResolverServiceImpl implements WarframeReferenceRe
         List<String> itemKeys = references.entrySet().stream()
             .filter(entry -> entry.getValue() == null || entry.getValue() == WarframeReferenceType.ITEM
                 || entry.getValue() == WarframeReferenceType.MODIFIER)
-            .map(Map.Entry::getKey).filter(StrUtil::isNotBlank).toList();
+            .map(Map.Entry::getKey).filter(CharSequenceUtil::isNotBlank).toList();
         result.putAll(itemNameService.resolveAll(itemKeys));
         Map<WarframeReferenceType, List<String>> typedReferences = new EnumMap<>(WarframeReferenceType.class);
         references.forEach((reference, type) -> {
-            if (StrUtil.isNotBlank(reference) && type != null && type != WarframeReferenceType.ITEM)
+            if (CharSequenceUtil.isNotBlank(reference) && type != null && type != WarframeReferenceType.ITEM)
                 typedReferences.computeIfAbsent(type, ignored -> new ArrayList<>()).add(reference);
         });
         Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks =

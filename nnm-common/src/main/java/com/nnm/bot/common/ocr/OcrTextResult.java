@@ -1,6 +1,6 @@
 package com.nnm.bot.common.ocr;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.hutool.core.collection.CollUtil;
 
@@ -15,7 +15,7 @@ import java.util.List;
 public record OcrTextResult(String text, List<String> lines) {
 
     public OcrTextResult {
-        text = ObjectUtil.isNull(text) ? "" : text;
+        text = ObjUtil.isNull(text) ? "" : text;
         lines = CollUtil.isEmpty(lines) ? List.of() : List.copyOf(lines);
     }
 }

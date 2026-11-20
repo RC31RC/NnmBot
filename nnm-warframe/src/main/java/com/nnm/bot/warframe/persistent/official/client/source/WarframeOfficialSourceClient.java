@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.client.source;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
@@ -101,12 +102,12 @@ public class WarframeOfficialSourceClient {
     public WarframeOfficialVersionDTO resolve(String ref) {
         if (properties.getSourceMode() == SourceMode.LOCAL) {
             WarframeOfficialVersionDTO version = localVersion();
-            BusinessAssert.isTrue(StrUtil.isBlank(ref) || properties.getLocalRef().equals(ref),
+            BusinessAssert.isTrue(CharSequenceUtil.isBlank(ref) || properties.getLocalRef().equals(ref),
                 OfficialSourceErrorCode.LOCAL_REF_REQUIRED);
             return version;
         }
         BusinessAssert.notBlank(ref, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
-        BusinessAssert.equals(ref, ref.trim(), OfficialSourceErrorCode.TAG_WHITESPACE_INVALID);
+        BusinessAssert.equals(ref, CharSequenceUtil.trim(ref), OfficialSourceErrorCode.TAG_WHITESPACE_INVALID);
         BusinessAssert.isTrue(validTag(ref), OfficialSourceErrorCode.TAG_FORMAT_INVALID);
         GithubVersionRawData tagRef = api("/git/ref/tags/" + ref, GithubVersionRawData.class);
         BusinessAssert.equals(tagRef.getRef(), "refs/tags/" + ref, OfficialSourceErrorCode.TAG_REFERENCE_INVALID);
@@ -202,7 +203,8 @@ public class WarframeOfficialSourceClient {
                     // 原件必须没有额外 HTTP 编码；不能把解码后的内容误当作清单中的压缩文件。
                     BusinessAssert.isTrue(
                         result.headers().getOrEmpty("Content-Encoding").stream()
-                            .allMatch(value -> value.isBlank() || "identity".equalsIgnoreCase(value.trim())),
+                            .allMatch(value -> CharSequenceUtil.isBlank(value)
+                                || "identity".equalsIgnoreCase(CharSequenceUtil.trim(value))),
                         OfficialSourceErrorCode.CONTENT_ENCODING_UNSUPPORTED);
                     T value = verify.apply(temporary);
                     publish(temporary, target);
@@ -297,7 +299,7 @@ public class WarframeOfficialSourceClient {
     }
 
     private Map<String, String> githubHeaders(String accept) {
-        if (StrUtil.isBlank(properties.getGithubToken())) {
+        if (CharSequenceUtil.isBlank(properties.getGithubToken())) {
             return Map.of("Accept", accept, "Accept-Encoding", "identity");
         }
         return Map.of("Accept", accept, "Accept-Encoding", "identity", "Authorization",
@@ -362,7 +364,7 @@ public class WarframeOfficialSourceClient {
      */
     private WarframeOfficialVersionDTO localVersion() {
         String commit = properties.getLocalCommit();
-        if (StrUtil.isBlank(commit)) {
+        if (CharSequenceUtil.isBlank(commit)) {
             Path sourceDirectory = properties.getLocalDataDirectory().toAbsolutePath().normalize();
             try {
                 Process process = new ProcessBuilder("git", "-C", sourceDirectory.toString(), "rev-parse", "HEAD")
@@ -371,7 +373,7 @@ public class WarframeOfficialSourceClient {
                     if (!process.waitFor(properties.getLocalVersionTimeout().toMillis(), TimeUnit.MILLISECONDS)) {
                         throw new IOException("Timed out resolving local source commit");
                     }
-                    commit = new String(output.readAllBytes(), StandardCharsets.UTF_8).trim();
+                    commit = CharSequenceUtil.trim(new String(output.readAllBytes(), StandardCharsets.UTF_8));
                     BusinessAssert.isTrue(process.exitValue() == 0 && validCommit(commit),
                         OfficialSourceErrorCode.LOCAL_COMMIT_UNAVAILABLE);
                 } finally {

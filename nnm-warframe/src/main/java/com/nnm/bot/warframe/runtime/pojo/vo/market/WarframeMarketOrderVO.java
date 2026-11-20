@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.pojo.vo.market;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketOrderEntryDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketOrderPageDTO;
@@ -57,7 +57,7 @@ public record WarframeMarketOrderVO(@JsonPropertyDescription("物品") String it
             List<String> specs = new ArrayList<>();
             if (order.rank() != null)
                 specs.add("等级 " + order.rank());
-            if (StrUtil.isNotBlank(order.subtype()))
+            if (CharSequenceUtil.isNotBlank(order.subtype()))
                 specs.add(order.subtype());
             if (order.charges() != null)
                 specs.add("剩余 " + order.charges() + " 次");

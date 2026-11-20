@@ -60,5 +60,6 @@ public class OfficialKeysRewardsItems extends OfficialChildRow {
     private OfficialKeysRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysRewardsItemsItemReferencesItems> officialKeysRewardsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialKeysRewardsItemsItemReferencesItems> officialKeysRewardsItemsItemReferencesItemsRows =
+        new ArrayList<>();
 }

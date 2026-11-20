@@ -1,6 +1,5 @@
 package com.nnm.bot.warframe.runtime.pojo.vo.riven;
 
-import cn.hutool.core.collection.CollUtil;
 import java.util.List;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenAttributeDTO;
 
@@ -89,7 +88,7 @@ public record WarframeRivenAnalysisVO(String rawText, List<String> rawLines, Str
      * @return 满足本方法说明的业务条件时返回真，否则返回假。
      */
     public boolean complete() {
-        return CollUtil.isEmpty(missingFields);
+        return missingFields.isEmpty();
     }
 
     /**

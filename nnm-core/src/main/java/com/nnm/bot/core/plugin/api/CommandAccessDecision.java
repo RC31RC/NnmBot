@@ -1,6 +1,6 @@
 package com.nnm.bot.core.plugin.api;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 /**
  * 命令访问责任链的稳定判定结果。
@@ -11,7 +11,7 @@ import cn.hutool.core.util.StrUtil;
 public record CommandAccessDecision(boolean allowed, String reason) {
 
     public CommandAccessDecision {
-        reason = StrUtil.blankToDefault(reason, "");
+        reason = CharSequenceUtil.blankToDefault(reason, "");
     }
 
     public static CommandAccessDecision permit() {

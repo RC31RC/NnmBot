@@ -1,5 +1,7 @@
 package com.nnm.bot.core.messaging.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import com.nnm.bot.core.messaging.constant.BotMessageScope;
@@ -81,7 +83,8 @@ public final class BotMessageContext {
         this.referenceIndex = referenceIndex;
     }
 
-    /** 创建不带附件的跨平台消息上下文。
+    /**
+     * 创建不带附件的跨平台消息上下文。
      *
      * @param platform 来源平台
      * @param scope 消息作用域
@@ -101,7 +104,8 @@ public final class BotMessageContext {
             List.of());
     }
 
-    /** 创建包含附件的跨平台消息上下文，并校验必需身份字段。
+    /**
+     * 创建包含附件的跨平台消息上下文，并校验必需身份字段。
      *
      * @param platform 来源平台
      * @param scope 消息作用域
@@ -129,10 +133,11 @@ public final class BotMessageContext {
     }
 
     private static String normalizeMessage(String message) {
-        return Objects.requireNonNullElse(message, "").trim();
+        return CharSequenceUtil.trim(Objects.requireNonNullElse(message, ""));
     }
 
-    /** 复制上下文并更新本次派发标识，不改变原始调用 ID。
+    /**
+     * 复制上下文并更新本次派发标识，不改变原始调用 ID。
      *
      * @param id 派发标识
      * @return 新上下文
@@ -142,7 +147,8 @@ public final class BotMessageContext {
             message, nativeSource, attachments, invocationId, id, receivedAt, execution, reference, referenceIndex);
     }
 
-    /** 复制上下文并覆盖接收时间。
+    /**
+     * 复制上下文并覆盖接收时间。
      *
      * @param timestamp Unix epoch 毫秒
      * @return 新上下文
@@ -154,7 +160,8 @@ public final class BotMessageContext {
             referenceIndex);
     }
 
-    /** 复制上下文并附加命令执行元数据。
+    /**
+     * 复制上下文并附加命令执行元数据。
      *
      * @param value 已解析的执行上下文
      * @return 新上下文
@@ -245,7 +252,8 @@ public final class BotMessageContext {
         return scope == BotMessageScope.CHANNEL;
     }
 
-    /** 按预期协议类型读取平台原生事件对象。
+    /**
+     * 按预期协议类型读取平台原生事件对象。
      *
      * @param type 适配器事件类型
      * @param <T> 平台事件类型

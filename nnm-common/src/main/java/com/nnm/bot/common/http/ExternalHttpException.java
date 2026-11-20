@@ -12,7 +12,8 @@ public class ExternalHttpException extends SystemException {
     private final String responseBody;
     private final HttpHeaders responseHeaders;
 
-    /** 保存上游状态、响应头及受客户端限制的响应体。
+    /**
+     * 保存上游状态、响应头及受客户端限制的响应体。
      *
      * @param method HTTP 方法
      * @param url 请求地址
@@ -34,7 +35,8 @@ public class ExternalHttpException extends SystemException {
         this.responseHeaders = HttpHeaders.readOnlyHttpHeaders(copy);
     }
 
-    /** 创建不含响应头诊断的异常。
+    /**
+     * 创建不含响应头诊断的异常。
      *
      * @param method HTTP 方法
      * @param url 请求地址

@@ -1,11 +1,12 @@
 package com.nnm.bot.core.jmcomic.service.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
@@ -72,8 +73,8 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
             .readTimeout(this.properties.getWholeFileTimeout()).writeTimeout(this.properties.getWholeFileTimeout())
             .callTimeout(this.properties.getWholeFileTimeout()).retryOnConnectionFailure(true).followRedirects(true)
             .followSslRedirects(true);
-        if (StrUtil.isNotBlank(this.properties.getProxyHost())
-            && ObjectUtil.isNotNull(this.properties.getProxyPort())) {
+        if (CharSequenceUtil.isNotBlank(this.properties.getProxyHost())
+            && ObjUtil.isNotNull(this.properties.getProxyPort())) {
             builder.proxy(new Proxy(Proxy.Type.HTTP,
                 new InetSocketAddress(this.properties.getProxyHost(), this.properties.getProxyPort())));
         }
@@ -88,10 +89,10 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         }
         try {
             JmAlbumDownloadInfo info = client.getAlbumDownloadInfo(albumId);
-            if (ObjectUtil.isNull(info) || StrUtil.isBlank(info.downloadUrl())) {
+            if (ObjUtil.isNull(info) || CharSequenceUtil.isBlank(info.downloadUrl())) {
                 return Optional.empty();
             }
-            String title = StrUtil.blankToDefault(info.title(), fallbackTitle);
+            String title = CharSequenceUtil.blankToDefault(info.title(), fallbackTitle);
             Path payload = workspace.resolve("whole-file.part");
             this.downloadPayload(info.downloadUrl(), client.getCookies(), payload);
             return Optional.of(this.convertPayload(albumId, title, payload, workspace));
@@ -112,7 +113,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         HttpUrl url = this.parseDownloadUrl(downloadUrl);
         Request.Builder request = new Request.Builder().url(url).get();
         String cookieHeader = this.cookieHeader(url, cookies);
-        if (StrUtil.isNotBlank(cookieHeader)) {
+        if (CharSequenceUtil.isNotBlank(cookieHeader)) {
             request.header("Cookie", cookieHeader);
         }
 
@@ -121,7 +122,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
                 throw new JmComicWholeFileException("JM 整本文件请求失败，HTTP 状态码: " + response.code());
             }
             ResponseBody body = response.body();
-            if (ObjectUtil.isNull(body)) {
+            if (ObjUtil.isNull(body)) {
                 throw new JmComicWholeFileException("JM 整本文件响应体为空");
             }
             long contentLength = body.contentLength();
@@ -141,12 +142,12 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
     }
 
     private HttpUrl parseDownloadUrl(String downloadUrl) {
-        String normalizedUrl = StrUtil.trim(downloadUrl);
+        String normalizedUrl = CharSequenceUtil.trim(downloadUrl);
         if (normalizedUrl.startsWith("//")) {
             normalizedUrl = "https:" + normalizedUrl;
         }
         HttpUrl url = HttpUrl.parse(normalizedUrl);
-        if (ObjectUtil.isNull(url)
+        if (ObjUtil.isNull(url)
             || (!"http".equalsIgnoreCase(url.scheme()) && !"https".equalsIgnoreCase(url.scheme()))) {
             throw new JmComicWholeFileException("JM 整本下载地址无效");
         }
@@ -157,7 +158,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         if (CollUtil.isEmpty(cookies)) {
             return null;
         }
-        return cookies.stream().filter(ObjectUtil::isNotNull).filter(cookie -> cookie.matches(url))
+        return cookies.stream().filter(ObjUtil::isNotNull).filter(cookie -> cookie.matches(url))
             .map(cookie -> cookie.name() + "=" + cookie.value()).collect(Collectors.joining("; "));
     }
 
@@ -209,7 +210,7 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
         int maxEntries = Math.addExact(Math.multiplyExact(this.properties.getMaxPages(), 2), 32);
         try (ZipInputStream input = new ZipInputStream(new BufferedInputStream(Files.newInputStream(archive)))) {
             ZipEntry entry;
-            while (ObjectUtil.isNotNull(entry = input.getNextEntry())) {
+            while (ObjUtil.isNotNull(entry = input.getNextEntry())) {
                 inspectedEntries++;
                 if (inspectedEntries > maxEntries) {
                     throw new BusinessException(JmComicErrorCode.ARCHIVE_ENTRY_LIMIT);
@@ -293,18 +294,18 @@ public class DefaultJmComicWholeFileService implements JmComicWholeFileService {
     }
 
     private boolean isImageEntry(String entryName) {
-        String lowerName = StrUtil.blankToDefault(entryName, "").toLowerCase(Locale.ROOT);
+        String lowerName = CharSequenceUtil.blankToDefault(entryName, "").toLowerCase(Locale.ROOT);
         return IMAGE_EXTENSIONS.stream().anyMatch(lowerName::endsWith);
     }
 
     private String fileExtension(String fileName) {
-        String lowerName = StrUtil.blankToDefault(fileName, "").toLowerCase(Locale.ROOT);
+        String lowerName = CharSequenceUtil.blankToDefault(fileName, "").toLowerCase(Locale.ROOT);
         return IMAGE_EXTENSIONS.stream().filter(lowerName::endsWith).findFirst().orElse(".img");
     }
 
     private String safePdfFileName(String title, String albumId) {
-        String safeTitle =
-            StrUtil.blankToDefault(title, "jm-" + albumId).replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").trim();
+        String safeTitle = CharSequenceUtil
+            .trim(CharSequenceUtil.blankToDefault(title, "jm-" + albumId).replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_"));
         if (safeTitle.length() > 100) {
             safeTitle = safeTitle.substring(0, 100);
         }

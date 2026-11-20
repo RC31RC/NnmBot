@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.adapter.onebot;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.mikuac.shiro.annotation.GroupDecreaseHandler;
 import com.mikuac.shiro.annotation.GroupIncreaseHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
@@ -72,11 +74,12 @@ public class OneBotGroupMemberEventHandler {
     }
 
     private String firstText(String first, String second) {
-        return first != null && !first.isBlank() ? first : second == null || second.isBlank() ? null : second;
+        return first != null && !CharSequenceUtil.isBlank(first) ? first
+            : second == null || CharSequenceUtil.isBlank(second) ? null : second;
     }
 
     private String normalizeRole(String role) {
-        return switch (role == null ? "" : role.trim().toLowerCase()) {
+        return switch (role == null ? "" : CharSequenceUtil.trim(role).toLowerCase()) {
             case "owner" -> "OWNER";
             case "admin" -> "ADMIN";
             default -> "MEMBER";

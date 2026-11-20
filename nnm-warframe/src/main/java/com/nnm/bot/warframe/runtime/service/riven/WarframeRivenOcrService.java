@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.riven;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.ocr.OcrTextResult;
 import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
 
@@ -22,6 +24,6 @@ public interface WarframeRivenOcrService {
      */
     default String recognize(BotIncomingAttachment attachment) {
         OcrTextResult result = recognizeDetailed(attachment);
-        return result == null ? "" : result.text().trim();
+        return result == null ? "" : CharSequenceUtil.trim(result.text());
     }
 }

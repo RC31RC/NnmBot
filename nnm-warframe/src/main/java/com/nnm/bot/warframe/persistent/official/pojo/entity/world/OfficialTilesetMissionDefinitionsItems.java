@@ -87,14 +87,22 @@ public class OfficialTilesetMissionDefinitionsItems extends OfficialChildRow {
     private OfficialTilesetRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialTilesetMissionDefinitionsItemsAdvancedSpawnersItems> officialTilesetMissionDefinitionsItemsAdvancedSpawnersItemsRows = new ArrayList<>();
+    private List<
+        OfficialTilesetMissionDefinitionsItemsAdvancedSpawnersItems> officialTilesetMissionDefinitionsItemsAdvancedSpawnersItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialTilesetMissionDefinitionsItemsEnemySpecsItems> officialTilesetMissionDefinitionsItemsEnemySpecsItemsRows = new ArrayList<>();
+    private List<
+        OfficialTilesetMissionDefinitionsItemsEnemySpecsItems> officialTilesetMissionDefinitionsItemsEnemySpecsItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialTilesetMissionDefinitionsItemsExtraEnemySpecsItems> officialTilesetMissionDefinitionsItemsExtraEnemySpecsItemsRows = new ArrayList<>();
+    private List<
+        OfficialTilesetMissionDefinitionsItemsExtraEnemySpecsItems> officialTilesetMissionDefinitionsItemsExtraEnemySpecsItemsRows =
+            new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialTilesetMissionDefinitionsItemsItemReferencesItems> officialTilesetMissionDefinitionsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialTilesetMissionDefinitionsItemsItemReferencesItems> officialTilesetMissionDefinitionsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

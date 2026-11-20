@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +15,7 @@ public final class WarframeWorldStateMarkupCleaner {
 
     /** @param text 可能包含游戏颜色或阵营标记的描述；@return 可直接展示的文本。 */
     public static String clean(String text) {
-        return text == null ? null : DISPLAY_MARKERS.matcher(text).replaceAll("").trim();
+        return text == null ? null : CharSequenceUtil.trim(DISPLAY_MARKERS.matcher(text).replaceAll(""));
     }
 
     /** @param value 展示字段或嵌套集合；@return 只清理标记的新展示值。 */

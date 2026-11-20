@@ -1,7 +1,7 @@
 package com.nnm.bot.common.error;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.common.constant.CommonErrorCode;
 import com.nnm.bot.common.response.ApiResponse;
@@ -216,7 +216,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<Void>> validationResponse(String logMessage, String message) {
-        String detail = StrUtil.isBlank(message) ? CommonErrorCode.PARAM_INVALID.getMessage() : message;
+        String detail = CharSequenceUtil.isBlank(message) ? CommonErrorCode.PARAM_INVALID.getMessage() : message;
         log.warn("{}: {}", logMessage, detail);
         return response(CommonErrorCode.PARAM_INVALID, detail);
     }

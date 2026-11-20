@@ -29,7 +29,8 @@ public class ObjectStorageConfiguration {
             .connectionPool(new ConnectionPool(properties.getMaxConcurrentRequests(), 5, TimeUnit.MINUTES)).build();
     }
 
-    /** 创建连接到配置 endpoint 的 MinIO SDK 客户端。
+    /**
+     * 创建连接到配置 endpoint 的 MinIO SDK 客户端。
      *
      * @param objectStorageHttpClient 已配置的 HTTP 客户端
      * @return 可复用的 MinIO 客户端

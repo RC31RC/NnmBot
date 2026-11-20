@@ -1,8 +1,9 @@
 package com.nnm.bot.admin.service.bot.channel.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Map;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
 import com.nnm.bot.admin.pojo.entity.bot.channel.OneBotChannelConfig;
@@ -157,13 +158,13 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     public OneBotAccountProbeDTO probeOneBot(OneBotAccountProbeQuery request) {
         String url = trimToNull(request.connectionUrl());
         String token = trimToNull(request.accessToken());
-        if (ObjectUtil.isNotNull(request.instanceId())) {
+        if (ObjUtil.isNotNull(request.instanceId())) {
             BotChannelInstance instance = instance(request.instanceId(), BotPlatform.ONEBOT);
             OneBotChannelConfig config = instance.getOneBotConfig();
-            if (ObjectUtil.isNull(url)) {
+            if (ObjUtil.isNull(url)) {
                 url = config.getConnectionUrl();
             }
-            if (ObjectUtil.isNull(token)) {
+            if (ObjUtil.isNull(token)) {
                 token = credentialCipher.decrypt(config.getAccessToken());
             }
         }
@@ -180,30 +181,29 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
         QqOfficialChannelConfig official = instance.getQqOfficialConfig();
         return new BotChannelInstanceDTO(instance.getId(), instance.getPlatform(), instance.getInstanceId(),
             instance.getDisplayName(), instance.getBotAccountId(), instance.isEnabled(),
-            ObjectUtil.isNull(oneBot) ? null : oneBot.getConnectionUrl(),
-            ObjectUtil.isNotNull(oneBot) && hasText(oneBot.getAccessToken()),
-            ObjectUtil.isNull(oneBot) ? null : oneBot.getReconnectIntervalSeconds(),
-            ObjectUtil.isNull(official) ? null : official.getAppId(),
-            ObjectUtil.isNotNull(official) && hasText(official.getClientSecret()),
-            ObjectUtil.isNull(official) ? null : official.getTokenUrl(),
-            ObjectUtil.isNull(official) ? null : official.getApiBaseUrl(),
-            ObjectUtil.isNull(official) ? null : official.getGatewayUrl(),
-            ObjectUtil.isNull(official) ? null : official.getIntents(),
-            ObjectUtil.isNull(official) ? null : official.getGatewayConnectTimeoutSeconds(),
-            ObjectUtil.isNull(official) ? null : official.getReconnectDelaySeconds(),
-            ObjectUtil.isNull(snapshot) ? (instance.isEnabled() ? "STOPPED" : "DISABLED") : snapshot.status().name(),
-            ObjectUtil.isNull(snapshot) ? null : snapshot.statusChangedAt(),
-            ObjectUtil.isNull(snapshot) ? null : snapshot.lastError(), instance.getCreatedAt(),
-            instance.getUpdatedAt());
+            ObjUtil.isNull(oneBot) ? null : oneBot.getConnectionUrl(),
+            ObjUtil.isNotNull(oneBot) && hasText(oneBot.getAccessToken()),
+            ObjUtil.isNull(oneBot) ? null : oneBot.getReconnectIntervalSeconds(),
+            ObjUtil.isNull(official) ? null : official.getAppId(),
+            ObjUtil.isNotNull(official) && hasText(official.getClientSecret()),
+            ObjUtil.isNull(official) ? null : official.getTokenUrl(),
+            ObjUtil.isNull(official) ? null : official.getApiBaseUrl(),
+            ObjUtil.isNull(official) ? null : official.getGatewayUrl(),
+            ObjUtil.isNull(official) ? null : official.getIntents(),
+            ObjUtil.isNull(official) ? null : official.getGatewayConnectTimeoutSeconds(),
+            ObjUtil.isNull(official) ? null : official.getReconnectDelaySeconds(),
+            ObjUtil.isNull(snapshot) ? (instance.isEnabled() ? "STOPPED" : "DISABLED") : snapshot.status().name(),
+            ObjUtil.isNull(snapshot) ? null : snapshot.statusChangedAt(),
+            ObjUtil.isNull(snapshot) ? null : snapshot.lastError(), instance.getCreatedAt(), instance.getUpdatedAt());
     }
 
     private void applyOneBot(BotChannelInstance instance, OneBotInstanceSaveDTO request, boolean create) {
         OneBotChannelConfig config = instance.getOneBotConfig();
-        if (ObjectUtil.isNull(config)) {
+        if (ObjUtil.isNull(config)) {
             config = new OneBotChannelConfig();
             instance.setOneBotConfig(config);
         }
-        config.setConnectionUrl(request.connectionUrl().trim());
+        config.setConnectionUrl(CharSequenceUtil.trim(request.connectionUrl()));
         if (create || hasText(request.accessToken())) {
             config.setAccessToken(credentialCipher.encrypt(trimToNull(request.accessToken())));
         }
@@ -212,16 +212,16 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
 
     private void applyQqOfficial(BotChannelInstance instance, QqOfficialInstanceSaveDTO request, boolean create) {
         QqOfficialChannelConfig config = instance.getQqOfficialConfig();
-        if (ObjectUtil.isNull(config)) {
+        if (ObjUtil.isNull(config)) {
             config = new QqOfficialChannelConfig();
             instance.setQqOfficialConfig(config);
         }
-        config.setAppId(request.appId().trim());
+        config.setAppId(CharSequenceUtil.trim(request.appId()));
         if (create || hasText(request.clientSecret())) {
             config.setClientSecret(credentialCipher.encrypt(trimToNull(request.clientSecret())));
         }
-        config.setTokenUrl(request.tokenUrl().trim());
-        config.setApiBaseUrl(request.apiBaseUrl().trim());
+        config.setTokenUrl(CharSequenceUtil.trim(request.tokenUrl()));
+        config.setApiBaseUrl(CharSequenceUtil.trim(request.apiBaseUrl()));
         config.setGatewayUrl(trimToNull(request.gatewayUrl()));
         config.setIntents(request.intents());
         config.setGatewayConnectTimeoutSeconds(request.gatewayConnectTimeoutSeconds());
@@ -230,18 +230,18 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
 
     private void applyCommon(BotChannelInstance instance, String instanceId, String displayName, String botAccountId,
         boolean enabled) {
-        instance.setInstanceId(instanceId.trim());
-        instance.setDisplayName(displayName.trim());
-        instance.setBotAccountId(botAccountId.trim());
+        instance.setInstanceId(CharSequenceUtil.trim(instanceId));
+        instance.setDisplayName(CharSequenceUtil.trim(displayName));
+        instance.setBotAccountId(CharSequenceUtil.trim(botAccountId));
         instance.setEnabled(enabled);
     }
 
     private void requireUnique(Long currentId, String instanceId, BotPlatform platform, String botAccountId) {
-        repository.findByInstanceIdIgnoreCase(instanceId.trim()).filter(existing -> !existing.getId().equals(currentId))
-            .ifPresent(existing -> {
+        repository.findByInstanceIdIgnoreCase(CharSequenceUtil.trim(instanceId))
+            .filter(existing -> !existing.getId().equals(currentId)).ifPresent(existing -> {
                 throw new BusinessException(BotManagementErrorCode.INSTANCE_ID_CONFLICT);
             });
-        repository.findByPlatformAndBotAccountId(platform, botAccountId.trim())
+        repository.findByPlatformAndBotAccountId(platform, CharSequenceUtil.trim(botAccountId))
             .filter(existing -> !existing.getId().equals(currentId)).ifPresent(existing -> {
                 throw new BusinessException(BotManagementErrorCode.ACCOUNT_CONFLICT);
             });
@@ -256,10 +256,10 @@ public class BotChannelManagementServiceImpl implements BotChannelManagementServ
     }
 
     private static String trimToNull(String value) {
-        return StrUtil.isBlank(value) ? null : value.trim();
+        return CharSequenceUtil.isBlank(value) ? null : CharSequenceUtil.trim(value);
     }
 
     private static boolean hasText(String value) {
-        return StrUtil.isNotBlank(value);
+        return CharSequenceUtil.isNotBlank(value);
     }
 }

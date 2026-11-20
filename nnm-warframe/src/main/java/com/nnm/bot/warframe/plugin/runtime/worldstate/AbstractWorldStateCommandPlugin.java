@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.plugin.runtime.worldstate;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.api.CommandInvocation;
 import com.nnm.bot.core.plugin.api.CommandResult;
@@ -51,11 +51,11 @@ public abstract class AbstractWorldStateCommandPlugin extends BotPlugin<Void, Vo
     @Override
     public CommandResult handle(CommandInvocation invocation, Void prepared, Void parsed) {
         WorldStateDTO state = worldStateService.getCurrentState();
-        if (ObjectUtil.isNull(state)) {
+        if (ObjUtil.isNull(state)) {
             return CommandResult.text("Warframe 世界状态暂时还没有加载，请稍后再试");
         }
         WarframeWorldStateCommandVO output = projectionEnricher.enrich(handler.apply(state), invocation.commandCode());
-        if (ObjectUtil.isNull(output)) {
+        if (ObjUtil.isNull(output)) {
             return CommandResult.text("当前没有可用数据");
         }
         // 引用解析后才选择用户展示字段；不要将抓取元数据及订阅匹配标识交给渲染渠道。

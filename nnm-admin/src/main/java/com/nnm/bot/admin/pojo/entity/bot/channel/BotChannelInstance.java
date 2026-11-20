@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.pojo.entity.bot.channel;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.core.channel.constant.BotPlatform;
 import jakarta.persistence.CascadeType;
@@ -71,14 +71,14 @@ public class BotChannelInstance {
 
     public void setOneBotConfig(OneBotChannelConfig config) {
         this.oneBotConfig = config;
-        if (ObjectUtil.isNotNull(config)) {
+        if (ObjUtil.isNotNull(config)) {
             config.setInstance(this);
         }
     }
 
     public void setQqOfficialConfig(QqOfficialChannelConfig config) {
         this.qqOfficialConfig = config;
-        if (ObjectUtil.isNotNull(config)) {
+        if (ObjUtil.isNotNull(config)) {
             config.setInstance(this);
         }
     }

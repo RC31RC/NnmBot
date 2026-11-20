@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.query.forum;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import java.util.List;
 
 /**
@@ -20,7 +20,7 @@ public record ForumArticleQuery(Integer current, Integer size, String keyword, S
      * @param enabled 操作后的启用状态。
      */
     public ForumArticleQuery {
-        tags = tags == null ? List.of()
-            : tags.stream().filter(value -> StrUtil.isNotBlank(value)).map(String::trim).distinct().toList();
+        tags = tags == null ? List.of() : tags.stream().filter(value -> CharSequenceUtil.isNotBlank(value))
+            .map(CharSequenceUtil::trim).distinct().toList();
     }
 }

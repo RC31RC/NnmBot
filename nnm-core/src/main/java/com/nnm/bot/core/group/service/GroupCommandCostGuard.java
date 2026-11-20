@@ -4,7 +4,7 @@ import com.nnm.bot.core.group.context.BotGroupCommandContext;
 import com.nnm.bot.core.group.constant.GroupPointConstants.TransactionType;
 import com.nnm.bot.core.group.constant.GroupPointConstants.PointErrorCode;
 import com.nnm.bot.common.error.BusinessException;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.plugin.api.CommandCostConfigurationDTO;
 import com.nnm.bot.core.plugin.api.CommandCostConfigurationProvider;
@@ -40,7 +40,7 @@ public class GroupCommandCostGuard implements CommandCostGuard {
     @Transactional
     public CommandCostReservationDTO reserve(BotMessageContext context, CommandDescriptor descriptor) {
         CommandCostConfigurationDTO cost = costConfigurationProvider.configuration(descriptor.code());
-        if (ObjectUtil.isNull(cost) || !cost.active()) {
+        if (ObjUtil.isNull(cost) || !cost.active()) {
             return CommandCostReservationDTO.none();
         }
         if (!context.isGroupMessage()) {
@@ -48,13 +48,13 @@ public class GroupCommandCostGuard implements CommandCostGuard {
         }
 
         BotGroupCommandContext groupContext = groupContextResolver.resolve(context).orElse(null);
-        if (ObjectUtil.isNull(groupContext)) {
+        if (ObjUtil.isNull(groupContext)) {
             return denied("当前群聊尚未绑定逻辑群组");
         }
 
         BotGroupMember member = memberIdentityResolver.findOrCreateForWrite(groupContext.group().getId(), context)
             .filter(BotGroupMember::isEnabled).orElse(null);
-        if (ObjectUtil.isNull(member)) {
+        if (ObjUtil.isNull(member)) {
             return denied("当前用户尚未加入该逻辑群组");
         }
 
@@ -93,11 +93,11 @@ public class GroupCommandCostGuard implements CommandCostGuard {
     @Transactional
     public CommandResult commit(BotMessageContext context, CommandDescriptor descriptor,
         CommandCostReservationDTO reservation, CommandResult result) {
-        if (ObjectUtil.isNull(reservation) || !reservation.rewarding()) {
+        if (ObjUtil.isNull(reservation) || !reservation.rewarding()) {
             return result;
         }
         BotGroupCommandContext groupContext = groupContextResolver.resolve(context).orElse(null);
-        if (ObjectUtil.isNull(groupContext)) {
+        if (ObjUtil.isNull(groupContext)) {
             throw new BusinessException(PointErrorCode.GROUP_UNAVAILABLE_AFTER_COMMAND);
         }
         BotGroupMember member = memberIdentityResolver.findOrCreateForWrite(groupContext.group().getId(), context)
@@ -111,7 +111,7 @@ public class GroupCommandCostGuard implements CommandCostGuard {
     @Override
     @Transactional
     public void refund(CommandCostReservationDTO reservation, Throwable cause) {
-        if (ObjectUtil.isNull(reservation) || !reservation.reserved()) {
+        if (ObjUtil.isNull(reservation) || !reservation.reserved()) {
             return;
         }
         pointAccountService.refund(reservation.reference(), "命令必要回复确定未发送退款");

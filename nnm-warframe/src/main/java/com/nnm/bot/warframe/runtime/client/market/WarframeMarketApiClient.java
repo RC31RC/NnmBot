@@ -1,10 +1,11 @@
 package com.nnm.bot.warframe.runtime.client.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.AuctionType;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.warframe.runtime.client.market.exchange.WarframeMarketV1HttpExchange;
@@ -67,8 +68,8 @@ public class WarframeMarketApiClient {
      * @return HTTP结果对象。
      */
     public HttpClient.HttpResult fetchMarketOrdersResult(String itemUrlName, String platform) {
-        String requestPlatform =
-            StrUtil.isBlank(platform) ? properties.getPlatform() : platform.trim().toLowerCase(Locale.ROOT);
+        String requestPlatform = CharSequenceUtil.isBlank(platform) ? properties.getPlatform()
+            : CharSequenceUtil.trim(platform).toLowerCase(Locale.ROOT);
         boolean v2 = "v2".equalsIgnoreCase(properties.getVersion());
         String path = v2 ? "/orders/item/" + itemUrlName : "/items/" + itemUrlName + "/orders";
         if (v2) {
@@ -237,7 +238,8 @@ public class WarframeMarketApiClient {
      * @return 当前接口需要的授权请求头对应的文本。
      */
     private String authorization() {
-        return StrUtil.isBlank(properties.getApiKey()) ? null : "Bearer " + properties.getApiKey().trim();
+        return CharSequenceUtil.isBlank(properties.getApiKey()) ? null
+            : "Bearer " + CharSequenceUtil.trim(properties.getApiKey());
     }
 
     /**

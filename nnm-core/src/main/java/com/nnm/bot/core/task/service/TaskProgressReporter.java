@@ -4,7 +4,8 @@ package com.nnm.bot.core.task.service;
 @FunctionalInterface
 public interface TaskProgressReporter {
 
-    /** 发布进度快照。
+    /**
+     * 发布进度快照。
      *
      * @param stage 当前阶段标识
      * @param message 面向管理端的阶段说明

@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.execution;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupBot;
 import com.nnm.bot.core.group.domain.BotGroupMember;
@@ -106,13 +108,13 @@ public class GroupCommandCoordinator {
         if (receipts.hasEarlierReceiptFromPlatform(context.dispatchId(), context)) {
             return;
         }
-        groupCommands.bindQq(context, match.invocation().arguments().trim());
+        groupCommands.bindQq(context, CharSequenceUtil.trim(match.invocation().arguments()));
     }
 
     private String correlationFingerprint(BotGroupCommandContext group, CommandMatch match) {
         BotMessageContext context = match.invocation().context();
         String commandCode = normalizeCommand(match.invocation().commandCode());
-        String arguments = Objects.requireNonNullElse(match.invocation().arguments(), "").trim();
+        String arguments = CharSequenceUtil.trim(Objects.requireNonNullElse(match.invocation().arguments(), ""));
         String senderIdentity;
         if (SystemCommandCodes.BIND.equals(commandCode)) {
             if (!validBindingReceipt(context, arguments)) {
@@ -152,7 +154,7 @@ public class GroupCommandCoordinator {
     }
 
     private boolean validBindingReceipt(BotMessageContext context, String arguments) {
-        String qq = arguments == null ? "" : arguments.trim();
+        String qq = arguments == null ? "" : CharSequenceUtil.trim(arguments);
         if (!qq.matches("\\d{5,20}")) {
             return false;
         }
@@ -164,7 +166,7 @@ public class GroupCommandCoordinator {
     }
 
     static String nativeIdentity(BotMessageContext context) {
-        if (context.messageId() == null || context.messageId().isBlank())
+        if (context.messageId() == null || CharSequenceUtil.isBlank(context.messageId()))
             return null;
         return digest(Stream.of(context.platform().name(), context.scope().name(), context.botAccountId(),
             context.conversationId(), context.messageId()).map(value -> value.length() + ":" + value)

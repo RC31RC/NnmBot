@@ -15,14 +15,16 @@ public interface RenderEngineProvider {
         return 100;
     }
 
-    /** 检查当前运行环境是否满足引擎启动条件。
+    /**
+     * 检查当前运行环境是否满足引擎启动条件。
      *
      * @param context 引擎运行上下文
      * @return 满足条件时为 {@code true}
      */
     boolean isAvailable(RenderEngineProviderContext context);
 
-    /** 按运行上下文创建引擎实例。
+    /**
+     * 按运行上下文创建引擎实例。
      *
      * @param context 引擎运行上下文
      * @return 可执行 HTML 图片渲染的引擎

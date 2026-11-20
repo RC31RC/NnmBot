@@ -12,7 +12,8 @@ public interface BotReplyContextProvider {
     /** 返回此上下文创建器所属的平台。 */
     BotPlatform platform();
 
-    /** 在已授权的机器人绑定下创建主动消息上下文。
+    /**
+     * 在已授权的机器人绑定下创建主动消息上下文。
      *
      * @param instance 目标渠道实例元数据
      * @param binding 已配置的群组与机器人绑定

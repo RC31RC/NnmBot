@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.config;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.SourceMode;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
@@ -47,25 +48,26 @@ public class WarframeOfficialImportProperties {
      */
     @PostConstruct
     public void validate() {
-        if (sourceMode == null || localDataDirectory == null || StrUtil.isBlank(localDataDirectory.toString())
-            || StrUtil.isBlank(localRef) || localCommit == null
-            || (StrUtil.isNotBlank(localCommit) && !localCommit.matches("[a-fA-F0-9]{40}"))
+        if (sourceMode == null || localDataDirectory == null || CharSequenceUtil.isBlank(localDataDirectory.toString())
+            || CharSequenceUtil.isBlank(localRef) || localCommit == null
+            || (CharSequenceUtil.isNotBlank(localCommit) && !localCommit.matches("[a-fA-F0-9]{40}"))
             || localVersionTimeout == null || localVersionTimeout.compareTo(Duration.ofMillis(1)) < 0
             || localVersionTimeout.compareTo(Duration.ofMinutes(1)) > 0
             || (sourceMode == SourceMode.REMOTE && (!validHttp(apiBaseUrl) || cdnBaseUrls == null
                 || cdnBaseUrls.isEmpty() || cdnBaseUrls.stream().anyMatch(uri -> !validHttps(uri))))
-            || githubToken == null || !githubToken.equals(githubToken.trim()) || githubToken.contains("\n")
-            || githubToken.contains("\r") || repository == null
+            || githubToken == null || !githubToken.equals(CharSequenceUtil.trim(githubToken))
+            || githubToken.contains("\n") || githubToken.contains("\r") || repository == null
             || !repository.matches("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+") || stagingDirectory == null
-            || StrUtil.isBlank(stagingDirectory.toString()) || maxFiles < 1 || maxFiles > 1024 || maxTagPages < 1
-            || maxTagPages > 100 || maxVersionResponseBytes < 1 || maxVersionResponseBytes > 16 * 1024 * 1024L
-            || maxFileBytes < 1 || maxFileBytes > 20_000_000L || maxPendingPreviews < 1 || maxPendingPreviews > maxFiles
-            || staleStagingTtl == null || staleStagingTtl.compareTo(Duration.ofHours(1)) < 0
-            || applyPollInterval == null || applyPollInterval.isNegative() || applyPollInterval.isZero()
-            || applyLeaseTtl == null || applyLeaseTtl.compareTo(Duration.ofMinutes(1)) < 0 || maxApplyAttempts < 1
-            || maxApplyAttempts > 100 || previewTtl == null || previewTtl.isNegative() || previewTtl.isZero()
-            || failedRetention == null || failedRetention.isNegative() || failedRetention.isZero()
-            || activeTaskRetention == null || activeTaskRetention.isNegative() || activeTaskRetention.isZero()) {
+            || CharSequenceUtil.isBlank(stagingDirectory.toString()) || maxFiles < 1 || maxFiles > 1024
+            || maxTagPages < 1 || maxTagPages > 100 || maxVersionResponseBytes < 1
+            || maxVersionResponseBytes > 16 * 1024 * 1024L || maxFileBytes < 1 || maxFileBytes > 20_000_000L
+            || maxPendingPreviews < 1 || maxPendingPreviews > maxFiles || staleStagingTtl == null
+            || staleStagingTtl.compareTo(Duration.ofHours(1)) < 0 || applyPollInterval == null
+            || applyPollInterval.isNegative() || applyPollInterval.isZero() || applyLeaseTtl == null
+            || applyLeaseTtl.compareTo(Duration.ofMinutes(1)) < 0 || maxApplyAttempts < 1 || maxApplyAttempts > 100
+            || previewTtl == null || previewTtl.isNegative() || previewTtl.isZero() || failedRetention == null
+            || failedRetention.isNegative() || failedRetention.isZero() || activeTaskRetention == null
+            || activeTaskRetention.isNegative() || activeTaskRetention.isZero()) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.dataset configuration");
         }
     }

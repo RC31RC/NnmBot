@@ -1,6 +1,6 @@
 package com.nnm.bot.render.config;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -51,12 +51,13 @@ public class RenderPluginProperties {
         this.provider = provider;
     }
 
-    /** 校验插件目录配置。
+    /**
+     * 校验插件目录配置。
      *
      * @throws IllegalArgumentException 插件目录为空时
      */
     public void validate() {
-        if (ObjectUtil.isNull(directory)) {
+        if (ObjUtil.isNull(directory)) {
             throw new IllegalArgumentException("render.plugins.directory must not be null");
         }
     }

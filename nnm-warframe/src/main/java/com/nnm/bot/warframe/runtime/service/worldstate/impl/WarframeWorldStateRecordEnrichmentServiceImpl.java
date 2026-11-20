@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.world.OfficialRegionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.OfficialActivityDTO;
@@ -88,7 +90,8 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
             if (CIRCUIT_TITLES.contains(output.data().get("title"))
                 && output.data().get("items") instanceof Collection<?> rows) {
                 rows.forEach(row -> {
-                    if (row instanceof Map<?, ?> item && item.get("item") instanceof String name && !name.isBlank())
+                    if (row instanceof Map<?, ?> item && item.get("item") instanceof String name
+                        && !CharSequenceUtil.isBlank(name))
                         keys.add(name);
                 });
             }
@@ -194,7 +197,7 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
                     break;
                 }
                 String label = first(record.localizedName(), record.officialName());
-                if (label != null || (description != null && !description.isBlank())) {
+                if (label != null || (description != null && !CharSequenceUtil.isBlank(description))) {
                     presentations.putIfAbsent(key, new RecordPresentation(label, null, description));
                 }
             }
@@ -506,11 +509,11 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
     private static void collectUnkeyedItems(Object value, Set<String> names) {
         if (value instanceof Map<?, ?> map) {
             if (map.get("itemKey") == null && map.get("count") != null && map.get("displayName") instanceof String label
-                && !label.isBlank())
+                && !CharSequenceUtil.isBlank(label))
                 names.add(label);
             map.forEach((key, child) -> {
-                if (ITEM_FIELDS.contains(String.valueOf(key)) && child instanceof String text && !text.isBlank()
-                    && !text.startsWith("/"))
+                if (ITEM_FIELDS.contains(String.valueOf(key)) && child instanceof String text
+                    && !CharSequenceUtil.isBlank(text) && !text.startsWith("/"))
                     names.add(text);
                 collectUnkeyedItems(child, names);
             });
@@ -631,7 +634,7 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
                 if (record.imageUrl() != null && (copy.get("imageUrl") == null || "".equals(copy.get("imageUrl")))) {
                     copy.put("imageUrl", record.imageUrl());
                 }
-                if (record.description() != null && !record.description().isBlank()
+                if (record.description() != null && !CharSequenceUtil.isBlank(record.description())
                     && (copy.get("description") == null || "".equals(copy.get("description")))) {
                     copy.put("description", record.description());
                 }
@@ -820,7 +823,7 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
      */
     private static void collectNodes(Object value, Set<String> nodes) {
         if (value instanceof Map<?, ?> map) {
-            if (map.get("node") instanceof String node && !node.isBlank())
+            if (map.get("node") instanceof String node && !CharSequenceUtil.isBlank(node))
                 nodes.add(node);
             map.values().forEach(child -> collectNodes(child, nodes));
         } else if (value instanceof Collection<?> list) {
@@ -964,7 +967,7 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
             String name = record == null ? null : record.name();
             Object current = index < displayNames.size() ? displayNames.get(index) : value;
             names.add(name != null && !containsChinese(text(current)) ? name : current);
-            if (record != null && record.description() != null && !record.description().isBlank()) {
+            if (record != null && record.description() != null && !CharSequenceUtil.isBlank(record.description())) {
                 descriptions.put(key, record.description());
             }
         }
@@ -994,7 +997,7 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
      * @param values 单个原始键或键列表。
      */
     private static void add(Set<String> keys, String prefix, Object values) {
-        if (values instanceof String value && !value.isBlank())
+        if (values instanceof String value && !CharSequenceUtil.isBlank(value))
             keys.add(prefix + value);
         else if (values instanceof Collection<?> list)
             list.forEach(value -> add(keys, prefix, value));
@@ -1008,7 +1011,8 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
      * @param value 已核实的文本值。
      */
     private static void putIfAbsent(Map<String, Object> display, String key, String value) {
-        if (value != null && !value.isBlank() && (display.get(key) == null || "".equals(display.get(key)))) {
+        if (value != null && !CharSequenceUtil.isBlank(value)
+            && (display.get(key) == null || "".equals(display.get(key)))) {
             display.put(key, value);
         }
     }
@@ -1030,7 +1034,7 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
      * @return 非空文本或空。
      */
     private static String text(Object value) {
-        return value instanceof String string && !string.isBlank() ? string : null;
+        return value instanceof String string && !CharSequenceUtil.isBlank(string) ? string : null;
     }
 
     /**
@@ -1041,7 +1045,7 @@ public class WarframeWorldStateRecordEnrichmentServiceImpl implements WarframeWo
      */
     private static String first(String... values) {
         for (String value : values)
-            if (value != null && !value.isBlank())
+            if (value != null && !CharSequenceUtil.isBlank(value))
                 return value;
         return null;
     }

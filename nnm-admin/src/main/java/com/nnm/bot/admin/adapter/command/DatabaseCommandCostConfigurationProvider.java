@@ -1,6 +1,6 @@
 package com.nnm.bot.admin.adapter.command;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandCost;
@@ -25,11 +25,11 @@ public class DatabaseCommandCostConfigurationProvider implements CommandCostConf
     @Override
     public CommandCostConfigurationDTO configuration(String commandCode) {
         BotCommand command = commandRepository.findByCodeIgnoreCase(commandCode).orElse(null);
-        if (ObjectUtil.isNull(command)) {
+        if (ObjUtil.isNull(command)) {
             return CommandCostConfigurationDTO.free();
         }
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElse(null);
-        if (ObjectUtil.isNull(cost)) {
+        if (ObjUtil.isNull(cost)) {
             return CommandCostConfigurationDTO.free();
         }
         return new CommandCostConfigurationDTO(cost.isEnabled(), cost.getCostPoints(), cost.isRewardEnabled(),

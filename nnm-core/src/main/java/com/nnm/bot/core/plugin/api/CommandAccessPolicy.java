@@ -10,7 +10,8 @@ import java.util.Locale;
  */
 public interface CommandAccessPolicy {
 
-    /** 判断当前消息上下文是否具备命令访问权限。
+    /**
+     * 判断当前消息上下文是否具备命令访问权限。
      *
      * @param context 当前消息及调用者身份
      * @param descriptor 命令静态元数据
@@ -20,7 +21,8 @@ public interface CommandAccessPolicy {
     CommandAccessDecision check(BotMessageContext context, CommandDescriptor descriptor,
         CommandExecutionConfigurationDTO configuration);
 
-    /** 回复实例只检查自身命令能力，不用另一个渠道的身份重新判断调用者权限。
+    /**
+     * 回复实例只检查自身命令能力，不用另一个渠道的身份重新判断调用者权限。
      *
      * @param platform 目标平台
      * @param botAccountId 目标机器人账号
@@ -33,7 +35,8 @@ public interface CommandAccessPolicy {
             ? CommandAccessDecision.permit() : CommandAccessDecision.denied("未提供机器人命令能力校验");
     }
 
-    /** 以布尔值读取 {@link #check} 的授权结果。
+    /**
+     * 以布尔值读取 {@link #check} 的授权结果。
      *
      * @param context 当前消息及调用者身份
      * @param descriptor 命令静态元数据

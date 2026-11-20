@@ -30,7 +30,8 @@ public class BotTopologyStore {
         }
     }
 
-    /** 仅在收到版本变化时重载拓扑。
+    /**
+     * 仅在收到版本变化时重载拓扑。
      *
      * @param version 广播的目标版本
      */
@@ -44,7 +45,8 @@ public class BotTopologyStore {
         }
     }
 
-    /** 返回当前完整拓扑快照。
+    /**
+     * 返回当前完整拓扑快照。
      *
      * @return 已发布的拓扑快照
      */

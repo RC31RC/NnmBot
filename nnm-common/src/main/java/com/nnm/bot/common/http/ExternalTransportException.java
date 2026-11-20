@@ -6,7 +6,8 @@ import com.nnm.bot.common.constant.ExternalHttpErrorCode;
 /** 外部 HTTP 请求未能建立或完成网络传输时抛出。 */
 public class ExternalTransportException extends SystemException {
 
-    /** 保留请求来源和网络传输原因。
+    /**
+     * 保留请求来源和网络传输原因。
      *
      * @param method HTTP 方法
      * @param url 请求地址

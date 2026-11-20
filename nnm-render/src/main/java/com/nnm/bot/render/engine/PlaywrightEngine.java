@@ -18,7 +18,8 @@ public class PlaywrightEngine implements RenderEngine {
     /** 启动 Chromium 时附加的命令行参数。 */
     private final List<String> chromiumArgs;
 
-    /** 创建使用指定 Chromium 参数的引擎。
+    /**
+     * 创建使用指定 Chromium 参数的引擎。
      *
      * @param chromiumArgs 浏览器启动参数
      */

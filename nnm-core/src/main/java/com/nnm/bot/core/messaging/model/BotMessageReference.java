@@ -1,5 +1,7 @@
 package com.nnm.bot.core.messaging.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.ReferenceKind;
 import java.util.List;
 import java.util.Objects;
@@ -14,7 +16,7 @@ import java.util.Objects;
 public record BotMessageReference(ReferenceKind kind, String id, List<BotIncomingAttachment> attachments) {
     public BotMessageReference {
         Objects.requireNonNull(kind, "引用类型不能为空");
-        if (id == null || id.isBlank())
+        if (id == null || CharSequenceUtil.isBlank(id))
             throw new IllegalArgumentException("引用标识不能为空");
         attachments = List.copyOf(attachments);
     }

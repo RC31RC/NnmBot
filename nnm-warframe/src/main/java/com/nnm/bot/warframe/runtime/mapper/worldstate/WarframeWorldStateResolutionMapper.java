@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateResolutionVO;
 import java.util.Arrays;
@@ -166,8 +168,9 @@ public final class WarframeWorldStateResolutionMapper {
      */
     private static String resolvedSiblingName(Map<?, ?> row, String field, String raw) {
         Object name = row.get(field + "Name");
-        if (!(name instanceof String resolved) || resolved.isBlank() || clean(raw).equals(clean(resolved))
-            || INTERNAL_PATH.matcher(resolved).find() || INTERNAL_CODE.matcher(resolved).find())
+        if (!(name instanceof String resolved) || CharSequenceUtil.isBlank(resolved)
+            || clean(raw).equals(clean(resolved)) || INTERNAL_PATH.matcher(resolved).find()
+            || INTERNAL_CODE.matcher(resolved).find())
             return null;
         return clean(resolved);
     }
@@ -179,7 +182,7 @@ public final class WarframeWorldStateResolutionMapper {
      * @return 非完整状态时为 true。
      */
     private static boolean incomplete(Object value) {
-        return value instanceof String code && !code.isBlank() && !COMPLETE_STATUSES.contains(code);
+        return value instanceof String code && !CharSequenceUtil.isBlank(code) && !COMPLETE_STATUSES.contains(code);
     }
 
     /**
@@ -217,18 +220,19 @@ public final class WarframeWorldStateResolutionMapper {
     private static void status(Map<?, ?> row, String path, String statusKey, String rawKey, String fallbackKey,
         String resolvedKey, Map<String, WarframeWorldStateResolutionVO> pending) {
         Object status = row.get(statusKey);
-        if (!(status instanceof String code) || code.isBlank() || COMPLETE_STATUSES.contains(code))
+        if (!(status instanceof String code) || CharSequenceUtil.isBlank(code) || COMPLETE_STATUSES.contains(code))
             return;
-        String field = row.get(rawKey) instanceof String raw && !raw.isBlank() ? rawKey : fallbackKey;
+        String field = row.get(rawKey) instanceof String raw && !CharSequenceUtil.isBlank(raw) ? rawKey : fallbackKey;
         Object rawValue = row.get(field);
-        if (!(rawValue instanceof String raw) || raw.isBlank())
+        if (!(rawValue instanceof String raw) || CharSequenceUtil.isBlank(raw))
             return;
         Object resolvedValue = resolvedKey == null ? null : row.get(resolvedKey);
         String resolved = resolvedValue instanceof String text && !text.equals(raw) ? clean(text) : null;
         String matchedKey = statusKey.equals("challengeResolutionStatus") ? "challengeMatchedKey"
             : statusKey.equals("typeResolutionStatus") ? "typeMatchedKey" : null;
         Object matched = matchedKey == null ? null : row.get(matchedKey);
-        List<String> candidates = matched instanceof String text && !text.isBlank() ? List.of(text) : List.of();
+        List<String> candidates =
+            matched instanceof String text && !CharSequenceUtil.isBlank(text) ? List.of(text) : List.of();
         add(pending, path + "." + field, raw, statusLabel(code), resolved, candidates);
     }
 
@@ -263,7 +267,7 @@ public final class WarframeWorldStateResolutionMapper {
      */
     private static void add(Map<String, WarframeWorldStateResolutionVO> pending, String path, String raw, String status,
         String resolved, List<String> candidates) {
-        if (raw == null || raw.isBlank())
+        if (raw == null || CharSequenceUtil.isBlank(raw))
             return;
         String identity = path + "\u0000" + raw;
         WarframeWorldStateResolutionVO note =
@@ -285,10 +289,10 @@ public final class WarframeWorldStateResolutionMapper {
      */
     /** 组合摘要同时包含已解析名称和内部键时，仅提取确认已解析的完整片段。 */
     private static String resolvedPortion(String text, String raw) {
-        if (raw == null || raw.isBlank() || !text.contains(raw))
+        if (raw == null || CharSequenceUtil.isBlank(raw) || !text.contains(raw))
             return null;
-        String resolved = Arrays
-            .stream(clean(text).split("[,，]")).map(String::trim).filter(part -> !part.isEmpty() && !part.contains(raw)
+        String resolved = Arrays.stream(clean(text).split("[,，]")).map(CharSequenceUtil::trim)
+            .filter(part -> CharSequenceUtil.isNotEmpty(part) && !part.contains(raw)
                 && !INTERNAL_PATH.matcher(part).find() && !INTERNAL_CODE.matcher(part).find())
             .reduce((first, next) -> first + "、" + next).orElse(null);
         return resolved;

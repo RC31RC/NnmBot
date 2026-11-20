@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_GROUPS;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -70,8 +70,9 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
         WarframeOfficialDataDomain domain =
             id == null ? WarframeOfficialDataDomain.fromCode(request.domain()) : models.domain(previous.getClass());
         BusinessAssert.isTrue(domain != WarframeOfficialDataDomain.OTHER, WarframeManagementErrorCode.DATASET_INVALID);
-        String group = StrUtil.trimToEmpty(request.group());
-        BusinessAssert.isTrue(group.isEmpty() || RECORD_GROUPS.getOrDefault(domain, Set.of()).contains(group),
+        String group = CharSequenceUtil.trimToEmpty(request.group());
+        BusinessAssert.isTrue(
+            CharSequenceUtil.isEmpty(group) || RECORD_GROUPS.getOrDefault(domain, Set.of()).contains(group),
             OfficialDataErrorCode.GROUP_INVALID);
         lockDataset(domain);
         if (previous != null)
@@ -88,7 +89,7 @@ public class WarframeOfficialMaintenanceServiceImpl implements WarframeOfficialM
                 WarframeManagementErrorCode.DATASET_INVALID);
             root = records.newRecord(domain.domainCode());
             // 新增独立资料由后端分配身份；编辑和官方覆盖沿用已有业务键，不能随名称变化。
-            root.setBkey((group.isEmpty() ? "" : group + "/") + "self:" + UUID.randomUUID());
+            root.setBkey((CharSequenceUtil.isEmpty(group) ? "" : group + "/") + "self:" + UUID.randomUUID());
             root.setMaintenanceType(MaintenanceType.SELF_MAINTAINED);
             root.setEnabled(true);
         }

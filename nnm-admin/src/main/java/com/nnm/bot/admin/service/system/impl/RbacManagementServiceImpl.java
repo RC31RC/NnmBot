@@ -1,10 +1,11 @@
 package com.nnm.bot.admin.service.system.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.rbac.RbacErrorCode;
 import com.nnm.bot.admin.pojo.dto.system.RoleGrantSaveDTO;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.nnm.bot.admin.pojo.entity.system.SysMenu;
@@ -65,7 +66,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Override
     @Transactional
     public long createUser(long operatorId, UserSaveDTO request) {
-        String username = request.userName().trim();
+        String username = CharSequenceUtil.trim(request.userName());
         BusinessAssert.isFalse(userRepository.existsByUsernameIgnoreCase(username), RbacErrorCode.USERNAME_CONFLICT);
         BusinessAssert.notBlank(request.password(), RbacErrorCode.PASSWORD_REQUIRED);
 
@@ -89,18 +90,18 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         SysUser operator = hierarchyService.operator(operatorId);
         SysUser user = user(userId);
         hierarchyService.checkCanManageUser(operator, user);
-        String username = request.userName().trim();
+        String username = CharSequenceUtil.trim(request.userName());
         userRepository.findByUsernameIgnoreCase(username).filter(existing -> !existing.getId().equals(userId))
             .ifPresent(existing -> {
                 throw new BusinessException(RbacErrorCode.USERNAME_CONFLICT);
             });
 
         user.setUsername(username);
-        if (StrUtil.isNotBlank(request.password())) {
+        if (CharSequenceUtil.isNotBlank(request.password())) {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
         applyUser(user, request);
-        if (ObjectUtil.isNotNull(request.roleCodes())) {
+        if (ObjUtil.isNotNull(request.roleCodes())) {
             Set<SysRole> roles = resolveRoles(request.roleCodes());
             hierarchyService.checkCanAssignRoles(operator, roles);
             user.getRoles().clear();
@@ -146,7 +147,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         SysUser operator = hierarchyService.operator(operatorId);
         int authorityLevel = requestedAuthorityLevel(request, 0);
         hierarchyService.checkRequestedLevel(operator, authorityLevel);
-        String code = request.roleCode().trim();
+        String code = CharSequenceUtil.trim(request.roleCode());
         if (roleRepository.existsByCodeIgnoreCase(code)) {
             throw new BusinessException(RbacErrorCode.ROLE_CODE_CONFLICT);
         }
@@ -165,7 +166,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         hierarchyService.checkCanManageRole(operator, role);
         int authorityLevel = requestedAuthorityLevel(request, role.getAuthorityLevel());
         hierarchyService.checkRequestedLevel(operator, authorityLevel);
-        String code = request.roleCode().trim();
+        String code = CharSequenceUtil.trim(request.roleCode());
         roleRepository.findByCode(code).filter(existing -> !existing.getId().equals(roleId)).ifPresent(existing -> {
             throw new BusinessException(RbacErrorCode.ROLE_CODE_CONFLICT);
         });
@@ -224,7 +225,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Override
     @Transactional
     public long createMenu(MenuSaveDTO request) {
-        if (menuRepository.existsByNameIgnoreCase(request.name().trim())) {
+        if (menuRepository.existsByNameIgnoreCase(CharSequenceUtil.trim(request.name()))) {
             throw new BusinessException(RbacErrorCode.MENU_CODE_CONFLICT);
         }
         validateParent(request.parentId(), null);
@@ -239,8 +240,8 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Transactional
     public void updateMenu(long menuId, MenuSaveDTO request) {
         SysMenu menu = menu(menuId);
-        menuRepository.findByName(request.name().trim()).filter(existing -> !existing.getId().equals(menuId))
-            .ifPresent(existing -> {
+        menuRepository.findByName(CharSequenceUtil.trim(request.name()))
+            .filter(existing -> !existing.getId().equals(menuId)).ifPresent(existing -> {
                 throw new BusinessException(RbacErrorCode.MENU_CODE_CONFLICT);
             });
         validateParent(request.parentId(), menuId);
@@ -269,7 +270,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Override
     @Transactional
     public long createPermission(PermissionSaveDTO request) {
-        if (permissionRepository.existsByCodeIgnoreCase(request.code().trim())) {
+        if (permissionRepository.existsByCodeIgnoreCase(CharSequenceUtil.trim(request.code()))) {
             throw new BusinessException(RbacErrorCode.PERMISSION_CODE_CONFLICT);
         }
         menu(request.menuId());
@@ -284,7 +285,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     @Transactional
     public void updatePermission(long permissionId, PermissionSaveDTO request) {
         SysPermission permission = permission(permissionId);
-        permissionRepository.findByCode(request.code().trim())
+        permissionRepository.findByCode(CharSequenceUtil.trim(request.code()))
             .filter(existing -> !existing.getId().equals(permissionId)).ifPresent(existing -> {
                 throw new BusinessException(RbacErrorCode.PERMISSION_CODE_CONFLICT);
             });
@@ -311,14 +312,14 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         user.setEmail(trimToNull(request.userEmail()));
         user.setGender(trimToNull(request.userGender()));
         user.setAvatar(trimToNull(request.avatar()));
-        if (ObjectUtil.isNotNull(request.enabled())) {
+        if (ObjUtil.isNotNull(request.enabled())) {
             user.setEnabled(request.enabled());
         }
     }
 
     private void applyRole(SysRole role, RoleSaveDTO request, int authorityLevel) {
-        role.setName(request.roleName().trim());
-        role.setCode(request.roleCode().trim());
+        role.setName(CharSequenceUtil.trim(request.roleName()));
+        role.setCode(CharSequenceUtil.trim(request.roleCode()));
         role.setDescription(trimToNull(request.description()));
         role.setEnabled(request.enabled());
         role.setDataScope(request.dataScope());
@@ -326,15 +327,15 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     private int requestedAuthorityLevel(RoleSaveDTO request, int defaultLevel) {
-        return ObjectUtil.isNull(request.authorityLevel()) ? defaultLevel : request.authorityLevel();
+        return ObjUtil.isNull(request.authorityLevel()) ? defaultLevel : request.authorityLevel();
     }
 
     private void applyMenu(SysMenu menu, MenuSaveDTO request) {
         menu.setParentId(request.parentId());
-        menu.setName(request.name().trim());
-        menu.setPath(request.path().trim());
+        menu.setName(CharSequenceUtil.trim(request.name()));
+        menu.setPath(CharSequenceUtil.trim(request.path()));
         menu.setComponent(trimToNull(request.component()));
-        menu.setTitle(request.title().trim());
+        menu.setTitle(CharSequenceUtil.trim(request.title()));
         menu.setIcon(trimToNull(request.icon()));
         menu.setSortOrder(request.sortOrder());
         menu.setKeepAlive(request.keepAlive());
@@ -344,8 +345,8 @@ public class RbacManagementServiceImpl implements RbacManagementService {
 
     private void applyPermission(SysPermission permission, PermissionSaveDTO request) {
         permission.setMenuId(request.menuId());
-        permission.setCode(request.code().trim());
-        permission.setName(request.name().trim());
+        permission.setCode(CharSequenceUtil.trim(request.code()));
+        permission.setName(CharSequenceUtil.trim(request.name()));
         permission.setType(request.type());
         permission.setEnabled(request.enabled());
     }
@@ -354,8 +355,8 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         if (CollUtil.isEmpty(roleCodes)) {
             return new LinkedHashSet<>();
         }
-        Set<String> codes = roleCodes.stream().filter(Objects::nonNull).map(String::trim)
-            .filter(code -> !code.isEmpty()).collect(Collectors.toSet());
+        Set<String> codes = roleCodes.stream().filter(Objects::nonNull).map(CharSequenceUtil::trim)
+            .filter(CharSequenceUtil::isNotEmpty).collect(Collectors.toSet());
         Set<SysRole> roles = roleRepository.findAll().stream().filter(role -> codes.contains(role.getCode()))
             .collect(Collectors.toCollection(LinkedHashSet::new));
         if (roles.size() != codes.size()) {
@@ -372,7 +373,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     private void validateParent(Long parentId, Long menuId) {
-        if (ObjectUtil.isNull(parentId)) {
+        if (ObjUtil.isNull(parentId)) {
             return;
         }
         if (Objects.equals(parentId, menuId)) {
@@ -380,7 +381,7 @@ public class RbacManagementServiceImpl implements RbacManagementService {
         }
         SysMenu parent = menu(parentId);
         Set<Long> visited = new HashSet<>();
-        while (ObjectUtil.isNotNull(parent.getParentId())) {
+        while (ObjUtil.isNotNull(parent.getParentId())) {
             if (!visited.add(parent.getId()) || Objects.equals(parent.getParentId(), menuId)) {
                 throw new BusinessException(RbacErrorCode.MENU_PARENT_CYCLE);
             }
@@ -407,6 +408,6 @@ public class RbacManagementServiceImpl implements RbacManagementService {
     }
 
     private String trimToNull(String value) {
-        return StrUtil.isBlank(value) ? null : value.trim();
+        return CharSequenceUtil.isBlank(value) ? null : CharSequenceUtil.trim(value);
     }
 }

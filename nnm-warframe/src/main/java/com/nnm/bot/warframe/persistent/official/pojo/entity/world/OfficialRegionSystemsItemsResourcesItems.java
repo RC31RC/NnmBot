@@ -115,5 +115,7 @@ public class OfficialRegionSystemsItemsResourcesItems extends OfficialChildRow {
     private OfficialRegionSystemsItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRegionSystemsItemsResourcesItemsItemReferencesItems> officialRegionSystemsItemsResourcesItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialRegionSystemsItemsResourcesItemsItemReferencesItems> officialRegionSystemsItemsResourcesItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

@@ -7,7 +7,7 @@ import com.nnm.bot.admin.pojo.vo.system.MenuVO;
 import com.nnm.bot.admin.pojo.vo.auth.UserInfoVO;
 import com.nnm.bot.admin.controller.assembler.system.AdminSystemViewAssembler;
 import com.nnm.bot.admin.controller.assembler.auth.AdminAuthViewAssembler;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
@@ -57,7 +57,7 @@ public class RbacController {
     @PostMapping("/roles/query")
     @SaCheckPermission("system:role:view")
     public ApiResponse<PageResult<RoleListVO>> roles(@RequestBody RoleQuery request) {
-        String keyword = StrUtil.isBlank(request.roleName()) ? request.roleCode() : request.roleName();
+        String keyword = CharSequenceUtil.isBlank(request.roleName()) ? request.roleCode() : request.roleName();
         return ApiResponse.ok(AdminSystemViewAssembler.toRoleListVO(rbacQueryService.roles(StpUtil.getLoginIdAsLong(),
             keyword, request.current() == null ? 1 : request.current(), request.size() == null ? 20 : request.size())));
     }

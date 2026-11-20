@@ -1,5 +1,7 @@
 package com.nnm.bot.core.qqofficial.message.context;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.BotIncomingAttachmentType;
 import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
 import com.nnm.bot.core.qqofficial.gateway.dto.QqOfficialGatewayEventDTO;
@@ -79,7 +81,7 @@ public final class QqOfficialMessageAttachmentMapper {
 
     private static String firstText(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank())
+            if (value != null && !CharSequenceUtil.isBlank(value))
                 return value;
         }
         return null;

@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.service.riven.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.common.config.ocr.OcrProperties;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.ocr.OcrService;
@@ -35,7 +35,7 @@ public class WarframeRivenOcrServiceImpl implements WarframeRivenOcrService {
         if (attachment == null || !attachment.isImage() || !attachment.hasRemoteReference()) {
             return new OcrTextResult("", List.of());
         }
-        if (StrUtil.isBlank(attachment.url())) {
+        if (CharSequenceUtil.isBlank(attachment.url())) {
             // fileId 需要渠道级文件 API，不能把平台标识拼成 URL。
             return new OcrTextResult("", List.of());
         }

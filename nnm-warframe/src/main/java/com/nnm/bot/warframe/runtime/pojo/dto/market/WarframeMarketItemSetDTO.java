@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import java.util.List;
 
 /**
@@ -24,10 +25,10 @@ public record WarframeMarketItemSetDTO(String id, List<WarframeMarketItemDTO> it
      * @param rawJson 用于审核或排障的原始响应文本。
      */
     public WarframeMarketItemSetDTO {
-        id = StrUtil.emptyIfNull(id).trim();
+        id = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(id));
         items = CollUtil.isEmpty(items) ? List.of() : List.copyOf(items);
-        apiVersion = StrUtil.emptyIfNull(apiVersion).trim();
-        error = StrUtil.emptyIfNull(error).trim();
-        rawJson = StrUtil.emptyIfNull(rawJson);
+        apiVersion = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(apiVersion));
+        error = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(error));
+        rawJson = CharSequenceUtil.emptyIfNull(rawJson);
     }
 }

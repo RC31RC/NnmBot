@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityTermGroup;
@@ -167,7 +168,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             String code = commandCode(commandCode, output);
             var scoped = scopedResolutions(output, code, resolutions);
             var textReplacements = scoped.values().stream().filter(WarframeReferenceResolutionDTO::resolved)
-                .filter(resolution -> !StrUtil.equals(resolution.reference(), resolution.displayName()))
+                .filter(resolution -> !CharSequenceUtil.equals(resolution.reference(), resolution.displayName()))
                 .sorted(Comparator
                     .comparingInt((WarframeReferenceResolutionDTO resolution) -> resolution.reference().length())
                     .reversed())
@@ -198,7 +199,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
         var group = research ? WarframeCommunityTermGroup.ARCHIMEDEA
             : sortie ? WarframeCommunityTermGroup.SORTIE_MODIFIER : WarframeCommunityTermGroup.BOUNTY_STAGE;
         var terms = communityCatalog.displayTerms(group);
-        if (terms == null || terms.isEmpty())
+        if (CollUtil.isEmpty(terms))
             return official;
         Map<String, WarframeReferenceType> references = new LinkedHashMap<>();
         collect(output.data(), null, references);
@@ -269,7 +270,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      * @return 满足两条数据是否指向同一游戏节点时为真，否则为假。
      */
     private static boolean sameNode(String left, String right) {
-        if (StrUtil.isBlank(left) || StrUtil.isBlank(right))
+        if (CharSequenceUtil.isBlank(left) || CharSequenceUtil.isBlank(right))
             return false;
         // 保留来源的全部节点键；不把不同星球的同名节点模糊合并。
         return left.equals(right);
@@ -299,8 +300,8 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      */
     private static Map<String, String> stateDescriptions(List<WarframeStateTranslationDetailsDTO> translations) {
         Map<String, String> descriptions = new LinkedHashMap<>();
-        translations.stream().filter(record -> StrUtil.isNotBlank(record.uniqueName()))
-            .filter(record -> StrUtil.isNotBlank(record.description()))
+        translations.stream().filter(record -> CharSequenceUtil.isNotBlank(record.uniqueName()))
+            .filter(record -> CharSequenceUtil.isNotBlank(record.description()))
             .forEach(record -> descriptions.putIfAbsent(record.uniqueName(), record.description()));
         return Map.copyOf(descriptions);
     }
@@ -331,9 +332,9 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
         if (value instanceof Map<?, ?> map) {
             Object job = map.get("jobType");
             Object pool = map.get("rewardPoolReference");
-            if (job != null && StrUtil.isNotBlank(job.toString()))
+            if (job != null && CharSequenceUtil.isNotBlank(job.toString()))
                 jobs.add(job.toString());
-            if (pool != null && StrUtil.isNotBlank(pool.toString()))
+            if (pool != null && CharSequenceUtil.isNotBlank(pool.toString()))
                 pools.add(pool.toString());
             map.values().forEach(child -> collectBountyKeys(child, jobs, pools));
         } else if (value instanceof Collection<?> values) {
@@ -373,14 +374,14 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             // 仅补静态定义，不替换动态实例、时间、状态和奖励池引用。
             // 引用解析只遍历 Map/List；不要把包含内部词条路径的 DTO 直接交给命令。
             Map<String, Object> displayDefinition = new LinkedHashMap<>();
-            if (StrUtil.isNotBlank(definition.nameKey())) {
+            if (CharSequenceUtil.isNotBlank(definition.nameKey())) {
                 displayDefinition.put("title", definition.nameKey());
                 Object type = result.get("type");
-                if (type == null || StrUtil.isBlank(type.toString()) || jobType.equals(type)) {
+                if (type == null || CharSequenceUtil.isBlank(type.toString()) || jobType.equals(type)) {
                     result.put("type", definition.nameKey());
                 }
             }
-            if (StrUtil.isNotBlank(definition.descriptionKey())) {
+            if (CharSequenceUtil.isNotBlank(definition.descriptionKey())) {
                 displayDefinition.put("description", definition.descriptionKey());
                 result.putIfAbsent("description", definition.descriptionKey());
             }
@@ -389,23 +390,23 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             result.put("definition", displayDefinition);
         });
         translations.stream().filter(record -> jobType.equals(record.uniqueName())).findFirst().ifPresent(record -> {
-            if (StrUtil.isNotBlank(record.displayName()))
+            if (CharSequenceUtil.isNotBlank(record.displayName()))
                 result.put("type", record.displayName());
-            if (StrUtil.isNotBlank(record.description()))
+            if (CharSequenceUtil.isNotBlank(record.description()))
                 result.put("description", record.description());
         });
         String stage = String.valueOf(result.getOrDefault("locationTag", ""));
         var names = stageNames.getOrDefault(WarframeNameNormalizer.phrase(stage), List.of());
         String type = String.valueOf(result.getOrDefault("type", ""));
         if (Boolean.TRUE.equals(result.get("isVault")) && names.size() == 1
-            && (StrUtil.isBlank(type) || "隔离库".equals(type) || jobType.equals(type) || stage.equals(type))) {
+            && (CharSequenceUtil.isBlank(type) || "隔离库".equals(type) || jobType.equals(type) || stage.equals(type))) {
             result.put("type", names.getFirst());
             result.put("locationTagReference", stage);
         }
         Object poolValue = result.remove("rewardPoolReference");
         String poolReference = poolValue == null ? "" : poolValue.toString();
         String displayType = result.get("type") == null ? null : result.get("type").toString();
-        if (StrUtil.isBlank(displayType) && isVaultBountyPool(poolReference)) {
+        if (CharSequenceUtil.isBlank(displayType) && isVaultBountyPool(poolReference)) {
             result.put("type", "隔离库赏金");
         }
         if (result.get("rewards") instanceof List<?> rewards && CollUtil.isEmpty(rewards)) {
@@ -461,8 +462,8 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                 var rule =
                     translations.stream().filter(row -> reference.equals(row.uniqueName())).findFirst().orElse(null);
                 option.put("mission",
-                    rule != null && StrUtil.isNotBlank(rule.displayName()) ? rule.displayName() : "未收录阶段任务名称");
-                if (rule != null && StrUtil.isNotBlank(rule.description()))
+                    rule != null && CharSequenceUtil.isNotBlank(rule.displayName()) ? rule.displayName() : "未收录阶段任务名称");
+                if (rule != null && CharSequenceUtil.isNotBlank(rule.description()))
                     option.put("description", rule.description());
                 return option;
             }).toList());
@@ -563,8 +564,8 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
         for (String key : List.of("missionType", "deviation")) {
             if (original.get(key) instanceof String reference) {
                 String description = descriptions.get(reference);
-                if (StrUtil.isNotBlank(description) && (result.get("description") == null
-                    || StrUtil.isBlank(String.valueOf(result.get("description"))))) {
+                if (CharSequenceUtil.isNotBlank(description) && (result.get("description") == null
+                    || CharSequenceUtil.isBlank(String.valueOf(result.get("description"))))) {
                     result.put("description", description);
                 }
             }
@@ -573,7 +574,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             if (original.get(key) instanceof List<?> entries) {
                 Map<String, String> explanations = new LinkedHashMap<>();
                 entries.stream().filter(String.class::isInstance).map(String.class::cast).forEach(reference -> {
-                    if (StrUtil.isNotBlank(descriptions.get(reference))) {
+                    if (CharSequenceUtil.isNotBlank(descriptions.get(reference))) {
                         explanations.put(reference, descriptions.get(reference));
                     }
                 });
@@ -616,7 +617,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             return;
         }
         if (value instanceof String reference && isReferenceField(fieldName)
-            && !isCompositeRewardSummary(fieldName, reference) && StrUtil.isNotBlank(reference)) {
+            && !isCompositeRewardSummary(fieldName, reference) && CharSequenceUtil.isNotBlank(reference)) {
             references.putIfAbsent(reference, typeHint(fieldName));
         }
     }
@@ -640,7 +641,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
         Map<String, Object> result = new LinkedHashMap<>();
         source.forEach((keyValue, value) -> {
             String key = String.valueOf(keyValue);
-            String childPath = StrUtil.isBlank(path) ? key : path + "." + key;
+            String childPath = CharSequenceUtil.isBlank(path) ? key : path + "." + key;
             EnrichedValue enriched = enrichValue(value, key, childPath, resolutions, commandCode, unresolved,
                 nightwaveDescriptions, calendarRules);
             result.put(key, enriched.value());
@@ -649,14 +650,14 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
         enrichRewardSummary(source, result, "attackerReward", "attackerRewards");
         enrichRewardSummary(source, result, "defenderReward", "defenderRewards");
         if ("nightwave".equals(commandCode) && result.get("challenge") instanceof String challenge
-            && (result.get("title") == null || StrUtil.isBlank(result.get("title").toString()))) {
+            && (result.get("title") == null || CharSequenceUtil.isBlank(result.get("title").toString()))) {
             result.put("title", challenge);
         }
         if ("nightwave".equals(commandCode)
-            && (result.get("description") == null || StrUtil.isBlank(result.get("description").toString()))
+            && (result.get("description") == null || CharSequenceUtil.isBlank(result.get("description").toString()))
             && source.get("challenge") instanceof String challenge) {
             String description = nightwaveDescriptions.get(challenge);
-            if (StrUtil.isNotBlank(description)) {
+            if (CharSequenceUtil.isNotBlank(description)) {
                 // 引用解析完成后再补中文说明，避免 description 被当作待解析内部标识。
                 result.put("description", description);
             }
@@ -677,18 +678,18 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
     private static void applyCalendarRule(Map<?, ?> source, Map<String, Object> result,
         List<WarframeStateTranslationDetailsDTO> rules) {
         String key = firstText(source, "uniqueName", "title", "challenge");
-        if (StrUtil.isBlank(key)) {
+        if (CharSequenceUtil.isBlank(key)) {
             return;
         }
-        rules.stream().filter(rule -> StrUtil.equals(rule.uniqueName(), key)).findFirst().ifPresent(rule -> {
-            if (StrUtil.isNotBlank(rule.displayName())
-                && (result.get("title") == null || StrUtil.isBlank(result.get("title").toString())
-                    || StrUtil.equals(String.valueOf(result.get("title")), key))) {
+        rules.stream().filter(rule -> CharSequenceUtil.equals(rule.uniqueName(), key)).findFirst().ifPresent(rule -> {
+            if (CharSequenceUtil.isNotBlank(rule.displayName())
+                && (result.get("title") == null || CharSequenceUtil.isBlank(result.get("title").toString())
+                    || CharSequenceUtil.equals(String.valueOf(result.get("title")), key))) {
                 result.put("title", rule.displayName());
             }
-            if (StrUtil.isNotBlank(rule.description())
-                && (result.get("description") == null || StrUtil.isBlank(result.get("description").toString())
-                    || StrUtil.equals(String.valueOf(result.get("description")), key))) {
+            if (CharSequenceUtil.isNotBlank(rule.description())
+                && (result.get("description") == null || CharSequenceUtil.isBlank(result.get("description").toString())
+                    || CharSequenceUtil.equals(String.valueOf(result.get("description")), key))) {
                 result.put("description", rule.description());
             }
         });
@@ -704,7 +705,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
     private static String firstText(Map<?, ?> source, String... keys) {
         for (String key : keys) {
             Object value = source.get(key);
-            if (value instanceof String text && StrUtil.isNotBlank(text)) {
+            if (value instanceof String text && CharSequenceUtil.isNotBlank(text)) {
                 return text;
             }
         }
@@ -731,8 +732,9 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                 Object raw =
                     references.get(index) instanceof Map<?, ?> entry ? entry.get("item") : references.get(index);
                 Object localized = names.get(index) instanceof Map<?, ?> entry ? entry.get("item") : names.get(index);
-                if (raw instanceof String reference && StrUtil.isNotBlank(reference) && localized instanceof String name
-                    && StrUtil.isNotBlank(name) && !reference.equals(name)) {
+                if (raw instanceof String reference && CharSequenceUtil.isNotBlank(reference)
+                    && localized instanceof String name && CharSequenceUtil.isNotBlank(name)
+                    && !reference.equals(name)) {
                     replacements.put(reference, name);
                 }
             }
@@ -742,7 +744,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
             List<String> names = new ArrayList<>();
             for (Object value : localized) {
                 Object item = value instanceof Map<?, ?> row ? row.get("item") : value;
-                if (!(item instanceof String name) || name.startsWith("/") || name.isBlank())
+                if (!(item instanceof String name) || name.startsWith("/") || CharSequenceUtil.isBlank(name))
                     break;
                 names.add(name);
             }
@@ -798,7 +800,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
                 return EnrichedValue.unchanged(value);
             }
             if (resolution != null && resolution.resolved()) {
-                boolean changed = !StrUtil.equals(reference, resolution.displayName());
+                boolean changed = !CharSequenceUtil.equals(reference, resolution.displayName());
                 return new EnrichedValue(resolution.displayName(), reference, changed, false, List.of());
             }
             unresolved.add(new WarframeWorldStateUnresolvedReferenceDTO(commandCode, path, reference,
@@ -842,7 +844,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      * @return 游戏资料引用类型对象。
      */
     private static WarframeReferenceType typeHint(String fieldName) {
-        String normalized = StrUtil.emptyIfNull(fieldName).toLowerCase(Locale.ROOT);
+        String normalized = CharSequenceUtil.emptyIfNull(fieldName).toLowerCase(Locale.ROOT);
         return switch (normalized) {
             case "node", "nodes", "location", "lastdiscoveredlocation" -> WarframeReferenceType.NODE;
             case "type", "mission", "missiontype", "attackermissions", "defendermissions" ->
@@ -895,7 +897,7 @@ public class WarframeReferenceProjectionEnrichmentServiceImpl implements Warfram
      * @return 用于匹配官方状态规则的命令代码。
      */
     private static String commandCode(String requested, WarframeWorldStateCommandVO output) {
-        if (StrUtil.isNotBlank(requested)) {
+        if (CharSequenceUtil.isNotBlank(requested)) {
             return requested;
         }
         String title = output.data().get("title") == null ? "" : String.valueOf(output.data().get("title"));

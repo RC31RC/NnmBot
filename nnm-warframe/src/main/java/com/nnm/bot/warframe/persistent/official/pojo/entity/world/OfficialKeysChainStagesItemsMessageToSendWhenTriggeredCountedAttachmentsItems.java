@@ -52,5 +52,7 @@ public class OfficialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttach
     private OfficialKeysChainStagesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsItemReferencesItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsItemReferencesItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsItemReferencesItems> officialKeysChainStagesItemsMessageToSendWhenTriggeredCountedAttachmentsItemsItemReferencesItemsRows =
+            new ArrayList<>();
 }

@@ -1,8 +1,8 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.worldstate;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -56,7 +56,6 @@ import java.util.Objects;
  * @param marketCategories 当前商城分类与商品
  * @param darkSectors 黑暗地带控制状态
  * @param temporaryActivity Tmp 内的寻呼机和社区目标
- * @param kuvaMissions 独立结构化任务流补充的当前赤毒任务
  */
 public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, List<InvasionDTO> invasions,
     SortieDTO sortie, CetusCycleDTO cetusCycle, VallisCycleDTO vallisCycle, CambionCycleDTO cambionCycle,
@@ -70,8 +69,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
     SimarisDTO simaris, SentientOutpostDTO sentientOutpost, List<ClanInitiativeDTO> clanInitiatives,
     List<CircuitChoiceDTO> circuitChoices, List<CalendarSeasonDTO> calendarSeasons, List<VaultTraderDTO> vaultTraders,
     List<WeeklyChallengeDTO> weeklyChallenges, List<DarkSectorDTO> darkSectors, List<DescentDTO> descents,
-    List<MarketCategoryDTO> marketCategories, TemporaryActivityDTO temporaryActivity,
-    List<KuvaMissionDTO> kuvaMissions) {
+    List<MarketCategoryDTO> marketCategories, TemporaryActivityDTO temporaryActivity) {
 
     /**
      * 使用本机周期推算结果构建新快照，保留其他分区。
@@ -91,7 +89,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
             syndicateMissions, steelPathOfferings, activeMissions, archonHunts, buildLabel, globalUpgrades, flashSales,
             persistentEnemies, metadata, archimedeas, constructionProgress, simaris, sentientOutpost, clanInitiatives,
             circuitChoices, calendarSeasons, vaultTraders, weeklyChallenges, darkSectors, descents, marketCategories,
-            temporaryActivity, kuvaMissions);
+            temporaryActivity);
     }
 
     /**
@@ -106,7 +104,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
             events, news, syndicateMissions, steelPathOfferings, activeMissions, archonHunts, buildLabel,
             globalUpgrades, flashSales, persistentEnemies, metadata, archimedeas, constructionProgress, simaris,
             sentientOutpost, clanInitiatives, circuitChoices, calendarSeasons, vaultTraders, weeklyChallenges,
-            darkSectors, descents, marketCategories, temporaryActivity, kuvaMissions);
+            darkSectors, descents, marketCategories, temporaryActivity);
     }
 
     /**
@@ -121,7 +119,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
             events, news, missions, steelPathOfferings, activeMissions, archonHunts, buildLabel, globalUpgrades,
             flashSales, persistentEnemies, metadata, archimedeas, constructionProgress, simaris, sentientOutpost,
             clanInitiatives, circuitChoices, calendarSeasons, vaultTraders, weeklyChallenges, darkSectors, descents,
-            marketCategories, temporaryActivity, kuvaMissions);
+            marketCategories, temporaryActivity);
     }
 
     /**
@@ -163,7 +161,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
             nightwave, timestamp, sorties, voidTraders, earthCycle, duviriCycle, zarimanCycle, dailyDeals, events, news,
             syndicateMissions, steelPathOfferings, activeMissions, archonHunts, null, List.of(), List.of(), List.of(),
             metadata, List.of(), null, null, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-            List.of(), List.of(), null, List.of());
+            List.of(), List.of(), null);
     }
 
     /**
@@ -185,14 +183,13 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
         SortieDTO sortie, CetusCycleDTO cetusCycle, VallisCycleDTO vallisCycle, CambionCycleDTO cambionCycle,
         VoidTraderDTO voidTrader, ArbitrationDTO arbitration, List<NightwaveMissionDTO> nightwave, Instant timestamp) {
         this(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle, voidTrader, arbitration,
-            nightwave, timestamp, ObjectUtil.isNull(sortie) ? List.of() : List.of(sortie),
-            ObjectUtil.isNull(voidTrader) ? List.of() : List.of(voidTrader), null, null, null, List.of(), List.of(),
+            nightwave, timestamp, ObjUtil.isNull(sortie) ? List.of() : List.of(sortie),
+            ObjUtil.isNull(voidTrader) ? List.of() : List.of(voidTrader), null, null, null, List.of(), List.of(),
             List.of(), List.of(), List.of(),
             CollUtil.isEmpty(fissures) ? List.of()
                 : fissures.stream().filter(Objects::nonNull).map(ActiveMissionDTO::fromFissure).toList(),
             List.of(), null, List.of(), List.of(), List.of(), WorldStateMetadataDTO.unknown(timestamp), List.of(), null,
-            null, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null,
-            List.of());
+            null, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), null);
     }
 
     /**
@@ -241,7 +238,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
      */
     public WorldStateDTO {
         // 统一缺省值，保证 JSON 往返转换后记录相等性与访问器结果一致。
-        buildLabel = StrUtil.emptyIfNull(buildLabel);
+        buildLabel = CharSequenceUtil.emptyIfNull(buildLabel);
         alerts = immutable(alerts);
         fissures = immutable(fissures);
         invasions = immutable(invasions);
@@ -267,8 +264,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
         darkSectors = immutable(darkSectors);
         descents = immutable(descents);
         marketCategories = immutable(marketCategories);
-        kuvaMissions = immutable(kuvaMissions);
-        metadata = ObjectUtil.isNull(metadata) ? WorldStateMetadataDTO.unknown(timestamp) : metadata;
+        metadata = ObjUtil.isNull(metadata) ? WorldStateMetadataDTO.unknown(timestamp) : metadata;
     }
 
     /** Tmp 中明确绑定的寻呼机文本与按物品区分的 QTCC 累计目标。 */
@@ -286,27 +282,13 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
     public record CommunityCounterDTO(String item, Long current, Long target) {
     }
 
-    /** 非官方 PHP 下发、经外部任务流确认正在进行的赤毒任务。 */
-    public record KuvaMissionDTO(String node, String missionType, Instant activation, Instant expiry) {
-    }
-
-    /** @param missions 同一小时内的有效外部赤毒任务；@return 保留官方数据的新快照。 */
-    public WorldStateDTO withKuvaMissions(List<KuvaMissionDTO> missions) {
-        return new WorldStateDTO(alerts, fissures, invasions, sortie, cetusCycle, vallisCycle, cambionCycle, voidTrader,
-            arbitration, nightwave, timestamp, sorties, voidTraders, earthCycle, duviriCycle, zarimanCycle, dailyDeals,
-            events, news, syndicateMissions, steelPathOfferings, activeMissions, archonHunts, buildLabel,
-            globalUpgrades, flashSales, persistentEnemies, metadata, archimedeas, constructionProgress, simaris,
-            sentientOutpost, clanInitiatives, circuitChoices, calendarSeasons, vaultTraders, weeklyChallenges,
-            darkSectors, descents, marketCategories, temporaryActivity, missions);
-    }
-
     /**
      * 读取当前突击列表，单条输入按列表返回。
      *
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<SortieDTO> allSorties() {
-        return CollUtil.isEmpty(sorties) && ObjectUtil.isNotNull(sortie) ? List.of(sortie) : sorties;
+        return sorties.isEmpty() && ObjUtil.isNotNull(sortie) ? List.of(sortie) : sorties;
     }
 
     /**
@@ -315,7 +297,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<VoidTraderDTO> allVoidTraders() {
-        return CollUtil.isEmpty(voidTraders) && ObjectUtil.isNotNull(voidTrader) ? List.of(voidTrader) : voidTraders;
+        return voidTraders.isEmpty() && ObjUtil.isNotNull(voidTrader) ? List.of(voidTrader) : voidTraders;
     }
 
     /**
@@ -324,7 +306,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
      * @return 按当前条件筛选或转换后的数据集合。
      */
     public List<ActiveMissionDTO> allActiveMissions() {
-        return CollUtil.isEmpty(activeMissions) ? fissures.stream().map(ActiveMissionDTO::fromFissure).toList()
+        return activeMissions.isEmpty() ? fissures.stream().map(ActiveMissionDTO::fromFissure).toList()
             : activeMissions;
     }
 
@@ -343,7 +325,7 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
      * @return 构造标签标题对应的文本。
      */
     public String buildLabel() {
-        return StrUtil.emptyIfNull(buildLabel);
+        return CharSequenceUtil.emptyIfNull(buildLabel);
     }
 
     /**
@@ -354,8 +336,8 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
      */
     public Duration ageAt(Instant now) {
         Objects.requireNonNull(now, "now must not be null");
-        Instant captured = ObjectUtil.isNull(metadata.fetchedAt()) ? timestamp : metadata.fetchedAt();
-        return ObjectUtil.isNull(captured) ? Duration.ZERO
+        Instant captured = ObjUtil.isNull(metadata.fetchedAt()) ? timestamp : metadata.fetchedAt();
+        return ObjUtil.isNull(captured) ? Duration.ZERO
             : Duration.between(captured, now).isNegative() ? Duration.ZERO : Duration.between(captured, now);
     }
 
@@ -1320,8 +1302,8 @@ public record WorldStateDTO(List<AlertDTO> alerts, List<FissureDTO> fissures, Li
          * @param contentDigest 内容摘要。
          */
         public WorldStateMetadataDTO {
-            source = StrUtil.isBlank(source) ? "unknown" : source;
-            schemaVersion = StrUtil.isBlank(schemaVersion) ? "nnm-world-state" : schemaVersion;
+            source = CharSequenceUtil.isBlank(source) ? "unknown" : source;
+            schemaVersion = CharSequenceUtil.isBlank(schemaVersion) ? "nnm-world-state" : schemaVersion;
         }
 
         /**

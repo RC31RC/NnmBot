@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenAttributeDTO;
@@ -49,7 +50,7 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
     @Override
     public List<RelatedCommand> relatedCommands(CommandResult result) {
         String weapon = result.actionContext().get("weapon.name");
-        if (StrUtil.isBlank(weapon))
+        if (CharSequenceUtil.isBlank(weapon))
             return List.of();
         return List.of(new RelatedCommand(WarframeCommandCodes.RIVEN_WEEKLY, "裂罅走势",
             List.of(new RelatedCommand.Argument(
@@ -66,8 +67,8 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
      */
     @Override
     protected WarframeMarketRivenInputDTO parse(CommandInvocation invocation, Void prepared) {
-        String input = invocation.arguments() == null ? "" : invocation.arguments().trim();
-        if (StrUtil.isBlank(input)) {
+        String input = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
+        if (CharSequenceUtil.isBlank(input)) {
             return new WarframeMarketRivenInputDTO(List.of(), 0, 1, "格式：命令 武器名称 [词条] [负词条]");
         }
         if (input.length() > 500)
@@ -152,15 +153,15 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
             }
             boolean isNegative = token.startsWith("负");
             String remaining = normalize(token.replaceFirst("^负面?", ""));
-            if (StrUtil.isEmpty(remaining)) {
+            if (CharSequenceUtil.isEmpty(remaining)) {
                 if (!isNegative || index + 1 >= end || parts[index + 1].startsWith("负")) {
                     return CommandResult.rejected("负面词条不能为空");
                 }
                 remaining = normalize(parts[++index]);
-                if (StrUtil.isEmpty(remaining))
+                if (CharSequenceUtil.isEmpty(remaining))
                     return CommandResult.rejected("负面词条不能为空");
             }
-            while (StrUtil.isNotEmpty(remaining)) {
+            while (CharSequenceUtil.isNotEmpty(remaining)) {
                 // 完整名称可跨空格，但不能吞掉下一个负面标记；同一记录内的多编码仍表示组合。
                 StringBuilder lookahead = new StringBuilder(remaining);
                 for (int next = index + 1; next < end && !parts[next].startsWith("负"); next++) {
@@ -199,7 +200,7 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
         Map<String, String> attributeNames = new LinkedHashMap<>();
         officialAttributes.definitions().forEach(record -> {
             WarframeRivenAttributeDTO details = record;
-            if (details.code() != null && StrUtil.isNotBlank(details.effect())) {
+            if (details.code() != null && CharSequenceUtil.isNotBlank(details.effect())) {
                 attributeNames.putIfAbsent(details.code(), details.effect());
             }
         });
@@ -207,13 +208,13 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
             WarframeMarketAuctionVO.from(result.get(), code -> attributeNames.getOrDefault(code, code));
         StringBuilder markdown =
             new StringBuilder("### ").append(display.weapon()).append(" · ").append(display.pagination());
-        if (StrUtil.isNotBlank(display.filter()))
+        if (CharSequenceUtil.isNotBlank(display.filter()))
             markdown.append("\n筛选：").append(display.filter());
-        if (StrUtil.isNotBlank(display.notice()))
+        if (CharSequenceUtil.isNotBlank(display.notice()))
             markdown.append("\n").append(display.notice());
         if (CollUtil.isNotEmpty(display.auctions())) {
             WarframeMarketAuctionVO.AuctionVO first = display.auctions().getFirst();
-            if (StrUtil.isNotBlank(first.userName()) && StrUtil.isNotBlank(first.buyoutPrice()))
+            if (CharSequenceUtil.isNotBlank(first.userName()) && CharSequenceUtil.isNotBlank(first.buyoutPrice()))
                 markdown.append("\n> 联系 ").append(first.userName()).append("：/w ").append(first.userName())
                     .append(" 我想购买 ").append(display.weapon()).append(" 紫卡，报价 ").append(first.buyoutPrice());
         }
@@ -252,7 +253,7 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
         if (CollUtil.isNotEmpty(exact))
             return exact;
         itemResolver.auctionWeaponSearchTerms(input).stream().map(MarketRivenPlugin::normalize)
-            .filter(value -> StrUtil.isNotBlank(value)).forEach(terms::add);
+            .filter(value -> CharSequenceUtil.isNotBlank(value)).forEach(terms::add);
         exact = matching(weapons, terms, true);
         return exactOnly || CollUtil.isNotEmpty(exact) ? exact : matching(weapons, terms, false);
     }
@@ -267,7 +268,7 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
      */
     private static List<WarframeMarketItemDTO> matching(List<WarframeMarketItemDTO> weapons, Set<String> terms,
         boolean exact) {
-        return weapons.stream().filter(item -> StrUtil.isNotBlank(item.slug()))
+        return weapons.stream().filter(item -> CharSequenceUtil.isNotBlank(item.slug()))
             .filter(
                 item -> List.of(item.slug(), item.localizedName("en"), item.localizedName("zh-hans")).stream()
                     .map(MarketRivenPlugin::normalize)
@@ -286,7 +287,7 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
         Set<String> validCodes = new LinkedHashSet<>();
         officialAttributes.definitions().forEach(record -> {
             String code = record.code();
-            if (Boolean.TRUE.equals(record.searchOnly()) || StrUtil.isBlank(code)
+            if (Boolean.TRUE.equals(record.searchOnly()) || CharSequenceUtil.isBlank(code)
                 || Set.of("has", "none").contains(code))
                 return;
             validCodes.add(code);
@@ -312,10 +313,10 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
      * @param code 当前数据集或业务对象的稳定代码。
      */
     private static void addAttribute(Map<String, Set<List<String>>> index, String name, String code) {
-        if (StrUtil.isNotBlank(name) && StrUtil.isNotBlank(code)) {
+        if (CharSequenceUtil.isNotBlank(name) && CharSequenceUtil.isNotBlank(code)) {
             List<String> codes = attributeCodes(code);
             String keyword = normalize(name);
-            if (CollUtil.isNotEmpty(codes) && StrUtil.isNotEmpty(keyword)) {
+            if (CollUtil.isNotEmpty(codes) && CharSequenceUtil.isNotEmpty(keyword)) {
                 index.computeIfAbsent(keyword, ignored -> new LinkedHashSet<>()).add(codes);
             }
         }
@@ -328,8 +329,8 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> attributeCodes(String code) {
-        return code == null ? List.of() : Arrays.stream(code.split("[,+]")).map(String::trim)
-            .filter(value -> StrUtil.isNotEmpty(value)).sorted().toList();
+        return code == null ? List.of() : Arrays.stream(code.split("[,+]")).map(CharSequenceUtil::trim)
+            .filter(value -> CharSequenceUtil.isNotEmpty(value)).sorted().toList();
     }
 
     /**

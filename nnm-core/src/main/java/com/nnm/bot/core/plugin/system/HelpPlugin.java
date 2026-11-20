@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.system;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.constant.SystemCommandCodes;
 
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -27,7 +29,7 @@ public class HelpPlugin extends BotPlugin<Void, Void> {
     public CommandResult handle(CommandInvocation invocation, Void prepared, Void parsed) {
         StringBuilder help = new StringBuilder("NnmBot 命令\n");
         this.commandRegistryProvider.getObject().commands().stream()
-            .filter(command -> !command.descriptor().code().equalsIgnoreCase(SystemCommandCodes.HELP))
+            .filter(command -> !CharSequenceUtil.equalsIgnoreCase(command.descriptor().code(), SystemCommandCodes.HELP))
             .filter(command -> command.configuration().enabled())
             .filter(command -> command.configuration().showInHelp())
             .sorted(Comparator.comparingInt((RuntimeCommand command) -> command.descriptor().order())
@@ -39,7 +41,7 @@ public class HelpPlugin extends BotPlugin<Void, Void> {
 
     private static void appendCommand(StringBuilder help, CommandDescriptor descriptor) {
         help.append('\n').append(descriptor.name());
-        if (!descriptor.description().isBlank()) {
+        if (!CharSequenceUtil.isBlank(descriptor.description())) {
             help.append(" - ").append(descriptor.description());
         }
     }

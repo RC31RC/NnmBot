@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.parser;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialObjectDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
 import java.math.BigDecimal;
@@ -76,7 +76,7 @@ public final class WarframeOfficialValues {
      */
     public static String first(Object... values) {
         for (Object value : values) {
-            if (value instanceof String text && StrUtil.isNotBlank(text))
+            if (value instanceof String text && CharSequenceUtil.isNotBlank(text))
                 return text;
             if (value instanceof BigDecimal number)
                 return number.stripTrailingZeros().toPlainString();

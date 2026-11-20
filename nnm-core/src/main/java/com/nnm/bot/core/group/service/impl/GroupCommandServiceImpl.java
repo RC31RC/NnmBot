@@ -1,13 +1,14 @@
 package com.nnm.bot.core.group.service.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.group.constant.BotGroupErrorCode;
 import com.nnm.bot.core.group.constant.GroupPointConstants.PointErrorCode;
 import com.nnm.bot.common.error.SystemException;
 
 import com.nnm.bot.common.error.BusinessException;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.group.pojo.dto.GroupCommandOutcomeDTO;
@@ -51,11 +52,11 @@ public class GroupCommandServiceImpl implements GroupCommandService {
     @Transactional
     public GroupCommandOutcomeDTO signIn(BotMessageContext context) {
         BotGroupCommandContext groupContext = resolveGroup(context);
-        if (ObjectUtil.isNull(groupContext)) {
+        if (ObjUtil.isNull(groupContext)) {
             return GroupCommandOutcomeDTO.rejected("签到只能在已配置的群组中使用");
         }
         BotGroupMember member = resolveWritableMember(groupContext, context);
-        if (ObjectUtil.isNull(member)) {
+        if (ObjUtil.isNull(member)) {
             return GroupCommandOutcomeDTO.rejected("当前用户还未加入该逻辑群组");
         }
 
@@ -68,11 +69,11 @@ public class GroupCommandServiceImpl implements GroupCommandService {
     @Override
     public GroupCommandOutcomeDTO currentPoints(BotMessageContext context) {
         BotGroupCommandContext groupContext = resolveGroup(context);
-        if (ObjectUtil.isNull(groupContext)) {
+        if (ObjUtil.isNull(groupContext)) {
             return GroupCommandOutcomeDTO.rejected("积分查询只能在已配置的群组中使用");
         }
         BotGroupMember member = resolveExistingMember(groupContext, context);
-        if (ObjectUtil.isNull(member)) {
+        if (ObjUtil.isNull(member)) {
             return GroupCommandOutcomeDTO.rejected("当前用户还未加入该逻辑群组");
         }
         PointBalanceDTO balance = pointAccountService.balance(groupContext.group().getId(), member.getId())
@@ -96,15 +97,15 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         if (!context.isGroupMessage()) {
             return GroupCommandOutcomeDTO.rejected("绑定命令只能在群聊中使用");
         }
-        if (StrUtil.isBlank(qqUserId) || !qqUserId.trim().matches("\\d{5,20}")) {
+        if (CharSequenceUtil.isBlank(qqUserId) || !CharSequenceUtil.trim(qqUserId).matches("\\d{5,20}")) {
             return GroupCommandOutcomeDTO.rejected("QQ号格式不正确，请使用“绑定 QQ号”");
         }
-        qqUserId = qqUserId.trim();
+        qqUserId = CharSequenceUtil.trim(qqUserId);
         if (context.platform() == BotPlatform.ONEBOT && !qqUserId.equals(context.senderId())) {
             return GroupCommandOutcomeDTO.rejected("OneBot 只能绑定当前消息发送人的 QQ 号");
         }
         BotGroupCommandContext groupContext = resolveGroup(context);
-        if (ObjectUtil.isNull(groupContext)) {
+        if (ObjUtil.isNull(groupContext)) {
             return GroupCommandOutcomeDTO.rejected("当前群聊尚未绑定逻辑群组");
         }
 
@@ -142,10 +143,11 @@ public class GroupCommandServiceImpl implements GroupCommandService {
         if (!member.isEnabled()) {
             return GroupCommandOutcomeDTO.rejected("当前群组成员身份已停用，请联系管理员");
         }
-        if (StrUtil.isNotBlank(member.getQqId()) && !qqUserId.equals(member.getQqId())) {
+        if (CharSequenceUtil.isNotBlank(member.getQqId()) && !qqUserId.equals(member.getQqId())) {
             return GroupCommandOutcomeDTO.rejected("当前平台身份已经绑定其他 QQ 号，不能直接覆盖");
         }
-        if (StrUtil.isNotBlank(member.getMemberOpenid()) && !context.senderId().equals(member.getMemberOpenid())) {
+        if (CharSequenceUtil.isNotBlank(member.getMemberOpenid())
+            && !context.senderId().equals(member.getMemberOpenid())) {
             return GroupCommandOutcomeDTO.rejected("该 QQ 号已经绑定其他 QQ 官方成员身份");
         }
         member.setQqId(qqUserId);
@@ -158,13 +160,13 @@ public class GroupCommandServiceImpl implements GroupCommandService {
 
     private void ensureMergeCompatible(BotGroupMember byQqId, BotGroupMember byOpenId, String qqUserId,
         String memberOpenid) {
-        if (StrUtil.isNotBlank(byQqId.getMemberOpenid()) && !memberOpenid.equals(byQqId.getMemberOpenid())) {
+        if (CharSequenceUtil.isNotBlank(byQqId.getMemberOpenid()) && !memberOpenid.equals(byQqId.getMemberOpenid())) {
             throw new BusinessException(BotGroupErrorCode.QQ_ID_ALREADY_BOUND);
         }
-        if (StrUtil.isNotBlank(byOpenId.getQqId()) && !qqUserId.equals(byOpenId.getQqId())) {
+        if (CharSequenceUtil.isNotBlank(byOpenId.getQqId()) && !qqUserId.equals(byOpenId.getQqId())) {
             throw new BusinessException(BotGroupErrorCode.PLATFORM_ID_ALREADY_BOUND);
         }
-        if (StrUtil.isNotBlank(byQqId.getKookId()) && StrUtil.isNotBlank(byOpenId.getKookId())
+        if (CharSequenceUtil.isNotBlank(byQqId.getKookId()) && CharSequenceUtil.isNotBlank(byOpenId.getKookId())
             && !byQqId.getKookId().equals(byOpenId.getKookId())) {
             throw new BusinessException(BotGroupErrorCode.MEMBER_IDENTITY_CONFLICT);
         }

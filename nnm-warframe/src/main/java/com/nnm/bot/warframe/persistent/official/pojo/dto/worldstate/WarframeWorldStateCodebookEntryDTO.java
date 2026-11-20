@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
 
 /**
@@ -28,14 +28,14 @@ public record WarframeWorldStateCodebookEntryDTO(String reference, String displa
      * @param nameKey 同身份的语言键；查询时按需解析，不在代码簿中缓存跨表结果。
      */
     public WarframeWorldStateCodebookEntryDTO {
-        reference = StrUtil.emptyIfNull(reference);
-        displayName = StrUtil.blankToDefault(displayName, reference);
-        description = StrUtil.emptyIfNull(description);
-        relatedReference = StrUtil.emptyIfNull(relatedReference);
-        source = StrUtil.emptyIfNull(source);
+        reference = CharSequenceUtil.emptyIfNull(reference);
+        displayName = CharSequenceUtil.blankToDefault(displayName, reference);
+        description = CharSequenceUtil.emptyIfNull(description);
+        relatedReference = CharSequenceUtil.emptyIfNull(relatedReference);
+        source = CharSequenceUtil.emptyIfNull(source);
         status = status == null ? WarframeReferenceResolutionStatus.UNRESOLVED : status;
-        factionReference = StrUtil.emptyIfNull(factionReference);
-        nameKey = StrUtil.emptyIfNull(nameKey);
+        factionReference = CharSequenceUtil.emptyIfNull(factionReference);
+        nameKey = CharSequenceUtil.emptyIfNull(nameKey);
     }
 
     /**

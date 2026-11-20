@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.service.reference.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
 import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialReferenceKeys;
@@ -34,7 +34,7 @@ public class WarframeItemNameServiceImpl implements WarframeItemNameService {
      */
     @Override
     public Map<String, WarframeReferenceResolutionDTO> resolveAll(Collection<String> itemKeys) {
-        List<String> keys = itemKeys.stream().filter(StrUtil::isNotBlank).distinct().toList();
+        List<String> keys = itemKeys.stream().filter(CharSequenceUtil::isNotBlank).distinct().toList();
         if (keys.isEmpty())
             return Map.of();
         Map<String, Map<String, WarframeOfficialNameDTO>> matches = new LinkedHashMap<>();

@@ -12,8 +12,8 @@ import lombok.Getter;
 
 /** REWARD_POOL 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialRewardPoolDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 奖池键；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("poolKey")
@@ -68,7 +68,7 @@ public class OfficialRewardPoolDTO extends OfficialObjectDTO implements Official
     /** 官方嵌套对象 StagesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesItemReferencesDTO extends OfficialObjectDTO {
         /** 阶段列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -210,7 +210,7 @@ public class OfficialRewardPoolDTO extends OfficialObjectDTO implements Official
     /** 官方嵌套对象 StagesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesDTO extends OfficialObjectDTO {
         /** 阶段列表的物品数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("itemCount")

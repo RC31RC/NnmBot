@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.parser.reference;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -229,7 +229,7 @@ public class WarframeCommunityImportParser {
             }
         };
         String key = explicitKey != null ? explicitKey : dictionaryKey != null ? dictionaryKey : naturalKey;
-        check(StrUtil.isNotBlank(key) && key.length() <= MAX_RECORD_KEY_LENGTH,
+        check(CharSequenceUtil.isNotBlank(key) && key.length() <= MAX_RECORD_KEY_LENGTH,
             CommunityInputErrorCode.RECORD_KEY_INVALID);
         check(!rows.records.containsKey(key), CommunityInputErrorCode.RECORD_KEY_DUPLICATE);
         rows.records.put(key, value);
@@ -267,7 +267,7 @@ public class WarframeCommunityImportParser {
     private static void text(String value, String field, boolean blankAllowed) {
         // 字段名仅由本类的固定 DTO 访问器传入，不接受 JSON 中的任意字段名。
         BusinessAssert.isTrue(
-            value != null && value.length() <= MAX_FIELD_LENGTH && (blankAllowed || StrUtil.isNotBlank(value)),
+            value != null && value.length() <= MAX_FIELD_LENGTH && (blankAllowed || CharSequenceUtil.isNotBlank(value)),
             CommunityInputErrorCode.FIELD_INVALID, CommunityInputErrorCode.FIELD_INVALID.getMessage().formatted(field));
     }
 

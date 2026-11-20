@@ -7,7 +7,7 @@ import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataCons
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_ALL_TASK_PREFIX;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_PERMISSION;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.REFRESH_TASK_PREFIX;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.core.task.constant.TaskConstants.AdminTaskStatus;
 import com.nnm.bot.core.task.pojo.dto.AdminTaskDTO;
 import com.nnm.bot.core.task.service.AdminTaskService;
@@ -136,7 +136,8 @@ public class WarframeOfficialRefreshAdmissionServiceImpl implements WarframeOffi
      */
     @Override
     public AdminTaskSubmissionDTO submitApply(String id, WarframeOfficialApplyDTO selection) {
-        BusinessAssert.isTrue(StrUtil.isNotBlank(id) && selection != null, WarframeManagementErrorCode.DATASET_INVALID);
+        BusinessAssert.isTrue(CharSequenceUtil.isNotBlank(id) && selection != null,
+            WarframeManagementErrorCode.DATASET_INVALID);
         return coordination.reserve(() -> {
             String type = APPLY_TASK_PREFIX + id;
             Optional<UUID> existing = tasks.findActive(type);
@@ -170,7 +171,7 @@ public class WarframeOfficialRefreshAdmissionServiceImpl implements WarframeOffi
     }
 
     private String selectedRef(String ref) {
-        if (StrUtil.isNotBlank(ref))
+        if (CharSequenceUtil.isNotBlank(ref))
             return ref;
         List<WarframeOfficialVersionDTO> versions = imports.versions();
         BusinessAssert.notEmpty(versions, WarframeManagementErrorCode.DATASET_VERSION_INVALID);

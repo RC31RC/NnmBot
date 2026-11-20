@@ -12,7 +12,8 @@ public interface BotScopeDiscoveryProvider {
     /** 返回此发现实现所属的平台。 */
     BotPlatform platform();
 
-    /** 查询当前账号可发现的作用域；实现不应写入业务作用域表。
+    /**
+     * 查询当前账号可发现的作用域；实现不应写入业务作用域表。
      *
      * @param instance 执行发现的渠道实例
      * @return 供管理端确认的发现结果

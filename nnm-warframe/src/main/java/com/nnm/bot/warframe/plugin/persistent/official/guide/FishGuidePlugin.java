@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.plugin.persistent.official.guide;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
@@ -121,7 +121,7 @@ public final class FishGuidePlugin extends AbstractGuidePlugin {
      * @return 当前值的业务表示对应的文本。
      */
     private static String value(String value) {
-        return StrUtil.isBlank(value) ? "未提供" : value;
+        return CharSequenceUtil.isBlank(value) ? "未提供" : value;
     }
 
     /**

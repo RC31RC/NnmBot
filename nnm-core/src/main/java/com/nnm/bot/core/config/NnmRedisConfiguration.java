@@ -1,5 +1,7 @@
 package com.nnm.bot.core.config;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import org.redisson.config.SingleServerConfig;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
@@ -19,8 +21,8 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 public class NnmRedisConfiguration {
     @Bean(destroyMethod = "shutdown")
     public RedissonClient nnmSessionRedis(DataRedisProperties redis) {
-        Config config = new Config().setThreads(2).setNettyThreads(1).setUsername(redis.getUsername())
-            .setPassword(redis.getPassword() == null || redis.getPassword().isBlank() ? null : redis.getPassword());
+        Config config = new Config().setThreads(2).setNettyThreads(1).setUsername(redis.getUsername()).setPassword(
+            redis.getPassword() == null || CharSequenceUtil.isBlank(redis.getPassword()) ? null : redis.getPassword());
         SingleServerConfig server = config.useSingleServer()
             .setAddress(
                 (redis.getSsl().isEnabled() ? "rediss://" : "redis://") + redis.getHost() + ":" + redis.getPort())

@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.constant.CommandPresentationConstants;
 
 import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandResultStatus;
@@ -36,7 +38,7 @@ public record CommandResult(CommandResultStatus status, List<ReplyBlock> blocks,
 
     public static CommandResult html(String title, Object data) {
         ArrayList<ReplyBlock> blocks = new ArrayList<>();
-        if (title != null && !title.isBlank())
+        if (title != null && !CharSequenceUtil.isBlank(title))
             blocks.add(new ReplyBlock.Text(title));
         if (hasContent(data))
             blocks.add(new ReplyBlock.HtmlData<>(data));
@@ -51,7 +53,7 @@ public record CommandResult(CommandResultStatus status, List<ReplyBlock> blocks,
 
     public static CommandResult file(String text, CommandAttachment attachment) {
         ArrayList<ReplyBlock> blocks = new ArrayList<>();
-        if (text != null && !text.isBlank())
+        if (text != null && !CharSequenceUtil.isBlank(text))
             blocks.add(new ReplyBlock.Text(text));
         blocks.add(new ReplyBlock.File(attachment));
         return new CommandResult(CommandResultStatus.SUCCESS, blocks, Map.of());
@@ -89,7 +91,7 @@ public record CommandResult(CommandResultStatus status, List<ReplyBlock> blocks,
         if (data instanceof Collection<?> items)
             return !items.isEmpty();
         if (data instanceof CharSequence text)
-            return !text.isEmpty();
+            return CharSequenceUtil.isNotEmpty(text);
         return true;
     }
 }

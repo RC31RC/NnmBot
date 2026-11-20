@@ -1,9 +1,10 @@
 package com.nnm.bot.warframe.persistent.official.repository.support;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.OfficialIdentityDTO;
@@ -103,7 +104,8 @@ public interface OfficialMainRepository<T extends OfficialRecord>
      * @return 自维护优先的摘要，未找到的键不返回。
      */
     default List<WarframeOfficialRecordDTO> findPreferredSummariesByKeys(Collection<String> keys) {
-        List<String> requested = keys.stream().map(key -> key.trim().toLowerCase(Locale.ROOT)).distinct().toList();
+        List<String> requested =
+            keys.stream().map(key -> CharSequenceUtil.trim(key).toLowerCase(Locale.ROOT)).distinct().toList();
         List<WarframeOfficialRecordDTO> result = new ArrayList<>();
         for (int start = 0; start < requested.size(); start += RECORD_BATCH_SIZE) {
             List<String> batch = requested.subList(start, Math.min(start + RECORD_BATCH_SIZE, requested.size()));
@@ -161,7 +163,7 @@ public interface OfficialMainRepository<T extends OfficialRecord>
      */
     default Optional<WarframeOfficialRecordDTO> findPreferredSummary(String bkey) {
         Specification<T> specification = preferredEnabled().and((entity, query, builder) -> builder
-            .equal(builder.lower(entity.get("bkey")), bkey.trim().toLowerCase(Locale.ROOT)));
+            .equal(builder.lower(entity.get("bkey")), CharSequenceUtil.trim(bkey).toLowerCase(Locale.ROOT)));
         return findBy(specification, query -> query.as(OfficialSummaryDTO.class).first()).map(this::toData);
     }
 
@@ -177,15 +179,16 @@ public interface OfficialMainRepository<T extends OfficialRecord>
             predicates.add(builder.isTrue(entity.get("enabled")));
             // 文件级包头参与导入与审计，但不占用业务列表及分页总数。
             predicates.add(builder.notEqual(entity.get("bkey"), METADATA_BKEY));
-            if (StrUtil.isNotBlank(request.group())) {
-                String group = request.group().trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            if (CharSequenceUtil.isNotBlank(request.group())) {
+                String group = CharSequenceUtil.trim(request.group()).replace("\\", "\\\\").replace("%", "\\%")
+                    .replace("_", "\\_");
                 predicates.add(builder.like(entity.get("bkey"), group + "/%", '\\'));
             }
-            if (StrUtil.isNotBlank(request.maintenanceType())) {
+            if (CharSequenceUtil.isNotBlank(request.maintenanceType())) {
                 predicates.add(
                     builder.equal(entity.get("maintenanceType"), MaintenanceType.valueOf(request.maintenanceType())));
             }
-            if (StrUtil.isNotBlank(request.keyword())) {
+            if (CharSequenceUtil.isNotBlank(request.keyword())) {
                 String keyword = "%" + request.keyword().toLowerCase(Locale.ROOT).replace("\\", "\\\\")
                     .replace("%", "\\%").replace("_", "\\_") + "%";
                 predicates.add(builder.or(builder.like(builder.lower(entity.get("bkey")), keyword, '\\'),

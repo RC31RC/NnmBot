@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.mapper.upgrades;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.upgrades.WarframeUpgradeVO;
@@ -55,7 +55,7 @@ public class OfficialUpgradeMapper {
         if (selected != null)
             for (var line : values(selected.getStats())) {
                 String text = first(line.getZhText(), line.getText());
-                if (StrUtil.isNotBlank(text))
+                if (CharSequenceUtil.isNotBlank(text))
                     effects.add(text);
             }
         return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value),
@@ -89,7 +89,7 @@ public class OfficialUpgradeMapper {
         if (selected != null)
             for (var line : values(selected.getStats())) {
                 String text = first(line.getZhText(), line.getText());
-                if (StrUtil.isNotBlank(text))
+                if (CharSequenceUtil.isNotBlank(text))
                     effects.add(text);
             }
         return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value), "", first(value.getRarity()),
@@ -120,7 +120,7 @@ public class OfficialUpgradeMapper {
         List<String> effects = new ArrayList<>();
         if (selected != null) {
             String line = first(selected.getStatsZh(), selected.getStats());
-            if (StrUtil.isNotBlank(line))
+            if (CharSequenceUtil.isNotBlank(line))
                 effects.add(line);
         }
         return new WarframeUpgradeVO.EntryVO(row.bkey(), name(row), description(value), "", "", null, "", "", null,

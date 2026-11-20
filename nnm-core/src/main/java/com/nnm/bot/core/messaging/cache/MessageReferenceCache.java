@@ -1,5 +1,7 @@
 package com.nnm.bot.core.messaging.cache;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.config.MessageReadProperties;
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.ReferenceKind;
 import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
@@ -54,7 +56,7 @@ public class MessageReferenceCache {
     /** 只登记有实际索引的别名，最多每条消息两个索引。 */
     private void remember(BotMessageContext context, ReferenceKind kind, String id,
         List<BotIncomingAttachment> attachments) {
-        if (id != null && !id.isBlank() && id.length() <= properties.maxMetadataCharacters()) {
+        if (id != null && !CharSequenceUtil.isBlank(id) && id.length() <= properties.maxMetadataCharacters()) {
             entries.put(key(context, kind, id), List.copyOf(attachments));
         }
     }

@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.parser.input;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 /** 官方输入的名称回退顺序；真正的联合类型仅接受其中的文本分支。 */
 public final class OfficialInputText {
@@ -19,7 +19,7 @@ public final class OfficialInputText {
     public static String firstWithin(int maxLength, Object... values) {
         for (Object value : values) {
             String text = value instanceof String string ? string : null;
-            if (StrUtil.isNotBlank(text) && text.length() <= maxLength)
+            if (CharSequenceUtil.isNotBlank(text) && text.length() <= maxLength)
                 return text;
         }
         return null;
@@ -35,7 +35,7 @@ public final class OfficialInputText {
         for (Object value : values) {
             String text =
                 value instanceof String string ? string : value instanceof Number number ? number.toString() : null;
-            if (StrUtil.isNotBlank(text))
+            if (CharSequenceUtil.isNotBlank(text))
                 return text;
         }
         return null;

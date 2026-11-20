@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.config.forum;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
@@ -73,7 +74,7 @@ public class ForumProperties {
                 && !"https".equalsIgnoreCase(publicBaseUrl.getScheme()))) {
             throw new IllegalArgumentException("nnm.warframe.forum.public-base-url must be an absolute HTTP URL");
         }
-        if (StrUtil.isBlank(publicDetailPath) || !publicDetailPath.startsWith("/#/warframe/forum/detail")) {
+        if (CharSequenceUtil.isBlank(publicDetailPath) || !publicDetailPath.startsWith("/#/warframe/forum/detail")) {
             throw new IllegalArgumentException(
                 "nnm.warframe.forum.public-detail-path must be a hash route under " + "/#/warframe/forum/detail");
         }

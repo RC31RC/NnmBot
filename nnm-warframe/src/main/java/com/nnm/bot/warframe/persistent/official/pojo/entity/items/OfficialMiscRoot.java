@@ -270,7 +270,8 @@ public class OfficialMiscRoot extends OfficialRecord {
     private List<OfficialMiscDissectionPartsItems> officialMiscDissectionPartsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialMiscHelminthSnackItemReferencesItems> officialMiscHelminthSnackItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialMiscHelminthSnackItemReferencesItems> officialMiscHelminthSnackItemReferencesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OfficialMiscItemReferencesItems> officialMiscItemReferencesItemsRows = new ArrayList<>();

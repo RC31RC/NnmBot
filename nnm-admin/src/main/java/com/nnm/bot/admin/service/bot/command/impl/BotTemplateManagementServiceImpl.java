@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.bot.command.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.Comparator;
 import java.util.Locale;
@@ -51,7 +53,8 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
     @Transactional
     public long create(BotTemplateSaveDTO request) {
         String code = normalize(request.templateCode());
-        if (templateRepository.findAll().stream().anyMatch(item -> item.getTemplateCode().equalsIgnoreCase(code))) {
+        if (templateRepository.findAll().stream()
+            .anyMatch(item -> CharSequenceUtil.equalsIgnoreCase(item.getTemplateCode(), code))) {
             throw new BusinessException(BotManagementErrorCode.TEMPLATE_CODE_CONFLICT);
         }
         BotCommandTemplate template = new BotCommandTemplate();
@@ -69,8 +72,8 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
             .orElseThrow(() -> new BusinessException(BotManagementErrorCode.TEMPLATE_NOT_FOUND));
         Long previousCommandId = template.getCommandId();
         String code = normalize(request.templateCode());
-        if (templateRepository.findAll().stream()
-            .anyMatch(item -> !item.getId().equals(id) && item.getTemplateCode().equalsIgnoreCase(code))) {
+        if (templateRepository.findAll().stream().anyMatch(
+            item -> !item.getId().equals(id) && CharSequenceUtil.equalsIgnoreCase(item.getTemplateCode(), code))) {
             throw new BusinessException(BotManagementErrorCode.TEMPLATE_CODE_CONFLICT);
         }
         apply(template, request, code);
@@ -96,11 +99,11 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
             throw new BusinessException(BotManagementErrorCode.TEMPLATE_COMMAND_NOT_FOUND);
         }
         template.setTemplateCode(code);
-        template.setName(request.name().trim());
+        template.setName(CharSequenceUtil.trim(request.name()));
         template.setCommandId(request.commandId());
         template.setSortOrder(
             request.commandId() == null || request.sortOrder() == null ? 0 : Math.max(0, request.sortOrder()));
-        if (request.htmlContent() == null || request.htmlContent().isBlank())
+        if (request.htmlContent() == null || CharSequenceUtil.isBlank(request.htmlContent()))
             throw new BusinessException(BotManagementErrorCode.HTML_TEMPLATE_REQUIRED);
         template.setHtmlContent(request.htmlContent() == null ? "" : request.htmlContent());
         template.setEnabled(Boolean.TRUE.equals(request.enabled()));
@@ -120,6 +123,6 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
     }
 
     private String normalize(String code) {
-        return code.trim().toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.trim(code).toLowerCase(Locale.ROOT);
     }
 }

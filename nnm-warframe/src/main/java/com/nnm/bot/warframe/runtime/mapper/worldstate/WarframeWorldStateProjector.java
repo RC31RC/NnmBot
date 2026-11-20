@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.ActiveMissionDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.AlertDTO;
@@ -9,8 +11,7 @@ import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.Constructi
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SentientOutpostDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SimarisDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SortieDTO;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.constant.WarframeBountyCycleConstants.Syndicate;
 import com.nnm.bot.warframe.runtime.constant.WarframeConquestType;
@@ -117,7 +118,7 @@ public final class WarframeWorldStateProjector {
      */
     public static WarframeWorldStateCommandVO arbitration(WorldStateDTO state, boolean table) {
         ArbitrationDTO arbitration = state.arbitration();
-        if (ObjectUtil.isNull(arbitration)) {
+        if (ObjUtil.isNull(arbitration)) {
             return new WarframeWorldStateCommandVO(table ? "仲裁轮换表暂时没有可用数据" : "当前没有进行中的仲裁",
                 base(state, table ? "仲裁表" : "仲裁"));
         }
@@ -236,22 +237,22 @@ public final class WarframeWorldStateProjector {
      */
     public static WarframeWorldStateCommandVO cycles(WorldStateDTO state, String title) {
         Map<String, Object> cycles = new LinkedHashMap<>();
-        if (ObjectUtil.isNotNull(state.earthCycle())) {
+        if (ObjUtil.isNotNull(state.earthCycle())) {
             cycles.put("地球", cycle(state.earthCycle().isDay() ? "白天" : "夜晚", state.earthCycle().expiry()));
         }
-        if (ObjectUtil.isNotNull(state.cetusCycle())) {
+        if (ObjUtil.isNotNull(state.cetusCycle())) {
             cycles.put("夜灵平原", cycle(state.cetusCycle().isDay() ? "白天" : "夜晚", state.cetusCycle().expiry()));
         }
-        if (ObjectUtil.isNotNull(state.vallisCycle())) {
+        if (ObjUtil.isNotNull(state.vallisCycle())) {
             cycles.put("福尔图娜", cycle(state.vallisCycle().isWarm() ? "温暖" : "寒冷", state.vallisCycle().expiry()));
         }
-        if (ObjectUtil.isNotNull(state.cambionCycle())) {
+        if (ObjUtil.isNotNull(state.cambionCycle())) {
             cycles.put("魔胎之境", cycle(state.cambionCycle().active(), state.cambionCycle().expiry()));
         }
-        if (ObjectUtil.isNotNull(state.zarimanCycle())) {
+        if (ObjUtil.isNotNull(state.zarimanCycle())) {
             cycles.put("扎里曼", cycle(state.zarimanCycle().state(), state.zarimanCycle().expiry()));
         }
-        if (ObjectUtil.isNotNull(state.duviriCycle())) {
+        if (ObjUtil.isNotNull(state.duviriCycle())) {
             cycles.put("双衍王境", cycle(state.duviriCycle().state(), state.duviriCycle().expiry()));
         }
         if ("双衍王境".equals(title)) {
@@ -419,16 +420,6 @@ public final class WarframeWorldStateProjector {
             }
         }
         return output(state, "社区活动与寻呼机", "社区活动与寻呼机：" + items.size() + " 条", items, "items", "itemCount");
-    }
-
-    /** @param state 官方快照及外部结构化任务流增量；@return 本小时正在进行的赤毒任务。 */
-    public static WarframeWorldStateCommandVO kuvaMissions(WorldStateDTO state) {
-        List<Map<String, Object>> items = state.kuvaMissions().stream()
-            .map(mission -> item("node", mission.node(), "missionType", mission.missionType(), "activationInstant",
-                mission.activation().toString(), "expiryInstant", mission.expiry().toString(), "remaining",
-                remaining(mission.expiry())))
-            .toList();
-        return output(state, "赤毒任务", "赤毒任务：" + items.size() + " 条", items, "items", "itemCount");
     }
 
     /**
@@ -782,9 +773,8 @@ public final class WarframeWorldStateProjector {
     private static Map<String, Object> item(Object... values) {
         Map<String, Object> result = new LinkedHashMap<>();
         for (int index = 0; index + 1 < values.length; index += 2) {
-            if (ObjectUtil.isNotNull(values[index])) {
-                result.put(String.valueOf(values[index]),
-                    ObjectUtil.isNull(values[index + 1]) ? "" : values[index + 1]);
+            if (ObjUtil.isNotNull(values[index])) {
+                result.put(String.valueOf(values[index]), ObjUtil.isNull(values[index + 1]) ? "" : values[index + 1]);
             }
         }
         return result;
@@ -797,7 +787,7 @@ public final class WarframeWorldStateProjector {
      * @return 将业务数据格式化为展示文本对应的文本。
      */
     private static String format(Instant instant) {
-        return ObjectUtil.isNull(instant) ? "" : TIME_FORMAT.format(instant);
+        return ObjUtil.isNull(instant) ? "" : TIME_FORMAT.format(instant);
     }
 
     /**
@@ -807,7 +797,7 @@ public final class WarframeWorldStateProjector {
      * @return 截止时间相对于当前时刻的剩余时长文本。
      */
     private static String remaining(Instant expiry) {
-        if (ObjectUtil.isNull(expiry)) {
+        if (ObjUtil.isNull(expiry)) {
             return "";
         }
         Duration duration = Duration.between(Instant.now(), expiry);
@@ -835,6 +825,6 @@ public final class WarframeWorldStateProjector {
      * @return 当前值的业务表示对应的文本。
      */
     private static String value(String value, String fallback) {
-        return StrUtil.isBlank(value) ? fallback : value;
+        return CharSequenceUtil.isBlank(value) ? fallback : value;
     }
 }

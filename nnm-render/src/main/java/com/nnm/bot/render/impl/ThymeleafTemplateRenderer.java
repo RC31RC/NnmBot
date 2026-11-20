@@ -2,7 +2,7 @@ package com.nnm.bot.render.impl;
 
 import java.util.Locale;
 import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.render.TemplateRenderer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
@@ -36,7 +36,7 @@ public class ThymeleafTemplateRenderer implements TemplateRenderer {
 
     @Override
     public String renderHtml(String html, Map<String, Object> variables) {
-        if (StrUtil.isBlank(html)) {
+        if (CharSequenceUtil.isBlank(html)) {
             throw new IllegalArgumentException("inline html must not be blank");
         }
         Map<String, Object> safeVariables = MapUtil.isEmpty(variables) ? Map.of() : variables;
@@ -46,7 +46,8 @@ public class ThymeleafTemplateRenderer implements TemplateRenderer {
         return this.templateEngine.process(html, context);
     }
 
-    /** 拒绝脚本、资源链接和不受支持的表达式，保持模板执行范围受限。
+    /**
+     * 拒绝脚本、资源链接和不受支持的表达式，保持模板执行范围受限。
      *
      * @param html 待检查的模板
      * @throws IllegalArgumentException 模板超长或包含禁止表达式时

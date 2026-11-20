@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.equipment;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import java.util.regex.Matcher;
@@ -27,7 +29,7 @@ public final class CompanionsPlugin extends BotPlugin<Void, WarframeCatalogPageC
      */
     @Override
     protected WarframeCatalogPageCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
         if (matcher.find()) {
@@ -36,7 +38,7 @@ public final class CompanionsPlugin extends BotPlugin<Void, WarframeCatalogPageC
             } catch (NumberFormatException exception) {
                 return new WarframeCatalogPageCommandDTO(query, page, "页码必须为有效的正整数：--page 2");
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || OPTION.matcher(query).find())
             return new WarframeCatalogPageCommandDTO(query, page, "仅支持末尾分页参数：--page 2");

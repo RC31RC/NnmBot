@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.upgrades;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import cn.hutool.core.collection.CollUtil;
@@ -28,7 +30,7 @@ abstract class AbstractUpgradePlugin extends BotPlugin<Void, WarframeUpgradeComm
      */
     @Override
     protected WarframeUpgradeCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Integer rank = null;
         Set<String> options = new HashSet<>();
@@ -50,7 +52,7 @@ abstract class AbstractUpgradePlugin extends BotPlugin<Void, WarframeUpgradeComm
                 page = value;
             else
                 rank = value;
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || UNKNOWN_OPTION.matcher(query).find()) {
             return new WarframeUpgradeCommandDTO(query, rank, page, "页码必须为正整数，等级必须为非负整数；套装件数至少为 1");

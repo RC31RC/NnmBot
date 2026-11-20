@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.ParameterType;
 import com.nnm.bot.core.plugin.constant.CommandPresentationConstants.ParameterErrorCode;
 import com.nnm.bot.common.error.BusinessException;
@@ -13,7 +15,8 @@ public record RelatedParameter(String name, ParameterType type, int maxLength) {
     }
 
     public String validate(String value) {
-        if (value == null || value.isBlank() || !value.equals(value.strip()) || value.length() > maxLength
+        if (value == null || CharSequenceUtil.isBlank(value) || !value.equals(value.strip())
+            || value.length() > maxLength
             || value.codePoints()
                 .anyMatch(code -> Character.isISOControl(code) || Character.getType(code) == Character.FORMAT)
             || value.contains("[CQ:") || value.contains("<@") || value.indexOf('\\') >= 0 || value.indexOf('"') >= 0

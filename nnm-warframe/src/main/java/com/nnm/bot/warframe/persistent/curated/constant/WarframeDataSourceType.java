@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.constant;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Locale;
 
 /** Warframe 本地数据的维护来源。 */
@@ -14,9 +15,9 @@ public enum WarframeDataSourceType {
      * @return 游戏资料数据来源类型对象。
      */
     public static WarframeDataSourceType parse(String value) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             return MANUAL;
         }
-        return valueOf(value.trim().toUpperCase(Locale.ROOT));
+        return valueOf(CharSequenceUtil.trim(value).toUpperCase(Locale.ROOT));
     }
 }

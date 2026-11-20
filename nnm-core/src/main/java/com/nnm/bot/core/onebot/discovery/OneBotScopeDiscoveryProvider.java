@@ -1,7 +1,8 @@
 package com.nnm.bot.core.onebot.discovery;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
+import cn.hutool.core.util.ObjUtil;
 
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.core.BotContainer;
@@ -57,16 +58,16 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
             throw new BusinessException(OneBotErrorCode.DISCOVERY_ACCOUNT_INVALID, exception);
         }
         Bot bot = this.botContainer.robots.get(accountId);
-        if (ObjectUtil.isNull(bot)) {
+        if (ObjUtil.isNull(bot)) {
             return BotScopeDiscoveryResult.unsupported("机器人当前未连接");
         }
         try {
             ActionList<GroupInfoResp> response = bot.getGroupList();
-            if (ObjectUtil.isNull(response) || ObjectUtil.isNull(response.getData())) {
+            if (ObjUtil.isNull(response) || ObjUtil.isNull(response.getData())) {
                 return BotScopeDiscoveryResult.unsupported("OneBot 未返回群组列表");
             }
             List<BotDiscoveredScope> scopes =
-                response.getData().stream().filter(group -> ObjectUtil.isNotNull(group.getGroupId())).map(group -> {
+                response.getData().stream().filter(group -> ObjUtil.isNotNull(group.getGroupId())).map(group -> {
                     MemberDiscovery members = loadMembers(bot, group.getGroupId());
                     return new BotDiscoveredScope("GROUP", String.valueOf(group.getGroupId()),
                         firstText(group.getGroupName(), group.getGroupMemo()), group.getMemberCount(),
@@ -95,14 +96,15 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
     private MemberDiscovery loadMembers(Bot bot, Long groupId) {
         try {
             ActionList<GroupMemberInfoResp> response = bot.getGroupMemberList(groupId);
-            if (ObjectUtil.isNull(response) || ObjectUtil.isNull(response.getData())
-                || (StrUtil.isNotBlank(response.getStatus()) && !"ok".equalsIgnoreCase(response.getStatus()))) {
+            if (ObjUtil.isNull(response) || ObjUtil.isNull(response.getData())
+                || (CharSequenceUtil.isNotBlank(response.getStatus())
+                    && !"ok".equalsIgnoreCase(response.getStatus()))) {
                 // 空列表是有效的空群；data=null 则表示平台没有给出可用于清理的全量结果。
                 return new MemberDiscovery(List.of(), false);
             }
             List<
                 BotDiscoveredMember> members =
-                    response.getData().stream().filter(member -> ObjectUtil.isNotNull(member.getUserId()))
+                    response.getData().stream().filter(member -> ObjUtil.isNotNull(member.getUserId()))
                         .map(member -> new BotDiscoveredMember(String.valueOf(member.getUserId()),
                             firstText(member.getCard(), member.getNickname()), normalizeRole(member.getRole())))
                         .toList();
@@ -115,7 +117,7 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
     }
 
     private String normalizeRole(String role) {
-        return switch (StrUtil.emptyIfNull(role).toLowerCase()) {
+        return switch (CharSequenceUtil.emptyIfNull(role).toLowerCase()) {
             case "owner" -> "OWNER";
             case "admin" -> "ADMIN";
             default -> "MEMBER";
@@ -123,7 +125,7 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
     }
 
     private String firstText(String first, String second) {
-        return StrUtil.isNotBlank(first) ? first : StrUtil.isBlank(second) ? null : second;
+        return CharSequenceUtil.isNotBlank(first) ? first : CharSequenceUtil.isBlank(second) ? null : second;
     }
 
     private record MemberDiscovery(List<BotDiscoveredMember> members, boolean complete) {

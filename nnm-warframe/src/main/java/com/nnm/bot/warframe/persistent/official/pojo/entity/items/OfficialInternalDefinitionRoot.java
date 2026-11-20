@@ -58,5 +58,6 @@ public class OfficialInternalDefinitionRoot extends OfficialRecord {
     private String parentNameValue;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialInternalDefinitionItemReferencesItems> officialInternalDefinitionItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialInternalDefinitionItemReferencesItems> officialInternalDefinitionItemReferencesItemsRows =
+        new ArrayList<>();
 }

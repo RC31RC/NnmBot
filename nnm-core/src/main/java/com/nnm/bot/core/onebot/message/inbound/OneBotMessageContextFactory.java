@@ -1,9 +1,11 @@
 package com.nnm.bot.core.onebot.message.inbound;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.onebot.message.context.OneBotMessageSource;
 import com.nnm.bot.core.onebot.message.context.OneBotMessageAttachmentMapper;
 import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.nnm.bot.core.messaging.model.BotMessageContext;
@@ -53,8 +55,8 @@ public final class OneBotMessageContextFactory {
 
         return BotMessageContext
             .of(BotPlatform.ONEBOT, scope, accountId, senderId, conversationId,
-                ObjectUtil.isNull(event.getMessageId()) ? null : String.valueOf(event.getMessageId()), rawMessage,
-                message, new OneBotMessageSource(bot, replyEvent(event)), attachments(event))
+                ObjUtil.isNull(event.getMessageId()) ? null : String.valueOf(event.getMessageId()), rawMessage, message,
+                new OneBotMessageSource(bot, replyEvent(event)), attachments(event))
             .withReference(reference(event), null);
     }
 
@@ -63,8 +65,8 @@ public final class OneBotMessageContextFactory {
         if (event.getArrayMsg() == null)
             return null;
         return event.getArrayMsg().stream().filter(segment -> "reply".equalsIgnoreCase(segment.getRawType()))
-            .map(segment -> segment.getStringData("id")).filter(id -> id != null && !id.isBlank()).findFirst()
-            .map(id -> new BotMessageReference(ReferenceKind.MESSAGE_ID, id, List.of())).orElse(null);
+            .map(segment -> segment.getStringData("id")).filter(id -> id != null && !CharSequenceUtil.isBlank(id))
+            .findFirst().map(id -> new BotMessageReference(ReferenceKind.MESSAGE_ID, id, List.of())).orElse(null);
     }
 
     private static AnyMessageEvent replyEvent(AnyMessageEvent source) {

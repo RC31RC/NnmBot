@@ -23,7 +23,8 @@ public class GroupNotificationResultStore {
     @Resource
     private BotNotificationProperties properties;
 
-    /** 查询单个通知结果。
+    /**
+     * 查询单个通知结果。
      *
      * @param id 通知任务标识
      * @return 已保存结果；不存在或仍在执行时为空
@@ -32,7 +33,8 @@ public class GroupNotificationResultStore {
         return states.get(key(id), GroupNotificationResult.class);
     }
 
-    /** 批量查询终态结果，过滤尚未完成的记录。
+    /**
+     * 批量查询终态结果，过滤尚未完成的记录。
      *
      * @param ids 通知任务标识
      * @return 已完成任务的结果映射
@@ -45,7 +47,8 @@ public class GroupNotificationResultStore {
             .collect(Collectors.toMap(id -> id, id -> values.get(key(id))));
     }
 
-    /** 按配置的保留时长保存通知结果。
+    /**
+     * 按配置的保留时长保存通知结果。
      *
      * @param id 通知任务标识
      * @param result 通知结果快照

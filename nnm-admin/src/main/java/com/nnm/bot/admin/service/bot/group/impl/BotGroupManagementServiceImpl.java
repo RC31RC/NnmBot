@@ -1,10 +1,11 @@
 package com.nnm.bot.admin.service.bot.group.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.Locale;
 import java.util.UUID;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
 import com.nnm.bot.admin.pojo.dto.bot.group.BotGroupBotSaveDTO;
@@ -215,13 +216,13 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     @Transactional
     public long create(BotGroupCreateDTO request) {
         topologyInvalidator.invalidateAfterCommit();
-        String code = request.code().trim().toLowerCase(Locale.ROOT);
+        String code = CharSequenceUtil.trim(request.code()).toLowerCase(Locale.ROOT);
         if (groupRepository.findByCodeIgnoreCase(code).isPresent()) {
             throw new BusinessException(BotManagementErrorCode.GROUP_CODE_CONFLICT);
         }
         BotGroup group = new BotGroup();
         group.setCode(code);
-        group.setName(request.name().trim());
+        group.setName(CharSequenceUtil.trim(request.name()));
         group.setDescription(trimToNull(request.description()));
         group.setEnabled(request.enabled());
         return groupRepository.save(group).getId();
@@ -246,7 +247,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
             placementCoordinator == null ? null : placementCoordinator.getIfAvailable();
         Plan plan =
             coordinator == null ? null : coordinator.prepareGroup(id, request.enabled(), request.confirmationToken());
-        group.setName(request.name().trim());
+        group.setName(CharSequenceUtil.trim(request.name()));
         group.setDescription(trimToNull(request.description()));
         group.setEnabled(request.enabled());
         groupRepository.save(group);
@@ -311,8 +312,8 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         if (instance.getPlatform() != request.platform()) {
             throw new BusinessException(BotManagementErrorCode.GROUP_INSTANCE_PLATFORM_MISMATCH);
         }
-        String scopeType = request.scopeType().trim().toUpperCase();
-        String scopeKey = request.scopeKey().trim();
+        String scopeType = CharSequenceUtil.trim(request.scopeType()).toUpperCase();
+        String scopeKey = CharSequenceUtil.trim(request.scopeKey());
         BusinessAssert
             .isTrue(botRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(request.platform().name(),
                 scopeType, scopeKey, instance.getId()).isEmpty(), BotManagementErrorCode.GROUP_SCOPE_ALREADY_BOUND);
@@ -410,7 +411,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         group(groupId);
         BotGroupMember member = memberRepository.findById(memberId).filter(item -> item.getGroupId().equals(groupId))
             .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_MEMBER_NOT_FOUND));
-        String role = request.memberRole().trim().toUpperCase();
+        String role = CharSequenceUtil.trim(request.memberRole()).toUpperCase();
         if (!role.equals("OWNER") && !role.equals("ADMIN") && !role.equals("MEMBER")) {
             throw new BusinessException(BotManagementErrorCode.GROUP_MEMBER_ROLE_INVALID);
         }
@@ -431,18 +432,18 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     private BotGroupDTO.BotBindingDTO binding(BotGroupBot binding, BotChannelInstance instance) {
         BotChannelSnapshot snapshot = channelSnapshot(instance).orElse(null);
         return new BotGroupDTO.BotBindingDTO(binding.getId(), binding.getBotInstanceId(),
-            ObjectUtil.isNull(instance) ? "-" : instance.getInstanceId(),
-            ObjectUtil.isNull(instance) ? "-" : instance.getDisplayName(), binding.getPlatform(),
-            binding.getScopeType(), binding.getScopeKey(), binding.getDisplayName(), binding.isEnabled(),
-            binding.getReplyPriority(), ObjectUtil.isNull(snapshot) ? null : snapshot.status(),
-            ObjectUtil.isNull(snapshot) ? null : snapshot.statusChangedAt(),
-            ObjectUtil.isNull(snapshot) ? null : snapshot.lastError());
+            ObjUtil.isNull(instance) ? "-" : instance.getInstanceId(),
+            ObjUtil.isNull(instance) ? "-" : instance.getDisplayName(), binding.getPlatform(), binding.getScopeType(),
+            binding.getScopeKey(), binding.getDisplayName(), binding.isEnabled(), binding.getReplyPriority(),
+            ObjUtil.isNull(snapshot) ? null : snapshot.status(),
+            ObjUtil.isNull(snapshot) ? null : snapshot.statusChangedAt(),
+            ObjUtil.isNull(snapshot) ? null : snapshot.lastError());
     }
 
     private BotScopeDiscoveryDTO discover(BotChannelInstance instance, DiscoveryExecution execution,
         boolean synchronizeBoundMembers) {
         BotScopeDiscoveryResult result =
-            ObjectUtil.isNull(execution) ? BotScopeDiscoveryResult.unsupported("渠道未提供发现能力") : execution.result();
+            ObjUtil.isNull(execution) ? BotScopeDiscoveryResult.unsupported("渠道未提供发现能力") : execution.result();
         return new BotScopeDiscoveryDTO(instance.getId(), instance.getInstanceId(), instance.getDisplayName(),
             instance.getPlatform(), channelSnapshot(instance).map(BotChannelSnapshot::status).orElse(null),
             result.supported(), result.message(), result.scopes().stream().map(scope -> {
@@ -463,19 +464,19 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     }
 
     private Optional<BotChannelSnapshot> channelSnapshot(BotChannelInstance instance) {
-        if (ObjectUtil.isNull(instance) || ObjectUtil.isNull(channelRegistry)) {
+        if (ObjUtil.isNull(instance) || ObjUtil.isNull(channelRegistry)) {
             return Optional.empty();
         }
         BotChannelKey key = new BotChannelKey(instance.getPlatform(), instance.getBotAccountId());
         ClusterBotRuntime cluster = clusterProvider == null ? null : clusterProvider.getIfAvailable();
-        return ObjectUtil.isNull(cluster) ? channelRegistry.find(key) : cluster.snapshot(key);
+        return ObjUtil.isNull(cluster) ? channelRegistry.find(key) : cluster.snapshot(key);
     }
 
     private void synchronizeMembers(long groupId, BotPlatform platform, String scopeType, String scopeKey,
         BotChannelInstance instance) {
         BotChannelInstanceRecord record = instanceProvider.findAll().stream()
             .filter(item -> item.instanceId().equals(instance.getInstanceId())).findFirst().orElse(null);
-        if (ObjectUtil.isNull(record)) {
+        if (ObjUtil.isNull(record)) {
             return;
         }
         BotMemberQueryResult query = discoveryRouter.queryMembers(record, scopeKey);
@@ -515,12 +516,12 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
 
     private DiscoveryExecution discoverInstance(BotChannelInstance instance, BotChannelInstanceRecord record) {
         try {
-            BotScopeDiscoveryResult result = ObjectUtil.isNull(record)
-                ? BotScopeDiscoveryResult.unsupported("机器人实例配置不存在") : discoveryRouter.discover(record);
+            BotScopeDiscoveryResult result = ObjUtil.isNull(record) ? BotScopeDiscoveryResult.unsupported("机器人实例配置不存在")
+                : discoveryRouter.discover(record);
             return new DiscoveryExecution(instance, result);
         } catch (RuntimeException exception) {
             return new DiscoveryExecution(instance,
-                BotScopeDiscoveryResult.unsupported(StrUtil.blankToDefault(exception.getMessage(), "发现失败")));
+                BotScopeDiscoveryResult.unsupported(CharSequenceUtil.blankToDefault(exception.getMessage(), "发现失败")));
         }
     }
 
@@ -531,7 +532,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         boolean membersComplete) {
         Set<String> discoveredIds = new HashSet<>();
         discoveredMembers.forEach(discovered -> {
-            if (StrUtil.isBlank(discovered.platformUserId())) {
+            if (CharSequenceUtil.isBlank(discovered.platformUserId())) {
                 return;
             }
             discoveredIds.add(discovered.platformUserId());
@@ -539,10 +540,10 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
                 .find(memberRepository, groupId, platform, discovered.platformUserId()).orElseGet(BotGroupMember::new);
             member.setGroupId(groupId);
             identityAdapters.assign(platform, member, discovered.platformUserId());
-            if (StrUtil.isNotBlank(discovered.displayName())) {
-                member.setDisplayName(discovered.displayName().trim());
+            if (CharSequenceUtil.isNotBlank(discovered.displayName())) {
+                member.setDisplayName(CharSequenceUtil.trim(discovered.displayName()));
             }
-            if (StrUtil.isNotBlank(discovered.role())) {
+            if (CharSequenceUtil.isNotBlank(discovered.role())) {
                 member.setMemberRole(discovered.role());
             }
             member.setEnabled(true);
@@ -558,34 +559,35 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     @Transactional
     public void handleMemberJoined(BotPlatform platform, String botAccountId, String scopeKey,
         BotDiscoveredMember member) {
-        if (platform == null || StrUtil.isBlank(botAccountId) || StrUtil.isBlank(scopeKey) || member == null
-            || StrUtil.isBlank(member.platformUserId())) {
+        if (platform == null || CharSequenceUtil.isBlank(botAccountId) || CharSequenceUtil.isBlank(scopeKey)
+            || member == null || CharSequenceUtil.isBlank(member.platformUserId())) {
             return;
         }
-        instanceRepository.findByPlatformAndBotAccountId(platform, botAccountId.trim())
+        instanceRepository.findByPlatformAndBotAccountId(platform, CharSequenceUtil.trim(botAccountId))
             .ifPresent(instance -> botRepository
-                .findAllByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(platform.name(), "GROUP", scopeKey.trim(),
-                    instance.getId())
+                .findAllByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(platform.name(), "GROUP",
+                    CharSequenceUtil.trim(scopeKey), instance.getId())
                 .forEach(binding -> synchronizeMembers(binding.getGroupId(), platform, List.of(member), false)));
     }
 
     @Override
     @Transactional
     public void handleMemberLeft(BotPlatform platform, String botAccountId, String scopeKey, String platformUserId) {
-        if (platform == null || StrUtil.isBlank(botAccountId) || StrUtil.isBlank(scopeKey)
-            || StrUtil.isBlank(platformUserId)) {
+        if (platform == null || CharSequenceUtil.isBlank(botAccountId) || CharSequenceUtil.isBlank(scopeKey)
+            || CharSequenceUtil.isBlank(platformUserId)) {
             return;
         }
-        instanceRepository.findByPlatformAndBotAccountId(platform, botAccountId.trim())
+        instanceRepository.findByPlatformAndBotAccountId(platform, CharSequenceUtil.trim(botAccountId))
             .ifPresent(instance -> botRepository
-                .findAllByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(platform.name(), "GROUP", scopeKey.trim(),
-                    instance.getId())
-                .forEach(binding -> removeMemberIdentity(binding.getGroupId(), platform, platformUserId.trim())));
+                .findAllByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(platform.name(), "GROUP",
+                    CharSequenceUtil.trim(scopeKey), instance.getId())
+                .forEach(binding -> removeMemberIdentity(binding.getGroupId(), platform,
+                    CharSequenceUtil.trim(platformUserId))));
     }
 
     private void removeMissingOneBotMembers(long groupId, Set<String> discoveredIds) {
         memberRepository.findAllByGroupIdOrderByMemberRoleAscIdAsc(groupId).stream()
-            .filter(member -> StrUtil.isNotBlank(member.getQqId()))
+            .filter(member -> CharSequenceUtil.isNotBlank(member.getQqId()))
             .filter(member -> !discoveredIds.contains(member.getQqId()))
             .forEach(member -> removeMemberIdentity(groupId, BotPlatform.ONEBOT, member.getQqId()));
     }
@@ -598,8 +600,8 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         existing.ifPresent(member -> {
             identityAdapters.clear(platform, member);
             // 离群只清理当前渠道身份，保留已关联的其他身份和积分。
-            if (StrUtil.isBlank(member.getQqId()) && StrUtil.isBlank(member.getMemberOpenid())
-                && StrUtil.isBlank(member.getKookId())) {
+            if (CharSequenceUtil.isBlank(member.getQqId()) && CharSequenceUtil.isBlank(member.getMemberOpenid())
+                && CharSequenceUtil.isBlank(member.getKookId())) {
                 boolean hasPointHistory = pointTransactionRepository.existsByMemberId(member.getId());
                 if (!hasPointHistory && member.getPoints() == 0 && member.getTotalEarned() == 0
                     && member.getTotalSpent() == 0) {
@@ -618,6 +620,6 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
     }
 
     private String trimToNull(String value) {
-        return StrUtil.isBlank(value) ? null : value.trim();
+        return CharSequenceUtil.isBlank(value) ? null : CharSequenceUtil.trim(value);
     }
 }

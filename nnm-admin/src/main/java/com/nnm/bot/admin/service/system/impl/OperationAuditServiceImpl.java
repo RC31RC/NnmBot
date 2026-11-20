@@ -1,7 +1,8 @@
 package com.nnm.bot.admin.service.system.impl;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
+import cn.hutool.core.util.ObjUtil;
 
 import cn.dev33.satoken.context.SaHolder;
 import cn.dev33.satoken.stp.StpUtil;
@@ -47,7 +48,7 @@ public class OperationAuditServiceImpl implements OperationAuditService {
         log.setOperatorName(operatorName);
         log.setAction(action);
         log.setTargetType(targetType);
-        log.setTargetId(ObjectUtil.isNull(targetId) ? null : String.valueOf(targetId));
+        log.setTargetId(ObjUtil.isNull(targetId) ? null : String.valueOf(targetId));
         log.setDetail(detail);
         log.setIpAddress(clientIp());
         logRepository.save(log);
@@ -57,8 +58,8 @@ public class OperationAuditServiceImpl implements OperationAuditService {
     public PageResult<OperationLogDTO> logs(String operatorName, int current, int size) {
         PageRequest pageable = PageRequest.of(Math.max(current, 1) - 1, Math.min(Math.max(size, 1), 100),
             Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<SysOperationLog> page = StrUtil.isBlank(operatorName) ? logRepository.findAll(pageable)
-            : logRepository.findByOperatorNameContainingIgnoreCase(operatorName.trim(), pageable);
+        Page<SysOperationLog> page = CharSequenceUtil.isBlank(operatorName) ? logRepository.findAll(pageable)
+            : logRepository.findByOperatorNameContainingIgnoreCase(CharSequenceUtil.trim(operatorName), pageable);
         List<OperationLogDTO> records = page.getContent().stream()
             .map(log -> new OperationLogDTO(log.getId(), log.getOperatorId(), log.getOperatorName(), log.getAction(),
                 log.getTargetType(), log.getTargetId(), log.getDetail(), log.getIpAddress(), log.getCreatedAt()))
@@ -74,8 +75,8 @@ public class OperationAuditServiceImpl implements OperationAuditService {
             return null;
         }
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (StrUtil.isNotBlank(forwarded)) {
-            return forwarded.split(",")[0].trim();
+        if (CharSequenceUtil.isNotBlank(forwarded)) {
+            return CharSequenceUtil.trim(forwarded.split(",")[0]);
         }
         return request.getRemoteAddr();
     }

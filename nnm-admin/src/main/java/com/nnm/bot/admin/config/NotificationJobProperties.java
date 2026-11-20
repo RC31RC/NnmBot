@@ -22,7 +22,8 @@ public class NotificationJobProperties {
     /** 单个用户可同时拥有的待处理预约上限。 */
     private int maxPendingPerUser = 20;
 
-    /** 校验任务保留时间及单用户积压上限。
+    /**
+     * 校验任务保留时间及单用户积压上限。
      *
      * @throws IllegalArgumentException 生命周期配置超出允许范围
      */

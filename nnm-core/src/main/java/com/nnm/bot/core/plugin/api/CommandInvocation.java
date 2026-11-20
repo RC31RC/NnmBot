@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
 import com.nnm.bot.core.messaging.model.BotMessageContext;
@@ -24,7 +26,7 @@ public record CommandInvocation(BotMessageContext context, String commandCode, S
         }
         commandCode = requireText(commandCode, "命令编码");
         matchedAlias = requireText(matchedAlias, "命中别名");
-        arguments = arguments == null ? "" : arguments.trim();
+        arguments = arguments == null ? "" : CharSequenceUtil.trim(arguments);
     }
 
     /** 返回本条消息的附件元数据，不执行下载。 */
@@ -38,8 +40,8 @@ public record CommandInvocation(BotMessageContext context, String commandCode, S
     }
 
     private static String requireText(String value, String field) {
-        String normalized = value == null ? "" : value.trim();
-        if (normalized.isBlank()) {
+        String normalized = value == null ? "" : CharSequenceUtil.trim(value);
+        if (CharSequenceUtil.isBlank(normalized)) {
             throw new SystemException(CommandErrorCode.MATCH_RESULT_INVALID, "命令匹配结果缺少" + field);
         }
         return normalized;

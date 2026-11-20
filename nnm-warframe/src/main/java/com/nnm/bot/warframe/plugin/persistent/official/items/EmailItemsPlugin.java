@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.items;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.pojo.vo.items.WarframeEmailVO;
 import java.util.regex.Matcher;
 import com.nnm.bot.core.plugin.constant.MatchType;
@@ -25,7 +27,7 @@ public final class EmailItemsPlugin extends BotPlugin<Void, WarframeItemPageComm
      */
     @Override
     protected WarframeItemPageCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
         if (matcher.find()) {
@@ -36,7 +38,7 @@ public final class EmailItemsPlugin extends BotPlugin<Void, WarframeItemPageComm
             } catch (NumberFormatException exception) {
                 page = Integer.MAX_VALUE;
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || OPTION.matcher(query).find())
             return new WarframeItemPageCommandDTO(query, page, "邮件定义参数不合法");

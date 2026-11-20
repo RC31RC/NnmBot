@@ -1,5 +1,7 @@
 package com.nnm.bot.core.group.adapter;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.channel.constant.BotPlatform;
 import com.nnm.bot.core.group.domain.BotGroupMember;
 import com.nnm.bot.core.group.port.BotGroupMemberIdentityAdapter;
@@ -52,7 +54,7 @@ public class BotGroupMemberIdentityAdapters {
 
     public boolean hasIdentity(BotPlatform platform, BotGroupMember member) {
         String identity = identity(platform, member);
-        return identity != null && !identity.isBlank();
+        return identity != null && !CharSequenceUtil.isBlank(identity);
     }
 
     private BotGroupMemberIdentityAdapter adapter(BotPlatform platform) {

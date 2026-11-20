@@ -63,7 +63,8 @@ public class ExecutorConfig {
             properties.getTask().getMaxSize() + properties.getTask().getQueueCapacity());
     }
 
-    /** 创建限制 OCR 在途量和结果等待时间的计算执行器。
+    /**
+     * 创建限制 OCR 在途量和结果等待时间的计算执行器。
      *
      * @param properties 执行器资源预算
      * @param cpuExecutor 有界 CPU 工作线程池

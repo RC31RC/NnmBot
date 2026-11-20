@@ -5,7 +5,8 @@ import java.util.Map;
 /** 将 HTML 模板与变量转换为图片的应用服务。 */
 public interface ImageService {
 
-    /** 使用默认参数渲染 HTML。
+    /**
+     * 使用默认参数渲染 HTML。
      *
      * @param html HTML 模板
      * @param data 模板变量
@@ -13,7 +14,8 @@ public interface ImageService {
      */
     byte[] generateHtml(String html, Map<String, Object> data);
 
-    /** 按指定参数渲染 HTML。
+    /**
+     * 按指定参数渲染 HTML。
      *
      * @param html HTML 模板
      * @param data 模板变量

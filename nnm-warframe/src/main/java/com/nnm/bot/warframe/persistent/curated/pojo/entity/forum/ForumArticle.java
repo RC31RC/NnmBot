@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.entity.forum;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -94,15 +94,15 @@ public class ForumArticle implements ForumArticleContentDTO {
      * 规范化输入，消除查询或比较时的格式差异。
      */
     private void normalize() {
-        slug = StrUtil.trim(slug);
-        title = StrUtil.trim(title);
+        slug = CharSequenceUtil.trim(slug);
+        title = CharSequenceUtil.trim(title);
         summary = trimToNull(summary);
         tags = trimToNull(tags);
         category = trimToNull(category);
         coverObjectId = trimToNull(coverObjectId);
-        contentHtml = StrUtil.trim(contentHtml);
+        contentHtml = CharSequenceUtil.trim(contentHtml);
         contentMarkdown = trimToNull(contentMarkdown);
-        pageUrl = StrUtil.trim(pageUrl);
+        pageUrl = CharSequenceUtil.trim(pageUrl);
     }
 
     /**
@@ -112,8 +112,8 @@ public class ForumArticle implements ForumArticleContentDTO {
      * @return 裁剪文本首尾空白，并将空白结果统一为缺省值对应的文本。
      */
     private static String trimToNull(String value) {
-        String trimmed = StrUtil.trim(value);
-        return StrUtil.isBlank(trimmed) ? null : trimmed;
+        String trimmed = CharSequenceUtil.trim(value);
+        return CharSequenceUtil.isBlank(trimmed) ? null : trimmed;
     }
 
     /**

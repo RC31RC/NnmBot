@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.crafting.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.mapper.crafting.OfficialRecipeMapper;
 import com.nnm.bot.warframe.constant.WarframeCommandCatalog.Category;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
@@ -43,9 +44,9 @@ public class WarframeRecipeServiceImpl implements WarframeRecipeService {
     public List<WarframeRecipeVO.EntryVO> find(String keyword, String kind) {
         String query = keyword == null ? "" : keyword.toLowerCase(Locale.ROOT);
         return data.records(Category.RECIPE).stream().map(mapper::map).filter(Objects::nonNull)
-            .filter(row -> StrUtil.isBlank(query)
+            .filter(row -> CharSequenceUtil.isBlank(query)
                 || (row.name() + " " + row.productName()).toLowerCase(Locale.ROOT).contains(query))
-            .filter(row -> StrUtil.isBlank(kind) || kind.equalsIgnoreCase(row.recipeKind())).toList();
+            .filter(row -> CharSequenceUtil.isBlank(kind) || kind.equalsIgnoreCase(row.recipeKind())).toList();
     }
 
     /**

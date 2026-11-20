@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.repository.forum;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.curated.pojo.query.forum.ForumArticleQuery;
 import com.nnm.bot.warframe.persistent.curated.pojo.entity.forum.ForumArticle;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -29,12 +30,12 @@ final class ForumArticleSpecifications {
             if (request.enabled() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("enabled"), request.enabled()));
             }
-            if (StrUtil.isNotBlank(request.category())) {
+            if (CharSequenceUtil.isNotBlank(request.category())) {
                 predicates.add(
                     criteriaBuilder.like(criteriaBuilder.lower(root.get("category")), likePattern(request.category())));
             }
             for (String tag : request.tags()) {
-                if (StrUtil.isBlank(tag)) {
+                if (CharSequenceUtil.isBlank(tag)) {
                     continue;
                 }
                 // 历史表结构把标签保存为逗号字符串。统一分隔符并在首尾补逗号，
@@ -42,10 +43,10 @@ final class ForumArticleSpecifications {
                 Expression<String> normalizedTags = normalizedTags(root.get("tags"), criteriaBuilder);
                 Expression<String> surroundedTags = criteriaBuilder.concat(
                     criteriaBuilder.concat(criteriaBuilder.literal(","), normalizedTags), criteriaBuilder.literal(","));
-                predicates.add(criteriaBuilder.like(surroundedTags, likePattern(","
-                    + tag.trim().toLowerCase(Locale.ROOT).replace(",", "").replace("，", "").replace("、", "") + ",")));
+                predicates.add(criteriaBuilder.like(surroundedTags, likePattern("," + CharSequenceUtil.trim(tag)
+                    .toLowerCase(Locale.ROOT).replace(",", "").replace("，", "").replace("、", "") + ",")));
             }
-            if (StrUtil.isNotBlank(request.keyword())) {
+            if (CharSequenceUtil.isNotBlank(request.keyword())) {
                 String pattern = likePattern(request.keyword());
                 predicates
                     .add(criteriaBuilder.or(criteriaBuilder.like(criteriaBuilder.lower(root.get("slug")), pattern),
@@ -65,8 +66,8 @@ final class ForumArticleSpecifications {
      * @return 已转义数据库通配符的包含匹配模式。
      */
     private static String likePattern(String value) {
-        String escaped =
-            value.trim().toLowerCase(Locale.ROOT).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        String escaped = CharSequenceUtil.trim(value).toLowerCase(Locale.ROOT).replace("\\", "\\\\").replace("%", "\\%")
+            .replace("_", "\\_");
         return "%" + escaped + "%";
     }
 

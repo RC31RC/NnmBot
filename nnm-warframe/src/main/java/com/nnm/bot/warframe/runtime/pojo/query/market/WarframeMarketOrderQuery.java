@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.pojo.query.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.OrderFilter;
 import java.util.Locale;
 import java.util.Objects;
@@ -19,9 +21,9 @@ public record WarframeMarketOrderQuery(String itemInput, String marketSlug, Stri
      * @param page 从一开始的页码。
      */
     public WarframeMarketOrderQuery {
-        itemInput = Objects.requireNonNullElse(itemInput, "").trim();
-        marketSlug = Objects.requireNonNullElse(marketSlug, "").trim().toLowerCase(Locale.ROOT);
-        platform = Objects.requireNonNullElse(platform, "").trim().toLowerCase(Locale.ROOT);
+        itemInput = CharSequenceUtil.trim(Objects.requireNonNullElse(itemInput, ""));
+        marketSlug = CharSequenceUtil.trim(Objects.requireNonNullElse(marketSlug, "")).toLowerCase(Locale.ROOT);
+        platform = CharSequenceUtil.trim(Objects.requireNonNullElse(platform, "")).toLowerCase(Locale.ROOT);
         filter = Objects.requireNonNullElse(filter, OrderFilter.ALL);
         page = Math.max(1, page);
     }

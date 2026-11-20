@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** ENEMY 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 护甲；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("armor")
@@ -533,7 +533,8 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -549,7 +550,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 AvatarTypesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class AvatarTypesDTO extends OfficialObjectDTO {
         /** 角色类型列表的引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("reference__domain")
@@ -721,21 +722,19 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 BehavioursChargedProjectileAttackDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
-    public static class BehavioursChargedProjectileAttackDTO extends OfficialObjectDTO {
-    }
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+    public static class BehavioursChargedProjectileAttackDTO extends OfficialObjectDTO {}
 
     /** 官方嵌套对象 BehavioursProjectileAttackDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
-    public static class BehavioursProjectileAttackDTO extends OfficialObjectDTO {
-    }
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+    public static class BehavioursProjectileAttackDTO extends OfficialObjectDTO {}
 
     /** 官方嵌套对象 BehavioursDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class BehavioursDTO extends OfficialObjectDTO {
         /** 行为配置列表的连发配置的数量；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("burst__count")
@@ -1972,7 +1971,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 HitProxiesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class HitProxiesItemReferencesDTO extends OfficialObjectDTO {
         /** 命中判定部位列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -2114,7 +2113,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 HitProxiesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class HitProxiesDTO extends OfficialObjectDTO {
         /** 命中判定部位列表的挂接骨骼名称；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("bone")
@@ -2166,7 +2165,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -2308,7 +2307,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 ItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -2465,7 +2464,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 ItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemsDTO extends OfficialObjectDTO {
         /** 物品列表的物品引用；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("itemReferences")
@@ -2502,7 +2501,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StagesItemsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesItemsItemReferencesDTO extends OfficialObjectDTO {
         /** 阶段列表的物品列表的物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -2659,7 +2658,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StagesItemsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesItemsDTO extends OfficialObjectDTO {
         /** 阶段列表的物品列表的物品引用；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("itemReferences")
@@ -2711,7 +2710,7 @@ public class OfficialEnemyDTO extends OfficialObjectDTO implements OfficialRecor
     /** 官方嵌套对象 StagesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class StagesDTO extends OfficialObjectDTO {
         /** 阶段列表的启动概率；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("activationProbability")

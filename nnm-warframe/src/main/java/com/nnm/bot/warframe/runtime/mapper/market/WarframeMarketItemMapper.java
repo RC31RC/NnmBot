@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.mapper.market;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketItemDTO;
@@ -31,7 +31,7 @@ public class WarframeMarketItemMapper {
         Map<String, WarframeMarketItemI18nDTO> i18n = new LinkedHashMap<>();
         if (CollUtil.isNotEmpty(item.getI18n()))
             item.getI18n().forEach((language, value) -> i18n.put(language, i18n(value)));
-        if (item.getEnglish() != null && StrUtil.isNotBlank(item.getEnglish().getName())) {
+        if (item.getEnglish() != null && CharSequenceUtil.isNotBlank(item.getEnglish().getName())) {
             i18n.putIfAbsent("en", i18n(item.getEnglish()));
         }
         return new WarframeMarketItemDTO(item.getId(), item.getSlug(), item.getGameRef(), item.getTags(),

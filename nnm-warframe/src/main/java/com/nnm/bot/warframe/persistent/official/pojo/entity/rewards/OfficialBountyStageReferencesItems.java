@@ -31,5 +31,6 @@ public class OfficialBountyStageReferencesItems extends OfficialChildRow {
     private OfficialBountyRoot parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialBountyStageReferencesItemsItems> officialBountyStageReferencesItemsItemsRows = new ArrayList<>();
+    private List<OfficialBountyStageReferencesItemsItems> officialBountyStageReferencesItemsItemsRows =
+        new ArrayList<>();
 }

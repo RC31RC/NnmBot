@@ -31,5 +31,7 @@ public class OfficialKeysItemReferencesItemsRotationsItems extends OfficialChild
     private OfficialKeysItemReferencesItems parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialKeysItemReferencesItemsRotationsItemsItems> officialKeysItemReferencesItemsRotationsItemsItemsRows = new ArrayList<>();
+    private List<
+        OfficialKeysItemReferencesItemsRotationsItemsItems> officialKeysItemReferencesItemsRotationsItemsItemsRows =
+            new ArrayList<>();
 }

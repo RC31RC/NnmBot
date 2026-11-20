@@ -1,7 +1,7 @@
 package com.nnm.bot.admin.config.properties;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -81,6 +81,6 @@ public class WebCorsProperties {
         if (CollUtil.isEmpty(values)) {
             return new ArrayList<>();
         }
-        return values.stream().filter(StrUtil::isNotBlank).map(String::trim).toList();
+        return values.stream().filter(CharSequenceUtil::isNotBlank).map(CharSequenceUtil::trim).toList();
     }
 }

@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.event.worldstate;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import java.time.Instant;
 
@@ -20,6 +20,6 @@ public record WorldStateUpdatedEvent(WorldStateDTO previous, WorldStateDTO curre
      * @param observedAt 实际观测时刻。
      */
     public WorldStateUpdatedEvent {
-        observedAt = ObjectUtil.isNull(observedAt) ? Instant.now() : observedAt;
+        observedAt = ObjUtil.isNull(observedAt) ? Instant.now() : observedAt;
     }
 }

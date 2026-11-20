@@ -1,9 +1,10 @@
 package com.nnm.bot.admin.service.bot.scope.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import com.nnm.bot.admin.pojo.entity.system.SysUserIdentity;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.channel.BotChannelInstance;
 import com.nnm.bot.admin.pojo.entity.bot.scope.BotScope;
@@ -79,8 +80,8 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
         if (instance.getPlatform() != request.platform()) {
             throw new BusinessException(BotManagementErrorCode.SCOPE_PLATFORM_MISMATCH);
         }
-        String scopeType = request.scopeType().trim().toUpperCase();
-        String scopeKey = request.scopeKey().trim();
+        String scopeType = CharSequenceUtil.trim(request.scopeType()).toUpperCase();
+        String scopeKey = CharSequenceUtil.trim(request.scopeKey());
         if (scopeRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(request.platform().name(), scopeType,
             scopeKey, instance.getId()).isPresent()) {
             throw new BusinessException(BotManagementErrorCode.SCOPE_CONFLICT);
@@ -134,7 +135,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
         scope(scopeId);
         BotScopeMember member = memberRepository.findById(memberId).filter(item -> item.getScopeId().equals(scopeId))
             .orElseThrow(() -> new BusinessException(BotManagementErrorCode.GROUP_MEMBER_NOT_FOUND));
-        String role = request.memberRole().trim().toUpperCase();
+        String role = CharSequenceUtil.trim(request.memberRole()).toUpperCase();
         if (!role.equals("OWNER") && !role.equals("ADMIN") && !role.equals("MEMBER")) {
             throw new BusinessException(BotManagementErrorCode.GROUP_MEMBER_ROLE_INVALID);
         }
@@ -146,24 +147,24 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
     private BotScopeDTO toItem(BotScope scope) {
         BotChannelInstance instance = instanceRepository.findById(scope.getBotInstanceId()).orElse(null);
         return new BotScopeDTO(scope.getId(), BotPlatform.valueOf(scope.getPlatform()), scope.getScopeType(),
-            scope.getScopeKey(), scope.getBotInstanceId(), ObjectUtil.isNull(instance) ? "-" : instance.getInstanceId(),
+            scope.getScopeKey(), scope.getBotInstanceId(), ObjUtil.isNull(instance) ? "-" : instance.getInstanceId(),
             scope.getDisplayName(), scope.isEnabled(), memberRepository.countByScopeId(scope.getId()));
     }
 
     private BotScopeDiscoveryDTO discovery(BotChannelInstance instance, BotChannelInstanceRecord record) {
         BotChannelSnapshot snapshot =
             channelRegistry.find(new BotChannelKey(instance.getPlatform(), instance.getBotAccountId())).orElse(null);
-        BotScopeDiscoveryResult result = ObjectUtil.isNull(record) ? BotScopeDiscoveryResult.unsupported("机器人实例配置不存在")
+        BotScopeDiscoveryResult result = ObjUtil.isNull(record) ? BotScopeDiscoveryResult.unsupported("机器人实例配置不存在")
             : discoveryRouter.discover(record);
         return new BotScopeDiscoveryDTO(instance.getId(), instance.getInstanceId(), instance.getDisplayName(),
-            instance.getPlatform(), ObjectUtil.isNull(snapshot) ? null : snapshot.status(), result.supported(),
+            instance.getPlatform(), ObjUtil.isNull(snapshot) ? null : snapshot.status(), result.supported(),
             result.message(), result.scopes().stream().map(scope -> {
                 BotScope existing =
                     scopeRepository.findByPlatformAndScopeTypeAndScopeKeyAndBotInstanceId(instance.getPlatform().name(),
                         scope.scopeType(), scope.scopeKey(), instance.getId()).orElse(null);
                 return new BotScopeDiscoveryScopeDTO(scope.scopeType(), scope.scopeKey(), scope.displayName(),
-                    scope.memberCount(), ObjectUtil.isNotNull(existing),
-                    ObjectUtil.isNull(existing) ? null : existing.getId(),
+                    scope.memberCount(), ObjUtil.isNotNull(existing),
+                    ObjUtil.isNull(existing) ? null : existing.getId(),
                     scope.members().stream().map(member -> new BotScopeDiscoveryMemberDTO(member.platformUserId(),
                         member.displayName(), member.role())).toList());
             }).toList());
@@ -176,7 +177,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
         }
         BotChannelInstanceRecord record = instanceProvider.findAll().stream()
             .filter(item -> item.instanceId().equals(instance.getInstanceId())).findFirst().orElse(null);
-        if (ObjectUtil.isNull(record)) {
+        if (ObjUtil.isNull(record)) {
             return;
         }
         discoveryRouter.discover(record).scopes().stream()
@@ -185,7 +186,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
                 SysUserIdentity identity = identityRepository
                     .findByPlatformAndExternalUserId(platform.name(), member.platformUserId()).orElse(null);
                 // 未绑定系统用户的 QQ 号只保留在发现结果，不自动创建后台用户。
-                if (ObjectUtil.isNull(identity)) {
+                if (ObjUtil.isNull(identity)) {
                     return;
                 }
                 BotScopeMember entity =
@@ -206,9 +207,9 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
     }
 
     private String trimToNull(String value) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             return null;
         }
-        return value.trim();
+        return CharSequenceUtil.trim(value);
     }
 }

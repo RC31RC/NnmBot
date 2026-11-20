@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.market;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketItemDTO.WarframeMarketItemI18nDTO;
 
@@ -38,6 +38,6 @@ public record WarframeMarketItemSummaryDTO(@JsonPropertyDescription("名称") St
      * @return 按既定优先级选择可用候选值对应的文本。
      */
     private static String choose(String localized, String fallback) {
-        return StrUtil.isBlank(localized) ? fallback : localized;
+        return CharSequenceUtil.isBlank(localized) ? fallback : localized;
     }
 }

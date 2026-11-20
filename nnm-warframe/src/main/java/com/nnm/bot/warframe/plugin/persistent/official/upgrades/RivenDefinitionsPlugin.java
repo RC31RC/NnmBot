@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.upgrades;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import cn.hutool.core.collection.CollUtil;
@@ -34,7 +36,7 @@ public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenD
      */
     @Override
     protected WarframeRivenDefinitionCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         String mode = "attributes";
         int page = 1;
         Set<String> seen = new HashSet<>();
@@ -58,7 +60,7 @@ public final class RivenDefinitionsPlugin extends BotPlugin<Void, WarframeRivenD
                     page = Integer.MAX_VALUE;
                 }
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || UNKNOWN_OPTION.matcher(query).find())
             return new WarframeRivenDefinitionCommandDTO(query, mode, page, "页码或参数不合法");

@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.config.worldstate;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,7 +24,7 @@ public class WarframeOfficialApiProperties {
         if (worldStateUrl == null || worldStateUrl.getHost() == null
             || !("https".equalsIgnoreCase(worldStateUrl.getScheme())
                 || "http".equalsIgnoreCase(worldStateUrl.getScheme()))
-            || StrUtil.isBlank(language)) {
+            || CharSequenceUtil.isBlank(language)) {
             throw new IllegalArgumentException("Invalid nnm.warframe.pull.official-api configuration");
         }
     }

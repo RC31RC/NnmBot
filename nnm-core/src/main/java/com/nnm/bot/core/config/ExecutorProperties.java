@@ -1,6 +1,6 @@
 package com.nnm.bot.core.config;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -78,7 +78,8 @@ public class ExecutorProperties {
         this.connectionConcurrency = connectionConcurrency;
     }
 
-    /** 校验线程数、队列容量和等待时长之间的约束。
+    /**
+     * 校验线程数、队列容量和等待时长之间的约束。
      *
      * @throws IllegalArgumentException 任一执行器容量或时限无效
      */
@@ -92,13 +93,13 @@ public class ExecutorProperties {
         if (task.queueCapacity < 0) {
             throw new IllegalArgumentException("nnm.executor.task.queue-capacity must not be negative");
         }
-        if (ObjectUtil.isNull(task.keepAlive) || task.keepAlive.isNegative()) {
+        if (ObjUtil.isNull(task.keepAlive) || task.keepAlive.isNegative()) {
             throw new IllegalArgumentException("nnm.executor.task.keep-alive must not be negative");
         }
         if (scheduler.poolSize < 1) {
             throw new IllegalArgumentException("nnm.executor.scheduler.pool-size must be at least 1");
         }
-        if (ObjectUtil.isNull(awaitTermination) || awaitTermination.isNegative()) {
+        if (ObjUtil.isNull(awaitTermination) || awaitTermination.isNegative()) {
             throw new IllegalArgumentException("nnm.executor.await-termination must not be negative");
         }
         if (applicationConcurrency < 1) {

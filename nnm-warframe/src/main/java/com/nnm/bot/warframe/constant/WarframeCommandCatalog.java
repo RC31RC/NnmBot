@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.constant;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.ErrorCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -97,7 +99,7 @@ public final class WarframeCommandCatalog {
          */
         public static Category parse(String value) {
             if (value != null) {
-                String normalized = value.trim().toLowerCase(Locale.ROOT);
+                String normalized = CharSequenceUtil.trim(value).toLowerCase(Locale.ROOT);
                 for (Category dataset : values()) {
                     if (dataset.code.equals(normalized))
                         return dataset;

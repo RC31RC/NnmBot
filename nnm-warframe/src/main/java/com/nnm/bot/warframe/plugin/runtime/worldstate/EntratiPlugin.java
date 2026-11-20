@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.plugin.runtime.worldstate;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.warframe.constant.WarframeCommandCodes;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateProjector;
@@ -27,7 +27,7 @@ public class EntratiPlugin extends AbstractWorldStateCommandPlugin {
      * @return 满足文本或集合是否包含指定内容时为真，否则为假。
      */
     private static boolean contains(String value, String... candidates) {
-        String normalized = ObjectUtil.isNull(value) ? "" : value.toLowerCase(Locale.ROOT);
+        String normalized = ObjUtil.isNull(value) ? "" : value.toLowerCase(Locale.ROOT);
         return Arrays.stream(candidates).anyMatch(candidate -> normalized.contains(candidate.toLowerCase(Locale.ROOT)));
     }
 }

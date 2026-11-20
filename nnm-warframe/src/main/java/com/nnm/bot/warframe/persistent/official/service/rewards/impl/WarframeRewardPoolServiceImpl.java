@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.rewards.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
 import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.*;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -29,7 +31,7 @@ public class WarframeRewardPoolServiceImpl implements WarframeRewardPoolService 
     @Override
     public List<EntryVO> find(String keyword, Integer stage) {
         List<EntryVO> result = new ArrayList<>();
-        String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        String query = keyword == null ? "" : CharSequenceUtil.trim(keyword).toLowerCase(Locale.ROOT);
         var keys = catalog.nameIndex(WarframeOfficialDataDomain.REWARD_POOL).items().values().stream()
             .filter(row -> (row.bkey() + " " + row.officialName() + " " + row.localizedName()).toLowerCase(Locale.ROOT)
                 .contains(query))

@@ -1,5 +1,8 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.collection.CollUtil;
+
 import com.nnm.bot.core.plugin.constant.CommandBoundaryPolicy;
 import com.nnm.bot.core.plugin.constant.MatchType;
 
@@ -43,7 +46,7 @@ public record CommandDescriptor(String code, String name, List<CommandTrigger> t
     }
 
     private static List<CommandTrigger> immutableTriggers(List<CommandTrigger> triggers) {
-        if (triggers == null || triggers.isEmpty()) {
+        if (CollUtil.isEmpty(triggers)) {
             return List.of();
         }
         Map<String, CommandTrigger> normalized = new LinkedHashMap<>();
@@ -55,8 +58,8 @@ public record CommandDescriptor(String code, String name, List<CommandTrigger> t
     }
 
     private static String requireText(String value, String field) {
-        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
-        if (normalized.isEmpty()) {
+        String normalized = CharSequenceUtil.trim(Objects.requireNonNull(value, field + " must not be null"));
+        if (CharSequenceUtil.isEmpty(normalized)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return normalized;

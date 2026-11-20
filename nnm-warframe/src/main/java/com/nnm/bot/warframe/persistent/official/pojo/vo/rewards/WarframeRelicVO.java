@@ -1,9 +1,10 @@
 package com.nnm.bot.warframe.persistent.official.pojo.vo.rewards;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicDetailsDTO;
-import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.nnm.bot.core.plugin.annotation.CommandTextInline;
@@ -88,12 +89,14 @@ public record WarframeRelicVO(@JsonPropertyDescription("查询") String query,
      */
     public static WarframeRelicVO rewards(String query, List<WarframeRelicDetailsDTO> details, String rarity,
         int page) {
-        List<RewardVO> all = details.stream().flatMap(detail -> detail.rewards().stream()
-            .filter(reward -> rarity.equalsIgnoreCase(reward.rarity()))
-            .filter(reward -> StrUtil.isBlank(query) || StrUtil.containsIgnoreCase(detail.relic().relicName(), query)
-                || StrUtil.containsIgnoreCase(detail.relic().recordKey(), query)
-                || StrUtil.containsIgnoreCase(reward.rewardName(), query))
-            .map(reward -> RewardVO.from(reward, name(detail.relic().relicName())))).toList();
+        List<RewardVO> all = details.stream()
+            .flatMap(detail -> detail.rewards().stream().filter(reward -> rarity.equalsIgnoreCase(reward.rarity()))
+                .filter(reward -> CharSequenceUtil.isBlank(query)
+                    || CharSequenceUtil.containsIgnoreCase(detail.relic().relicName(), query)
+                    || CharSequenceUtil.containsIgnoreCase(detail.relic().recordKey(), query)
+                    || CharSequenceUtil.containsIgnoreCase(reward.rewardName(), query))
+                .map(reward -> RewardVO.from(reward, name(detail.relic().relicName()))))
+            .toList();
         List<RangeVO> ranges = ranges(
             all.stream().map(reward -> Math.max(60, length(reward.rewardName()) + length(reward.relicName()))).toList(),
             REWARD_PAGE_SIZE);
@@ -203,7 +206,7 @@ public record WarframeRelicVO(@JsonPropertyDescription("查询") String query,
      * @return 奖励稀有度的中文名称。
      */
     private static String rarityName(String rarity) {
-        return switch (rarity == null ? "" : rarity.trim().toLowerCase(Locale.ROOT)) {
+        return switch (rarity == null ? "" : CharSequenceUtil.trim(rarity).toLowerCase(Locale.ROOT)) {
             case "rare" -> "稀有";
             case "uncommon" -> "罕见";
             case "common" -> "常见";
@@ -218,6 +221,6 @@ public record WarframeRelicVO(@JsonPropertyDescription("查询") String query,
      * @return 优先使用的业务名称对应的文本。
      */
     private static String name(String value) {
-        return StrUtil.isBlank(value) ? "名称未提供" : value;
+        return CharSequenceUtil.isBlank(value) ? "名称未提供" : value;
     }
 }

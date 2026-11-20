@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.rawdata.worldstate.jackson;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -50,8 +51,8 @@ public class OfficialInstantDeserializer extends JsonDeserializer<Instant> {
             return fromEpoch(parser.getLongValue());
         }
         if (parser.currentToken() == JsonToken.VALUE_STRING) {
-            String value = parser.getText().trim();
-            if (StrUtil.isEmpty(value)) {
+            String value = CharSequenceUtil.trim(parser.getText());
+            if (CharSequenceUtil.isEmpty(value)) {
                 return null;
             }
             try {

@@ -146,5 +146,6 @@ public class OfficialRivenWeaponRoot extends OfficialRecord {
     private List<OfficialRivenWeaponMarketListingsItems> officialRivenWeaponMarketListingsItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRivenWeaponUnresolvedMarketWeaponsItems> officialRivenWeaponUnresolvedMarketWeaponsItemsRows = new ArrayList<>();
+    private List<OfficialRivenWeaponUnresolvedMarketWeaponsItems> officialRivenWeaponUnresolvedMarketWeaponsItemsRows =
+        new ArrayList<>();
 }

@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.rewards;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import cn.hutool.core.collection.CollUtil;
@@ -32,7 +34,7 @@ public final class RewardPoolsPlugin extends BotPlugin<Void, WarframeRewardPoolC
      */
     @Override
     protected WarframeRewardPoolCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Integer stage = null;
         HashSet<String> options = new HashSet<String>();
@@ -54,7 +56,7 @@ public final class RewardPoolsPlugin extends BotPlugin<Void, WarframeRewardPoolC
                 page = value;
             else
                 stage = value;
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || stage != null && stage < 1 || UNKNOWN_OPTION.matcher(query).find()) {
             return new WarframeRewardPoolCommandDTO(query, stage, page, "页码和阶段必须为正整数");

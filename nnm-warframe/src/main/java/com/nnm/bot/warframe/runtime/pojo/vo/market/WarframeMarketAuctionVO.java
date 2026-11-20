@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.pojo.vo.market;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketAuctionEntryDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketAuctionPageDTO;
@@ -68,15 +68,15 @@ public record WarframeMarketAuctionVO(@JsonPropertyDescription("武器") String 
                     specs.add("洗练 " + item.reRolls());
                 if (item.masteryLevel() != null)
                     specs.add("段位 " + item.masteryLevel());
-                if (StrUtil.isNotBlank(item.polarity()))
+                if (CharSequenceUtil.isNotBlank(item.polarity()))
                     specs.add("极性 " + item.polarity());
-                if (StrUtil.isNotBlank(item.element()))
+                if (CharSequenceUtil.isNotBlank(item.element()))
                     specs.add("元素 " + item.element());
                 if (item.damage() != null)
                     specs.add("加成 " + item.damage() + "%");
                 if (item.havingEphemera() != null)
                     specs.add(item.havingEphemera() ? "有幻纹" : "无幻纹");
-                if (StrUtil.isNotBlank(item.quirk()))
+                if (CharSequenceUtil.isNotBlank(item.quirk()))
                     specs.add("怪癖 " + item.quirk());
                 item.attributes().forEach(attribute -> stats.add((attribute.positive() ? "正面 " : "负面 ")
                     + attributeName.apply(attribute.urlName()) + " " + attribute.value()));

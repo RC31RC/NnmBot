@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nnm.bot.common.error.SystemException;
@@ -91,7 +92,7 @@ public class OfficialWorldStateMapper {
      * @return 已经解析并校验的世界状态快照。
      */
     public WorldStateDTO map(String json, String source) {
-        if (StrUtil.isBlank(json)) {
+        if (CharSequenceUtil.isBlank(json)) {
             throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "世界状态上游响应为空");
         }
         try {
@@ -136,8 +137,7 @@ public class OfficialWorldStateMapper {
             clanInitiatives(rawData.getWeeklyVaultBonusRewards()), circuitChoices(rawData.getEndlessXpSchedule()),
             calendarSeasons(rawData.getKnownCalendarSeasons()), vaultTraders(rawData.getPrimeVaultTraders()),
             weeklyChallenges(rawData.getWeeklyChallenges()), darkSectors(rawData.getDarkSectors()),
-            descents(rawData.getDescents()), marketCategories(rawData.getInGameMarket()), temporaryActivity(temporary),
-            List.of());
+            descents(rawData.getDescents()), marketCategories(rawData.getInGameMarket()), temporaryActivity(temporary));
         validate(state);
         return state;
     }
@@ -385,12 +385,13 @@ public class OfficialWorldStateMapper {
      */
     private String chineseTitle(NewsRawData item) {
         var translations = item.getTranslations();
-        if (translations != null && translations.getChinese() != null && !translations.getChinese().isBlank())
+        if (translations != null && translations.getChinese() != null
+            && !CharSequenceUtil.isBlank(translations.getChinese()))
             return translations.getChinese();
         for (var message : values(item.getMessages())) {
             String language = Objects.toString(message.getLanguageCode(), "").toLowerCase(Locale.ROOT);
             if ((language.equals("zh") || language.startsWith("zh-")) && message.getMessage() != null
-                && !message.getMessage().isBlank())
+                && !CharSequenceUtil.isBlank(message.getMessage()))
                 return message.getMessage();
         }
         // 汉字也用于日文；没有 zh 语言标识时不能用字形猜测语言。
@@ -424,7 +425,7 @@ public class OfficialWorldStateMapper {
             values(job.getRewardPoolDrops()).stream().map(this::syndicateReward).toList();
         String reference = String.join(", ", values(job.getRewards()));
         List<String> pool = values(job.getRewardPool());
-        if (StrUtil.isBlank(reference) && CollUtil.isNotEmpty(pool)) {
+        if (CharSequenceUtil.isBlank(reference) && CollUtil.isNotEmpty(pool)) {
             reference = String.join(", ", pool);
         }
         Integer min = job.getMinEnemyLevel();
@@ -587,12 +588,12 @@ public class OfficialWorldStateMapper {
             return null;
         }
         String target = library.getLastCompletedTargetType();
-        return new WorldStateDTO.SimarisDTO(target, StrUtil.isBlank(target));
+        return new WorldStateDTO.SimarisDTO(target, CharSequenceUtil.isBlank(target));
     }
 
     /** @param input 官方快照；@return 可类型化绑定的 Tmp，异常时保留其它官方分区。 */
     private TmpRawData parseTmp(OfficialWorldStateRawData input) {
-        if (StrUtil.isBlank(input.getTmp()))
+        if (CharSequenceUtil.isBlank(input.getTmp()))
             return null;
         try {
             return objectMapper.readValue(input.getTmp(), TmpRawData.class);
@@ -621,24 +622,24 @@ public class OfficialWorldStateMapper {
         var pager = temporary.getPager();
         WorldStateDTO.PagerMessageDTO message = null;
         if (pager != null) {
-            String text = StrUtil.isNotBlank(pager.getChinese()) ? pager.getChinese() : pager.getEnglish();
-            if (StrUtil.isNotBlank(text)) {
+            String text = CharSequenceUtil.isNotBlank(pager.getChinese()) ? pager.getChinese() : pager.getEnglish();
+            if (CharSequenceUtil.isNotBlank(text)) {
                 Instant timestamp = null;
                 try {
-                    if (StrUtil.isNotBlank(pager.getTimestamp()))
+                    if (CharSequenceUtil.isNotBlank(pager.getTimestamp()))
                         timestamp = Instant.ofEpochSecond(Long.parseLong(pager.getTimestamp()));
                 } catch (NumberFormatException | DateTimeException ignored) {
                     // 寻呼机时间损坏不应丢弃已有消息。
                 }
-                message = new WorldStateDTO.PagerMessageDTO(text, StrUtil.isNotBlank(pager.getChinese()) ? "zh" : "en",
-                    timestamp);
+                message = new WorldStateDTO.PagerMessageDTO(text,
+                    CharSequenceUtil.isNotBlank(pager.getChinese()) ? "zh" : "en", timestamp);
             }
         }
         Map<String, Long> counts = temporary.getQtcc();
         List<WorldStateDTO.CommunityCounterDTO> counters =
             counts.keySet().stream().filter(key -> key.startsWith(WarframeWorldStateDisplayConstants.QTCC_COUNT_PREFIX))
                 .map(key -> key.substring(WarframeWorldStateDisplayConstants.QTCC_COUNT_PREFIX.length()))
-                .filter(key -> !key.isBlank())
+                .filter(key -> !CharSequenceUtil.isBlank(key))
                 .map(key -> new WorldStateDTO.CommunityCounterDTO(key,
                     counts.get(WarframeWorldStateDisplayConstants.QTCC_COUNT_PREFIX + key),
                     counts.get(WarframeWorldStateDisplayConstants.QTCC_LIMIT_PREFIX + key)))
@@ -949,7 +950,7 @@ public class OfficialWorldStateMapper {
         if (reward == null) {
             return "";
         }
-        if (StrUtil.isNotBlank(reward.getAsString())) {
+        if (CharSequenceUtil.isNotBlank(reward.getAsString())) {
             return reward.getAsString();
         }
         List<String> parts = new ArrayList<>();
@@ -971,7 +972,7 @@ public class OfficialWorldStateMapper {
         if (reward == null) {
             return "";
         }
-        if (StrUtil.isNotBlank(reward.getAsString())) {
+        if (CharSequenceUtil.isNotBlank(reward.getAsString())) {
             return reward.getAsString();
         }
         List<String> parts = new ArrayList<>();
@@ -1081,6 +1082,6 @@ public class OfficialWorldStateMapper {
      * @return 首个非空值对应的文本。
      */
     private String firstNonNull(String first, String second) {
-        return StrUtil.isBlank(first) ? second : first;
+        return CharSequenceUtil.isBlank(first) ? second : first;
     }
 }

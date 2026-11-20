@@ -1,5 +1,7 @@
 package com.nnm.bot.admin.service.system.notification.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.AdminNoticeErrorCode;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -79,9 +81,10 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
             request.expiresAt().isAfter(now)
                 && !request.expiresAt().isAfter(now.plus(properties.getMaxManualRetention())),
             AdminNoticeErrorCode.INVALID_EXPIRY);
-        String title = request.title().trim();
-        String content = request.content().trim();
-        BusinessAssert.isTrue(!title.isEmpty() && !content.isEmpty(), AdminNoticeErrorCode.CONTENT_REQUIRED);
+        String title = CharSequenceUtil.trim(request.title());
+        String content = CharSequenceUtil.trim(request.content());
+        BusinessAssert.isTrue(CharSequenceUtil.isNotEmpty(title) && CharSequenceUtil.isNotEmpty(content),
+            AdminNoticeErrorCode.CONTENT_REQUIRED);
         List<AdminNotice> batch = new ArrayList<>();
         for (SysUser user : users.findAll()) {
             if (admin(user)) {
@@ -206,6 +209,6 @@ public class AdminNoticeServiceImpl implements AdminNoticeService {
     }
 
     private static String text(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+        return value == null || CharSequenceUtil.isBlank(value) ? null : CharSequenceUtil.trim(value);
     }
 }

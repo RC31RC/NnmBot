@@ -1,12 +1,13 @@
 package com.nnm.bot.admin.adapter.command;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.OptionalLong;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandRobotRole;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandRole;
 import com.nnm.bot.admin.pojo.entity.bot.role.BotRobotRole;
 import java.util.stream.Collectors;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
 import com.nnm.bot.admin.pojo.entity.system.SysUser;
@@ -73,7 +74,7 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
     public CommandAccessDecision check(BotMessageContext context, CommandDescriptor descriptor,
         CommandExecutionConfigurationDTO configuration) {
         BotCommand command = this.commandRepository.findByCodeIgnoreCase(descriptor.code()).orElse(null);
-        if (ObjectUtil.isNull(command)) {
+        if (ObjUtil.isNull(command)) {
             String commandCode = descriptor.code().strip().toLowerCase(Locale.ROOT);
             return SystemCommandCodes.ALL.contains(commandCode) ? CommandAccessDecision.permit()
                 : CommandAccessDecision.denied("当前业务命令未完成数据库配置");
@@ -156,7 +157,7 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
 
     private CommandAccessDecision checkGroupRole(BotMessageContext context, BotCommand command) {
         String requiredRole = normalizeRole(command.getGroupRoleRequired());
-        if (StrUtil.isBlank(requiredRole)) {
+        if (CharSequenceUtil.isBlank(requiredRole)) {
             return CommandAccessDecision.permit();
         }
         if (!context.isGroupMessage()) {
@@ -164,7 +165,7 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
         }
 
         BotGroupMember member = this.resolveGroupMember(context);
-        if (ObjectUtil.isNull(member) || !member.isEnabled()) {
+        if (ObjUtil.isNull(member) || !member.isEnabled()) {
             return CommandAccessDecision.denied("当前用户不是已启用的逻辑群组成员");
         }
         boolean allowed = "OWNER".equals(member.getMemberRole())
@@ -192,6 +193,6 @@ public class DatabaseCommandAccessPolicy implements CommandAccessPolicy {
     }
 
     private String normalizeRole(String role) {
-        return StrUtil.isBlank(role) ? null : role.trim().toUpperCase(Locale.ROOT);
+        return CharSequenceUtil.isBlank(role) ? null : CharSequenceUtil.trim(role).toUpperCase(Locale.ROOT);
     }
 }

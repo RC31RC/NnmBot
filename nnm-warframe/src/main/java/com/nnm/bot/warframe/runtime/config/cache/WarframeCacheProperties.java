@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.config.cache;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.constant.WarframeCacheErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -170,7 +170,7 @@ public class WarframeCacheProperties {
             throw new SystemException(WarframeCacheErrorCode.CONFIGURATION_INVALID,
                 name + ".capacity must be at least 1");
         }
-        if (expiryRequired && (ObjectUtil.isNull(region.expireAfterWrite) || region.expireAfterWrite.isZero()
+        if (expiryRequired && (ObjUtil.isNull(region.expireAfterWrite) || region.expireAfterWrite.isZero()
             || region.expireAfterWrite.isNegative())) {
             throw new SystemException(WarframeCacheErrorCode.CONFIGURATION_INVALID,
                 name + ".expire-after-write must be positive");

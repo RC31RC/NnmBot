@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.query.forum;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import java.util.List;
 
@@ -34,7 +35,7 @@ public record ForumArticleSearchQuery(String title, String category, List<String
      * @return 满足查询是否未指定任何有效筛选条件时为真，否则为假。
      */
     public boolean isBlank() {
-        return StrUtil.isBlank(title) && StrUtil.isBlank(category) && CollUtil.isEmpty(tags)
+        return CharSequenceUtil.isBlank(title) && CharSequenceUtil.isBlank(category) && CollUtil.isEmpty(tags)
             && CollUtil.isEmpty(keywords);
     }
 
@@ -45,7 +46,7 @@ public record ForumArticleSearchQuery(String title, String category, List<String
      * @return 规范化后的文本，供比较或查找使用。
      */
     private static String normalize(String value) {
-        return value == null ? "" : value.trim();
+        return value == null ? "" : CharSequenceUtil.trim(value);
     }
 
     /**
@@ -56,6 +57,6 @@ public record ForumArticleSearchQuery(String title, String category, List<String
      */
     private static List<String> normalizeList(List<String> values) {
         return values == null ? List.of() : values.stream().map(ForumArticleSearchQuery::normalize)
-            .filter(value -> StrUtil.isNotBlank(value)).toList();
+            .filter(value -> CharSequenceUtil.isNotBlank(value)).toList();
     }
 }

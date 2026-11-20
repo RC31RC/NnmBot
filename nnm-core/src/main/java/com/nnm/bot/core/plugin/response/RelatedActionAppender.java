@@ -1,5 +1,6 @@
 package com.nnm.bot.core.plugin.response;
 
+import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.core.config.ReplyProperties;
 import com.nnm.bot.core.messaging.model.BotMessageContext;
 import com.nnm.bot.core.messaging.model.BotMarkdownMessage;
@@ -48,7 +49,7 @@ public class RelatedActionAppender {
             log.warn("Related command actions were omitted command={}", command.descriptor().code(), exception);
             return result;
         }
-        if (actions == null || actions.isEmpty())
+        if (CollUtil.isEmpty(actions))
             return result;
 
         List<ReplyBlock> blocks = new ArrayList<>(result.blocks());

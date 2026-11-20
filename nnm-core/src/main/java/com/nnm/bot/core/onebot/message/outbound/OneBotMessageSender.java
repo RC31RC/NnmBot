@@ -1,5 +1,7 @@
 package com.nnm.bot.core.onebot.message.outbound;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.onebot.message.outbound.OneBotFileStager;
 import com.nnm.bot.core.onebot.message.context.OneBotMessageSource;
 import com.nnm.bot.core.onebot.message.outbound.OneBotFileStager.StagedFile;
@@ -7,7 +9,7 @@ import com.nnm.bot.core.messaging.model.BotMessagePart.File;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Image;
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.PartKind;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Text;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
@@ -85,7 +87,7 @@ public class OneBotMessageSender implements BotMessageSender {
                 }
                 case BotMessagePart.Markdown markdown -> {
                     String text = markdown.plainText();
-                    if (!text.isBlank())
+                    if (!CharSequenceUtil.isBlank(text))
                         message.text(escapeText(text));
                     markdown.message().buttons()
                         .forEach(button -> message.text(escapeText("\n" + button.label() + "：" + button.value())));
@@ -154,7 +156,7 @@ public class OneBotMessageSender implements BotMessageSender {
     }
 
     private static boolean mentionUserIdIsUsable(BotMessageContext context, String mentionUserId) {
-        if (!context.isGroupMessage() || mentionUserId == null || mentionUserId.isBlank()) {
+        if (!context.isGroupMessage() || mentionUserId == null || CharSequenceUtil.isBlank(mentionUserId)) {
             return false;
         }
         try {
@@ -170,8 +172,8 @@ public class OneBotMessageSender implements BotMessageSender {
             // SDK 超时也合成 failed，不能证明平台未接受，更不能据此退款。
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 消息结果无法确认: " + result);
         }
-        if (ObjectUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
-            || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
+        if (ObjUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
+            || (ObjUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 消息发送失败: " + result);
         }
         if (result.getData() == null || result.getData().getMessageId() == null) {
@@ -184,8 +186,8 @@ public class OneBotMessageSender implements BotMessageSender {
         if (result != null && "failed".equalsIgnoreCase(result.getStatus())) {
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 文件结果无法确认: " + result);
         }
-        if (ObjectUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
-            || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
+        if (ObjUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
+            || (ObjUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED,
                 "OneBot 文件发送失败: result=" + result + ", file=" + file.fileName() + ", size=" + stagedFile.fileSize()
                     + ", transferMode=" + stagedFile.transferMode() + ", uploadReference="

@@ -3,7 +3,7 @@ package com.nnm.bot.core.qqofficial.discovery;
 import io.github.rdt.lock.LockScope;
 import io.github.rdt.lock.LockKey;
 import io.github.rdt.lock.RdtLock;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.core.channel.model.BotDiscoveredMember;
 import com.nnm.bot.core.channel.model.BotDiscoveredScope;
 import com.nnm.bot.core.config.BotCacheProperties;
@@ -43,7 +43,7 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
     }
 
     public void observeGroup(String account, String group) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group))
+        if (CharSequenceUtil.isBlank(account) || CharSequenceUtil.isBlank(group))
             return;
         String key = account.length() + ":" + account + group;
         if (!touches.putIfAbsent(key, true))
@@ -58,14 +58,14 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
     }
 
     public void deactivateGroup(String account, String group) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group))
+        if (CharSequenceUtil.isBlank(account) || CharSequenceUtil.isBlank(group))
             return;
         update(account, group, false);
         touches.remove(account.length() + ":" + account + group);
     }
 
     public void observeMember(String account, String group, String member, String name, String role) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group) || StrUtil.isBlank(member))
+        if (CharSequenceUtil.isBlank(account) || CharSequenceUtil.isBlank(group) || CharSequenceUtil.isBlank(member))
             return;
         // 成员锁必须先释放，再触发群组触摸；不能让一个注解作用域持有两把相反顺序的锁。
         try (LockScope scope = lockManager.beginScope()) {
@@ -76,8 +76,8 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
                 cache.<ObservedMember>get(memberMap(account, group), member, ObservedMember.class).orElse(null);
             cache.put(memberMap(account, group), member,
                 new ObservedMember(member,
-                    StrUtil.isBlank(name) ? previous == null ? null : previous.displayName() : name,
-                    StrUtil.isBlank(role) ? previous == null ? null : previous.role() : role, Instant.now()),
+                    CharSequenceUtil.isBlank(name) ? previous == null ? null : previous.displayName() : name,
+                    CharSequenceUtil.isBlank(role) ? previous == null ? null : previous.role() : role, Instant.now()),
                 properties.observationRetention());
         }
         observeGroup(account, group);
@@ -85,7 +85,7 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
 
     @RdtLock
     public void removeMember(String account, String group, String member) {
-        if (StrUtil.isBlank(account) || StrUtil.isBlank(group) || StrUtil.isBlank(member))
+        if (CharSequenceUtil.isBlank(account) || CharSequenceUtil.isBlank(group) || CharSequenceUtil.isBlank(member))
             return;
         lockManager
             .lock(LockKey.forResource(QqOfficialObservedScopeStore.class, memberLockName(account, group, member)));
@@ -93,7 +93,7 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
     }
 
     public List<BotDiscoveredScope> findActive(String account) {
-        if (StrUtil.isBlank(account))
+        if (CharSequenceUtil.isBlank(account))
             return List.of();
         return cache.<GroupObservation>getAll(groupMap(account), GroupObservation.class).values().stream()
             .filter(group -> group.active() && live(group.lastObservedAt()))
@@ -138,7 +138,7 @@ public class QqOfficialObservedScopeStore implements AutoCloseable {
     }
 
     private String normalizeRole(String role) {
-        return switch (StrUtil.emptyIfNull(role).toLowerCase(Locale.ROOT)) {
+        return switch (CharSequenceUtil.emptyIfNull(role).toLowerCase(Locale.ROOT)) {
             case "owner" -> "OWNER";
             case "admin" -> "ADMIN";
             default -> "MEMBER";

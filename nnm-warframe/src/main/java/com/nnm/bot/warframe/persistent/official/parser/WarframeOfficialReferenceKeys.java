@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.parser;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import java.util.LinkedHashSet;
@@ -21,9 +23,9 @@ public final class WarframeOfficialReferenceKeys {
      * @return 有序且去重的候选；不截断路径，不进行模糊匹配。
      */
     public static List<String> candidates(String reference) {
-        if (reference == null || reference.isBlank())
+        if (reference == null || CharSequenceUtil.isBlank(reference))
             return List.of();
-        String key = reference.trim();
+        String key = CharSequenceUtil.trim(reference);
         return key.startsWith(STORE_PREFIX) ? List.of(key, ITEM_PREFIX + key.substring(STORE_PREFIX.length()))
             : List.of(key);
     }

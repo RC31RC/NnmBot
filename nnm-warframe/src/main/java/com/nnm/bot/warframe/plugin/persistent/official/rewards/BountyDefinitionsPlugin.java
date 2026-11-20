@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.rewards;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import com.nnm.bot.warframe.persistent.official.pojo.vo.rewards.WarframeBountyVO;
@@ -27,7 +29,7 @@ public final class BountyDefinitionsPlugin extends BotPlugin<Void, WarframeCatal
      */
     @Override
     protected WarframeCatalogPageCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
         if (matcher.find()) {
@@ -38,7 +40,7 @@ public final class BountyDefinitionsPlugin extends BotPlugin<Void, WarframeCatal
             } catch (NumberFormatException exception) {
                 page = Integer.MAX_VALUE;
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || OPTION.matcher(query).find())
             return new WarframeCatalogPageCommandDTO(query, page, "赏金定义参数不合法");

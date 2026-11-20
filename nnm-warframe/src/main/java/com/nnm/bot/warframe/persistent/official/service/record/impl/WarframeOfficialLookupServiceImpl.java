@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -57,7 +59,7 @@ public class WarframeOfficialLookupServiceImpl implements WarframeOfficialLookup
                 .concat(WarframeOfficialReferenceKeys.identities(domain, row.bkey()).stream(),
                     Stream.of(row.officialName(), row.localizedName(), terminal))
                 .filter(Objects::nonNull).flatMap(value -> WarframeNameNormalizer.itemSearchNames(value).stream())
-                .map(WarframeNameNormalizer::item).filter(value -> !value.isBlank()).distinct()
+                .map(WarframeNameNormalizer::item).filter(value -> !CharSequenceUtil.isBlank(value)).distinct()
                 .forEach(name -> names.computeIfAbsent(name, ignored -> new ArrayList<>()).add(key));
         }
         Map<String, List<String>> frozen = new LinkedHashMap<>();
@@ -75,8 +77,8 @@ public class WarframeOfficialLookupServiceImpl implements WarframeOfficialLookup
     @Override
     public Map<String, WarframeOfficialRecordReadDTO> records(WarframeOfficialDataDomain domain,
         Collection<String> keys) {
-        List<String> normalized = keys.stream().filter(key -> key != null && !key.isBlank())
-            .map(key -> key.trim().toLowerCase(Locale.ROOT)).distinct().toList();
+        List<String> normalized = keys.stream().filter(key -> key != null && !CharSequenceUtil.isBlank(key))
+            .map(key -> CharSequenceUtil.trim(key).toLowerCase(Locale.ROOT)).distinct().toList();
         return cache.records(WarframeDatasetCacheNames.official(domain), normalized, missing -> {
             Map<String, WarframeOfficialRecordReadDTO> loaded = new LinkedHashMap<>();
             records.recordsByKeys(domain, List.copyOf(missing))

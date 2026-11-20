@@ -1,9 +1,10 @@
 package com.nnm.bot.core.onebot.connection;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.onebot.constant.OneBotConstants.StatusAction;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.core.channel.model.BotChannelKey;
 import com.nnm.bot.core.channel.port.BotChannelConnector;
@@ -113,7 +114,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
             this.validate(record);
             ManagedConnection replacement = new ManagedConnection(List.of(record));
             ManagedConnection previous = this.connections.put(record.instanceId(), replacement);
-            if (ObjectUtil.isNotNull(previous)) {
+            if (ObjUtil.isNotNull(previous)) {
                 previous.stop();
             }
             this.running = true;
@@ -127,7 +128,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
         lifecycleLock.lock();
         try {
             ManagedConnection connection = this.connections.get(instanceId);
-            if (ObjectUtil.isNotNull(connection)) {
+            if (ObjUtil.isNotNull(connection)) {
                 connection.stop();
                 this.connections.remove(instanceId, connection);
             }
@@ -185,7 +186,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
             this.headers = new WebSocketHttpHeaders();
             this.uri = URI.create(primaryInstance.connectionUrl());
             String token = primaryInstance.accessToken();
-            if (StrUtil.isNotBlank(token)) {
+            if (CharSequenceUtil.isNotBlank(token)) {
                 headers.set(HttpHeaders.AUTHORIZATION, token.startsWith("Bearer ") ? token : "Bearer " + token);
             }
             this.configuredAccounts = this.instances.stream().map(BotChannelInstanceRecord::botAccountId)
@@ -214,7 +215,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                     closeQuietly(connectedSession);
                     return;
                 }
-                if (ObjectUtil.isNotNull(error)) {
+                if (ObjUtil.isNotNull(error)) {
                     if (!running) {
                         markKnown(StatusAction.DISCONNECTED);
                         return;
@@ -234,17 +235,17 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
 
         private void stop() {
             active.set(false);
-            if (ObjectUtil.isNotNull(reconnectTask)) {
+            if (ObjUtil.isNotNull(reconnectTask)) {
                 reconnectTask.cancel(false);
                 reconnectTask = null;
             }
             CompletableFuture<WebSocketSession> pendingConnection = connectionFuture;
-            if (ObjectUtil.isNotNull(pendingConnection) && !pendingConnection.isDone()) {
+            if (ObjUtil.isNotNull(pendingConnection) && !pendingConnection.isDone()) {
                 pendingConnection.cancel(true);
             }
             WebSocketSession connectedSession = session;
             session = null;
-            if (ObjectUtil.isNotNull(connectedSession) && connectedSession.isOpen()) {
+            if (ObjUtil.isNotNull(connectedSession) && connectedSession.isOpen()) {
                 try {
                     connectedSession.close(CloseStatus.NORMAL);
                 } catch (IOException exception) {
@@ -257,7 +258,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
         }
 
         private void closeQuietly(WebSocketSession connectedSession) {
-            if (ObjectUtil.isNull(connectedSession) || !connectedSession.isOpen()) {
+            if (ObjUtil.isNull(connectedSession) || !connectedSession.isOpen()) {
                 return;
             }
             try {
@@ -321,10 +322,10 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
         }
 
         private String normalizeAccountId(String accountId) {
-            if (StrUtil.isBlank(accountId)) {
+            if (CharSequenceUtil.isBlank(accountId)) {
                 throw new BusinessException(OneBotErrorCode.SELF_ACCOUNT_MISSING);
             }
-            return accountId.trim();
+            return CharSequenceUtil.trim(accountId);
         }
 
         private final class ConnectionHandler extends WebSocketHandlerDecorator {
@@ -359,7 +360,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                 }
                 WebSocketSession concurrentSession = sessionForShiro(session);
                 String actualAccount = messageAccountId(message);
-                if (ObjectUtil.isNotNull(actualAccount)) {
+                if (ObjUtil.isNotNull(actualAccount)) {
                     String normalizedAccount = normalizeAccountId(actualAccount);
                     parseAccountId(normalizedAccount);
                     if (!accepts(normalizedAccount)) {
@@ -400,7 +401,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
 
             private WebSocketSession sessionForShiro(WebSocketSession fallback) {
                 WebSocketSession current = this.shiroSession;
-                return ObjectUtil.isNotNull(current) ? current : fallback;
+                return ObjUtil.isNotNull(current) ? current : fallback;
             }
 
             private String messageAccountId(WebSocketMessage<?> message) {
@@ -412,11 +413,11 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
                 }
                 try {
                     Object value = JsonObjectWrapper.parseObject(payload).get("self_id");
-                    if (ObjectUtil.isNull(value)) {
+                    if (ObjUtil.isNull(value)) {
                         return null;
                     }
-                    String accountId = value.toString().trim();
-                    return accountId.isBlank() ? null : accountId;
+                    String accountId = CharSequenceUtil.trim(value.toString());
+                    return CharSequenceUtil.isBlank(accountId) ? null : accountId;
                 } catch (RuntimeException exception) {
                     throw new BusinessException(OneBotErrorCode.SELF_ACCOUNT_PARSE_FAILED, exception);
                 }
@@ -431,20 +432,20 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
     }
 
     private void validate(BotChannelInstanceRecord record) {
-        if (ObjectUtil.isNull(record)) {
+        if (ObjUtil.isNull(record)) {
             throw new BusinessException(OneBotErrorCode.INSTANCE_REQUIRED);
         }
-        if (StrUtil.isBlank(record.instanceId())) {
+        if (CharSequenceUtil.isBlank(record.instanceId())) {
             throw new BusinessException(OneBotErrorCode.INSTANCE_ID_REQUIRED);
         }
-        if (StrUtil.isBlank(record.botAccountId())) {
+        if (CharSequenceUtil.isBlank(record.botAccountId())) {
             throw new BusinessException(OneBotErrorCode.INSTANCE_ACCOUNT_REQUIRED);
         }
         this.validateAccountId(record.botAccountId());
-        if (StrUtil.isBlank(record.connectionUrl())) {
+        if (CharSequenceUtil.isBlank(record.connectionUrl())) {
             throw new BusinessException(OneBotErrorCode.CONNECTION_URL_REQUIRED);
         }
-        if (ObjectUtil.isNull(record.reconnectInterval()) || record.reconnectInterval().isZero()
+        if (ObjUtil.isNull(record.reconnectInterval()) || record.reconnectInterval().isZero()
             || record.reconnectInterval().isNegative()) {
             throw new BusinessException(OneBotErrorCode.RECONNECT_INTERVAL_INVALID);
         }
@@ -452,7 +453,7 @@ public class OneBotWebSocketClient implements SmartLifecycle, BotChannelConnecto
 
     private void validateAccountId(String accountId) {
         try {
-            long value = Long.parseLong(ObjectUtil.isNull(accountId) ? "" : accountId.trim());
+            long value = Long.parseLong(ObjUtil.isNull(accountId) ? "" : CharSequenceUtil.trim(accountId));
             if (value <= 0L) {
                 throw new NumberFormatException("account id must be positive");
             }

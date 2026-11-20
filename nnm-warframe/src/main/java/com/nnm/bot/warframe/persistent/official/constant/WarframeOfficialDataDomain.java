@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.constant;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -135,7 +137,8 @@ public enum WarframeOfficialDataDomain {
      * @return 游戏资料官方数据业务领域对象。
      */
     public static WarframeOfficialDataDomain fromCode(String code) {
-        return Arrays.stream(values()).filter(domain -> domain.name().equalsIgnoreCase(code)).findFirst().orElse(OTHER);
+        return Arrays.stream(values()).filter(domain -> CharSequenceUtil.equalsIgnoreCase(domain.name(), code))
+            .findFirst().orElse(OTHER);
     }
 
     /**

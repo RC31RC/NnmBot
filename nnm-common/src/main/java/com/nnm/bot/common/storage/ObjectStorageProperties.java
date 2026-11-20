@@ -1,7 +1,7 @@
 package com.nnm.bot.common.storage;
 
 import cn.hutool.core.lang.Assert;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,7 +41,8 @@ public class ObjectStorageProperties {
     /** 清理重试间隔。 */
     private Duration cleanupRetryDelay = Duration.ofMillis(250);
 
-    /** 校验 endpoint、bucket、超时及并发预算。
+    /**
+     * 校验 endpoint、bucket、超时及并发预算。
      *
      * @throws IllegalArgumentException 配置不符合对象存储 SDK 约束
      */
@@ -50,9 +51,9 @@ public class ObjectStorageProperties {
         Assert.notBlank(endpoint, "nnm.storage.endpoint is required");
         URI uri = URI.create(endpoint);
         Assert.isTrue(
-            ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme())) && StrUtil.isNotBlank(uri.getHost())
-                && uri.getUserInfo() == null && uri.getQuery() == null && uri.getFragment() == null
-                && (StrUtil.isEmpty(uri.getPath()) || "/".equals(uri.getPath())),
+            ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
+                && CharSequenceUtil.isNotBlank(uri.getHost()) && uri.getUserInfo() == null && uri.getQuery() == null
+                && uri.getFragment() == null && (CharSequenceUtil.isEmpty(uri.getPath()) || "/".equals(uri.getPath())),
             "nnm.storage.endpoint must be an HTTP(S) origin");
         Assert.notBlank(accessKey, "nnm.storage.access-key is required");
         Assert.notBlank(secretKey, "nnm.storage.secret-key is required");

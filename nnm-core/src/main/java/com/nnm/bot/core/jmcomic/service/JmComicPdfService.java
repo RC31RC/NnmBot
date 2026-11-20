@@ -7,7 +7,8 @@ import java.util.List;
 public interface JmComicPdfService {
 
     /** 按传入列表的顺序生成 PDF；章节和页码排序由下载服务负责。 */
-    /** 按传入顺序生成 PDF；章节和页码排序由下载服务负责。
+    /**
+     * 按传入顺序生成 PDF；章节和页码排序由下载服务负责。
      *
      * @param imageFiles 待合成图片路径
      * @param outputFile 输出 PDF 路径

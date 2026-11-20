@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.rewards.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.BOUNTY_PAGE_SIZE;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
 import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.*;
@@ -45,12 +47,12 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
      */
     @Override
     public Map<String, WarframeBountyDefinitionDetailsDTO> findAll(Collection<String> jobTypes) {
-        var keys = jobTypes.stream().filter(value -> value != null && !value.isBlank())
+        var keys = jobTypes.stream().filter(value -> value != null && !CharSequenceUtil.isBlank(value))
             .flatMap(value -> Stream.of("definitions/" + value, value)).distinct().toList();
         var rows = catalog.records(WarframeOfficialDataDomain.BOUNTY, keys);
         Map<String, WarframeBountyDefinitionDetailsDTO> result = new LinkedHashMap<>();
         for (String jobType : jobTypes) {
-            if (jobType == null || jobType.isBlank())
+            if (jobType == null || CharSequenceUtil.isBlank(jobType))
                 continue;
             var root = rows.get(("definitions/" + jobType).toLowerCase(Locale.ROOT));
             if (root == null)
@@ -71,7 +73,7 @@ public class WarframeBountyDefinitionServiceImpl implements WarframeBountyDefini
     @Override
     public WarframeBountyVO page(String keyword, int page) {
         List<WarframeBountyVO.EntryVO> result = new ArrayList<>();
-        String query = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        String query = keyword == null ? "" : CharSequenceUtil.trim(keyword).toLowerCase(Locale.ROOT);
         var keys = catalog.nameIndex(WarframeOfficialDataDomain.BOUNTY).items().values().stream()
             .filter(row -> row.bkey().startsWith("definitions/")
                 && (row.bkey() + " " + row.officialName() + " " + row.localizedName()).toLowerCase(Locale.ROOT)

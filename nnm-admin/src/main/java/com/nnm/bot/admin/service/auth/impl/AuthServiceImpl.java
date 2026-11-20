@@ -1,9 +1,10 @@
 package com.nnm.bot.admin.service.auth.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.AdminAuthErrorCode;
 import com.nnm.bot.admin.pojo.dto.auth.LoginDTO;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.stp.StpUtil;
@@ -32,7 +33,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginTokenDTO login(LoginDTO request) {
-        SysUser user = userRepository.findByUsernameIgnoreCase(request.userName().trim())
+        SysUser user = userRepository.findByUsernameIgnoreCase(CharSequenceUtil.trim(request.userName()))
             .orElseThrow(() -> new BusinessException(AdminAuthErrorCode.INVALID_CREDENTIALS));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BusinessException(AdminAuthErrorCode.INVALID_CREDENTIALS);
@@ -46,9 +47,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginTokenDTO refresh(RefreshTokenDTO request) {
-        String token = request.token().trim();
-        Object loginId = StrUtil.isBlank(token) ? null : StpUtil.getLoginIdByToken(token);
-        if (loginId == null || StrUtil.isBlank(String.valueOf(loginId))) {
+        String token = CharSequenceUtil.trim(request.token());
+        Object loginId = CharSequenceUtil.isBlank(token) ? null : StpUtil.getLoginIdByToken(token);
+        if (loginId == null || CharSequenceUtil.isBlank(String.valueOf(loginId))) {
             throw new BusinessException(AdminAuthErrorCode.TOKEN_INVALID);
         }
         long userId = parseLoginId(loginId);
@@ -77,8 +78,8 @@ public class AuthServiceImpl implements AuthService {
             .map(permission -> permission.getCode()).distinct().sorted(Comparator.naturalOrder()).toList();
 
         return new UserInfoDTO(buttons, roles, user.getId(),
-            ObjectUtil.isNull(user.getNickname()) ? user.getUsername() : user.getNickname(),
-            ObjectUtil.isNull(user.getEmail()) ? "" : user.getEmail(), user.getAvatar());
+            ObjUtil.isNull(user.getNickname()) ? user.getUsername() : user.getNickname(),
+            ObjUtil.isNull(user.getEmail()) ? "" : user.getEmail(), user.getAvatar());
     }
 
     private LoginTokenDTO login(long userId) {

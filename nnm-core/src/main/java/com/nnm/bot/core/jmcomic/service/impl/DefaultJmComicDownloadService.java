@@ -1,9 +1,10 @@
 package com.nnm.bot.core.jmcomic.service.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Optional;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -64,8 +65,8 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     @Override
     public JmComicDocument downloadAsPdf(String albumId) {
         BusinessAssert.isTrue(this.properties.isEnabled(), JmComicErrorCode.DISABLED);
-        String normalizedAlbumId = StrUtil.trim(albumId);
-        if (StrUtil.isBlank(normalizedAlbumId) || !normalizedAlbumId.matches(ALBUM_ID_PATTERN)) {
+        String normalizedAlbumId = CharSequenceUtil.trim(albumId);
+        if (CharSequenceUtil.isBlank(normalizedAlbumId) || !normalizedAlbumId.matches(ALBUM_ID_PATTERN)) {
             throw new BusinessException(JmComicErrorCode.INVALID_ALBUM_ID);
         }
         boolean acquired = false;
@@ -109,7 +110,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
             try {
                 return this.downloadImagesAsPdf(client, album, normalizedAlbumId, downloadDirectory, workspace);
             } catch (RuntimeException exception) {
-                if (ObjectUtil.isNotNull(wholeFileFailure)) {
+                if (ObjUtil.isNotNull(wholeFileFailure)) {
                     exception.addSuppressed(wholeFileFailure);
                 }
                 throw exception;
@@ -141,12 +142,12 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
         }
         Path pdf = workspace.resolve(this.safeFileName(album.getTitle(), albumId));
         this.pdfService.createCompressedPdf(imageFiles, pdf);
-        return new JmComicDocument(albumId, StrUtil.blankToDefault(album.getTitle(), albumId), imageFiles.size(), pdf,
-            workspace);
+        return new JmComicDocument(albumId, CharSequenceUtil.blankToDefault(album.getTitle(), albumId),
+            imageFiles.size(), pdf, workspace);
     }
 
     private void loginIfConfigured(AbstractJmClient client) {
-        if (this.loggedIn || StrUtil.isBlank(this.properties.getUsername())) {
+        if (this.loggedIn || CharSequenceUtil.isBlank(this.properties.getUsername())) {
             return;
         }
         this.loginLock.lock();
@@ -172,7 +173,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     }
 
     private void validateAlbum(JmAlbum album) {
-        if (ObjectUtil.isNull(album)) {
+        if (ObjUtil.isNull(album)) {
             throw new BusinessException(JmComicErrorCode.ALBUM_RESPONSE_MISSING);
         }
         if (album.getPageCount() > this.properties.getMaxPages()) {
@@ -182,17 +183,17 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     }
 
     private List<Path> validateDownload(DownloadResult result) throws IOException {
-        if (ObjectUtil.isNull(result) || CollUtil.isEmpty(result.getSuccessfulFiles())) {
+        if (ObjUtil.isNull(result) || CollUtil.isEmpty(result.getSuccessfulFiles())) {
             throw new BusinessException(JmComicErrorCode.IMAGE_DOWNLOAD_EMPTY);
         }
         if (!result.isAllSuccess()) {
             Throwable firstFailure =
-                result.getFailedTasks().values().stream().filter(ObjectUtil::isNotNull).findFirst().orElse(null);
+                result.getFailedTasks().values().stream().filter(ObjUtil::isNotNull).findFirst().orElse(null);
             throw new BusinessException(JmComicErrorCode.IMAGE_DOWNLOAD_FAILURES,
                 JmComicErrorCode.IMAGE_DOWNLOAD_FAILURES.getMessage().formatted(result.getFailedTasks().size()),
                 firstFailure);
         }
-        List<Path> imageFiles = result.getSuccessfulFiles().stream().filter(ObjectUtil::isNotNull)
+        List<Path> imageFiles = result.getSuccessfulFiles().stream().filter(ObjUtil::isNotNull)
             .map(path -> path.toAbsolutePath().normalize()).distinct()
             .sorted((left, right) -> JmPageOrder.compare(left.toString(), right.toString())).toList();
         if (imageFiles.size() > this.properties.getMaxPages()) {
@@ -214,8 +215,8 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     }
 
     private String safeFileName(String title, String albumId) {
-        String safeTitle =
-            StrUtil.blankToDefault(title, "jm-" + albumId).replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").trim();
+        String safeTitle = CharSequenceUtil
+            .trim(CharSequenceUtil.blankToDefault(title, "jm-" + albumId).replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_"));
         if (safeTitle.length() > 100) {
             safeTitle = safeTitle.substring(0, 100);
         }
@@ -223,7 +224,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
     }
 
     private static void cleanupAfterFailure(Path workspace, Throwable original) {
-        if (ObjectUtil.isNull(workspace) || !Files.exists(workspace)) {
+        if (ObjUtil.isNull(workspace) || !Files.exists(workspace)) {
             return;
         }
         try {
@@ -236,7 +237,7 @@ public class DefaultJmComicDownloadService implements JmComicDownloadService {
 
                 @Override
                 public FileVisitResult postVisitDirectory(Path directory, IOException exception) throws IOException {
-                    if (ObjectUtil.isNotNull(exception)) {
+                    if (ObjUtil.isNotNull(exception)) {
                         throw exception;
                     }
                     Files.deleteIfExists(directory);

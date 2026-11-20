@@ -28,33 +28,23 @@ public class WarframeArbitrationRefreshServiceImpl implements WarframeArbitratio
     @Resource
     private Clock warframeClock;
 
-    private volatile Instant nextAttemptAt = Instant.MIN;
-
-    /**
-     * 获取当前上游数据并更新本地有效状态。
-     */
+    /** 仅在成功刷新间隔到期时请求上游；失败由定时任务按 retryInterval 再次触发。 */
     @Override
     public void refresh() {
         refreshLock.lock();
         try {
             Instant now = warframeClock.instant();
-            if (now.isBefore(nextAttemptAt))
-                return;
             Instant lastFetchedAt = snapshots.current().fetchedAt();
             if (lastFetchedAt != null && now.isBefore(lastFetchedAt.plus(properties.getRefreshInterval()))) {
-                nextAttemptAt = lastFetchedAt.plus(properties.getRefreshInterval());
                 return;
             }
             try {
                 var entries = parser.parse(client.fetch());
                 Instant completedAt = warframeClock.instant();
                 snapshots.replace(entries, completedAt);
-                nextAttemptAt = completedAt.plus(properties.getRefreshInterval());
             } catch (RuntimeException exception) {
-                // 请求本身可能经历多次超时；等待时间从失败完成后计算，避免耗时请求耗尽重试间隔。
-                nextAttemptAt = warframeClock.instant().plus(properties.getRetryInterval());
-                log.warn("仲裁排期刷新失败，保留最近一次有效内存快照 source={} retryAfter={} nextAttemptAt={}", properties.getUrl(),
-                    properties.getRetryInterval(), nextAttemptAt, exception);
+                log.warn("仲裁排期刷新失败，保留最近一次有效内存快照 source={} retryAfter={}", properties.getUrl(),
+                    properties.getRetryInterval(), exception);
             }
         } finally {
             refreshLock.unlock();

@@ -1,11 +1,12 @@
 package com.nnm.bot.admin.service.bot.command.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.stream.Collectors;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandAlias;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommandCost;
@@ -115,8 +116,8 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         command.setDescription(valueOr(request.description(), descriptor.description()));
         command.setEnabled(Boolean.TRUE.equals(request.enabled()));
         command.setShowInHelp(Boolean.TRUE.equals(request.showInHelp()));
-        command.setCooldownSeconds(
-            Math.max(0, ObjectUtil.isNull(request.cooldownSeconds()) ? 0 : request.cooldownSeconds()));
+        command
+            .setCooldownSeconds(Math.max(0, ObjUtil.isNull(request.cooldownSeconds()) ? 0 : request.cooldownSeconds()));
         command.setMentionInvoker(Boolean.TRUE.equals(request.mentionInvoker()));
         command.setPermissionOverride(request.permissionOverride());
         command.setGroupRoleRequired(normalizeGroupRole(request.groupRoleRequired()));
@@ -245,9 +246,9 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         BotCommand command = commandRepository.findByCodeIgnoreCase(code)
             .orElseThrow(() -> new BusinessException(BotManagementErrorCode.COMMAND_NOT_FOUND));
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElse(null);
-        return new BotCommandCostDTO(command.getCode(), ObjectUtil.isNull(cost) ? 0 : cost.getCostPoints(),
-            ObjectUtil.isNotNull(cost) && cost.isEnabled(), ObjectUtil.isNull(cost) ? 0 : cost.getRewardPoints(),
-            ObjectUtil.isNotNull(cost) && cost.isRewardEnabled());
+        return new BotCommandCostDTO(command.getCode(), ObjUtil.isNull(cost) ? 0 : cost.getCostPoints(),
+            ObjUtil.isNotNull(cost) && cost.isEnabled(), ObjUtil.isNull(cost) ? 0 : cost.getRewardPoints(),
+            ObjUtil.isNotNull(cost) && cost.isRewardEnabled());
     }
 
     @Override
@@ -284,63 +285,63 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         }
         Map<String, BotCommandTriggerSaveDTO> normalized = new LinkedHashMap<>();
         for (BotCommandTriggerSaveDTO trigger : triggers) {
-            if (ObjectUtil.isNull(trigger) || StrUtil.isBlank(trigger.name())) {
+            if (ObjUtil.isNull(trigger) || CharSequenceUtil.isBlank(trigger.name())) {
                 continue;
             }
-            String value = trigger.name().trim();
+            String value = CharSequenceUtil.trim(trigger.name());
             CommandBoundaryPolicy policy =
-                ObjectUtil.defaultIfNull(trigger.boundaryPolicy(), CommandBoundaryPolicy.defaultFor(value));
+                ObjUtil.defaultIfNull(trigger.boundaryPolicy(), CommandBoundaryPolicy.defaultFor(value));
             normalized.putIfAbsent(value.toLowerCase(Locale.ROOT), new BotCommandTriggerSaveDTO(value, policy));
         }
         return Collections.unmodifiableMap(normalized);
     }
 
     private BotCommandDTO toItem(BotPlugin<?, ?> plugin, BotCommand command) {
-        CommandMetadataDTO metadata = ObjectUtil.isNull(plugin) ? null : commandRegistry.metadata(plugin);
-        String code = ObjectUtil.isNull(command) ? metadata.code() : command.getCode();
+        CommandMetadataDTO metadata = ObjUtil.isNull(plugin) ? null : commandRegistry.metadata(plugin);
+        String code = ObjUtil.isNull(command) ? metadata.code() : command.getCode();
         String gameCode = gameCode(command, plugin, code);
-        List<BotCommandTriggerDTO> triggers = ObjectUtil.isNull(command) ? List.of()
+        List<BotCommandTriggerDTO> triggers = ObjUtil.isNull(command) ? List.of()
             : aliasRepository.findAllByCommandId(command.getId()).stream()
                 .sorted(Comparator.comparing(BotCommandAlias::getId))
                 .map(alias -> new BotCommandTriggerDTO(alias.getAliasName(), alias.getBoundaryPolicy())).toList();
-        return new BotCommandDTO(ObjectUtil.isNull(command) ? null : command.getId(), ObjectUtil.isNull(command), code,
-            ObjectUtil.isNull(command) ? metadata.name() : command.getName(), gameCode,
-            ObjectUtil.isNull(command) ? "" : command.getDescription(), metadata == null ? null : metadata.matchType(),
-            ObjectUtil.isNull(command) ? false : command.isEnabled(),
-            ObjectUtil.isNull(command) ? false : command.isShowInHelp(), triggers,
-            ObjectUtil.isNull(command) ? 0 : command.getCooldownSeconds(),
-            ObjectUtil.isNotNull(command) && command.isMentionInvoker(),
-            ObjectUtil.isNull(command) || ObjectUtil.isNull(command.getPermissionOverride()) ? ""
+        return new BotCommandDTO(ObjUtil.isNull(command) ? null : command.getId(), ObjUtil.isNull(command), code,
+            ObjUtil.isNull(command) ? metadata.name() : command.getName(), gameCode,
+            ObjUtil.isNull(command) ? "" : command.getDescription(), metadata == null ? null : metadata.matchType(),
+            ObjUtil.isNull(command) ? false : command.isEnabled(),
+            ObjUtil.isNull(command) ? false : command.isShowInHelp(), triggers,
+            ObjUtil.isNull(command) ? 0 : command.getCooldownSeconds(),
+            ObjUtil.isNotNull(command) && command.isMentionInvoker(),
+            ObjUtil.isNull(command) || ObjUtil.isNull(command.getPermissionOverride()) ? ""
                 : command.getPermissionOverride(),
-            ObjectUtil.isNull(command) ? null : command.getGroupRoleRequired(),
-            ObjectUtil.isNull(command) ? null : command.getTemplateId(),
-            ObjectUtil.isNull(command) ? null : command.getCreatedAt(),
-            ObjectUtil.isNull(command) ? null : command.getUpdatedAt());
+            ObjUtil.isNull(command) ? null : command.getGroupRoleRequired(),
+            ObjUtil.isNull(command) ? null : command.getTemplateId(),
+            ObjUtil.isNull(command) ? null : command.getCreatedAt(),
+            ObjUtil.isNull(command) ? null : command.getUpdatedAt());
     }
 
     private String normalize(String code) {
-        return ObjectUtil.isNull(code) ? "" : code.trim().toLowerCase(Locale.ROOT);
+        return ObjUtil.isNull(code) ? "" : CharSequenceUtil.trim(code).toLowerCase(Locale.ROOT);
     }
 
     private String resolveGameCode(BotCommand command, String descriptorCode, String requestedGameCode) {
         String pluginGameCode = pluginGameCode(descriptorCode);
-        if (ObjectUtil.isNotNull(pluginGameCode)) {
+        if (ObjUtil.isNotNull(pluginGameCode)) {
             return pluginGameCode;
         }
-        if (StrUtil.isNotBlank(requestedGameCode)) {
-            return requestedGameCode.trim();
+        if (CharSequenceUtil.isNotBlank(requestedGameCode)) {
+            return CharSequenceUtil.trim(requestedGameCode);
         }
-        if (ObjectUtil.isNotNull(command.getId()) && StrUtil.isNotBlank(command.getGameCode())) {
+        if (ObjUtil.isNotNull(command.getId()) && CharSequenceUtil.isNotBlank(command.getGameCode())) {
             return command.getGameCode();
         }
         return defaultGameCode(descriptorCode);
     }
 
     private String normalizeGroupRole(String role) {
-        if (StrUtil.isBlank(role)) {
+        if (CharSequenceUtil.isBlank(role)) {
             return null;
         }
-        String normalized = role.trim().toUpperCase(Locale.ROOT);
+        String normalized = CharSequenceUtil.trim(role).toUpperCase(Locale.ROOT);
         if (!Set.of("OWNER", "ADMIN").contains(normalized)) {
             throw new BusinessException(BotManagementErrorCode.GROUP_ROLE_INVALID);
         }
@@ -348,10 +349,10 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     }
 
     private String gameCode(BotCommand command, BotPlugin<?, ?> plugin, String descriptorCode) {
-        if (ObjectUtil.isNotNull(plugin)) {
+        if (ObjUtil.isNotNull(plugin)) {
             return commandRegistry.metadata(plugin).gameCode();
         }
-        if (ObjectUtil.isNotNull(command) && StrUtil.isNotBlank(command.getGameCode())) {
+        if (ObjUtil.isNotNull(command) && CharSequenceUtil.isNotBlank(command.getGameCode())) {
             return command.getGameCode();
         }
         return defaultGameCode(descriptorCode);
@@ -369,6 +370,6 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
     }
 
     private static String valueOr(String value, String fallback) {
-        return StrUtil.isBlank(value) ? fallback : value.trim();
+        return CharSequenceUtil.isBlank(value) ? fallback : CharSequenceUtil.trim(value);
     }
 }

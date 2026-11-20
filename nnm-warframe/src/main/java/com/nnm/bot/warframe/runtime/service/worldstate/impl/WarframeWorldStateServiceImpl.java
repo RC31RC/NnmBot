@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
@@ -18,7 +18,6 @@ import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.rawdata.worldstate.OfficialWorldStateRawData;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeBountyCycleService;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeInvasionEnrichmentService;
-import com.nnm.bot.warframe.runtime.service.worldstate.WarframeKuvaMissionEnrichmentService;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeCycleService;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeWorldStateService;
 import jakarta.annotation.Resource;
@@ -63,9 +62,6 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     /** 只补全匹配官方轮次的双方入侵任务；失败仍发布官方结果。 */
     @Resource
     private WarframeInvasionEnrichmentService invasionEnrichmentService;
-    /** 外部任务流仅增加有效赤毒任务，失败时保持官方数据。 */
-    @Resource
-    private WarframeKuvaMissionEnrichmentService kuvaMissionEnrichmentService;
     /** 最近一次完整的本机快照，所有分区必须一起替换。 */
     private final AtomicReference<WorldStateRuntimeSnapshot> currentSnapshot = new AtomicReference<>();
 
@@ -92,7 +88,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             WorldStateRuntimeSnapshot oldSnapshot = currentSnapshot.getAndSet(newSnapshot);
             WorldStateDTO oldState = oldSnapshot == null ? null : oldSnapshot.state();
 
-            if (ObjectUtil.isNull(oldState)) {
+            if (ObjUtil.isNull(oldState)) {
                 log.info("Initial world state loaded");
                 eventPublisher.publishEvent(new WorldStateUpdatedEvent(null, newState, null));
                 return;
@@ -148,7 +144,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             TaskProgressReporter progress = reporter == null ? TaskProgressReporter.noop() : reporter;
             progress.report("DOWNLOADING_WORLD_STATE", "正在拉取 Warframe 世界数据");
             HttpResult result = officialApiClient.fetchWorldStateResult();
-            if (result == null || !result.isSuccess() || StrUtil.isBlank(result.body())) {
+            if (result == null || !result.isSuccess() || CharSequenceUtil.isBlank(result.body())) {
                 // 保留最近一次成功的 JVM 内存快照，由本机下一个轮询周期重试。
                 throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "世界状态上游响应失败或为空");
             }
@@ -161,8 +157,8 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
                 throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED,
                     "官方世界状态字段绑定失败：" + exception.getMessage(), exception);
             }
-            WorldStateDTO state = cycleService.resolve(kuvaMissionEnrichmentService.enrich(invasionEnrichmentService
-                .enrich(bountyCycleService.enrich(worldStateMapper.map(rawData, source, result.body())))));
+            WorldStateDTO state = cycleService.resolve(invasionEnrichmentService
+                .enrich(bountyCycleService.enrich(worldStateMapper.map(rawData, source, result.body()))));
             applySnapshot(new WorldStateRuntimeSnapshot(rawData, state, source, result.body(), sha256(result.body()),
                 state.metadata().fetchedAt(), topLevelFields(result.body())));
             progress.complete("Warframe 世界数据已更新");

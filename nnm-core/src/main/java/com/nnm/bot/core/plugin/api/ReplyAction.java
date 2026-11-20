@@ -1,5 +1,6 @@
 package com.nnm.bot.core.plugin.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.core.plugin.constant.CommandPresentationConstants;
 
 import java.net.URI;
@@ -34,7 +35,8 @@ public sealed interface ReplyAction {
 
     private static String checked(String value, int maxLength) {
         String text = Objects.requireNonNull(value, "action text").strip();
-        if (text.isEmpty() || text.length() > maxLength || text.chars().anyMatch(Character::isISOControl)) {
+        if (CharSequenceUtil.isEmpty(text) || text.length() > maxLength
+            || text.chars().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException("Invalid action text");
         }
         return text;

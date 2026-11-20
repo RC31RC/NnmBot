@@ -1,11 +1,12 @@
 package com.nnm.bot.warframe.persistent.curated.service.watch.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.BountyCycleJobDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SyndicateMissionDTO;
 import java.util.Map.Entry;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.channel.model.BotChannelInstanceMetadata;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
 import com.nnm.bot.core.channel.model.BotChannelKey;
@@ -184,11 +185,11 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
         String actualType = normalizeType(candidate.type());
         boolean allFissures = "filter".equals(rule.getWatchKey()) && "fissures".equals(requestedType)
             && Set.of("fissures", "steel-fissures", "void-storms").contains(actualType);
-        if (!"*".equals(requestedType) && StrUtil.isNotBlank(requestedType) && !requestedType.equals(actualType)
-            && !allFissures)
+        if (!"*".equals(requestedType) && CharSequenceUtil.isNotBlank(requestedType)
+            && !requestedType.equals(actualType) && !allFissures)
             return false;
         String expected = normalize(rule.getWatchValue());
-        if (StrUtil.isBlank(expected))
+        if (CharSequenceUtil.isBlank(expected))
             return false;
         if ("filter".equals(rule.getWatchKey())) {
             if ("*".equals(expected))
@@ -199,7 +200,7 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
             }
             return false;
         }
-        if (StrUtil.isBlank(rule.getWatchKey()) || "*".equals(rule.getWatchKey().trim())) {
+        if (CharSequenceUtil.isBlank(rule.getWatchKey()) || "*".equals(CharSequenceUtil.trim(rule.getWatchKey()))) {
             return normalize(candidate.values().toString()).contains(expected);
         }
         Object actual = valueByKey(candidate.values(), rule.getWatchKey());
@@ -239,7 +240,7 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
                 return false;
             remaining = remaining.replace(tier.getKey(), "");
         }
-        if (StrUtil.isEmpty(remaining))
+        if (CharSequenceUtil.isEmpty(remaining))
             return true;
         String node = normalize(Objects.toString(candidate.values().get("node"), ""));
         String nodeName = normalize(Objects.toString(candidate.values().get("nodeName"), ""));
@@ -248,9 +249,9 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
         String mission = normalize(Objects.toString(candidate.values().get("missionType"),
             Objects.toString(candidate.values().get("type"), "")));
         // 条件中的星球与任务必须各自连续匹配，不能逐字拼凑出不存在的任务。
-        if (StrUtil.isNotBlank(mission) && remaining.endsWith(mission)) {
+        if (CharSequenceUtil.isNotBlank(mission) && remaining.endsWith(mission)) {
             String location = remaining.substring(0, remaining.length() - mission.length());
-            return StrUtil.isEmpty(location) || node.contains(location) || nodeName.contains(location)
+            return CharSequenceUtil.isEmpty(location) || node.contains(location) || nodeName.contains(location)
                 || system.contains(location) || planet.contains(location);
         }
         // 九重天按节点名订阅；H2 星云等数字身份不能被拆成单字模糊匹配。
@@ -386,12 +387,10 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
                     continue;
                 }
                 SelectedChannel channel = selected.get();
-                List<
-                    String> mentions =
-                        channel.platform() == BotPlatform.ONEBOT
-                            ? notification.memberIds().stream().map(members::get).filter(Objects::nonNull)
-                                .map(BotGroupMember::getQqId).filter(StrUtil::isNotBlank).distinct().toList()
-                            : List.of();
+                List<String> mentions = channel.platform() == BotPlatform.ONEBOT
+                    ? notification.memberIds().stream().map(members::get).filter(Objects::nonNull)
+                        .map(BotGroupMember::getQqId).filter(CharSequenceUtil::isNotBlank).distinct().toList()
+                    : List.of();
                 messageSenderRouter.sendGroupText(channel.platform(),
                     new BotProactiveGroupMessage(channel.instance().botAccountId(), channel.binding().getScopeKey(),
                         notification.message(), mentions));
@@ -584,7 +583,7 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
      * @return 规范化后的文本，供比较或查找使用。
      */
     private static String normalize(String value) {
-        return StrUtil.emptyIfNull(value).trim().toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(value)).toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -659,7 +658,7 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
                 return key;
             for (String key : List.of("id", "node", "title", "name", "item", "missionType", "type", "location")) {
                 Object value = values.get(key);
-                if (value != null && StrUtil.isNotBlank(String.valueOf(value))) {
+                if (value != null && CharSequenceUtil.isNotBlank(String.valueOf(value))) {
                     return sha256(
                         type + ":" + key + ":" + value + ":" + Objects.toString(values.get("expiryInstant"), ""));
                 }
@@ -674,7 +673,7 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
          */
         private Instant expiry() {
             Object value = values.get("expiryInstant");
-            return value instanceof String text && StrUtil.isNotBlank(text) ? Instant.parse(text) : null;
+            return value instanceof String text && CharSequenceUtil.isNotBlank(text) ? Instant.parse(text) : null;
         }
 
         /**
@@ -695,11 +694,11 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
         private String messageLine() {
             List<String> parts = new ArrayList<>();
             Object node = values.getOrDefault("nodeName", values.get("node"));
-            if (node != null && StrUtil.isNotBlank(String.valueOf(node)))
+            if (node != null && CharSequenceUtil.isNotBlank(String.valueOf(node)))
                 parts.add(String.valueOf(node));
             for (String key : List.of("missionType", "item", "reward", "location", "title", "name")) {
                 Object value = values.get(key);
-                if (value != null && StrUtil.isNotBlank(String.valueOf(value))) {
+                if (value != null && CharSequenceUtil.isNotBlank(String.valueOf(value))) {
                     parts.add(String.valueOf(value));
                 }
             }

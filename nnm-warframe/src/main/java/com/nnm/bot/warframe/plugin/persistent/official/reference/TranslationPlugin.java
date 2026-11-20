@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.reference;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -23,7 +25,7 @@ public final class TranslationPlugin extends BotPlugin<Void, String> {
      */
     @Override
     protected String parse(CommandInvocation invocation, Void prepared) {
-        return invocation.arguments() == null ? "" : invocation.arguments().trim();
+        return invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
     }
 
     @Resource

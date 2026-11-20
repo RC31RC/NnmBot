@@ -1,8 +1,9 @@
 package com.nnm.bot.core.onebot.connection;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.mikuac.shiro.adapter.WebSocketClientHandler;
 import com.mikuac.shiro.common.utils.PayloadSender;
@@ -73,7 +74,7 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
             && payload.get("message_id") != null) {
             messageArrivals.record(session.getId(), accountId, payload.get("message_id").toString(), receivedAt);
         }
-        if (ObjectUtil.isNotNull(accountId)) {
+        if (ObjUtil.isNotNull(accountId)) {
             session.getAttributes().put(Connection.X_SELF_ID, accountId);
             long numericAccountId = parseAccountId(accountId);
             if (numericAccountId != 0L) {
@@ -103,23 +104,23 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
     private void removeSessionBot(WebSocketSession session, long accountId) {
         AtomicReference<Bot> removed = new AtomicReference<>();
         botContainer.robots.computeIfPresent(accountId, (key, bot) -> {
-            if (ObjectUtil.isNotNull(bot.getSession()) && session.getId().equals(bot.getSession().getId())) {
+            if (ObjUtil.isNotNull(bot.getSession()) && session.getId().equals(bot.getSession().getId())) {
                 removed.set(bot);
                 return null;
             }
             return bot;
         });
-        if (ObjectUtil.isNull(removed.get())) {
+        if (ObjUtil.isNull(removed.get())) {
             return;
         }
         CompletableFuture.runAsync(() -> coreEvent.offline(accountId), shiroTaskExecutor);
     }
 
     private static long parseAccountId(String accountId) {
-        if (StrUtil.isBlank(accountId)) {
+        if (CharSequenceUtil.isBlank(accountId)) {
             return 0L;
         }
-        String normalized = accountId.trim();
+        String normalized = CharSequenceUtil.trim(accountId);
         if (!normalized.chars().allMatch(Character::isDigit)) {
             return 0L;
         }
@@ -136,6 +137,6 @@ public class MultiOneBotWebSocketClientHandler extends WebSocketClientHandler {
         if (value instanceof Number number) {
             return number.longValue();
         }
-        return ObjectUtil.isNull(value) ? 0L : parseAccountId(value.toString());
+        return ObjUtil.isNull(value) ? 0L : parseAccountId(value.toString());
     }
 }

@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.worldstate;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeStateTranslationDetailsDTO;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
@@ -26,7 +27,8 @@ public final class Calendar1999Plugin extends BotPlugin<Void, String> {
      */
     @Override
     protected String parse(CommandInvocation invocation, Void prepared) {
-        return invocation.arguments() == null ? "" : invocation.arguments().trim().toLowerCase(Locale.ROOT);
+        return invocation.arguments() == null ? ""
+            : CharSequenceUtil.trim(invocation.arguments()).toLowerCase(Locale.ROOT);
     }
 
     @Resource
@@ -46,7 +48,7 @@ public final class Calendar1999Plugin extends BotPlugin<Void, String> {
         List<WarframeStateTranslationDetailsDTO> items = worldStateRuleService.stateTranslations().stream()
             // 当前目录是日历任务词典，不是官方 KnownCalendarSeasons 的实时日期排期。
             .filter(item -> contains(item.uniqueName(), "calendar1999"))
-            .filter(item -> StrUtil.isBlank(query) || contains(item.uniqueName(), query)
+            .filter(item -> CharSequenceUtil.isBlank(query) || contains(item.uniqueName(), query)
                 || contains(item.displayName(), query) || contains(item.description(), query))
             .toList();
         return CommandResult.html(CollUtil.isEmpty(items) ? "没有找到 1999 日历任务资料" : "1999 日历任务资料",

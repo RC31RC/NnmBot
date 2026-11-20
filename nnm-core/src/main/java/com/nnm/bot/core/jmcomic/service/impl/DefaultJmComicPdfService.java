@@ -1,7 +1,7 @@
 package com.nnm.bot.core.jmcomic.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.jmcomic.config.JmComicProperties;
@@ -45,7 +45,7 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
         if (CollUtil.isEmpty(imageFiles)) {
             throw new BusinessException(JmComicErrorCode.PDF_INPUT_EMPTY);
         }
-        List<Path> imagesInCallerOrder = imageFiles.stream().filter(ObjectUtil::isNotNull).toList();
+        List<Path> imagesInCallerOrder = imageFiles.stream().filter(ObjUtil::isNotNull).toList();
         // ZIP 图片落盘名只用于隔离条目，不能覆盖调用方按原始章节、页码确定的顺序。
         if (imagesInCallerOrder.isEmpty()) {
             throw new BusinessException(JmComicErrorCode.PDF_INPUT_EMPTY);
@@ -84,7 +84,7 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
         }
 
         BufferedImage source = ImageIO.read(imageFile.toFile());
-        if (ObjectUtil.isNull(source)) {
+        if (ObjUtil.isNull(source)) {
             throw new BusinessException(JmComicErrorCode.IMAGE_FORMAT_INVALID);
         }
         BufferedImage compressedImage = null;
@@ -100,7 +100,7 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
                 content.drawImage(pdfImage, 0, 0, pageWidth, pageHeight);
             }
         } finally {
-            if (ObjectUtil.isNotNull(compressedImage) && compressedImage != source) {
+            if (ObjUtil.isNotNull(compressedImage) && compressedImage != source) {
                 compressedImage.flush();
             }
             source.flush();
@@ -112,7 +112,7 @@ public class DefaultJmComicPdfService implements JmComicPdfService {
             throw new BusinessException(JmComicErrorCode.IMAGE_FILE_UNREADABLE);
         }
         try (ImageInputStream input = ImageIO.createImageInputStream(imageFile.toFile())) {
-            if (ObjectUtil.isNull(input)) {
+            if (ObjUtil.isNull(input)) {
                 throw new BusinessException(JmComicErrorCode.IMAGE_READ_FAILED);
             }
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);

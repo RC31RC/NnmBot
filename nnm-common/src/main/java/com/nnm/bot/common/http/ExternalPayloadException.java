@@ -6,7 +6,8 @@ import com.nnm.bot.common.constant.ExternalHttpErrorCode;
 /** 外部 HTTP 响应无法按预期协议解析时抛出。 */
 public class ExternalPayloadException extends SystemException {
 
-    /** 保留来源定位信息及解析原因供内部诊断。
+    /**
+     * 保留来源定位信息及解析原因供内部诊断。
      *
      * @param method HTTP 方法
      * @param url 请求地址

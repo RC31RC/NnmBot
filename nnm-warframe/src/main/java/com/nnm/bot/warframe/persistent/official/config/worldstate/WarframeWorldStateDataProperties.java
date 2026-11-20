@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.config.worldstate;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -39,10 +40,10 @@ public class WarframeWorldStateDataProperties {
      */
     @PostConstruct
     public void validate() {
-        if (StrUtil.isBlank(locale)) {
+        if (CharSequenceUtil.isBlank(locale)) {
             throw new IllegalArgumentException("nnm.warframe.query.world-state.locale must not be blank");
         }
-        if (!"zh".equalsIgnoreCase(locale) && !"en".equalsIgnoreCase(locale)) {
+        if (!CharSequenceUtil.equalsIgnoreCase("zh", locale) && !CharSequenceUtil.equalsIgnoreCase("en", locale)) {
             throw new IllegalArgumentException("nnm.warframe.query.world-state.locale must be zh or en");
         }
     }

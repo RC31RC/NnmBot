@@ -1,5 +1,6 @@
 package com.nnm.bot.core.channel.runtime;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.core.channel.topology.BotTopologySnapshot;
 import java.util.Map.Entry;
 import com.nnm.bot.core.channel.model.BotChannelInstanceRecord;
@@ -205,7 +206,7 @@ public class ClusterBotRuntime implements NodeIdentityListener {
             String id = connection.record().instanceId();
             String expected = placement.get(id);
             String target = targets.get(expected);
-            if (target != null && !target.isEmpty() && !rdt.instanceId().equals(target)) {
+            if (CharSequenceUtil.isNotEmpty(target) && !rdt.instanceId().equals(target)) {
                 // 两个节点都存活时，只有已批准的转移才能变更所有者。
                 stopLocal(id);
                 continue;

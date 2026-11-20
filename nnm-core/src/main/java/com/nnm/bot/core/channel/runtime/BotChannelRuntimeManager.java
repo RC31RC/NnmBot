@@ -1,7 +1,8 @@
 package com.nnm.bot.core.channel.runtime;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import org.springframework.beans.factory.ObjectProvider;
-import cn.hutool.core.util.StrUtil;
 
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -118,10 +119,10 @@ public class BotChannelRuntimeManager {
     }
 
     private BotChannelInstanceRecord find(String instanceId) {
-        if (StrUtil.isBlank(instanceId)) {
+        if (CharSequenceUtil.isBlank(instanceId)) {
             throw new BusinessException(BotChannelErrorCode.INSTANCE_ID_REQUIRED);
         }
-        String normalizedInstanceId = instanceId.trim();
+        String normalizedInstanceId = CharSequenceUtil.trim(instanceId);
         return this.instanceProvider.findAll().stream()
             .filter(record -> record.instanceId().equals(normalizedInstanceId)).findFirst()
             .orElseThrow(() -> new BusinessException(BotChannelErrorCode.INSTANCE_NOT_FOUND));

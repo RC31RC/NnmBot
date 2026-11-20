@@ -1,5 +1,7 @@
 package com.nnm.bot.core.group.plugin.system;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.CommandInvocation;
@@ -24,7 +26,7 @@ public class BindQqPlugin extends BotPlugin<Void, String> {
      */
     @Override
     protected String parse(CommandInvocation invocation, Void prepared) {
-        String qqNumber = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String qqNumber = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         return qqNumber.matches("\\d{5,20}") ? qqNumber : null;
     }
 

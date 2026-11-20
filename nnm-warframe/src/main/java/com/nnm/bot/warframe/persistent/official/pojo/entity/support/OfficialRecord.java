@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.pojo.entity.support;
 
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.MaintenanceType;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.EnumType;
@@ -97,7 +97,7 @@ public abstract class OfficialRecord extends OfficialRow {
 
     /** 清理业务检索字段首尾空白，统一可选字段的空值表示。 */
     private void normalize() {
-        bkey = StrUtil.trim(bkey);
+        bkey = CharSequenceUtil.trim(bkey);
         officialName = trimToNull(officialName);
         localizedName = trimToNull(localizedName);
         parentName = trimToNull(parentName);
@@ -115,7 +115,7 @@ public abstract class OfficialRecord extends OfficialRow {
      * @return 裁剪文本首尾空白，并将空白结果统一为缺省值对应的文本。
      */
     private static String trimToNull(String value) {
-        String trimmed = StrUtil.trim(value);
-        return StrUtil.isBlank(trimmed) ? null : trimmed;
+        String trimmed = CharSequenceUtil.trim(value);
+        return CharSequenceUtil.isBlank(trimmed) ? null : trimmed;
     }
 }

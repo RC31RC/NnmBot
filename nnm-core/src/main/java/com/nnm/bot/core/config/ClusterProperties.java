@@ -4,7 +4,8 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/** 分布式任务、实例认领、故障切换和发现流程的时间预算。
+/**
+ * 分布式任务、实例认领、故障切换和发现流程的时间预算。
  *
  * @param taskRetention 任务结果保留时长
  * @param taskTimeout 单项任务执行超时

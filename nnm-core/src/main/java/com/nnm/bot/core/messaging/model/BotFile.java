@@ -1,8 +1,9 @@
 package com.nnm.bot.core.messaging.model;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.util.ArrayUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -34,22 +35,22 @@ public final class BotFile {
     }
 
     private BotFile(String fileName, String contentType, byte[] content, Path path) {
-        if (StrUtil.isBlank(fileName)) {
+        if (CharSequenceUtil.isBlank(fileName)) {
             throw new IllegalArgumentException("fileName must not be blank");
         }
-        if (StrUtil.isBlank(contentType)) {
+        if (CharSequenceUtil.isBlank(contentType)) {
             throw new IllegalArgumentException("contentType must not be blank");
         }
         boolean hasContent = ArrayUtil.isNotEmpty(content);
-        boolean hasPath = ObjectUtil.isNotNull(path);
+        boolean hasPath = ObjUtil.isNotNull(path);
         if (hasContent == hasPath) {
             throw new IllegalArgumentException("exactly one of content or path is required");
         }
         if (hasPath && (!Files.isRegularFile(path) || !Files.isReadable(path))) {
             throw new IllegalArgumentException("file path must be a readable regular file: " + path);
         }
-        this.fileName = fileName.trim();
-        this.contentType = contentType.trim().toLowerCase();
+        this.fileName = CharSequenceUtil.trim(fileName);
+        this.contentType = CharSequenceUtil.trim(contentType).toLowerCase();
         this.content = hasContent ? Arrays.copyOf(content, content.length) : null;
         this.path = hasPath ? path.toAbsolutePath().normalize() : null;
     }
@@ -63,7 +64,7 @@ public final class BotFile {
     }
 
     public byte[] content() {
-        if (ObjectUtil.isNull(this.content)) {
+        if (ObjUtil.isNull(this.content)) {
             throw new IllegalStateException("file content is path-backed");
         }
         return Arrays.copyOf(this.content, this.content.length);
@@ -74,7 +75,7 @@ public final class BotFile {
     }
 
     public boolean pathBacked() {
-        return ObjectUtil.isNotNull(this.path);
+        return ObjUtil.isNotNull(this.path);
     }
 
     public long size() throws IOException {

@@ -1,22 +1,17 @@
 package com.nnm.bot.warframe.runtime.cache.arbitration;
 
-import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationSourceProperties;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleEntryDTO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
 
 /** 每个 JVM 仅保留一份有界不可变排期快照；重启后重新拉取，不写数据库或 Redis。 */
 @Component
 public class WarframeArbitrationSnapshotStore {
-    private final ReentrantLock snapshotLock = new ReentrantLock();
-
     @Resource
     private WarframeArbitrationSourceProperties properties;
 
@@ -38,31 +33,11 @@ public class WarframeArbitrationSnapshotStore {
      * @param fetchedAt 拉取时间时刻。
      */
     public void replace(List<ArbitrationScheduleEntryDTO> entries, Instant fetchedAt) {
-        snapshotLock.lock();
-        try {
-            Objects.requireNonNull(fetchedAt, "fetchedAt");
-            if (CollUtil.isEmpty(entries) || entries.size() > properties.getMaxRecords()) {
-                throw new IllegalArgumentException("Invalid arbitration snapshot size");
-            }
-            Instant retainAfter = fetchedAt.minus(properties.getHistoryRetention());
-            TreeMap<Instant, ArbitrationScheduleEntryDTO> retained = new TreeMap<>();
-            // 只保留本进程见过的有限历史；上游撤回的未来任务不能从旧快照中复活。
-            for (ArbitrationScheduleEntryDTO old : current.get().entries()) {
-                if (old.activation().isBefore(fetchedAt) && old.expiry().isAfter(retainAfter)) {
-                    retained.put(old.activation(), old);
-                }
-            }
-            for (ArbitrationScheduleEntryDTO entry : entries) {
-                if (entry.expiry().isAfter(retainAfter))
-                    retained.put(entry.activation(), entry);
-            }
-            // 历史和最新响应共用记录数预算，优先淘汰最早历史，不能随运行时间无界增长。
-            while (retained.size() > properties.getMaxRecords())
-                retained.pollFirstEntry();
-            current.set(new Snapshot(List.copyOf(retained.values()), fetchedAt));
-        } finally {
-            snapshotLock.unlock();
-        }
+        if (entries == null || entries.size() > properties.getMaxRecords())
+            throw new IllegalArgumentException("Invalid arbitration snapshot size");
+        current.set(new Snapshot(
+            entries.stream().sorted(Comparator.comparing(ArbitrationScheduleEntryDTO::activation)).toList(),
+            fetchedAt));
     }
 
     public record Snapshot(List<ArbitrationScheduleEntryDTO> entries, Instant fetchedAt) {

@@ -1,5 +1,7 @@
 package com.nnm.bot.core.config;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.zaxxer.hikari.HikariPoolMXBean;
 import io.github.rdt.spring.config.RdtProperties;
 import io.github.rdt.spring.runtime.DatabasePressureProbe;
@@ -14,7 +16,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({ClusterProperties.class, BotNotificationProperties.class})
 public class ClusterConfiguration {
-    /** 计算本进程 Hikari 连接池的最高使用率，供 RDT 调度避让。
+    /**
+     * 计算本进程 Hikari 连接池的最高使用率，供 RDT 调度避让。
      *
      * @param sources 当前应用的数据源集合
      * @return 活跃连接比例；没有可用连接池指标时返回 -1
@@ -29,7 +32,7 @@ public class ClusterConfiguration {
     }
 
     public ClusterConfiguration(RdtProperties properties) {
-        if (properties.instanceId() == null || properties.instanceId().isBlank()) {
+        if (properties.instanceId() == null || CharSequenceUtil.isBlank(properties.instanceId())) {
             throw new IllegalArgumentException("rdt.instance-id is required for reliable broadcast recovery");
         }
         if (!properties.enabled() || !properties.queue().enabled() || !properties.schedule().enabled()) {

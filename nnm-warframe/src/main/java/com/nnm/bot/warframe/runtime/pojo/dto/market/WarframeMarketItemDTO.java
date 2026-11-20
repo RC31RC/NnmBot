@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,8 +70,8 @@ public record WarframeMarketItemDTO(String id, String slug, String gameRef, List
      */
     public WarframeMarketItemDTO(String name, Integer maxRank) {
         this("", "", "", List.of(), null, List.of(), null, "", null, List.of(), maxRank, null, null, null, null, null,
-            null, null, null, null, null, null,
-            StrUtil.isBlank(name) ? Map.of() : Map.of("en", new WarframeMarketItemI18nDTO(name, "", "", "", "", "")),
+            null, null, null, null, null, null, CharSequenceUtil.isBlank(name) ? Map.of()
+                : Map.of("en", new WarframeMarketItemI18nDTO(name, "", "", "", "", "")),
             Map.of());
     }
 
@@ -128,6 +129,6 @@ public record WarframeMarketItemDTO(String id, String slug, String gameRef, List
      * @return 去除首尾空白的文本；输入缺省时返回空文本。
      */
     private static String trim(String value) {
-        return StrUtil.emptyIfNull(value).trim();
+        return CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(value));
     }
 }

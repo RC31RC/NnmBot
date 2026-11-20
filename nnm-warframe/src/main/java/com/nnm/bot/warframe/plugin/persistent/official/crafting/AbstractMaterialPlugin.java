@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.crafting;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialCommandErrorCode;
 import java.util.regex.Matcher;
@@ -24,7 +26,7 @@ abstract class AbstractMaterialPlugin extends BotPlugin<Void, WarframeMaterialCo
      */
     @Override
     protected WarframeMaterialCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String query = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String query = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         int page = 1;
         Matcher matcher = PAGE.matcher(query);
         if (matcher.find()) {
@@ -33,7 +35,7 @@ abstract class AbstractMaterialPlugin extends BotPlugin<Void, WarframeMaterialCo
             } catch (NumberFormatException exception) {
                 return new WarframeMaterialCommandDTO(query, page, "页码必须为有效的正整数：--page 2");
             }
-            query = query.substring(0, matcher.start()).trim();
+            query = CharSequenceUtil.trim(query.substring(0, matcher.start()));
         }
         if (page < 1 || OPTION.matcher(query).find())
             return new WarframeMaterialCommandDTO(query, page, "仅支持末尾分页参数：--page 2");

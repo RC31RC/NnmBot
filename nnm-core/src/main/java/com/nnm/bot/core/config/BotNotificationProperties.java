@@ -5,7 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.util.Assert;
 
-/** 群通知等待、结果轮询及通知资源的保留策略。
+/**
+ * 群通知等待、结果轮询及通知资源的保留策略。
  *
  * @param responseTimeout 等待单个接收方回复的最长时长
  * @param retention 通知结果的保留时长

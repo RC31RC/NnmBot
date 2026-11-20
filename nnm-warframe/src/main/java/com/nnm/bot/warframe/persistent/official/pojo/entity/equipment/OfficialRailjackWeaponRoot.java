@@ -318,14 +318,18 @@ public class OfficialRailjackWeaponRoot extends OfficialRecord {
     private List<OfficialRailjackWeaponBehavioursItems> officialRailjackWeaponBehavioursItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRailjackWeaponCompatibilityTagsItems> officialRailjackWeaponCompatibilityTagsItemsRows = new ArrayList<>();
+    private List<OfficialRailjackWeaponCompatibilityTagsItems> officialRailjackWeaponCompatibilityTagsItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRailjackWeaponDamagePerShotItems> officialRailjackWeaponDamagePerShotItemsRows = new ArrayList<>();
+    private List<OfficialRailjackWeaponDamagePerShotItems> officialRailjackWeaponDamagePerShotItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRailjackWeaponDefaultUpgradesItems> officialRailjackWeaponDefaultUpgradesItemsRows = new ArrayList<>();
+    private List<OfficialRailjackWeaponDefaultUpgradesItems> officialRailjackWeaponDefaultUpgradesItemsRows =
+        new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialRailjackWeaponItemReferencesItems> officialRailjackWeaponItemReferencesItemsRows = new ArrayList<>();
+    private List<OfficialRailjackWeaponItemReferencesItems> officialRailjackWeaponItemReferencesItemsRows =
+        new ArrayList<>();
 }

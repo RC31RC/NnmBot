@@ -5,7 +5,7 @@ import java.nio.file.Files;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialFileDigestDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.snapshot.OfficialImportRecordDTO;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.parser.input.WarframeOfficialManifest.FileEntry;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -318,8 +318,8 @@ public class WarframeOfficialSnapshotParser {
             }
             if (domain == WarframeOfficialDataDomain.RIVEN_WEAPON)
                 validateListings((OfficialRivenWeaponDTO)value);
-            check(StrUtil.isNotBlank(key), OfficialSnapshotErrorCode.RECORD_KEY_MISSING);
-            add(records, domain, StrUtil.isEmpty(group) ? key : group + "/" + key, value);
+            check(CharSequenceUtil.isNotBlank(key), OfficialSnapshotErrorCode.RECORD_KEY_MISSING);
+            add(records, domain, CharSequenceUtil.isEmpty(group) ? key : group + "/" + key, value);
         }
     }
 
@@ -379,10 +379,10 @@ public class WarframeOfficialSnapshotParser {
             } else {
                 value = WarframeOfficialInputParser.parseCurrentValue(objectMapper, domain, parser);
             }
-            if (StrUtil.isEmpty(group) && key.startsWith("/") && value.stableKey() != null) {
+            if (CharSequenceUtil.isEmpty(group) && key.startsWith("/") && value.stableKey() != null) {
                 check(key.equals(value.stableKey()), OfficialSnapshotErrorCode.DICTIONARY_KEY_MISMATCH);
             }
-            add(records, domain, StrUtil.isEmpty(group) ? key : group + "/" + key, value);
+            add(records, domain, CharSequenceUtil.isEmpty(group) ? key : group + "/" + key, value);
         }
     }
 
@@ -423,7 +423,7 @@ public class WarframeOfficialSnapshotParser {
         check(value.getMarketListings() != null, OfficialApprovalErrorCode.RIVEN_LISTINGS_MISSING);
         Set<String> ids = new HashSet<>();
         for (var listing : value.getMarketListings()) {
-            check(StrUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()),
+            check(CharSequenceUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()),
                 OfficialApprovalErrorCode.RIVEN_LISTING_ID_INVALID);
         }
     }
@@ -453,7 +453,7 @@ public class WarframeOfficialSnapshotParser {
      */
     private void add(RecordSink records, WarframeOfficialDataDomain domain, String key, OfficialRecordDTO value)
         throws IOException {
-        check(StrUtil.isNotBlank(key) && key.length() <= MAX_RECORD_KEY_LENGTH,
+        check(CharSequenceUtil.isNotBlank(key) && key.length() <= MAX_RECORD_KEY_LENGTH,
             OfficialSnapshotErrorCode.RECORD_KEY_TOO_LONG);
         OfficialRecordHeaderDTO header = value.header();
         String json = objectMapper.writeValueAsString(value);

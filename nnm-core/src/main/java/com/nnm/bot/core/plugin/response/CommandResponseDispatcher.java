@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.response;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
@@ -83,7 +85,8 @@ public class CommandResponseDispatcher {
     @Resource
     private ReplyProperties limits;
 
-    /** 为普通命令结果创建独立资源作用域并完成回复派发。
+    /**
+     * 为普通命令结果创建独立资源作用域并完成回复派发。
      *
      * @param origin 触发命令的原消息
      * @param command 当前运行时命令
@@ -100,13 +103,14 @@ public class CommandResponseDispatcher {
         return dispatch(origin, command, command.configuration(), result, resources);
     }
 
-    /** 通过相同渠道能力与资源约束发送系统通知文本。
+    /**
+     * 通过相同渠道能力与资源约束发送系统通知文本。
      *
      * @param context 目标消息上下文
      * @param message 通知内容
      */
     public void dispatchNotice(BotMessageContext context, String message) {
-        if (message != null && !message.isBlank()) {
+        if (message != null && !CharSequenceUtil.isBlank(message)) {
             dispatch(context, null, CommandExecutionConfigurationDTO.defaults(), CommandResult.text(message),
                 new ResourceScope());
         }
@@ -298,7 +302,7 @@ public class CommandResponseDispatcher {
             StringBuilder text = new StringBuilder();
             for (ReplyBlock block : plan.blocks()) {
                 if (block instanceof Text part) {
-                    if (!text.isEmpty())
+                    if (CharSequenceUtil.isNotEmpty(text))
                         text.append('\n');
                     text.append(part.content());
                 } else {
@@ -332,7 +336,7 @@ public class CommandResponseDispatcher {
         if (template == null) {
             // 未选择 HTML 模板时仍以结构化文字保留数据，不丢弃业务结果，也不拆成多条消息。
             String formatted = dataTextFormatter.format(dataBlock.data(), null);
-            ReplyBlock.Text text = new ReplyBlock.Text(formatted.isBlank() ? "没有可展示的数据" : formatted);
+            ReplyBlock.Text text = new ReplyBlock.Text(CharSequenceUtil.isBlank(formatted) ? "没有可展示的数据" : formatted);
             return result.withBlocks(result.blocks().stream()
                 .map(block -> block instanceof ReplyBlock.HtmlData<?> ? (ReplyBlock)text : block).toList());
         }
@@ -411,7 +415,7 @@ public class CommandResponseDispatcher {
     }
 
     private void flushText(List<ReplyBlock> blocks, StringBuilder text) {
-        if (text.isEmpty())
+        if (CharSequenceUtil.isEmpty(text))
             return;
         if (text.length() > limits.getMaxTextCharacters())
             throw new IllegalArgumentException("Rendered text limit exceeded");

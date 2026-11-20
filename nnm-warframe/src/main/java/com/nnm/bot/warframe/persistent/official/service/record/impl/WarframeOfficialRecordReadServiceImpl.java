@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.IMPORT_HEAD_ID;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -110,7 +111,7 @@ public class WarframeOfficialRecordReadServiceImpl implements WarframeOfficialRe
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<WarframeOfficialRecordReadDTO> recordsByIds(WarframeOfficialDataDomain domain,
         Collection<Long> recordIds) {
-        if (recordIds == null || recordIds.isEmpty())
+        if (CollUtil.isEmpty(recordIds))
             return List.of();
         List<WarframeOfficialRecordDTO> roots = repositories.require(domain).findSummariesByIds(recordIds).stream()
             .filter(record -> record.isEnabled() && !METADATA_BKEY.equals(record.getBkey())).toList();

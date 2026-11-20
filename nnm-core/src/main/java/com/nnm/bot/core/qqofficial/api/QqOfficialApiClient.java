@@ -1,5 +1,8 @@
 package com.nnm.bot.core.qqofficial.api;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.collection.CollUtil;
+
 import com.nnm.bot.core.qqofficial.constant.QqOfficialErrorCode;
 
 import com.nnm.bot.core.messaging.model.BotMessagePart.Button;
@@ -8,8 +11,7 @@ import com.nnm.bot.core.messaging.model.BotMessagePart.Image;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Keyboard;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Markdown;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Text;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialApiRequestDTO;
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialApiResponseDTO;
@@ -83,13 +85,13 @@ public class QqOfficialApiClient {
 
     public String gatewayUrl() {
         String configured = connection.gatewayUrl();
-        if (StrUtil.isNotBlank(configured)) {
+        if (CharSequenceUtil.isNotBlank(configured)) {
             return configured;
         }
         QqOfficialApiResponseDTO.GatewayDTO response =
             request("GET", "/gateway", null, QqOfficialApiResponseDTO.GatewayDTO.class);
         String url = response == null ? null : response.url();
-        if (StrUtil.isBlank(url)) {
+        if (CharSequenceUtil.isBlank(url)) {
             throw new BusinessException(QqOfficialErrorCode.GATEWAY_URL_MISSING);
         }
         return url;
@@ -99,7 +101,7 @@ public class QqOfficialApiClient {
      * 查询已经通过 Gateway 观察到的 QQ 群成员。QQ 官方没有机器人群组全量枚举接口， 因此调用方仍需先拥有 group_openid；成员列表接口本身支持分页。
      */
     public List<BotDiscoveredMember> listGroupMembers(String groupOpenid) {
-        if (StrUtil.isBlank(groupOpenid)) {
+        if (CharSequenceUtil.isBlank(groupOpenid)) {
             return List.of();
         }
         List<BotDiscoveredMember> members = new ArrayList<>();
@@ -121,7 +123,7 @@ public class QqOfficialApiClient {
                     throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_EMPTY);
                 }
                 if (!Boolean.TRUE.equals(item.bot())) {
-                    if (StrUtil.isBlank(item.memberOpenid())) {
+                    if (CharSequenceUtil.isBlank(item.memberOpenid())) {
                         throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_ID_MISSING);
                     }
                     members.add(new BotDiscoveredMember(item.memberOpenid(), item.username(),
@@ -129,18 +131,18 @@ public class QqOfficialApiClient {
                 }
             }
             cursor = response.nextCursor();
-        } while (StrUtil.isNotBlank(cursor));
+        } while (CharSequenceUtil.isNotBlank(cursor));
         return List.copyOf(members);
     }
 
     public BotDiscoveredMember getGroupMember(String groupOpenid, String memberOpenid) {
-        if (StrUtil.isBlank(groupOpenid) || StrUtil.isBlank(memberOpenid)) {
+        if (CharSequenceUtil.isBlank(groupOpenid) || CharSequenceUtil.isBlank(memberOpenid)) {
             throw new BusinessException(QqOfficialErrorCode.GROUP_IDS_REQUIRED);
         }
         QqOfficialApiResponseDTO.MemberDTO item = request("GET",
             "/v2/groups/" + groupOpenid + "/members/" + memberOpenid, null, QqOfficialApiResponseDTO.MemberDTO.class);
         String actualOpenid = item == null ? null : item.memberOpenid();
-        if (StrUtil.isBlank(actualOpenid)) {
+        if (CharSequenceUtil.isBlank(actualOpenid)) {
             throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_DETAIL_ID_MISSING);
         }
         return new BotDiscoveredMember(actualOpenid, item.username(), normalizeMemberRole(item.memberRole()));
@@ -158,7 +160,7 @@ public class QqOfficialApiClient {
                 case Text value -> value.content();
                 case Markdown value -> value.plainText();
                 default -> null;
-            }).filter(StrUtil::isNotBlank).toList());
+            }).filter(CharSequenceUtil::isNotBlank).toList());
             if (source.supportsMedia() && blocks.stream()
                 .anyMatch(block -> block instanceof Markdown markdown && markdown.message().content() != null)) {
                 try {
@@ -267,14 +269,14 @@ public class QqOfficialApiClient {
             QqOfficialApiResponseDTO.ImagePrepareDTO.class);
         String uploadId = prepared == null ? null : prepared.uploadId();
         String uploadUrl = prepared == null ? null : prepared.presignedUrl();
-        if (StrUtil.isBlank(uploadId) || uploadUrl == null || !uploadUrl.startsWith("https://"))
+        if (CharSequenceUtil.isBlank(uploadId) || uploadUrl == null || !uploadUrl.startsWith("https://"))
             throw new BusinessException(QqOfficialErrorCode.MARKDOWN_UPLOAD_URL_INVALID);
         requireOwnership();
         HttpResult upload = httpClient.putBytes(uploadUrl, bytes, Map.of("Content-Type", image.contentType()));
         if (upload == null || !upload.isSuccess())
             throw new BusinessException(QqOfficialErrorCode.MARKDOWN_UPLOAD_FAILED);
         String etag = upload.headers().getETag();
-        if (etag != null && !etag.replace("\"", "").equalsIgnoreCase(md5))
+        if (etag != null && !CharSequenceUtil.equalsIgnoreCase(etag.replace("\"", ""), md5))
             throw new BusinessException(QqOfficialErrorCode.MARKDOWN_UPLOAD_DIGEST_INVALID);
         QqOfficialApiResponseDTO.ImageCompleteDTO finished =
             request("POST", "/v2/media-images/complete", new QqOfficialApiRequestDTO.ImageCompleteDTO(uploadId, md5),
@@ -309,7 +311,7 @@ public class QqOfficialApiClient {
         }
         String fileInfo = uploadMedia(source, file, fileType);
         // 富媒体协议要求 content 非空；图片本身没有正文时使用一个空白占位符。
-        return prepareCreate(source, message(source, permit, 7, StrUtil.isBlank(text) ? " " : text, null,
+        return prepareCreate(source, message(source, permit, 7, CharSequenceUtil.isBlank(text) ? " " : text, null,
             new QqOfficialApiRequestDTO.MediaDTO(fileInfo), keyboard), permit);
     }
 
@@ -340,7 +342,7 @@ public class QqOfficialApiClient {
         String uploadId = prepared == null ? null : prepared.uploadId();
         List<QqOfficialApiResponseDTO.FilePartDTO> parts = prepared == null ? null : prepared.parts();
         long defaultBlockSize = prepared == null || prepared.blockSize() == null ? 0 : prepared.blockSize();
-        if (StrUtil.isBlank(uploadId) || parts == null || parts.isEmpty() || defaultBlockSize <= 0) {
+        if (CharSequenceUtil.isBlank(uploadId) || CollUtil.isEmpty(parts) || defaultBlockSize <= 0) {
             throw new BusinessException(QqOfficialErrorCode.FILE_PARTS_MISSING);
         }
 
@@ -352,7 +354,7 @@ public class QqOfficialApiClient {
                 String presignedUrl = part == null ? null : part.presignedUrl();
                 long configuredPartSize =
                     part == null || part.blockSize() == null ? defaultBlockSize : part.blockSize();
-                if (partIndex < 0 || StrUtil.isBlank(presignedUrl) || configuredPartSize <= 0
+                if (partIndex < 0 || CharSequenceUtil.isBlank(presignedUrl) || configuredPartSize <= 0
                     || configuredPartSize > MAX_FILE_BYTES || configuredPartSize > Integer.MAX_VALUE) {
                     throw new BusinessException(QqOfficialErrorCode.FILE_PART_INVALID);
                 }
@@ -389,7 +391,7 @@ public class QqOfficialApiClient {
             new QqOfficialApiRequestDTO.FileUploadDTO(fileType, uploadId, file.fileName(), false),
             QqOfficialApiResponseDTO.FileUploadDTO.class);
         String fileInfo = uploaded == null ? null : uploaded.fileInfo();
-        if (StrUtil.isBlank(fileInfo)) {
+        if (CharSequenceUtil.isBlank(fileInfo)) {
             throw new BusinessException(QqOfficialErrorCode.FILE_INFO_MISSING);
         }
         return fileInfo;
@@ -561,7 +563,7 @@ public class QqOfficialApiClient {
         }
         QqOfficialGatewayEventDTO response =
             request("GET", "/channels/" + channelId + "/messages/" + messageId, null, QqOfficialGatewayEventDTO.class);
-        if (response == null || StrUtil.isBlank(response.id())) {
+        if (response == null || CharSequenceUtil.isBlank(response.id())) {
             throw new BusinessException(QqOfficialErrorCode.CHANNEL_RECEIPT_ID_MISSING);
         }
         return response;
@@ -607,7 +609,7 @@ public class QqOfficialApiClient {
                 throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "QQ 媒体创建未证明整条请求零接受");
             }
             String id = response == null ? null : response.id();
-            if (StrUtil.isBlank(id))
+            if (CharSequenceUtil.isBlank(id))
                 throw new SystemException(BotChannelErrorCode.UPSTREAM_RESPONSE_INVALID, "QQ 消息创建回执缺少 id");
             if (acceptanceUnknown != null)
                 acceptanceUnknown.set(false);
@@ -649,7 +651,7 @@ public class QqOfficialApiClient {
     }
 
     private String normalizeMemberRole(String role) {
-        return switch (StrUtil.emptyIfNull(role).toLowerCase()) {
+        return switch (CharSequenceUtil.emptyIfNull(role).toLowerCase()) {
             case "owner" -> "OWNER";
             case "admin" -> "ADMIN";
             default -> "MEMBER";

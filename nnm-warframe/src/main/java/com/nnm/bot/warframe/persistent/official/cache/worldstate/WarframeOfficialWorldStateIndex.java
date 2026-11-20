@@ -1,7 +1,8 @@
 package com.nnm.bot.warframe.persistent.official.cache.worldstate;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.official.config.worldstate.WarframeWorldStateDataProperties;
@@ -142,7 +143,7 @@ public class WarframeOfficialWorldStateIndex {
                     value.getName())
                 .filter(WarframeNameNormalizer::isReadableDisplayName).filter(candidate -> !candidate.equals(key))
                 .findFirst().orElse(null);
-            if (name == null && StrUtil.isBlank(value.getNameKey()))
+            if (name == null && CharSequenceUtil.isBlank(value.getNameKey()))
                 return null;
             String system = localized(value.getZhSystemName(), value.getSystemName(), null);
             if (!WarframeNameNormalizer.isReadableDisplayName(system))
@@ -170,7 +171,7 @@ public class WarframeOfficialWorldStateIndex {
         lookup.records(WarframeOfficialDataDomain.LANGUAGE_STRING, keys).forEach((key, row) -> {
             OfficialLanguageStringDTO value = (OfficialLanguageStringDTO)row.data();
             String text = english() ? value.getText() : first(value.getZhText(), value.getText());
-            if (StrUtil.isNotBlank(text))
+            if (CharSequenceUtil.isNotBlank(text))
                 result.put(key, text);
         });
         return Map.copyOf(result);
@@ -333,7 +334,7 @@ public class WarframeOfficialWorldStateIndex {
                     name.apply(value), nameZh.apply(value))
                 .filter(WarframeNameNormalizer::isReadableDisplayName).findFirst().orElse(null);
             String languageKey = nameKey.apply(value);
-            if (localizedName == null && StrUtil.isBlank(languageKey))
+            if (localizedName == null && CharSequenceUtil.isBlank(languageKey))
                 return null;
             // 即使当前字段只有内部键，也要保留其官方语言键供查询边界补全名称。
             WarframeWorldStateCodebookEntryDTO entry =
@@ -344,7 +345,7 @@ public class WarframeOfficialWorldStateIndex {
                     "", false, languageKey);
             entries.put(normalize(key), entry);
             for (String alias : Stream.of(name.apply(value), nameEn.apply(value), nameKey.apply(value)).toList()) {
-                if (StrUtil.isNotBlank(alias))
+                if (CharSequenceUtil.isNotBlank(alias))
                     entries.putIfAbsent(normalize(alias), entry);
             }
             return entry;
@@ -408,7 +409,7 @@ public class WarframeOfficialWorldStateIndex {
      */
     private static String first(String... values) {
         for (String value : values)
-            if (StrUtil.isNotBlank(value))
+            if (CharSequenceUtil.isNotBlank(value))
                 return value;
         return null;
     }
@@ -420,7 +421,7 @@ public class WarframeOfficialWorldStateIndex {
      * @return 规范化后的文本，供比较或查找使用。
      */
     private static String normalize(String value) {
-        return value.trim().toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.trim(value).toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -500,7 +501,7 @@ public class WarframeOfficialWorldStateIndex {
          * @return 展示名称对应的文本。
          */
         public String displayName() {
-            return StrUtil.isBlank(nameZh) ? nameEn : nameZh;
+            return CharSequenceUtil.isBlank(nameZh) ? nameEn : nameZh;
         }
     }
 

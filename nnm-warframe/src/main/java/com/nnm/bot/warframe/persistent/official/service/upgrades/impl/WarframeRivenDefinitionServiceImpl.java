@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.upgrades.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.OfficialRivenDefinitionDTO;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
@@ -30,7 +32,7 @@ public class WarframeRivenDefinitionServiceImpl implements WarframeRivenDefiniti
      */
     @Override
     public List<EntryVO> find(String keyword, String requestedMode) {
-        String mode = "challenges".equalsIgnoreCase(requestedMode) ? "challenges" : "attributes";
+        String mode = CharSequenceUtil.equalsIgnoreCase("challenges", requestedMode) ? "challenges" : "attributes";
         List<EntryVO> result = new ArrayList<>();
         for (var root : catalog.records(WarframeOfficialDataDomain.RIVEN_DEFINITION)) {
             OfficialRivenDefinitionDTO value = (OfficialRivenDefinitionDTO)root.data();

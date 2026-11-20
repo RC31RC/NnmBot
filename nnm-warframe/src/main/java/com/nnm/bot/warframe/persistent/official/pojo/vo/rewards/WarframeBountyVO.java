@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.pojo.vo.rewards;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeBountyDefinitionDetailsDTO.StageOptionDTO;
 import java.util.List;
 
@@ -29,7 +29,7 @@ public record WarframeBountyVO(String query, int page, int totalPages, int total
             .append(totalCount).append(" 条");
         for (EntryVO entry : items) {
             result.append("\n\n").append(entry.name());
-            if (StrUtil.isNotBlank(entry.description())) {
+            if (CharSequenceUtil.isNotBlank(entry.description())) {
                 result.append("\n").append(entry.description());
             }
             if (CollUtil.isEmpty(entry.stages()))

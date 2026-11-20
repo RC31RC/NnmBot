@@ -8,7 +8,7 @@ import java.util.List;
 
 /** 各官方关系表的强类型 QueryDSL 标量投影与批量 DML。由模型生成器维护。 */
 public final class OfficialRelationQueryDsl {
-    private OfficialRelationQueryDsl() { }
+    private OfficialRelationQueryDsl() {}
 
     /**
      * 查询官方关系表指定主记录的类型化标量投影。
@@ -19,7 +19,8 @@ public final class OfficialRelationQueryDsl {
      * @return 按记录标识排序的关系行投影。
      */
     public static List<OfficialRelationRowDTO> select(JPAQueryFactory query, String table, Collection<Long> ids) {
-        if (ids.isEmpty()) return List.of();
+        if (ids.isEmpty())
+            return List.of();
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.select(query, table, ids);
             case 1 -> OfficialRelationQueryDslPart01.select(query, table, ids);
@@ -73,7 +74,8 @@ public final class OfficialRelationQueryDsl {
      * @return 匹配的子行主键。
      */
     public static List<Long> selectChildIds(JPAQueryFactory query, String table, Collection<Long> parentIds) {
-        if (parentIds.isEmpty()) return List.of();
+        if (parentIds.isEmpty())
+            return List.of();
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.selectChildIds(query, table, parentIds);
             case 1 -> OfficialRelationQueryDslPart01.selectChildIds(query, table, parentIds);
@@ -127,7 +129,8 @@ public final class OfficialRelationQueryDsl {
      * @return 实际删除的记录数。
      */
     public static long deleteByIds(JPAQueryFactory query, String table, Collection<Long> ids) {
-        if (ids.isEmpty()) return 0;
+        if (ids.isEmpty())
+            return 0;
         return switch (part(table)) {
             case 0 -> OfficialRelationQueryDslPart00.deleteByIds(query, table, ids);
             case 1 -> OfficialRelationQueryDslPart01.deleteByIds(query, table, ids);

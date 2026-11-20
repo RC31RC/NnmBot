@@ -20,7 +20,7 @@ import com.nnm.bot.warframe.persistent.official.pojo.entity.rewards.QOfficialRel
 
 /** 官方关系表 QueryDSL 标量投影分片 19；由模型生成器维护。 */
 final class OfficialRelationQueryDslPart19 {
-    private OfficialRelationQueryDslPart19() { }
+    private OfficialRelationQueryDslPart19() {}
 
     /**
      * 查询官方关系表指定主记录的类型化标量投影。
@@ -33,51 +33,102 @@ final class OfficialRelationQueryDslPart19 {
     static List<OfficialRelationRowDTO> select(JPAQueryFactory query, String table, Collection<Long> ids) {
         return switch (table) {
             case "wf_official_relic_states_entries_itemreferences_item_29f51a750c" -> {
-                QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems row = new QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems(ROW);
-                var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState", "itemDomainState", "itemDomain", "itemIconStatusState", "itemIconStatus", "itemIconUrlState", "itemIconUrl", "itemNameState", "itemName", "itemNameEnState", "itemNameEn", "itemNameZhState", "itemNameZh", "itemResolutionState", "itemResolution", "itemUniqueNameState", "itemUniqueName", "itemCountState", "itemCount", "rarityState", "rarity", "typeState", "type"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.itemDomainState, row.itemDomain, row.itemIconStatusState, row.itemIconStatus, row.itemIconUrlState, row.itemIconUrl, row.itemNameState, row.itemName, row.itemNameEnState, row.itemNameEn, row.itemNameZhState, row.itemNameZh, row.itemResolutionState, row.itemResolution, row.itemUniqueNameState, row.itemUniqueName, row.itemCountState, row.itemCount, row.rarityState, row.rarity, row.typeState, row.type));
+                QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems row =
+                    new QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems(ROW);
+                var projection = new OfficialRelationRowProjection(
+                    List.of("id", "bkey", "rootState", "itemDomainState", "itemDomain", "itemIconStatusState",
+                        "itemIconStatus", "itemIconUrlState", "itemIconUrl", "itemNameState", "itemName",
+                        "itemNameEnState", "itemNameEn", "itemNameZhState", "itemNameZh", "itemResolutionState",
+                        "itemResolution", "itemUniqueNameState", "itemUniqueName", "itemCountState", "itemCount",
+                        "rarityState", "rarity", "typeState", "type"),
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.itemDomainState, row.itemDomain,
+                        row.itemIconStatusState, row.itemIconStatus, row.itemIconUrlState, row.itemIconUrl,
+                        row.itemNameState, row.itemName, row.itemNameEnState, row.itemNameEn, row.itemNameZhState,
+                        row.itemNameZh, row.itemResolutionState, row.itemResolution, row.itemUniqueNameState,
+                        row.itemUniqueName, row.itemCountState, row.itemCount, row.rarityState, row.rarity,
+                        row.typeState, row.type));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             case "wf_official_relic_states_entries_rewards_items" -> {
                 QOfficialRelicStatesEntriesRewardsItems row = new QOfficialRelicStatesEntriesRewardsItems(ROW);
-                var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState", "dropChancePercentState", "dropChancePercent", "dropRarityState", "dropRarity", "dropTableEntriesState", "itemIconStatusState", "itemIconStatus", "itemIconUrlState", "itemIconUrl", "itemMarketSlugState", "itemMarketSlug", "itemNameState", "itemName", "itemNameEnState", "itemNameEn", "itemNameZhState", "itemNameZh", "itemResolutionState", "itemResolution", "itemUniqueNameState", "itemUniqueName", "itemCountState", "itemCount", "itemReferencesState", "probabilityState", "probability", "rarityState", "rarity", "rewardNameState", "rewardName", "tierState", "tier"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.dropChancePercentState, row.dropChancePercent, row.dropRarityState, row.dropRarity, row.dropTableEntriesState, row.itemIconStatusState, row.itemIconStatus, row.itemIconUrlState, row.itemIconUrl, row.itemMarketSlugState, row.itemMarketSlug, row.itemNameState, row.itemName, row.itemNameEnState, row.itemNameEn, row.itemNameZhState, row.itemNameZh, row.itemResolutionState, row.itemResolution, row.itemUniqueNameState, row.itemUniqueName, row.itemCountState, row.itemCount, row.itemReferencesState, row.probabilityState, row.probability, row.rarityState, row.rarity, row.rewardNameState, row.rewardName, row.tierState, row.tier));
+                var projection = new OfficialRelationRowProjection(
+                    List.of("id", "bkey", "rootState", "dropChancePercentState", "dropChancePercent", "dropRarityState",
+                        "dropRarity", "dropTableEntriesState", "itemIconStatusState", "itemIconStatus",
+                        "itemIconUrlState", "itemIconUrl", "itemMarketSlugState", "itemMarketSlug", "itemNameState",
+                        "itemName", "itemNameEnState", "itemNameEn", "itemNameZhState", "itemNameZh",
+                        "itemResolutionState", "itemResolution", "itemUniqueNameState", "itemUniqueName",
+                        "itemCountState", "itemCount", "itemReferencesState", "probabilityState", "probability",
+                        "rarityState", "rarity", "rewardNameState", "rewardName", "tierState", "tier"),
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.dropChancePercentState,
+                        row.dropChancePercent, row.dropRarityState, row.dropRarity, row.dropTableEntriesState,
+                        row.itemIconStatusState, row.itemIconStatus, row.itemIconUrlState, row.itemIconUrl,
+                        row.itemMarketSlugState, row.itemMarketSlug, row.itemNameState, row.itemName,
+                        row.itemNameEnState, row.itemNameEn, row.itemNameZhState, row.itemNameZh,
+                        row.itemResolutionState, row.itemResolution, row.itemUniqueNameState, row.itemUniqueName,
+                        row.itemCountState, row.itemCount, row.itemReferencesState, row.probabilityState,
+                        row.probability, row.rarityState, row.rarity, row.rewardNameState, row.rewardName,
+                        row.tierState, row.tier));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             case "wf_official_relic_states_entries_rewards_items_dropt_5dab4ce4aa" -> {
-                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems row = new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems(ROW);
-                var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState", "categoryState", "category", "chanceResolutionState", "chanceResolution", "dropChancePercentState", "dropChancePercent", "groupsState", "itemIconStatusState", "itemIconStatus", "itemIconUrlState", "itemIconUrl", "itemItemCountState", "itemItemCount", "itemNameState", "itemName", "itemNameEnState", "itemNameEn", "itemNameZhState", "itemNameZh", "itemResolutionState", "itemResolution", "itemUniqueNameState", "itemUniqueName", "probabilityState", "probability", "rarityState", "rarity", "sourceState", "source"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.categoryState, row.category, row.chanceResolutionState, row.chanceResolution, row.dropChancePercentState, row.dropChancePercent, row.groupsState, row.itemIconStatusState, row.itemIconStatus, row.itemIconUrlState, row.itemIconUrl, row.itemItemCountState, row.itemItemCount, row.itemNameState, row.itemName, row.itemNameEnState, row.itemNameEn, row.itemNameZhState, row.itemNameZh, row.itemResolutionState, row.itemResolution, row.itemUniqueNameState, row.itemUniqueName, row.probabilityState, row.probability, row.rarityState, row.rarity, row.sourceState, row.source));
+                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems(ROW);
+                var projection = new OfficialRelationRowProjection(
+                    List.of("id", "bkey", "rootState", "categoryState", "category", "chanceResolutionState",
+                        "chanceResolution", "dropChancePercentState", "dropChancePercent", "groupsState",
+                        "itemIconStatusState", "itemIconStatus", "itemIconUrlState", "itemIconUrl",
+                        "itemItemCountState", "itemItemCount", "itemNameState", "itemName", "itemNameEnState",
+                        "itemNameEn", "itemNameZhState", "itemNameZh", "itemResolutionState", "itemResolution",
+                        "itemUniqueNameState", "itemUniqueName", "probabilityState", "probability", "rarityState",
+                        "rarity", "sourceState", "source"),
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.categoryState, row.category,
+                        row.chanceResolutionState, row.chanceResolution, row.dropChancePercentState,
+                        row.dropChancePercent, row.groupsState, row.itemIconStatusState, row.itemIconStatus,
+                        row.itemIconUrlState, row.itemIconUrl, row.itemItemCountState, row.itemItemCount,
+                        row.itemNameState, row.itemName, row.itemNameEnState, row.itemNameEn, row.itemNameZhState,
+                        row.itemNameZh, row.itemResolutionState, row.itemResolution, row.itemUniqueNameState,
+                        row.itemUniqueName, row.probabilityState, row.probability, row.rarityState, row.rarity,
+                        row.sourceState, row.source));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             case "wf_official_relic_states_entries_rewards_items_dropt_0252b10b41" -> {
-                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems row = new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems(ROW);
+                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems(ROW);
                 var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState));
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             case "wf_official_relic_states_entries_rewards_items_itemr_8a9c8ba3ab" -> {
-                QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems row = new QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems(ROW);
-                var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState", "domainState", "domain", "fieldState", "field", "iconStatusState", "iconStatus", "iconUrlState", "iconUrl", "nameState", "name", "nameEnState", "nameEn", "nameZhState", "nameZh", "resolutionState", "resolution", "uniqueNameState", "uniqueName"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.domainState, row.domain, row.fieldState, row.field, row.iconStatusState, row.iconStatus, row.iconUrlState, row.iconUrl, row.nameState, row.name, row.nameEnState, row.nameEn, row.nameZhState, row.nameZh, row.resolutionState, row.resolution, row.uniqueNameState, row.uniqueName));
+                QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems(ROW);
+                var projection = new OfficialRelationRowProjection(
+                    List.of("id", "bkey", "rootState", "domainState", "domain", "fieldState", "field",
+                        "iconStatusState", "iconStatus", "iconUrlState", "iconUrl", "nameState", "name", "nameEnState",
+                        "nameEn", "nameZhState", "nameZh", "resolutionState", "resolution", "uniqueNameState",
+                        "uniqueName"),
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState, row.domainState, row.domain, row.fieldState,
+                        row.field, row.iconStatusState, row.iconStatus, row.iconUrlState, row.iconUrl, row.nameState,
+                        row.name, row.nameEnState, row.nameEn, row.nameZhState, row.nameZh, row.resolutionState,
+                        row.resolution, row.uniqueNameState, row.uniqueName));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             case "wf_official_relic_states_entries_unresolveddroprewards_items" -> {
-                QOfficialRelicStatesEntriesUnresolvedDropRewardsItems row = new QOfficialRelicStatesEntriesUnresolvedDropRewardsItems(ROW);
+                QOfficialRelicStatesEntriesUnresolvedDropRewardsItems row =
+                    new QOfficialRelicStatesEntriesUnresolvedDropRewardsItems(ROW);
                 var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState));
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             case "wf_official_relic_unresolveddroprows_items" -> {
                 QOfficialRelicUnresolvedDropRowsItems row = new QOfficialRelicUnresolvedDropRowsItems(ROW);
                 var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState));
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             case "wf_official_relic_unresolvedlocationrows_items" -> {
                 QOfficialRelicUnresolvedLocationRowsItems row = new QOfficialRelicUnresolvedLocationRowsItems(ROW);
                 var projection = new OfficialRelationRowProjection(List.of("id", "bkey", "rootState"),
-                        List.<Expression<?>>of(row.id, row.bkey, row.rootState));
+                    List.<Expression<?>>of(row.id, row.bkey, row.rootState));
                 yield selectChildren(query, row, row.id, row.bkey, row.sortOrder, ids, projection);
             }
             default -> throw new IllegalArgumentException("Unsupported official relation table: " + table);
@@ -95,7 +146,8 @@ final class OfficialRelationQueryDslPart19 {
     static List<Long> selectChildIds(JPAQueryFactory query, String table, Collection<Long> parentIds) {
         return switch (table) {
             case "wf_official_relic_states_entries_itemreferences_item_29f51a750c" -> {
-                QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems row = new QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems(ROW);
+                QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems row =
+                    new QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems(ROW);
                 yield query.select(row.id).from(row).where(row.bkey.in(parentIds)).fetch();
             }
             case "wf_official_relic_states_entries_rewards_items" -> {
@@ -103,19 +155,23 @@ final class OfficialRelationQueryDslPart19 {
                 yield query.select(row.id).from(row).where(row.bkey.in(parentIds)).fetch();
             }
             case "wf_official_relic_states_entries_rewards_items_dropt_5dab4ce4aa" -> {
-                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems row = new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems(ROW);
+                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems(ROW);
                 yield query.select(row.id).from(row).where(row.bkey.in(parentIds)).fetch();
             }
             case "wf_official_relic_states_entries_rewards_items_dropt_0252b10b41" -> {
-                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems row = new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems(ROW);
+                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems(ROW);
                 yield query.select(row.id).from(row).where(row.bkey.in(parentIds)).fetch();
             }
             case "wf_official_relic_states_entries_rewards_items_itemr_8a9c8ba3ab" -> {
-                QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems row = new QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems(ROW);
+                QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems(ROW);
                 yield query.select(row.id).from(row).where(row.bkey.in(parentIds)).fetch();
             }
             case "wf_official_relic_states_entries_unresolveddroprewards_items" -> {
-                QOfficialRelicStatesEntriesUnresolvedDropRewardsItems row = new QOfficialRelicStatesEntriesUnresolvedDropRewardsItems(ROW);
+                QOfficialRelicStatesEntriesUnresolvedDropRewardsItems row =
+                    new QOfficialRelicStatesEntriesUnresolvedDropRewardsItems(ROW);
                 yield query.select(row.id).from(row).where(row.bkey.in(parentIds)).fetch();
             }
             case "wf_official_relic_unresolveddroprows_items" -> {
@@ -141,7 +197,8 @@ final class OfficialRelationQueryDslPart19 {
     static long deleteByIds(JPAQueryFactory query, String table, Collection<Long> ids) {
         return switch (table) {
             case "wf_official_relic_states_entries_itemreferences_item_29f51a750c" -> {
-                QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems row = new QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems(ROW);
+                QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems row =
+                    new QOfficialRelicStatesEntriesItemReferencesItemsRotationsItemsItems(ROW);
                 yield query.delete(row).where(row.id.in(ids)).execute();
             }
             case "wf_official_relic_states_entries_rewards_items" -> {
@@ -149,19 +206,23 @@ final class OfficialRelationQueryDslPart19 {
                 yield query.delete(row).where(row.id.in(ids)).execute();
             }
             case "wf_official_relic_states_entries_rewards_items_dropt_5dab4ce4aa" -> {
-                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems row = new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems(ROW);
+                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItems(ROW);
                 yield query.delete(row).where(row.id.in(ids)).execute();
             }
             case "wf_official_relic_states_entries_rewards_items_dropt_0252b10b41" -> {
-                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems row = new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems(ROW);
+                QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsDropTableEntriesItemsGroupsItems(ROW);
                 yield query.delete(row).where(row.id.in(ids)).execute();
             }
             case "wf_official_relic_states_entries_rewards_items_itemr_8a9c8ba3ab" -> {
-                QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems row = new QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems(ROW);
+                QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems row =
+                    new QOfficialRelicStatesEntriesRewardsItemsItemReferencesItems(ROW);
                 yield query.delete(row).where(row.id.in(ids)).execute();
             }
             case "wf_official_relic_states_entries_unresolveddroprewards_items" -> {
-                QOfficialRelicStatesEntriesUnresolvedDropRewardsItems row = new QOfficialRelicStatesEntriesUnresolvedDropRewardsItems(ROW);
+                QOfficialRelicStatesEntriesUnresolvedDropRewardsItems row =
+                    new QOfficialRelicStatesEntriesUnresolvedDropRewardsItems(ROW);
                 yield query.delete(row).where(row.id.in(ids)).execute();
             }
             case "wf_official_relic_unresolveddroprows_items" -> {
@@ -187,7 +248,7 @@ final class OfficialRelationQueryDslPart19 {
      * @return 按主键排序的关系行投影。
      */
     private static <T> List<OfficialRelationRowDTO> selectRoot(JPAQueryFactory query, EntityPathBase<T> row,
-            NumberPath<Long> id, Collection<Long> ids, OfficialRelationRowProjection projection) {
+        NumberPath<Long> id, Collection<Long> ids, OfficialRelationRowProjection projection) {
         return query.select(projection).from(row).where(id.in(ids)).orderBy(id.asc()).fetch();
     }
 
@@ -204,9 +265,9 @@ final class OfficialRelationQueryDslPart19 {
      * @return 按父记录和源顺序排列的关系行投影。
      */
     private static <T> List<OfficialRelationRowDTO> selectChildren(JPAQueryFactory query, EntityPathBase<T> row,
-            NumberPath<Long> id, NumberPath<Long> parentId, NumberPath<Integer> sortOrder, Collection<Long> ids,
-            OfficialRelationRowProjection projection) {
+        NumberPath<Long> id, NumberPath<Long> parentId, NumberPath<Integer> sortOrder, Collection<Long> ids,
+        OfficialRelationRowProjection projection) {
         return query.select(projection).from(row).where(parentId.in(ids))
-                .orderBy(parentId.asc(), sortOrder.asc(), id.asc()).fetch();
+            .orderBy(parentId.asc(), sortOrder.asc(), id.asc()).fetch();
     }
 }

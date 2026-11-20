@@ -1,5 +1,7 @@
 package com.nnm.bot.core.plugin.execution.advice;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.core.plugin.api.CommandResult;
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.CommandErrorCode;
@@ -18,7 +20,7 @@ public sealed interface BotFailureReply
 
     record Notice(String text) implements BotFailureReply {
         public Notice {
-            if (text == null || text.isBlank())
+            if (text == null || CharSequenceUtil.isBlank(text))
                 throw new SystemException(CommandErrorCode.ADVICE_CONFIGURATION_INVALID,
                     "BotExceptionAdvice must provide non-blank notice text");
         }

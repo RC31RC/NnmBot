@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.persistent.official.service.rewards.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
 import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialValues.*;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialRelicDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.WarframeRelicDetailsDTO;
@@ -39,7 +40,7 @@ public class WarframeRelicServiceImpl implements WarframeRelicService {
     @Override
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<WarframeRelicDetailsDTO> findDetails(String keyword) {
-        String query = keyword == null ? "" : keyword.trim();
+        String query = keyword == null ? "" : CharSequenceUtil.trim(keyword);
         List<WarframeRelicDetailsDTO> result = new ArrayList<>();
         List<Long> candidateIds = relics.findPreferredRelicIds(query);
         var loaded = catalog.recordsByIds(WarframeOfficialDataDomain.RELIC, candidateIds);
@@ -68,8 +69,8 @@ public class WarframeRelicServiceImpl implements WarframeRelicService {
                 RelicDTO relic = new RelicDTO(root.bkey(), label, value.getVaultedAt() == null ? null : true, quality,
                     first(value.getIcon()), first(value.getIconUrl()), OFFICIAL_SOURCE_CODE);
                 if (selection.matches(root, query)
-                    || rewards.stream().anyMatch(row -> StrUtil.containsIgnoreCase(row.rewardName(), query))
-                    || drops.stream().anyMatch(row -> StrUtil.containsIgnoreCase(row.locationText(), query))) {
+                    || rewards.stream().anyMatch(row -> CharSequenceUtil.containsIgnoreCase(row.rewardName(), query))
+                    || drops.stream().anyMatch(row -> CharSequenceUtil.containsIgnoreCase(row.locationText(), query))) {
                     result.add(new WarframeRelicDetailsDTO(relic, rewards, drops));
                 }
             });

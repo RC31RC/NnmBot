@@ -89,5 +89,6 @@ public class OfficialVendorRoot extends OfficialRecord {
     private List<OfficialVendorNumItemsPerBinItems> officialVendorNumItemsPerBinItemsRows = new ArrayList<>();
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OfficialVendorRandomItemPricesPerBinItems> officialVendorRandomItemPricesPerBinItemsRows = new ArrayList<>();
+    private List<OfficialVendorRandomItemPricesPerBinItems> officialVendorRandomItemPricesPerBinItemsRows =
+        new ArrayList<>();
 }

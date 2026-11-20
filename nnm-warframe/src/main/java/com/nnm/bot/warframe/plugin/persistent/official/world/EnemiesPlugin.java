@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.world;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.pojo.vo.world.WarframeEnemyVO;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
@@ -29,7 +31,7 @@ public final class EnemiesPlugin extends BotPlugin<Void, WarframeEnemyCommandDTO
      */
     @Override
     protected WarframeEnemyCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String arguments = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String arguments = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         EnemySection section = EnemySection.AVATARS;
         int page = 1;
         Set<String> seen = new HashSet<>();
@@ -60,7 +62,8 @@ public final class EnemiesPlugin extends BotPlugin<Void, WarframeEnemyCommandDTO
                     return new WarframeEnemyCommandDTO(arguments, section, page, "页码必须为正整数");
             }
         }
-        String query = keyword.append(arguments.substring(start)).toString().trim().replaceAll("\\s+", " ");
+        String query =
+            CharSequenceUtil.trim(keyword.append(arguments.substring(start)).toString()).replaceAll("\\s+", " ");
         if (UNKNOWN.matcher(query).find())
             return new WarframeEnemyCommandDTO(query, section, page, "敌人资料参数不合法");
         if (query.length() > 500)

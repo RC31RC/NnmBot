@@ -1,10 +1,11 @@
 package com.nnm.bot.render.spi;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.ServiceLoader.Provider;
 import com.nnm.bot.render.RenderEngine;
 import java.util.Locale;
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.render.engine.OpenHtmlToPdfEngine;
 import com.nnm.bot.render.engine.PlaywrightEngine;
@@ -38,7 +39,8 @@ public class RenderEngineProviderLoader {
     /** 持有外部插件类加载器，直到 Spring 容器关闭。 */
     private final List<URLClassLoader> classLoaders = new ArrayList<>();
 
-    /** 加载内置提供者并按优先级和标识稳定排序。
+    /**
+     * 加载内置提供者并按优先级和标识稳定排序。
      *
      * @param properties 插件发现配置
      * @return 去重后的提供者列表
@@ -56,7 +58,8 @@ public class RenderEngineProviderLoader {
             .toList();
     }
 
-    /** 从插件目录创建独立类加载器并发现外部 SPI 实现。
+    /**
+     * 从插件目录创建独立类加载器并发现外部 SPI 实现。
      *
      * @param directory 外部 JAR 目录
      * @param providers 已发现的提供者集合
@@ -105,26 +108,27 @@ public class RenderEngineProviderLoader {
         }
     }
 
-    /** 校验提供者并按忽略大小写的 ID 去重。
+    /**
+     * 校验提供者并按忽略大小写的 ID 去重。
      *
      * @param providers 已发现的提供者集合
      * @param provider 待注册的提供者
      */
     private void add(LinkedHashMap<String, RenderEngineProvider> providers, RenderEngineProvider provider) {
-        if (ObjectUtil.isNull(provider)) {
+        if (ObjUtil.isNull(provider)) {
             log.warn("Ignoring null render provider");
             return;
         }
         try {
             String rawId = provider.id();
-            if (StrUtil.isBlank(rawId)) {
+            if (CharSequenceUtil.isBlank(rawId)) {
                 log.warn("Ignoring render provider with blank id");
                 return;
             }
-            String id = rawId.trim().toLowerCase(Locale.ROOT);
+            String id = CharSequenceUtil.trim(rawId).toLowerCase(Locale.ROOT);
             // 统一 ID 后再去重，避免不同大小写的重复实现进入选择列表。
             RenderEngineProvider registered = new RegisteredProvider(id, provider.order(), provider);
-            if (ObjectUtil.isNotNull(providers.putIfAbsent(id, registered))) {
+            if (ObjUtil.isNotNull(providers.putIfAbsent(id, registered))) {
                 log.warn("Ignoring duplicate render provider id [{}]", id);
             }
         } catch (RuntimeException | LinkageError e) {

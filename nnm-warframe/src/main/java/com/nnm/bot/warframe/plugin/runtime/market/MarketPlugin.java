@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketOrderPageDTO;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -63,13 +64,13 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
      */
     @Override
     public CommandResult handle(CommandInvocation invocation, Void prepared, WarframeMarketCommandDTO parsed) {
-        if (StrUtil.isBlank(parsed.itemInput())) {
+        if (CharSequenceUtil.isBlank(parsed.itemInput())) {
             return CommandResult.rejected("格式：wm [满级] [买家|卖家] [平台] 物品名称 [页码]");
         }
         WarframeItemResolutionDTO resolution = itemResolver.resolve(parsed.itemInput());
         // Market 有自己的可交易目录，不能因为官方物品多候选就提前拒绝匹配。
         String slug = resolveMarketSlug(parsed.itemInput(), resolution);
-        if (StrUtil.isBlank(slug)) {
+        if (CharSequenceUtil.isBlank(slug)) {
             if (resolution.ambiguous()) {
                 return CommandResult.rejected("物品名称存在多个候选，请输入更完整的名称：" + resolution.candidates().stream()
                     .map(WarframeItemDTO::getLocalizedName).collect(Collectors.joining("、")));
@@ -94,7 +95,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
      * @return 游戏资料市场订单查询对象。
      */
     static WarframeMarketCommandDTO parseQuery(String raw) {
-        String[] tokens = StrUtil.emptyIfNull(raw).trim().split("\\s+");
+        String[] tokens = CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(raw)).split("\\s+");
         boolean maxLevel = false;
         OrderFilter filter = OrderFilter.ALL;
         String platform = "";
@@ -125,7 +126,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
                 filter = OrderFilter.SELL;
             } else if (PLATFORMS.contains(normalized)) {
                 platform = normalized;
-            } else if (StrUtil.isNotBlank(token)) {
+            } else if (CharSequenceUtil.isNotBlank(token)) {
                 item.add(token);
             }
         }
@@ -140,7 +141,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
      * @return 解析市场地址标识对应的文本。
      */
     private String resolveMarketSlug(String input, WarframeItemResolutionDTO resolution) {
-        String direct = input.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", "_");
+        String direct = CharSequenceUtil.trim(input).toLowerCase(Locale.ROOT).replaceAll("\\s+", "_");
         List<WarframeMarketItemDTO> catalog;
         try {
             catalog = marketService.fetchItems();
@@ -156,14 +157,14 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
             searchTerms.add(resolution.item().getLocalizedName());
             searchTerms.add(resolution.item().getMarketSlug());
         }
-        Set<String> terms = searchTerms.stream().filter(StrUtil::isNotBlank).map(MarketPlugin::compact)
+        Set<String> terms = searchTerms.stream().filter(CharSequenceUtil::isNotBlank).map(MarketPlugin::compact)
             .collect(Collectors.toCollection(LinkedHashSet::new));
         // 裸名称的 Prime 偏好只使用精确名称/别名，不能把模糊纠错结果当成用户意图。
         Set<String> exactTerms = new LinkedHashSet<>();
         exactTerms.add(compact(input));
-        itemResolver.auctionWeaponSearchTerms(input).stream().filter(StrUtil::isNotBlank).map(MarketPlugin::compact)
-            .forEach(exactTerms::add);
-        List<MarketCandidate> matched = catalog.stream().filter(item -> StrUtil.isNotBlank(item.slug()))
+        itemResolver.auctionWeaponSearchTerms(input).stream().filter(CharSequenceUtil::isNotBlank)
+            .map(MarketPlugin::compact).forEach(exactTerms::add);
+        List<MarketCandidate> matched = catalog.stream().filter(item -> CharSequenceUtil.isNotBlank(item.slug()))
             .map(item -> new MarketCandidate(item, bestMarketScore(item, terms),
                 marketIntentPriority(item, input, exactTerms)))
             .filter(candidate -> candidate.score() >= 0.78D)
@@ -185,7 +186,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
         // 目录短暂不可用时允许明确的 URL slug；中文不得原样发送给上游。
         if (direct.matches("[a-z0-9]+(?:_[a-z0-9]+)+"))
             return direct;
-        if (resolution.found() && StrUtil.isNotBlank(resolution.item().getMarketSlug())) {
+        if (resolution.found() && CharSequenceUtil.isNotBlank(resolution.item().getMarketSlug())) {
             return resolution.item().getMarketSlug();
         }
         return "";
@@ -202,7 +203,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
     private static int marketIntentPriority(WarframeMarketItemDTO item, String input, Set<String> exactTerms) {
         String slug = item.slug().toLowerCase(Locale.ROOT);
         // 带下划线的完整 slug 是显式商品选择，不受裸名称偏好影响。
-        if (input.contains("_") && slug.equalsIgnoreCase(input.trim()))
+        if (input.contains("_") && slug.equalsIgnoreCase(CharSequenceUtil.trim(input)))
             return 0;
         if (slug.endsWith("_prime_set") || slug.endsWith("_prime")) {
             String base = slug.replaceFirst("_prime(?:_set)?$", "");
@@ -228,7 +229,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
         for (String term : terms) {
             for (String name : names) {
                 String candidate = compact(name);
-                if (StrUtil.isBlank(candidate))
+                if (CharSequenceUtil.isBlank(candidate))
                     continue;
                 if (candidate.equals(term))
                     best = Math.max(best, 1);
@@ -277,7 +278,8 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
      * @return 已去除比较分隔符的名称键。
      */
     private static String compact(String value) {
-        return StrUtil.emptyIfNull(value).trim().toLowerCase(Locale.ROOT).replaceAll("[\\s_\\-·•/\\\\]+", "");
+        return CharSequenceUtil.trim(CharSequenceUtil.emptyIfNull(value)).toLowerCase(Locale.ROOT)
+            .replaceAll("[\\s_\\-·•/\\\\]+", "");
     }
 
     private record MarketCandidate(WarframeMarketItemDTO item, double score, int intentPriority) {

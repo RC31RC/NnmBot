@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.service.watch.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.curated.cache.watch.WarframeSubscriptionEventMemory.Claim;
 import com.nnm.bot.warframe.persistent.curated.pojo.entity.watch.WarframeGroupWatchRule;
@@ -36,9 +38,9 @@ public class WarframeGroupWatchRuleServiceImpl implements WarframeGroupWatchRule
     @Transactional
     public WarframeGroupWatchRuleDTO create(long groupId, long memberId, String watchType, String watchKey,
         String watchValue) {
-        String normalizedType = watchType == null ? "" : watchType.trim();
-        String normalizedKey = watchKey == null ? "" : watchKey.trim();
-        String normalizedValue = watchValue == null ? "" : watchValue.trim();
+        String normalizedType = watchType == null ? "" : CharSequenceUtil.trim(watchType);
+        String normalizedKey = watchKey == null ? "" : CharSequenceUtil.trim(watchKey);
+        String normalizedValue = watchValue == null ? "" : CharSequenceUtil.trim(watchValue);
         return WarframeGroupWatchRuleDTO
             .from(repository.findFirstByGroupIdAndMemberIdAndWatchTypeAndWatchKeyAndWatchValue(groupId, memberId,
                 normalizedType, normalizedKey, normalizedValue).map(this::reenable).orElseGet(() -> {
@@ -82,9 +84,9 @@ public class WarframeGroupWatchRuleServiceImpl implements WarframeGroupWatchRule
     @Override
     @Transactional
     public boolean disable(long groupId, long memberId, String watchType, String watchKey, String watchValue) {
-        String normalizedType = watchType == null ? "" : watchType.trim();
-        String normalizedKey = watchKey == null ? "*" : watchKey.trim();
-        String normalizedValue = watchValue == null ? "" : watchValue.trim();
+        String normalizedType = watchType == null ? "" : CharSequenceUtil.trim(watchType);
+        String normalizedKey = watchKey == null ? "*" : CharSequenceUtil.trim(watchKey);
+        String normalizedValue = watchValue == null ? "" : CharSequenceUtil.trim(watchValue);
         List<WarframeGroupWatchRule> rules = "*".equals(normalizedKey)
             ? repository.findAllByGroupIdAndMemberIdAndWatchTypeAndWatchValueAndEnabledTrue(groupId, memberId,
                 normalizedType, normalizedValue)

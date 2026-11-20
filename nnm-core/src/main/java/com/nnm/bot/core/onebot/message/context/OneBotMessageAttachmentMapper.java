@@ -1,9 +1,11 @@
 package com.nnm.bot.core.onebot.message.context;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.collection.CollUtil;
+
 import com.mikuac.shiro.model.ArrayMsg;
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.BotIncomingAttachmentType;
 import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
-import cn.hutool.core.util.StrUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -16,15 +18,15 @@ public final class OneBotMessageAttachmentMapper {
     private OneBotMessageAttachmentMapper() {}
 
     public static List<BotIncomingAttachment> from(List<ArrayMsg> messageSegments) {
-        if (messageSegments == null || messageSegments.isEmpty()) {
+        if (CollUtil.isEmpty(messageSegments)) {
             return List.of();
         }
         List<BotIncomingAttachment> attachments = new ArrayList<>();
         for (ArrayMsg segment : messageSegments) {
             String type = segment.getRawType();
-            if ("image".equalsIgnoreCase(type)) {
+            if (CharSequenceUtil.equalsIgnoreCase("image", type)) {
                 attachments.add(toAttachment(segment, BotIncomingAttachmentType.IMAGE));
-            } else if ("file".equalsIgnoreCase(type)) {
+            } else if (CharSequenceUtil.equalsIgnoreCase("file", type)) {
                 attachments.add(toAttachment(segment, BotIncomingAttachmentType.FILE));
             }
         }
@@ -38,7 +40,7 @@ public final class OneBotMessageAttachmentMapper {
         String fileId = firstText(segment, "file_id", "file_unique", "file");
         String fileName = firstText(segment, "name", "file");
         String contentType = firstText(segment, "content_type", "mime", "mime_type");
-        if (StrUtil.isBlank(contentType) && type == BotIncomingAttachmentType.IMAGE) {
+        if (CharSequenceUtil.isBlank(contentType) && type == BotIncomingAttachmentType.IMAGE) {
             contentType = contentTypeFromName(fileName);
         }
         Map<String, String> metadata =
@@ -52,7 +54,7 @@ public final class OneBotMessageAttachmentMapper {
     private static String firstText(ArrayMsg segment, String... keys) {
         for (String key : keys) {
             String value = segment.getStringData(key);
-            if (StrUtil.isNotBlank(value)) {
+            if (CharSequenceUtil.isNotBlank(value)) {
                 return value;
             }
         }
@@ -60,7 +62,7 @@ public final class OneBotMessageAttachmentMapper {
     }
 
     private static String contentTypeFromName(String fileName) {
-        if (StrUtil.isBlank(fileName)) {
+        if (CharSequenceUtil.isBlank(fileName)) {
             return null;
         }
         String lower = fileName.toLowerCase(Locale.ROOT);

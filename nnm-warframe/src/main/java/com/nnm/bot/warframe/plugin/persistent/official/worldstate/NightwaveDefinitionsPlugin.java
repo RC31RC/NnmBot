@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.official.worldstate;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.persistent.official.pojo.vo.worldstate.WarframeNightwaveDefinitionVO;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
@@ -29,7 +31,7 @@ public final class NightwaveDefinitionsPlugin extends BotPlugin<Void, WarframeNi
      */
     @Override
     protected WarframeNightwaveDefinitionCommandDTO parse(CommandInvocation invocation, Void prepared) {
-        String arguments = invocation.arguments() == null ? "" : invocation.arguments().trim();
+        String arguments = invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
         NightwaveSection section = NightwaveSection.CHALLENGES;
         int page = 1;
         Set<String> seen = new HashSet<>();
@@ -60,7 +62,8 @@ public final class NightwaveDefinitionsPlugin extends BotPlugin<Void, WarframeNi
                     return new WarframeNightwaveDefinitionCommandDTO(arguments, section, page, "页码必须为正整数");
             }
         }
-        String query = keyword.append(arguments.substring(start)).toString().trim().replaceAll("\\s+", " ");
+        String query =
+            CharSequenceUtil.trim(keyword.append(arguments.substring(start)).toString()).replaceAll("\\s+", " ");
         if (UNKNOWN.matcher(query).find())
             return new WarframeNightwaveDefinitionCommandDTO(query, section, page, "电波静态定义参数不合法");
         if (query.length() > 500)

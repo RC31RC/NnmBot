@@ -27,7 +27,8 @@ public class ReplyProperties {
     /** 单个文件最大字节数。 */
     private long maxFileBytes = 200L * 1024 * 1024;
 
-    /** 启动时拒绝非正资源上限。
+    /**
+     * 启动时拒绝非正资源上限。
      *
      * @throws IllegalArgumentException 任一上限小于 1
      */

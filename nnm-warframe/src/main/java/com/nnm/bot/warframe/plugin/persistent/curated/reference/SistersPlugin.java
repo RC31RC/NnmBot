@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.plugin.persistent.curated.reference;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO.TermDTO;
@@ -28,7 +29,7 @@ public final class SistersPlugin extends BotPlugin<Void, String> {
      */
     @Override
     protected String parse(CommandInvocation invocation, Void prepared) {
-        return invocation.arguments() == null ? "" : invocation.arguments().trim();
+        return invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
     }
 
     @Resource
@@ -62,7 +63,7 @@ public final class SistersPlugin extends BotPlugin<Void, String> {
      * @return 满足文本或集合是否包含指定内容时为真，否则为假。
      */
     private static boolean contains(String value, String query) {
-        return StrUtil.isBlank(query)
+        return CharSequenceUtil.isBlank(query)
             || (value != null && value.toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)));
     }
 }

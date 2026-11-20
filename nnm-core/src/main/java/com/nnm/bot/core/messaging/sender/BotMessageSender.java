@@ -16,7 +16,8 @@ public interface BotMessageSender {
     /** 返回此发送器所属的平台。 */
     BotPlatform platform();
 
-    /** 判断当前上下文和能力是否可用于发送。
+    /**
+     * 判断当前上下文和能力是否可用于发送。
      *
      * @param context 目标消息上下文
      * @param capability 所需渠道能力
@@ -24,7 +25,8 @@ public interface BotMessageSender {
      */
     boolean supports(BotMessageContext context, BotChannelCapability capability);
 
-    /** 判断一条消息包含的内容类型能否按顺序组合发送。
+    /**
+     * 判断一条消息包含的内容类型能否按顺序组合发送。
      *
      * @param context 目标消息上下文
      * @param parts 按展示顺序排列的消息部分类型
@@ -37,7 +39,8 @@ public interface BotMessageSender {
         return count > 0;
     }
 
-    /** 整组预留必须原子完成；无协议额度的平台只提供生命周期句柄。
+    /**
+     * 整组预留必须原子完成；无协议额度的平台只提供生命周期句柄。
      *
      * @param context 目标消息上下文
      * @param count 整组消息数
@@ -50,7 +53,8 @@ public interface BotMessageSender {
         return IntStream.range(0, count).mapToObj(index -> BotMessageSendPermit.unrestricted()).toList();
     }
 
-    /** 可上传或暂存资源，但不得创建平台消息；调用方负责关闭返回对象。
+    /**
+     * 可上传或暂存资源，但不得创建平台消息；调用方负责关闭返回对象。
      *
      * @param context 目标消息上下文
      * @param blocks 按顺序排列的待发送内容

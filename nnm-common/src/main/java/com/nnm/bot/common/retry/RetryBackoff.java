@@ -10,7 +10,8 @@ public final class RetryBackoff {
 
     private RetryBackoff() {}
 
-    /** 根据失败次数计算指数退避时长，并限制在最大值内。
+    /**
+     * 根据失败次数计算指数退避时长，并限制在最大值内。
      *
      * @param initial 首次失败后的等待时长
      * @param maximum 等待上限

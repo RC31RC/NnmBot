@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.image.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.warframe.runtime.cache.dataset.DatasetSnapshotMetrics;
 import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
@@ -42,7 +43,7 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
      */
     @Override
     public String resolve(String reference, String sourceCode) {
-        if (StrUtil.isBlank(reference) || reference.length() > 1_024) {
+        if (CharSequenceUtil.isBlank(reference) || reference.length() > 1_024) {
             return null;
         }
         if (reference.startsWith("https://") || reference.startsWith("http://")) {
@@ -107,7 +108,7 @@ public class WarframeImageResolverImpl implements WarframeImageResolver {
             case "DIT_STEAM" -> mapping.getDitSteam();
             default -> mapping.getDitAgnostic();
         };
-        if (StrUtil.isBlank(path))
+        if (CharSequenceUtil.isBlank(path))
             path = mapping.getDitAgnostic();
         return resolve(path, null);
     }

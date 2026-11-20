@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.service.record.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.METADATA_BKEY;
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_GROUPS;
@@ -8,7 +10,6 @@ import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
 
 import com.nnm.bot.warframe.persistent.official.pojo.vo.record.WarframeOfficialDatasetOverviewVO;
 import com.nnm.bot.warframe.persistent.official.repository.snapshot.WarframeOfficialFileRepository;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
@@ -69,17 +70,19 @@ public class WarframeOfficialDataQueryServiceImpl implements WarframeOfficialDat
     @Override
     public PageResult<WarframeOfficialRecordVO> query(WarframeOfficialRecordQuery request) {
         WarframeOfficialDataDomain domain = parseDomain(request.domain());
-        String group = StrUtil.trimToEmpty(request.group());
-        BusinessAssert.isTrue(group.isEmpty() || RECORD_GROUPS.getOrDefault(domain, Set.of()).contains(group),
+        String group = CharSequenceUtil.trimToEmpty(request.group());
+        BusinessAssert.isTrue(
+            CharSequenceUtil.isEmpty(group) || RECORD_GROUPS.getOrDefault(domain, Set.of()).contains(group),
             OfficialDataErrorCode.GROUP_INVALID);
         int current = request.current() == null ? 1 : Math.max(request.current(), 1);
         int size = request.size() == null ? 20 : Math.min(Math.max(request.size(), 1), MAX_PAGE_SIZE);
         PageRequest pageable = PageRequest.of(current - 1, size, Sort.by(Sort.Order.asc("localizedName").nullsLast(),
             Sort.Order.asc("officialName").nullsLast(), Sort.Order.asc("id")));
         String maintenance = request.maintenanceType();
-        if (StrUtil.isNotBlank(maintenance)) {
+        if (CharSequenceUtil.isNotBlank(maintenance)) {
             try {
-                maintenance = MaintenanceType.valueOf(maintenance.trim().toUpperCase(Locale.ROOT)).name();
+                maintenance =
+                    MaintenanceType.valueOf(CharSequenceUtil.trim(maintenance).toUpperCase(Locale.ROOT)).name();
             } catch (IllegalArgumentException exception) {
                 throw new BusinessException(OfficialDataErrorCode.MAINTENANCE_TYPE_INVALID, exception);
             }
@@ -166,7 +169,7 @@ public class WarframeOfficialDataQueryServiceImpl implements WarframeOfficialDat
      */
     private WarframeOfficialFormFieldVO describe(String key, Type type, Set<Class<?>> ancestors, int depth,
         String domain, String parentPath) {
-        String path = parentPath.isEmpty() ? key : parentPath + "/" + key;
+        String path = CharSequenceUtil.isEmpty(parentPath) ? key : parentPath + "/" + key;
         String label = OfficialFormFieldLabels.label(domain, path);
         Class<?> raw = rawType(type);
         if (Map.class.isAssignableFrom(raw)) {
@@ -293,11 +296,11 @@ public class WarframeOfficialDataQueryServiceImpl implements WarframeOfficialDat
      * @return 游戏资料官方数据业务领域对象。
      */
     private static WarframeOfficialDataDomain parseDomain(String value) {
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             throw new BusinessException(WarframeManagementErrorCode.INVALID_OFFICIAL_DATA_DOMAIN);
         }
         try {
-            return WarframeOfficialDataDomain.valueOf(value.trim().toUpperCase(Locale.ROOT));
+            return WarframeOfficialDataDomain.valueOf(CharSequenceUtil.trim(value).toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(WarframeManagementErrorCode.INVALID_OFFICIAL_DATA_DOMAIN, exception);
         }

@@ -1,6 +1,8 @@
 package com.nnm.bot.warframe.persistent.official.service.worldstate.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.collection.CollUtil;
+
 import com.nnm.bot.warframe.persistent.official.cache.worldstate.WarframeOfficialWorldStateIndex;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolutionStatus;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceType;
@@ -45,19 +47,20 @@ public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldState
     @Override
     public Map<String, WarframeWorldStateCodebookEntryDTO> findAll(WarframeReferenceType type,
         Collection<String> references) {
-        if (type == null || references.isEmpty())
+        if (type == null || CollUtil.isEmpty(references))
             return Map.of();
         var entries = type == WarframeReferenceType.LANGUAGE_STRING
             ? Map.<String, WarframeWorldStateCodebookEntryDTO>of() : officialIndex.codebook(type);
         Map<String, WarframeWorldStateCodebookEntryDTO> result = new LinkedHashMap<>();
         Map<String, String> languageKeys = new LinkedHashMap<>();
         for (String reference : references) {
-            if (StrUtil.isBlank(reference))
+            if (CharSequenceUtil.isBlank(reference))
                 continue;
-            var entry = entries.get(reference.trim().toLowerCase(Locale.ROOT));
+            var entry = entries.get(CharSequenceUtil.trim(reference).toLowerCase(Locale.ROOT));
             if (entry != null) {
                 result.put(reference, entry);
-                if (!WarframeNameNormalizer.hasChinese(entry.displayName()) && StrUtil.isNotBlank(entry.nameKey()))
+                if (!WarframeNameNormalizer.hasChinese(entry.displayName())
+                    && CharSequenceUtil.isNotBlank(entry.nameKey()))
                     languageKeys.put(reference, entry.nameKey());
             } else if (reference.startsWith("/Lotus/Language/")) {
                 languageKeys.put(reference, reference);
@@ -95,9 +98,9 @@ public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldState
         var values = officialIndex.language(references);
         Map<String, WarframeWorldStateCodebookEntryDTO> result = new LinkedHashMap<>();
         for (String key : references) {
-            if (StrUtil.isBlank(key))
+            if (CharSequenceUtil.isBlank(key))
                 continue;
-            String text = values.get(key.trim().toLowerCase(Locale.ROOT));
+            String text = values.get(CharSequenceUtil.trim(key).toLowerCase(Locale.ROOT));
             if (WarframeNameNormalizer.isReadableDisplayName(text))
                 result.put(key, new WarframeWorldStateCodebookEntryDTO(key, text, "", "", "official:language_string",
                     WarframeReferenceResolutionStatus.RESOLVED, "", false, key));

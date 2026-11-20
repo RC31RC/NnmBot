@@ -1,9 +1,10 @@
 package com.nnm.bot.warframe.persistent.curated.service.forum.impl;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.common.storage.ObjectStorage.StoredObject;
 import java.util.Map.Entry;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.common.storage.ObjectStorage;
@@ -68,8 +69,9 @@ public class ForumFileServiceImpl implements ForumFileService {
     @PostConstruct
     void initialize() {
         validateProperties();
-        allowedExtensions = properties.getAllowedExtensions().stream().filter(StrUtil::isNotBlank)
-            .map(extension -> extension.trim().toLowerCase(Locale.ROOT)).collect(Collectors.toUnmodifiableSet());
+        allowedExtensions = properties.getAllowedExtensions().stream().filter(CharSequenceUtil::isNotBlank)
+            .map(extension -> CharSequenceUtil.trim(extension).toLowerCase(Locale.ROOT))
+            .collect(Collectors.toUnmodifiableSet());
         temporaryUrlPattern = urlPattern(properties.getTemporaryPublicPath(), false);
         permanentUrlPattern = urlPattern(properties.getPublicPath(), true);
 
@@ -210,7 +212,7 @@ public class ForumFileServiceImpl implements ForumFileService {
             return;
         }
         Set<String> uniqueObjects = objectReferences.stream().map(this::objectIdFromReference)
-            .filter(StrUtil::isNotBlank).collect(Collectors.toUnmodifiableSet());
+            .filter(CharSequenceUtil::isNotBlank).collect(Collectors.toUnmodifiableSet());
         afterCommitExecutor.execute(() -> deletePermanentFiles(uniqueObjects));
     }
 
@@ -359,7 +361,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @param references 引用集合。
      */
     private void collectTemporaryUrls(String content, Set<String> references) {
-        if (StrUtil.isBlank(content)) {
+        if (CharSequenceUtil.isBlank(content)) {
             return;
         }
         Matcher matcher = temporaryUrlPattern.matcher(content);
@@ -375,7 +377,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @param references 引用集合。
      */
     private void collectStorageReferences(String content, Set<String> references) {
-        if (StrUtil.isBlank(content)) {
+        if (CharSequenceUtil.isBlank(content)) {
             return;
         }
         Matcher marker = Pattern.compile("\\{\\{object:([^}]+)}}").matcher(content);
@@ -401,11 +403,11 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 存储引用对应的文本。
      */
     private String storageReference(String reference) {
-        if (StrUtil.isBlank(reference)) {
+        if (CharSequenceUtil.isBlank(reference)) {
             return reference;
         }
         String objectId = objectIdFromReference(reference);
-        return StrUtil.isBlank(objectId) ? reference : objectId;
+        return CharSequenceUtil.isBlank(objectId) ? reference : objectId;
     }
 
     /**
@@ -415,7 +417,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 存储引用对应的文本。
      */
     private String storageReferences(String content) {
-        if (StrUtil.isBlank(content)) {
+        if (CharSequenceUtil.isBlank(content)) {
             return content;
         }
         String result = content;
@@ -434,11 +436,11 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 公开引用对应的文本。
      */
     private String publicReference(String reference) {
-        if (StrUtil.isBlank(reference)) {
+        if (CharSequenceUtil.isBlank(reference)) {
             return reference;
         }
         String objectId = objectIdFromReference(reference);
-        return StrUtil.isBlank(objectId) ? reference : publicUrl(objectId);
+        return CharSequenceUtil.isBlank(objectId) ? reference : publicUrl(objectId);
     }
 
     /**
@@ -448,7 +450,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 公开引用对应的文本。
      */
     private String publicReferences(String content) {
-        if (StrUtil.isBlank(content)) {
+        if (CharSequenceUtil.isBlank(content)) {
             return content;
         }
         Matcher matcher = Pattern.compile("\\{\\{object:([^}]+)}}").matcher(content);
@@ -477,7 +479,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 对象标识转换引用对应的文本。
      */
     private String objectIdFromReference(String reference) {
-        if (StrUtil.isBlank(reference)) {
+        if (CharSequenceUtil.isBlank(reference)) {
             return null;
         }
         if (reference.startsWith("{{object:") && reference.endsWith("}}")) {
@@ -565,7 +567,7 @@ public class ForumFileServiceImpl implements ForumFileService {
     private static void validatePathSegments(String year, String month, String fileName) {
         BusinessAssert.isTrue(year != null && year.matches("\\d{4}"), ForumErrorCode.YEAR_INVALID);
         BusinessAssert.isTrue(month != null && month.matches("0[1-9]|1[0-2]"), ForumErrorCode.MONTH_INVALID);
-        BusinessAssert.isTrue(StrUtil.isNotBlank(fileName) && fileName.matches("[0-9a-f]{32}\\.[a-z0-9]+"),
+        BusinessAssert.isTrue(CharSequenceUtil.isNotBlank(fileName) && fileName.matches("[0-9a-f]{32}\\.[a-z0-9]+"),
             ForumErrorCode.FILE_NAME_INVALID);
     }
 
@@ -576,8 +578,8 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 规范化原始名称对应的文本。
      */
     private static String normalizedOriginalName(String fileName) {
-        String normalized = StrUtil.trim(fileName);
-        BusinessAssert.isTrue(StrUtil.isNotBlank(normalized), ForumErrorCode.FILE_NAME_REQUIRED);
+        String normalized = CharSequenceUtil.trim(fileName);
+        BusinessAssert.isTrue(CharSequenceUtil.isNotBlank(normalized), ForumErrorCode.FILE_NAME_REQUIRED);
         String leafName = Path.of(normalized).getFileName().toString();
         BusinessAssert.isTrue(leafName.length() <= 255, ForumErrorCode.FILE_NAME_TOO_LONG);
         return leafName;
@@ -615,7 +617,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 将内容中的临时文件引用替换为已确认的公开地址对应的文本。
      */
     private static String replaceUrls(String content, Map<String, String> replacements) {
-        if (StrUtil.isBlank(content)) {
+        if (CharSequenceUtil.isBlank(content)) {
             return content;
         }
         String result = content;
@@ -646,7 +648,7 @@ public class ForumFileServiceImpl implements ForumFileService {
      * @return 规范化公开路径对应的文本。
      */
     private static String normalizedPublicPath(String configuredPath) {
-        String path = configuredPath.trim();
+        String path = CharSequenceUtil.trim(configuredPath);
         return path.startsWith("/") ? path : "/" + path;
     }
 

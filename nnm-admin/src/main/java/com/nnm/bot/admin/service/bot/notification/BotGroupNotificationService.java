@@ -10,7 +10,9 @@ import java.util.List;
 /** 预览并向群组成员发送通知。 */
 public interface BotGroupNotificationService {
 
-    /** 按群组和机器人绑定发送通知。
+    /**
+     * 按群组和机器人绑定发送通知。
+     *
      * @param request 通知内容与目标群组
      * @param manifest 本次任务使用的资源清单
      * @param reporter 任务进度接收器
@@ -20,7 +22,9 @@ public interface BotGroupNotificationService {
     BotGroupNotificationReportDTO send(BotGroupNotificationDTO request, NotificationResourceManifest manifest,
         TaskProgressReporter reporter) throws InterruptedException;
 
-    /** 生成发送目标及内容预览，不执行发送。
+    /**
+     * 生成发送目标及内容预览，不执行发送。
+     *
      * @param ownerId 发起用户主键
      * @param request 通知内容与目标群组
      * @return 按群组生成的预览列表

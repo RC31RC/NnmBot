@@ -2,7 +2,7 @@ package com.nnm.bot.core.onebot.config;
 
 import com.nnm.bot.core.onebot.constant.OneBotConstants.FileTransferMode;
 
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -100,13 +100,14 @@ public class OneBotProperties {
         this.fileStreamRetention = fileStreamRetention;
     }
 
-    /** 返回可传给协议客户端的发送超时毫秒数。
+    /**
+     * 返回可传给协议客户端的发送超时毫秒数。
      *
      * @return 正整数毫秒
      * @throws IllegalArgumentException 超时为空、非正数或超出客户端范围
      */
     public int sendTimeLimitMillis() {
-        if (ObjectUtil.isNull(sendTimeLimit)) {
+        if (ObjUtil.isNull(sendTimeLimit)) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.send-time-limit must not be null");
         }
         long millis = durationMillis(sendTimeLimit, "nnm.bot.channels.onebot.send-time-limit");
@@ -117,13 +118,14 @@ public class OneBotProperties {
         return (int)millis;
     }
 
-    /** 返回暂存文件保留时长的毫秒数。
+    /**
+     * 返回暂存文件保留时长的毫秒数。
      *
      * @return 正整数毫秒
      * @throws IllegalArgumentException 保留时长为空、非正数或溢出
      */
     public long fileStreamRetentionMillis() {
-        if (ObjectUtil.isNull(fileStreamRetention)) {
+        if (ObjUtil.isNull(fileStreamRetention)) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.file-stream-retention must not be null");
         }
         long millis = durationMillis(fileStreamRetention, "nnm.bot.channels.onebot.file-stream-retention");
@@ -133,22 +135,23 @@ public class OneBotProperties {
         return millis;
     }
 
-    /** 在启动时校验协议限制及编码后帧大小。
+    /**
+     * 在启动时校验协议限制及编码后帧大小。
      *
      * @throws IllegalArgumentException 参数非法或分块超出发送缓冲区预算
      */
     public void validateDefaults() {
-        if (ObjectUtil.isNull(probeTimeout) || probeTimeout.isZero() || probeTimeout.isNegative()) {
+        if (ObjUtil.isNull(probeTimeout) || probeTimeout.isZero() || probeTimeout.isNegative()) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.probe-timeout must be positive");
         }
         sendTimeLimitMillis();
         if (sendBufferSizeBytes <= 0) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.send-buffer-size-bytes must be positive");
         }
-        if (ObjectUtil.isNull(fileTransferMode)) {
+        if (ObjUtil.isNull(fileTransferMode)) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.file-transfer-mode must not be null");
         }
-        if (ObjectUtil.isNull(fileStagingDirectory)) {
+        if (ObjUtil.isNull(fileStagingDirectory)) {
             throw new IllegalArgumentException("nnm.bot.channels.onebot.file-staging-directory must not be null");
         }
         if (fileStreamChunkSizeBytes <= 0) {

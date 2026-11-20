@@ -1,7 +1,7 @@
 package com.nnm.bot.core.messaging.sender;
 
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.PartKind;
-import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.channel.constant.BotChannelCapability;
@@ -41,7 +41,7 @@ public class BotMessageSenderRouter {
         Map<BotPlatform, BotMessageSender> registry = new HashMap<>();
         for (BotMessageSender sender : this.platformSenders) {
             BotMessageSender previous = registry.put(sender.platform(), sender);
-            if (ObjectUtil.isNotNull(previous)) {
+            if (ObjUtil.isNotNull(previous)) {
                 throw new BusinessException(BotChannelErrorCode.SENDER_REGISTRATION_CONFLICT);
             }
         }
@@ -72,7 +72,7 @@ public class BotMessageSenderRouter {
     private BotMessageSender sender(BotMessageContext context) {
         Assert.notNull(context, "context must not be null");
         BotMessageSender sender = senders.get(context.platform());
-        if (ObjectUtil.isNull(sender)) {
+        if (ObjUtil.isNull(sender)) {
             throw new BusinessException(BotChannelErrorCode.MESSAGE_SENDER_NOT_REGISTERED);
         }
         return sender;

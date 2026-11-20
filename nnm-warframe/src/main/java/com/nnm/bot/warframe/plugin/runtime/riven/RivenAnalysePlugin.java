@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.plugin.runtime.riven;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.messaging.model.BotIncomingAttachment;
@@ -46,15 +47,15 @@ public final class RivenAnalysePlugin extends BotPlugin<WarframeRivenInputDTO, W
         Optional<BotIncomingAttachment> image = messageInputs.firstImage(invocation);
         if (image.isPresent()) {
             var recognition = rivenOcrService.recognizeDetailed(image.get());
-            if (StrUtil.isBlank(recognition.text())) {
+            if (CharSequenceUtil.isBlank(recognition.text())) {
                 throw new BusinessException(WarframeRivenErrorCode.INPUT_UNREADABLE);
             }
             return new WarframeRivenInputDTO(null, recognition);
         }
-        if (StrUtil.isBlank(invocation.arguments())) {
+        if (CharSequenceUtil.isBlank(invocation.arguments())) {
             throw new BusinessException(WarframeRivenErrorCode.INPUT_REQUIRED);
         }
-        return new WarframeRivenInputDTO(invocation.arguments().trim(), null);
+        return new WarframeRivenInputDTO(CharSequenceUtil.trim(invocation.arguments()), null);
     }
 
     /**
@@ -92,11 +93,11 @@ public final class RivenAnalysePlugin extends BotPlugin<WarframeRivenInputDTO, W
      */
     private static String format(WarframeRivenAnalysisVO result) {
         StringBuilder text = new StringBuilder("紫卡结构化分析");
-        text.append("\n武器：").append(StrUtil.isBlank(result.weaponName()) ? "未确认" : result.weaponName());
+        text.append("\n武器：").append(CharSequenceUtil.isBlank(result.weaponName()) ? "未确认" : result.weaponName());
         if (CollUtil.isNotEmpty(result.weaponCandidates())) {
             text.append("\n武器候选：").append(String.join("、", result.weaponCandidates()));
         }
-        if (StrUtil.isNotBlank(result.weaponType())) {
+        if (CharSequenceUtil.isNotBlank(result.weaponType())) {
             text.append("\n类型：").append(result.weaponType());
         }
         text.append("\n卡片等级：").append(result.rank() == null ? "未确认" : result.rank());

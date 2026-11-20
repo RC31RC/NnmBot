@@ -2,7 +2,7 @@ package com.nnm.bot.warframe.persistent.official.service.dataset.impl;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.RECORD_BATCH_SIZE;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -358,7 +358,7 @@ public class WarframeOfficialApprovalServiceImpl implements WarframeOfficialAppr
             Set<String> ids = new HashSet<>();
             for (var listing : weapon.getMarketListings()) {
                 BusinessAssert.isTrue(
-                    listing != null && StrUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()),
+                    listing != null && CharSequenceUtil.isNotBlank(listing.getId()) && ids.add(listing.getId()),
                     OfficialApprovalErrorCode.RIVEN_LISTING_ID_INVALID);
             }
         }

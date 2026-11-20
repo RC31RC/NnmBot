@@ -1,7 +1,8 @@
 package com.nnm.bot.common.http;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
+import cn.hutool.core.util.ObjUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.config.http.HttpClientProperties;
@@ -274,7 +275,8 @@ public class HttpClient {
                     return new DownloadResult(response.statusCode(), 0, responseHeaders, null);
                 }
                 if (response.headers().allValues(HttpHeaders.CONTENT_ENCODING).stream()
-                    .anyMatch(value -> !value.isBlank() && !"identity".equalsIgnoreCase(value.trim()))) {
+                    .anyMatch(value -> !CharSequenceUtil.isBlank(value)
+                        && !"identity".equalsIgnoreCase(CharSequenceUtil.trim(value)))) {
                     return new DownloadResult(-1, 0, responseHeaders,
                         new IOException("Raw download requires identity Content-Encoding"));
                 }
@@ -465,7 +467,7 @@ public class HttpClient {
         String requestUrl = requireUrl(url);
         HttpHeaders requestHeaders = requestHeaders(headers);
         Objects.requireNonNull(responseTypeReference, "responseType must not be null");
-        String requestBody = serialize("POST", requestUrl, ObjectUtil.isNull(body) ? Map.of() : body);
+        String requestBody = serialize("POST", requestUrl, ObjUtil.isNull(body) ? Map.of() : body);
         logRequest("POST", requestUrl, body);
         return executeTypedRequest("POST", requestUrl, responseType,
             () -> restClient.post().uri(requestUrl).contentType(MediaType.APPLICATION_JSON)
@@ -577,7 +579,8 @@ public class HttpClient {
 
     private static boolean hasContentEncoding(ClientHttpResponse response) {
         String encoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
-        return encoding != null && !encoding.isBlank() && !"identity".equalsIgnoreCase(encoding.trim());
+        return encoding != null && !CharSequenceUtil.isBlank(encoding)
+            && !"identity".equalsIgnoreCase(CharSequenceUtil.trim(encoding));
     }
 
     /**
@@ -591,16 +594,16 @@ public class HttpClient {
             throw transportFailure(url, exception);
         }
         String encoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
-        if (encoding == null || encoding.isBlank()) {
+        if (encoding == null || CharSequenceUtil.isBlank(encoding)) {
             return transportInput(input, url);
         }
         String[] encodings = encoding.split(",");
         for (int index = encodings.length - 1; index >= 0; index--) {
-            String value = encodings[index].trim();
-            if (value.isEmpty() || "identity".equalsIgnoreCase(value)) {
+            String value = CharSequenceUtil.trim(encodings[index]);
+            if (CharSequenceUtil.isEmpty(value) || CharSequenceUtil.equalsIgnoreCase("identity", value)) {
                 continue;
             }
-            if (!"gzip".equalsIgnoreCase(value)) {
+            if (!CharSequenceUtil.equalsIgnoreCase("gzip", value)) {
                 throw new ExternalTransportException("GET", sanitizeUrl(url),
                     new IOException("Unsupported Content-Encoding: " + value));
             }
@@ -783,7 +786,7 @@ public class HttpClient {
     }
 
     private <T> T deserialize(String method, String url, String body, Type responseType) {
-        if (responseType == Void.class || responseType == void.class || StrUtil.isBlank(body)) {
+        if (responseType == Void.class || responseType == void.class || CharSequenceUtil.isBlank(body)) {
             return null;
         }
         if (responseType == String.class) {
@@ -800,7 +803,7 @@ public class HttpClient {
 
     private void logRequest(String method, String url, Object payload) {
         log.debug("[{}] >>> url={}", method, sanitizeUrl(url));
-        if (properties.isPayloadLoggingEnabled() && ObjectUtil.isNotNull(payload) && log.isDebugEnabled()) {
+        if (properties.isPayloadLoggingEnabled() && ObjUtil.isNotNull(payload) && log.isDebugEnabled()) {
             log.debug("[{}] >>> payload={}", method, truncate(String.valueOf(payload)));
         }
     }
@@ -816,7 +819,7 @@ public class HttpClient {
             log.debug("[{}] <<< url={}, status={}, elapsedMs={}", method, sanitizeUrl(url),
                 response.getStatusCode().value(), elapsedMillis);
         }
-        if (properties.isPayloadLoggingEnabled() && ObjectUtil.isNotNull(response.getBody()) && log.isDebugEnabled()) {
+        if (properties.isPayloadLoggingEnabled() && ObjUtil.isNotNull(response.getBody()) && log.isDebugEnabled()) {
             log.debug("[{}] <<< payload={}", method, truncate(String.valueOf(response.getBody())));
         }
     }
@@ -880,7 +883,7 @@ public class HttpClient {
     }
 
     private String truncate(String value) {
-        if (ObjectUtil.isNull(value)) {
+        if (ObjUtil.isNull(value)) {
             return "";
         }
         int maxLength = properties.getMaxPayloadLogLength();
@@ -891,7 +894,7 @@ public class HttpClient {
     }
 
     private static String requireUrl(String url) {
-        if (StrUtil.isBlank(url)) {
+        if (CharSequenceUtil.isBlank(url)) {
             throw new IllegalArgumentException("url must not be blank");
         }
         return url;
@@ -902,13 +905,13 @@ public class HttpClient {
         copyHeaders(headers, result);
         if (result.getFirst(properties.getRequestIdHeader()) == null) {
             String requestId = MDC.get(properties.getRequestIdMdcKey());
-            if (StrUtil.isNotBlank(requestId)) {
+            if (CharSequenceUtil.isNotBlank(requestId)) {
                 result.set(properties.getRequestIdHeader(), requestId);
             }
         }
         if (result.getFirst(properties.getTraceHeader()) == null) {
             String trace = MDC.get(properties.getTraceMdcKey());
-            if (StrUtil.isNotBlank(trace)) {
+            if (CharSequenceUtil.isNotBlank(trace)) {
                 result.set(properties.getTraceHeader(), trace);
             }
         }
@@ -995,11 +998,11 @@ public class HttpClient {
             return null;
         }
         String value = headers.getFirst(HttpHeaders.RETRY_AFTER);
-        if (StrUtil.isBlank(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             return null;
         }
         try {
-            long seconds = Long.parseLong(value.trim());
+            long seconds = Long.parseLong(CharSequenceUtil.trim(value));
             if (seconds < 0) {
                 return null;
             }
@@ -1058,7 +1061,7 @@ public class HttpClient {
 
     private static boolean containsCause(Throwable throwable, Class<? extends Throwable> causeType) {
         Throwable current = throwable;
-        while (ObjectUtil.isNotNull(current)) {
+        while (ObjUtil.isNotNull(current)) {
             if (causeType.isInstance(current)) {
                 return true;
             }

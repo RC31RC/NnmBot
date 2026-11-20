@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.cache.worldstate;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.error.SystemException;
@@ -125,7 +127,7 @@ public class WorldStateCommandImageCache implements CommandImageCache {
      * @return 图片缓存键对象。
      */
     private ImageCacheKey cacheKey(String commandCode, String templateHtml, Map<String, Object> data) {
-        String normalizedCode = commandCode.trim().toLowerCase(Locale.ROOT);
+        String normalizedCode = CharSequenceUtil.trim(commandCode).toLowerCase(Locale.ROOT);
         String dayBucket = DAILY_COMMANDS.contains(normalizedCode) ? LocalDate.now(CHINA_ZONE).toString() : "";
         return new ImageCacheKey(normalizedCode, sha256(templateHtml), sha256(writeStableData(data)), dayBucket);
     }

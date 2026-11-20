@@ -1,9 +1,10 @@
 package com.nnm.bot.core.onebot.message.outbound;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.SystemException;
 import java.util.Arrays;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ObjUtil;
 
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
@@ -108,15 +109,15 @@ public class OneBotFileStager {
         ActionData<?> completed = bot.customRequest(UPLOAD_FILE_STREAM, completeParams);
         this.ensureStreamSuccess(completed, file, fileSize, "complete");
         String remotePath = dataText(completed, "file_path");
-        if (StrUtil.isBlank(remotePath)) {
+        if (CharSequenceUtil.isBlank(remotePath)) {
             throw this.streamFailure(file, fileSize, completed, "OneBot 未返回分片合并后的 file_path");
         }
         return new StagedFile(remotePath, "websocket-stream", fileSize, null);
     }
 
     private void ensureStreamSuccess(ActionData<?> result, BotFile file, long fileSize, String phase) {
-        if (ObjectUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
-            || (ObjectUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
+        if (ObjUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
+            || (ObjUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
             throw this.streamFailure(file, fileSize, result,
                 "phase=" + phase + "; 远端 OneBot 需要支持 NapCat upload_file_stream");
         }
@@ -137,9 +138,9 @@ public class OneBotFileStager {
 
     private static boolean isLoopback(Bot bot) {
         WebSocketSession session = bot.getSession();
-        URI uri = ObjectUtil.isNull(session) ? null : session.getUri();
-        String host = ObjectUtil.isNull(uri) ? null : uri.getHost();
-        if (StrUtil.isBlank(host)) {
+        URI uri = ObjUtil.isNull(session) ? null : session.getUri();
+        String host = ObjUtil.isNull(uri) ? null : uri.getHost();
+        if (CharSequenceUtil.isBlank(host)) {
             return false;
         }
         String normalized = host.toLowerCase(Locale.ROOT);
@@ -147,11 +148,11 @@ public class OneBotFileStager {
     }
 
     private static String dataText(ActionData<?> result, String name) {
-        if (ObjectUtil.isNull(result) || !(result.getData() instanceof Map<?, ?> data)) {
+        if (ObjUtil.isNull(result) || !(result.getData() instanceof Map<?, ?> data)) {
             return null;
         }
         Object value = data.get(name);
-        return ObjectUtil.isNull(value) ? null : value.toString();
+        return ObjUtil.isNull(value) ? null : value.toString();
     }
 
     private static String safeName(String fileName) {
@@ -172,7 +173,7 @@ public class OneBotFileStager {
 
         @Override
         public void close() throws IOException {
-            if (ObjectUtil.isNotNull(cleanupPath)) {
+            if (ObjUtil.isNotNull(cleanupPath)) {
                 Files.deleteIfExists(cleanupPath);
             }
         }

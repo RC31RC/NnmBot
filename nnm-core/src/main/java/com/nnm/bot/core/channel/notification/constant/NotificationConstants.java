@@ -1,5 +1,7 @@
 package com.nnm.bot.core.channel.notification.constant;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.ErrorCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,7 @@ public final class NotificationConstants {
 
         public static ImageFormat fromCode(String code) {
             for (ImageFormat value : values()) {
-                if (value.code.equalsIgnoreCase(code)) {
+                if (CharSequenceUtil.equalsIgnoreCase(value.code, code)) {
                     return value;
                 }
             }

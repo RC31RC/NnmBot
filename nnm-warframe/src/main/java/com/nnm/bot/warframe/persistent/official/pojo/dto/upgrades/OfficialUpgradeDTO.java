@@ -13,8 +13,8 @@ import lombok.Getter;
 
 /** UPGRADE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 可用挑战列表；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("availableChallenges")
@@ -638,7 +638,8 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null, null, OfficialInputText.first(descriptionZh, descriptionEn, description));
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(nameZh), null,
+            null, OfficialInputText.first(descriptionZh, descriptionEn, description));
     }
 
     /**
@@ -654,7 +655,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 AvailableChallengesComplicationsItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class AvailableChallengesComplicationsItemReferencesDTO extends OfficialObjectDTO {
         /** 可用挑战列表的挑战附加条件列表的物品引用的字段；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("field")
@@ -781,7 +782,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 AvailableChallengesComplicationsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class AvailableChallengesComplicationsDTO extends OfficialObjectDTO {
         /** 可用挑战列表的挑战附加条件列表的描述；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("description")
@@ -848,7 +849,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 AvailableChallengesItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class AvailableChallengesItemReferencesDTO extends OfficialObjectDTO {
         /** 可用挑战列表的物品引用的字段；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("field")
@@ -975,7 +976,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 AvailableChallengesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class AvailableChallengesDTO extends OfficialObjectDTO {
         /** 可用挑战列表的挑战附加条件列表；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("complications")
@@ -1042,7 +1043,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 DescriptionLinesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class DescriptionLinesDTO extends OfficialObjectDTO {
         /** 分行描述列表的文本行序号；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("lineIndex")
@@ -1094,7 +1095,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 ItemReferencesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class ItemReferencesDTO extends OfficialObjectDTO {
         /** 物品引用的领域；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("domain")
@@ -1251,7 +1252,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 RanksStatsDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RanksStatsDTO extends OfficialObjectDTO {
         /** 等级配置列表的属性统计的文本行序号；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("lineIndex")
@@ -1303,7 +1304,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 RanksDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class RanksDTO extends OfficialObjectDTO {
         /** 等级配置列表的等级；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("rank")
@@ -1340,7 +1341,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 UpgradeEntriesUpgradeValuesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class UpgradeEntriesUpgradeValuesDTO extends OfficialObjectDTO {
         /** 强化条目列表的强化数值列表的本地化文本标签；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("locTag")
@@ -1392,7 +1393,7 @@ public class OfficialUpgradeDTO extends OfficialObjectDTO implements OfficialRec
     /** 官方嵌套对象 UpgradeEntriesDTO 的固定字段。 */
     @Getter
     @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-            isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
     public static class UpgradeEntriesDTO extends OfficialObjectDTO {
         /** 强化条目列表的前缀标签；保留该字段的原始类型与缺省状态。 */
         @JsonProperty("prefixTag")

@@ -1,8 +1,9 @@
 package com.nnm.bot.core.plugin.response;
 
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.util.Map.Entry;
 import java.util.Objects;
-import cn.hutool.core.util.StrUtil;
 import com.nnm.bot.core.plugin.annotation.CommandTextInline;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
@@ -49,7 +50,7 @@ public class CommandDataTextFormatter {
         StringBuilder result = new StringBuilder();
         if (serialized instanceof Map<?, ?> map && inline(data)) {
             appendInline(result, map, data, 0);
-            return result.toString().trim();
+            return CharSequenceUtil.trim(result.toString());
         }
         for (Entry<?, ?> entry : fields.entrySet()) {
             String key = String.valueOf(entry.getKey());
@@ -57,7 +58,7 @@ public class CommandDataTextFormatter {
             Object original = serialized instanceof Map<?, ?> ? propertyValue(data, key, property) : data;
             appendField(result, displayLabel(key, property), entry.getValue(), original, 0);
         }
-        return result.toString().trim();
+        return CharSequenceUtil.trim(result.toString());
     }
 
     private void appendField(StringBuilder output, String label, Object value, Object original, int depth) {
@@ -175,7 +176,7 @@ public class CommandDataTextFormatter {
 
     private static String displayLabel(String key, BeanPropertyDefinition property) {
         String description = property == null ? null : property.getMetadata().getDescription();
-        return StrUtil.isBlank(description) ? ("items".equals(key) ? "项目" : key) : description;
+        return CharSequenceUtil.isBlank(description) ? ("items".equals(key) ? "项目" : key) : description;
     }
 
     private static void indent(StringBuilder output, int depth) {

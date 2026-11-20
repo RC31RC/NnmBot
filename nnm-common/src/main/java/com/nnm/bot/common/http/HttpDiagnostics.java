@@ -1,6 +1,6 @@
 package com.nnm.bot.common.http;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -14,7 +14,8 @@ public final class HttpDiagnostics {
 
     private HttpDiagnostics() {}
 
-    /** 移除用户信息、查询参数和片段，保留可识别的请求路径。
+    /**
+     * 移除用户信息、查询参数和片段，保留可识别的请求路径。
      *
      * @param url 原始 URL
      * @return 脱敏 URL；无法解析时返回固定占位值
@@ -31,18 +32,19 @@ public final class HttpDiagnostics {
         }
     }
 
-    /** 清理错误消息中的凭据风险、换行及超长内容。
+    /**
+     * 清理错误消息中的凭据风险、换行及超长内容。
      *
      * @param message 原始诊断消息
      * @param requestUrl 对应请求地址
      * @return 可安全用于日志或管理端诊断的短文本
      */
     public static String safeFailureMessage(String message, String requestUrl) {
-        if (StrUtil.isBlank(message)) {
+        if (CharSequenceUtil.isBlank(message)) {
             return "-";
         }
-        String normalized = message.replace('\r', ' ').replace('\n', ' ').trim();
-        if (StrUtil.isNotBlank(requestUrl)) {
+        String normalized = CharSequenceUtil.trim(message.replace('\r', ' ').replace('\n', ' '));
+        if (CharSequenceUtil.isNotBlank(requestUrl)) {
             normalized = normalized.replace(requestUrl, safeUrl(requestUrl));
         }
         Matcher matcher = URL_PATTERN.matcher(normalized);

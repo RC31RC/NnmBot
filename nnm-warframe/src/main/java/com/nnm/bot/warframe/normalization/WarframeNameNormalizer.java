@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.normalization;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
@@ -22,10 +23,11 @@ public final class WarframeNameNormalizer {
      * @return 可用于物品检索的规范化名称键。
      */
     public static String item(String input) {
-        if (StrUtil.isBlank(input)) {
+        if (CharSequenceUtil.isBlank(input)) {
             return "";
         }
-        String normalized = Normalizer.normalize(input.trim(), Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
+        String normalized =
+            Normalizer.normalize(CharSequenceUtil.trim(input), Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
         return normalized.replaceAll("[\\s_\\-·•/\\\\]+", "");
     }
 
@@ -36,7 +38,7 @@ public final class WarframeNameNormalizer {
      * @return 可建立索引的名称入口。
      */
     public static List<String> itemSearchNames(String value) {
-        if (StrUtil.isBlank(value))
+        if (CharSequenceUtil.isBlank(value))
             return List.of();
         String plain = ARCHWING_DISPLAY_MARKER.matcher(value).replaceFirst("");
         return plain.equals(value) ? List.of(value) : List.of(value, plain);
@@ -49,8 +51,8 @@ public final class WarframeNameNormalizer {
      * @return 可用于周紫卡代码簿匹配的武器名称键。
      */
     public static String weeklyWeapon(String value) {
-        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFKC).trim().replaceAll("\\s+", " ")
-            .toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.trim(Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFKC))
+            .replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -60,8 +62,8 @@ public final class WarframeNameNormalizer {
      * @return 忽略大小写及连续空白的整词匹配键。
      */
     public static String phrase(String value) {
-        return Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFKC).trim().replaceAll("\\s+", " ")
-            .toLowerCase(Locale.ROOT);
+        return CharSequenceUtil.trim(Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFKC))
+            .replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -71,9 +73,9 @@ public final class WarframeNameNormalizer {
      * @return 不属于内部路径或大写下划线代码时为真。
      */
     public static boolean isReadableDisplayName(String value) {
-        if (StrUtil.isBlank(value))
+        if (CharSequenceUtil.isBlank(value))
             return false;
-        String name = value.trim();
+        String name = CharSequenceUtil.trim(value);
         return !name.startsWith("/") && !name.matches("[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+");
     }
 

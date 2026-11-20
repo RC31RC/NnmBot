@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.market.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
@@ -59,12 +60,12 @@ public class WarframeMarketDucatsServiceImpl implements WarframeMarketDucatsServ
             return Optional.empty();
         Map<String, CatalogItem> catalog = catalog();
         List<PeriodVO> periods = new ArrayList<>();
-        String filter = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        String filter = keyword == null ? "" : CharSequenceUtil.trim(keyword).toLowerCase(Locale.ROOT);
         for (RawPeriod period : raw.get()) {
             List<ItemVO> items = period.rows().stream()
                 .filter(row -> gold ? row.ducats() == 100 : row.ducats() >= 45 && row.ducats() < 100)
                 .map(row -> localize(row, catalog))
-                .filter(row -> StrUtil.isBlank(filter) || row.name().toLowerCase(Locale.ROOT).contains(filter)
+                .filter(row -> CharSequenceUtil.isBlank(filter) || row.name().toLowerCase(Locale.ROOT).contains(filter)
                     || row.slug().toLowerCase(Locale.ROOT).contains(filter))
                 .sorted(Comparator.comparing(ItemVO::ducatsPerPlatinum).reversed().thenComparing(ItemVO::itemId))
                 .limit(properties.getDucatsLimit()).skip((long)(Math.max(1, page) - 1) * 10).limit(10).toList();

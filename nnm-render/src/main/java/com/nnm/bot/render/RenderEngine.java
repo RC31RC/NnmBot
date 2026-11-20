@@ -5,14 +5,16 @@ package com.nnm.bot.render;
  */
 public interface RenderEngine {
 
-    /** 使用引擎默认参数渲染 HTML。
+    /**
+     * 使用引擎默认参数渲染 HTML。
      *
      * @param html 已完成模板处理的 HTML
      * @return 图片字节
      */
     byte[] renderHtmlToImage(String html);
 
-    /** 将 HTML 渲染为图片；超出像素上限时实现应拒绝渲染。
+    /**
+     * 将 HTML 渲染为图片；超出像素上限时实现应拒绝渲染。
      *
      * @param html 已完成模板处理的 HTML
      * @param options 输出参数及资源限制

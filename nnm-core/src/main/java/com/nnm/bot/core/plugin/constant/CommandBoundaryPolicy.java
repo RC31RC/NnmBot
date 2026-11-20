@@ -1,6 +1,6 @@
 package com.nnm.bot.core.plugin.constant;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 /**
  * 前缀命令触发词与参数之间的边界策略。
@@ -17,7 +17,7 @@ public enum CommandBoundaryPolicy {
     NONE;
 
     public static CommandBoundaryPolicy defaultFor(String trigger) {
-        if (StrUtil.isBlank(trigger)) {
+        if (CharSequenceUtil.isBlank(trigger)) {
             return WHITESPACE_REQUIRED;
         }
         int last = trigger.codePointBefore(trigger.length());

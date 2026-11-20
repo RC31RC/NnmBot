@@ -9,13 +9,15 @@ public interface BotChannelConnector {
     /** 返回此连接器实现的平台类型。 */
     BotPlatform platform();
 
-    /** 启动指定平台账号的协议会话。
+    /**
+     * 启动指定平台账号的协议会话。
      *
      * @param instance 当前持久化渠道配置快照
      */
     void startInstance(BotChannelInstanceRecord instance);
 
-    /** 停止指定实例并释放其会话资源。
+    /**
+     * 停止指定实例并释放其会话资源。
      *
      * @param instanceId 持久化渠道实例标识
      */

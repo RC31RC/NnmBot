@@ -1,6 +1,6 @@
 package com.nnm.bot.core.jmcomic.plugin;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.api.BotPlugin;
@@ -27,7 +27,7 @@ public class JmPlugin extends BotPlugin<Void, String> {
      */
     @Override
     protected String parse(CommandInvocation invocation, Void prepared) {
-        return invocation.arguments() == null ? "" : invocation.arguments().trim();
+        return invocation.arguments() == null ? "" : CharSequenceUtil.trim(invocation.arguments());
     }
 
     @Resource
@@ -35,7 +35,7 @@ public class JmPlugin extends BotPlugin<Void, String> {
 
     @Override
     public CommandResult handle(CommandInvocation invocation, Void prepared, String parsed) {
-        if (StrUtil.isBlank(parsed)) {
+        if (CharSequenceUtil.isBlank(parsed)) {
             return CommandResult.rejected("JM 命令格式：jm 漫画ID，例如：jm 123456");
         }
         JmComicDocument document = this.downloadService.downloadAsPdf(parsed);

@@ -15,8 +15,8 @@ import lombok.Getter;
 
 /** MARKET_ITEM 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
 @Getter
-@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-        isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+    setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class OfficialMarketItemDTO extends OfficialObjectDTO implements OfficialRecordDTO {
     /** 基础内融核心价值；保留该字段的原始类型与缺省状态。 */
     @JsonProperty("baseEndo")
@@ -569,7 +569,8 @@ public class OfficialMarketItemDTO extends OfficialObjectDTO implements Official
      */
     @Override
     public OfficialRecordHeaderDTO header() {
-        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(zhName), null, null, null);
+        return new OfficialRecordHeaderDTO(OfficialInputText.first(nameEn, name), OfficialInputText.first(zhName), null,
+            null, null);
     }
 
     /**

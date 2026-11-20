@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.plugin.persistent.official.guide;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.core.plugin.constant.MatchType;
 import com.nnm.bot.core.plugin.annotation.BotPluginCommand;
@@ -59,7 +59,7 @@ public final class MapFeaturesPlugin extends AbstractGuidePlugin {
                 text.append("\n区域：").append(geometry.boundaryRingCount()).append(" 个边界环");
             }
             FeaturePropertiesVO properties = feature.properties();
-            if (properties != null && StrUtil.isNotBlank(properties.description())) {
+            if (properties != null && CharSequenceUtil.isNotBlank(properties.description())) {
                 text.append("\n").append(properties.description());
             }
         }
