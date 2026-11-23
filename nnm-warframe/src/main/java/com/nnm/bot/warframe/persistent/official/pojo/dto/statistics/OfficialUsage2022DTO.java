@@ -9,7 +9,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordH
 import java.math.BigDecimal;
 import lombok.Getter;
 
-/** USAGE_2022 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 2022 年装备使用统计。按年份、平台、类别、物品及段位读取使用占比，适用于同统计口径下的比较。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

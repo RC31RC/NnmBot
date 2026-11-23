@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 RELIC 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 遗物与各精炼等级的奖励和来源。按遗物身份查询内容或反查部件，保留各稀有度的概率。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

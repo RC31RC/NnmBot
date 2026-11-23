@@ -5,6 +5,9 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRecordDTO.EssenceDTO;
+import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityCatalogService;
 import com.nnm.bot.warframe.runtime.cache.arbitration.WarframeArbitrationSnapshotStore;
 import com.nnm.bot.warframe.runtime.cache.arbitration.WarframeArbitrationSnapshotStore.Snapshot;
 import com.nnm.bot.warframe.runtime.config.arbitration.WarframeArbitrationProperties;
@@ -23,7 +26,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +53,8 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
     private Clock warframeClock;
     @Resource
     private WarframeArbitrationSourceProperties sourceProperties;
+    @Resource
+    private WarframeCommunityCatalogService communityCatalog;
 
     /**
      * 按真实查询范围筛选最近一次成功的 JVM 内存快照，不在机器人请求中下载来源。
@@ -101,7 +108,7 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
         if (query != QueryType.CURRENT && !covers(all, from, until)) {
             notice += " 所查时间范围排期不完整。";
         }
-        return new ArbitrationScheduleDTO(entries, notice, fetchedAt, properties.getZone());
+        return new ArbitrationScheduleDTO(withCommunityReferences(entries), notice, fetchedAt, properties.getZone());
     }
 
     /**
@@ -136,9 +143,11 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
                 log.warn("仲裁管理页静态引用重投影失败，保留有效快照", exception);
             }
         }
-        List<EntryVO> records = page
-            .stream().map(entry -> new EntryVO(entry.id(), entry.activation(), entry.expiry(), entry.node(),
-                entry.missionType(), entry.enemy(), entry.planet(), entry.boundsJson(), entry.nodeReference()))
+        page = withCommunityReferences(page);
+        List<EntryVO> records = page.stream()
+            .map(entry -> new EntryVO(entry.id(), entry.activation(), entry.expiry(), entry.node(), entry.missionType(),
+                entry.enemy(), entry.planet(), entry.boundsJson(), entry.nodeReference(), entry.essenceAmount(),
+                entry.efficiencyGrade()))
             .toList();
         Instant fetchedAt = snapshot.fetchedAt();
         boolean stale = fetchedAt != null
@@ -179,6 +188,32 @@ public class WarframeArbitrationServiceImpl implements WarframeArbitrationServic
         return matches(properties.getEfficientMissionTypes(), record.missionType())
             && matches(properties.getEfficientPlanets(), record.planet())
             && matches(properties.getEfficientEnemies(), record.enemy());
+    }
+
+    /** 仅把已入库的节点估值与评级附加到本次结果，不改变上游排期快照。 */
+    private List<ArbitrationScheduleEntryDTO> withCommunityReferences(List<ArbitrationScheduleEntryDTO> entries) {
+        List<WarframeCommunityRecordDTO<EssenceDTO>> records = communityCatalog.arbitrationEssences();
+        if (records.isEmpty())
+            return entries;
+        Map<String, EssenceDTO> byNode = new LinkedHashMap<>();
+        for (WarframeCommunityRecordDTO<EssenceDTO> record : records) {
+            EssenceDTO details = record.details();
+            String nodeKey = CharSequenceUtil.isNotBlank(details.nodeKey()) ? details.nodeKey() : record.recordKey();
+            if (CharSequenceUtil.isNotBlank(nodeKey))
+                byNode.putIfAbsent(nodeKey, details);
+        }
+        return entries.stream().map(entry -> {
+            EssenceDTO details = entry.nodeReference() == null ? null : byNode.get(entry.nodeReference());
+            if (details == null) {
+                details = records.stream().map(WarframeCommunityRecordDTO::details)
+                    .filter(value -> CharSequenceUtil.equalsIgnoreCase(value.nodeName(), entry.node())).findFirst()
+                    .orElse(null);
+            }
+            if (details == null)
+                return entry;
+            String grade = details.efficiencyGrade() == null ? null : details.efficiencyGrade().code();
+            return entry.withCommunityReference(details.essenceAmount(), grade);
+        }).toList();
     }
 
     /**

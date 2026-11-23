@@ -3,7 +3,7 @@ package com.nnm.bot.warframe.plugin.runtime.arbitration;
 import com.nnm.bot.core.plugin.api.BotPlugin;
 import com.nnm.bot.core.plugin.api.CommandInvocation;
 import com.nnm.bot.core.plugin.api.CommandResult;
-import com.nnm.bot.warframe.constant.WarframeViewKeys;
+import com.nnm.bot.warframe.runtime.mapper.WarframeTimeDisplay;
 import com.nnm.bot.warframe.runtime.mapper.worldstate.WarframeWorldStateDisplayMapper;
 import com.nnm.bot.warframe.runtime.pojo.dto.arbitration.ArbitrationScheduleDTO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateCommandVO;
@@ -11,7 +11,6 @@ import com.nnm.bot.warframe.runtime.service.arbitration.WarframeArbitrationServi
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeReferenceProjectionEnrichmentService;
 import com.nnm.bot.warframe.runtime.constant.ArbitrationConstants.QueryType;
 import jakarta.annotation.Resource;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,18 +58,22 @@ public abstract class AbstractArbitrationCommandPlugin extends BotPlugin<Void, V
             case EFFICIENT -> "高效仲裁";
             case UPCOMING -> "仲裁表";
         };
-        DateTimeFormatter format = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(result.zone());
         List<Map<String, Object>> rows = result.entries().stream().map(entry -> {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("node", entry.node());
+            row.put("nodeReference", entry.nodeReference());
             row.put("missionType", entry.missionType());
             row.put("faction", entry.enemy());
-            row.put("activation", format.format(entry.activation()));
-            row.put("expiry", format.format(entry.expiry()));
+            row.put("essenceAmount", entry.essenceAmount());
+            row.put("efficiencyGrade", entry.efficiencyGrade());
+            if (entry.essenceAmount() != null)
+                row.put("essence", entry.essenceAmount() + " 精华/小时（社区估值）");
+            row.put("activation", WarframeTimeDisplay.format(entry.activation()));
+            row.put("expiry", WarframeTimeDisplay.format(entry.expiry()));
             return row;
         }).toList();
-        String notice =
-            result.notice() + (result.fetchedAt() == null ? "" : " 数据存档：" + format.format(result.fetchedAt()) + "。");
+        String fetchedAt = WarframeTimeDisplay.format(result.fetchedAt());
+        String notice = result.notice() + (fetchedAt.isEmpty() ? "" : " 数据存档：" + fetchedAt + "。");
         WarframeWorldStateCommandVO output = projectionEnricher
             .enrich(new WarframeWorldStateCommandVO(title, Map.of("items", rows, "notice", notice)), "arbitration");
         return CommandResult.html(title,

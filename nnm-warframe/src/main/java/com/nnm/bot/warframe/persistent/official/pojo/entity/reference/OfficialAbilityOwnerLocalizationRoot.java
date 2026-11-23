@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 ABILITY_OWNER_LOCALIZATION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 技能拥有者的双语展示映射。按战甲或装备路径取得其技能列表、说明和图标。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

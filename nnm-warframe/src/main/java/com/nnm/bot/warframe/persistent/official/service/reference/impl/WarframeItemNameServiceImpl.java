@@ -39,8 +39,9 @@ public class WarframeItemNameServiceImpl implements WarframeItemNameService {
             return Map.of();
         Map<String, Map<String, WarframeOfficialNameDTO>> matches = new LinkedHashMap<>();
         for (var domain : WarframeOfficialDataDomain.values()) {
-            if (!domain.itemIndex() && domain != WarframeOfficialDataDomain.ITEM_LOCALIZATION
-                && domain != WarframeOfficialDataDomain.ACTIVITY && domain != WarframeOfficialDataDomain.CHALLENGE)
+            if (domain == WarframeOfficialDataDomain.REGION
+                || (!domain.itemIndex() && domain != WarframeOfficialDataDomain.ITEM_LOCALIZATION
+                    && domain != WarframeOfficialDataDomain.ACTIVITY && domain != WarframeOfficialDataDomain.CHALLENGE))
                 continue;
             var index = officialLookup.nameIndex(domain);
             for (String key : keys) {
@@ -66,6 +67,12 @@ public class WarframeItemNameServiceImpl implements WarframeItemNameService {
         Map<String, WarframeReferenceResolutionDTO> result = new LinkedHashMap<>();
         for (String key : keys) {
             var found = matches.getOrDefault(key, Map.of());
+            if (key.startsWith("/")) {
+                String canonical = WarframeOfficialReferenceKeys.candidates(key).getLast().toLowerCase(Locale.ROOT);
+                var exact = found.get(canonical);
+                if (exact != null)
+                    found = Map.of(canonical, exact);
+            }
             if (found.size() > 1) {
                 result.put(key, new WarframeReferenceResolutionDTO(key, key, key, null,
                     WarframeReferenceResolutionStatus.AMBIGUOUS, List.copyOf(found.keySet())));

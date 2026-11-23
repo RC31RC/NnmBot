@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 WARFRAME 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 战甲定义。按战甲身份查询属性、变体、被动和技能；同名外观由外观表保存。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

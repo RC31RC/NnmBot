@@ -12,7 +12,7 @@ public class KuvaMissionPollingTask {
     private WarframeKuvaMissionService kuvaMissionService;
 
     /** 按独立配置刷新赤毒任务内存快照。 */
-//    @Scheduled(fixedDelayString = "#{@warframeKuvaMissionProperties.interval.toString()}")
+    // @Scheduled(fixedDelayString = "#{@warframeKuvaMissionProperties.interval.toString()}")
     public void execute() {
         kuvaMissionService.refresh();
     }

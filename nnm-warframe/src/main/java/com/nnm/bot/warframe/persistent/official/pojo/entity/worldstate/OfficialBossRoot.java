@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 BOSS 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 执刑官代码到首领名称和源力石候选定义的映射。动态猎杀给出本轮首领，阶段实际奖励需有相应动态证据。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

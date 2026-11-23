@@ -7,6 +7,7 @@ import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.EarthCycle
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.VallisCycleDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.ZarimanCycleDTO;
 import com.nnm.bot.warframe.runtime.config.worldstate.WarframeCycleProperties;
+import com.nnm.bot.warframe.runtime.constant.WarframeOpenWorldSyndicate;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.service.worldstate.WarframeCycleService;
 import jakarta.annotation.PostConstruct;
@@ -14,7 +15,6 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Objects;
 
 @Service
 public class WarframeCycleServiceImpl implements WarframeCycleService {
@@ -42,10 +42,11 @@ public class WarframeCycleServiceImpl implements WarframeCycleService {
         if (state == null)
             return null;
         Instant now = warframeClock.instant();
-        Instant anchor =
-            state.syndicateMissions().stream().filter(mission -> "CetusSyndicate".equals(mission.syndicate()))
-                .map(WorldStateDTO.SyndicateMissionDTO::expiry).filter(Objects::nonNull).max(Instant::compareTo)
-                .orElse(null);
+        Instant anchor = state.syndicateMissions().stream()
+            .filter(mission -> WarframeOpenWorldSyndicate.CETUS.matches(mission.syndicate()))
+            .map(WorldStateDTO.SyndicateMissionDTO::expiry)
+            .filter(expiry -> WarframeCycleCalculator.validBountyAnchor(now, expiry, properties.getCetusAnchorMaxAge()))
+            .max(Instant::compareTo).orElse(null);
         CetusCycleDTO cetus = state.cetusCycle();
         if (cetus == null || !valid(cetus.expiry(), now)) {
             cetus = WarframeCycleCalculator.cetus(now, anchor, properties.getCetusAnchorMaxAge());

@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** AVIONIC 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 九重天航电定义。按升级对象路径读取极性、容量消耗和等级效果。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

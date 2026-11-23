@@ -1,17 +1,17 @@
 package com.nnm.bot.warframe.runtime.constant;
 
-import java.util.Locale;
+import cn.hutool.core.util.StrUtil;
 
 /** 世界状态 Conquests 中科研任务的官方类型。 */
 public enum WarframeConquestType {
-    DEEP("CT_LAB", "深层科研"), HEX("CT_HEX", "时光科研");
+    DEEP("CT_LAB", "LabConquest"), HEX("CT_HEX", "HexConquest");
 
     private final String code;
-    private final String label;
+    private final String variantGroup;
 
-    WarframeConquestType(String code, String label) {
+    WarframeConquestType(String code, String variantGroup) {
         this.code = code;
-        this.label = label;
+        this.variantGroup = variantGroup;
     }
 
     /**
@@ -21,21 +21,21 @@ public enum WarframeConquestType {
      * @return 匹配本类型时为真。
      */
     public boolean matches(String candidate) {
-        return candidate != null && code.equals(candidate.strip().toUpperCase(Locale.ROOT));
+        return StrUtil.equalsIgnoreCase(code, StrUtil.trim(candidate));
     }
 
     /**
-     * 提供可读名称，未知类型仍保留上游原值。
+     * 选择活动表中与当前科研协议对应的变体分组。
      *
      * @param code 上游类型代码。
-     * @return 展示名称或未识别的原始代码。
+     * @return 已知分组，未知类型为空。
      */
-    public static String displayName(String code) {
+    public static String variantGroup(String code) {
         for (WarframeConquestType type : values()) {
             if (type.matches(code)) {
-                return type.label;
+                return type.variantGroup;
             }
         }
-        return code;
+        return null;
     }
 }

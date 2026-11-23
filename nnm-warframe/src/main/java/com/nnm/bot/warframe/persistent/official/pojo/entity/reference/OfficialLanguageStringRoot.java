@@ -7,7 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 LANGUAGE_STRING 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 游戏语言键到双语文本的字典。用完整语言键解析名称和说明；翻译文本本身不承担物品身份。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

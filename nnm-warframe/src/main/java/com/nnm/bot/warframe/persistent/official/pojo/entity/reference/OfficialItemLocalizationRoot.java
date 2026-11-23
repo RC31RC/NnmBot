@@ -7,7 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 ITEM_LOCALIZATION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 物品路径到双语名称、说明及图标的映射。为具有同一游戏身份的物品补展示信息。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

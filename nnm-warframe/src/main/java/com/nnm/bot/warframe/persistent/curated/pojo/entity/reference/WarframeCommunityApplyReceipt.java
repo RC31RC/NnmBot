@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.Instant;
 
+/** 按预览标识记录一次已采纳结果，供重复提交校验选择范围并复用处理结果。 */
 @Getter
 @Setter
 @Entity
@@ -18,6 +19,7 @@ public class WarframeCommunityApplyReceipt {
     private String previewId;
     @Column(nullable = false, length = 50)
     private String dataset;
+    /** 本次采纳记录集合的摘要，区分同一预览的不同选择。 */
     @Column(nullable = false, length = 64)
     private String selectionHash;
     @Column(nullable = false)

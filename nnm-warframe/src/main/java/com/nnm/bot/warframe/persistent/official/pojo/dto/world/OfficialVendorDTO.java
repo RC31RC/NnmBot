@@ -10,7 +10,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** VENDOR 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 静态商人商品目录。以商人清单路径查询商品、价格和图标；当前轮换按动态来源或受管顺序确认。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

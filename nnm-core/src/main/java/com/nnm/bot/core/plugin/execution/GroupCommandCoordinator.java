@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 /**
@@ -129,7 +127,7 @@ public class GroupCommandCoordinator {
                 senderIdentity = "native:" + context.platform().name() + ":" + context.senderId();
             }
         }
-        return digest(String.join("|", Long.toString(group.group().getId()), senderIdentity, commandCode, arguments));
+        return digest(encodeComponents(Long.toString(group.group().getId()), senderIdentity, commandCode, arguments));
     }
 
     private List<BotGroupBot> enabledBindings(BotMessageContext context, long groupId) {
@@ -168,9 +166,20 @@ public class GroupCommandCoordinator {
     static String nativeIdentity(BotMessageContext context) {
         if (context.messageId() == null || CharSequenceUtil.isBlank(context.messageId()))
             return null;
-        return digest(Stream.of(context.platform().name(), context.scope().name(), context.botAccountId(),
-            context.conversationId(), context.messageId()).map(value -> value.length() + ":" + value)
-            .collect(Collectors.joining()));
+        return digest(encodeComponents(context.platform().name(), context.scope().name(), context.botAccountId(),
+            context.conversationId(), context.messageId()));
+    }
+
+    private static String encodeComponents(String... components) {
+        StringBuilder encoded = new StringBuilder();
+        for (String component : components) {
+            if (component == null) {
+                encoded.append("-1:");
+            } else {
+                encoded.append(component.length()).append(':').append(component);
+            }
+        }
+        return encoded.toString();
     }
 
     public static String digest(String value) {

@@ -1,9 +1,11 @@
 package com.nnm.bot.warframe.persistent.official.service.reference;
 
-import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceType;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeReferenceResolutionDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.query.reference.WarframeReferenceQuery;
+import java.util.Collection;
 import java.util.Map;
 
+/** 按资料类型解析动态响应与命令中的引用。 */
 public interface WarframeReferenceResolverService {
     /**
      * 解析引用或输入对应的实际业务对象。
@@ -16,8 +18,9 @@ public interface WarframeReferenceResolverService {
     /**
      * 批量解析引用，复用同次读取获得的资料。
      *
-     * @param references 引用。
-     * @return 以本方法约定的业务键组织的数据映射。
+     * @param references 带资料类型的原始引用。
+     * @return 按资料类型及原始引用索引的解析结果，包含未命中项。
      */
-    Map<String, WarframeReferenceResolutionDTO> resolveAll(Map<String, WarframeReferenceType> references);
+    Map<WarframeReferenceQuery, WarframeReferenceResolutionDTO>
+        resolveAll(Collection<WarframeReferenceQuery> references);
 }

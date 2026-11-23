@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.runtime.pojo.vo.riven;
 
+import com.nnm.bot.warframe.runtime.constant.WarframeRivenAnalysisConstants.ReferenceRangeStatus;
 import java.util.List;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenAttributeDTO;
 
@@ -185,7 +186,7 @@ public record WarframeRivenAnalysisVO(String rawText, List<String> rawLines, Str
      * @param baselineSource 属性基准的来源码
      */
     public record ReferenceRangeVO(String code, String displayName, String units, Double lower, Double upper,
-        Double deviationPercent, String status, String reason, String ruleVersion, String weaponKey,
+        Double deviationPercent, ReferenceRangeStatus status, String reason, String ruleVersion, String weaponKey,
         String weaponSource, String baselineSource) {
     }
 }

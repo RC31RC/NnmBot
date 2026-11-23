@@ -622,6 +622,7 @@ CREATE TABLE nnmbot.bot_command_template (
     command_id bigint,
     sort_order integer DEFAULT 0 NOT NULL,
     html_content text NOT NULL,
+    function_description boolean DEFAULT false NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -676,6 +677,8 @@ COMMENT ON COLUMN nnmbot.bot_command_template.sort_order IS '同一命令下 HTM
 --
 
 COMMENT ON COLUMN nnmbot.bot_command_template.html_content IS '模板 HTML 内容，变量由服务端白名单控制';
+
+COMMENT ON COLUMN nnmbot.bot_command_template.function_description IS '无参数命令展示时使用的功能说明模板标记';
 
 
 --
@@ -2954,7 +2957,7 @@ INSERT INTO nnmbot.bot_command (id, code, name, game_code, description, enabled,
 ('60', 'archimedeas', '科研', 'warframe', '查看全部科研任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('61', 'deep-archimedeas', '深层科研', 'warframe', '查看 CT_LAB 科研任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('62', 'hex-archimedeas', '时光科研', 'warframe', '查看 CT_HEX 科研任务', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('63', 'descents', '深层下降', 'warframe', '查看当前深层下降轮换', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('63', 'descents', '沉沦之地', 'warframe', '查看当前沉沦之地轮换与已确认奖励', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('64', 'cavia', '科维兽', 'warframe', '查看科维兽赏金', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('65', 'holdfasts', '坚守者', 'warframe', '查看扎里曼坚守者赏金', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('66', 'hex-bounties', '六人组赏金', 'warframe', '查看六人组赏金', 't', 't', NULL, NULL, NULL, '0', 'f', '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
@@ -3009,7 +3012,7 @@ INSERT INTO nnmbot.bot_command (id, code, name, game_code, description, enabled,
 ('115', 'riven-attributes', '历史紫卡属性编码', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
 ('116', 'riven-definitions', '紫卡属性与挑战', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
 ('118', 'riven-unrollables', '紫卡不可洗属性', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
-('119', 'riven-weekly', '紫卡周成交统计', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '30', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
+('119', 'riven-weekly', '紫卡周成交统计', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', '32', NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
 ('120', 'steel-path-catalog', '钢铁奖励目录', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
 ('121', 'synth-targets', '合成目标地点', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
 ('122', 'systems', '星系定义', 'warframe', '已实现插件；请配置机器人能力并确认数据后启用', 'f', 't', NULL, NULL, NULL, '0', 'f', '2026-10-15 13:19:05.136139', '2026-10-15 13:19:05.136139'),
@@ -3126,7 +3129,7 @@ INSERT INTO nnmbot.bot_command_alias (id, command_id, alias_name, boundary_polic
 ('102', '52', 'simaris', 'WHITESPACE_REQUIRED'),
 ('103', '59', '世界时间', 'WHITESPACE_REQUIRED'),
 ('104', '63', 'Descendia', 'WHITESPACE_REQUIRED'),
-('105', '63', '深层下降', 'WHITESPACE_REQUIRED'),
+('105', '63', '沉沦之地', 'WHITESPACE_REQUIRED'),
 ('106', '60', 'archimedeas', 'WHITESPACE_REQUIRED'),
 ('107', '49', 'persistent-enemies', 'WHITESPACE_REQUIRED'),
 ('108', '58', 'vault-trader', 'WHITESPACE_REQUIRED'),
@@ -4374,6 +4377,66 @@ footer{padding:12px 18px;color:#687684;font-size:14px;overflow-wrap:anywhere}
 </div></body></html>
 ', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
+-- 紫卡周成交统计按武器聚合，未洗和已洗统计并列展示。
+INSERT INTO nnmbot.bot_command_template
+    (id, template_code, name, command_id, sort_order, html_content, function_description, enabled, created_at, updated_at)
+VALUES (32, 'wf-riven-weekly-grouped', 'Warframe 紫卡周统计（按武器）', 119, 0, $weekly$
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}body{margin:0;padding:18px;background:#e9efed;color:#223330;font:14px/1.5 "Noto Sans SC","PingFang SC",sans-serif}
+main{width:760px;max-width:100%;margin:auto;background:#fff;border:1px solid #d7e1de;border-radius:8px;overflow:hidden}
+header{padding:18px 22px;background:#1b4943;color:#fff}h1{margin:0;font-size:24px}.meta{margin-top:5px;color:#d3e3df;font-size:12px}
+.content{padding:16px 20px}.item{padding:14px 0;border-bottom:1px solid #e4ebe8}.weapon{font-size:17px;font-weight:700}.type{color:#667671;font-size:12px}
+.variants{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}.variant{min-width:0;padding:10px;border:1px solid #dce6e2;border-radius:6px;background:#f7faf9}
+h2{margin:0 0 7px;font-size:13px;color:#1b6257}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.stat{color:#5c6d67;font-size:11px}.stat strong{display:block;color:#273d36;font-size:14px;overflow-wrap:anywhere}
+.notice{padding:10px;background:#fff5df;color:#805b19}.empty{padding:24px;text-align:center;color:#667671}footer{padding:12px 20px;background:#f4f7f6;color:#667671;font-size:11px}
+@media(max-width:520px){body{padding:10px}.variants{grid-template-columns:minmax(0,1fr)}header{padding:16px}.content{padding:12px}}
+</style></head><body><main><header><h1>紫卡周成交统计</h1><div class="meta"><span th:text="${platform != null ? #strings.toUpperCase(platform) : '平台未提供'}"></span> · <span th:text="${stale ? '历史成功快照' : '最近成功快照'}"></span><span th:if="${fetchedAtLabel != null}" th:text="${' / ' + fetchedAtLabel}"></span></div></header>
+<div class="content"><div class="meta" th:text="${query != null and query != '' ? query : '武器成交记录'}"></div>
+<article class="item" th:each="item : ${items}"><div class="weapon" th:text="${item.weaponName}"></div><div class="type" th:text="${item.itemType}"></div>
+<div class="variants"><section class="variant" th:if="${item.unrolled != null}"><h2>未洗</h2><div class="stats">
+<div class="stat">均价<strong th:text="${item.unrolled.avg != null ? #numbers.formatDecimal(item.unrolled.avg,1,1) : '未提供'}"></strong></div><div class="stat">中位价<strong th:text="${item.unrolled.median != null ? #numbers.formatDecimal(item.unrolled.median,1,1) : '未提供'}"></strong></div>
+<div class="stat">最低价<strong th:text="${item.unrolled.min != null ? #numbers.formatDecimal(item.unrolled.min,1,1) : '未提供'}"></strong></div><div class="stat">最高价<strong th:text="${item.unrolled.max != null ? #numbers.formatDecimal(item.unrolled.max,1,1) : '未提供'}"></strong></div>
+<div class="stat">标准差<strong th:text="${item.unrolled.stddev != null ? #numbers.formatDecimal(item.unrolled.stddev,1,2) : '未提供'}"></strong></div><div class="stat">相对热度<strong th:text="${item.unrolled.pop != null ? #numbers.formatDecimal(item.unrolled.pop,1,4) : '未提供'}"></strong></div></div></section>
+<section class="variant" th:if="${item.rerolled != null}"><h2>已洗</h2><div class="stats">
+<div class="stat">均价<strong th:text="${item.rerolled.avg != null ? #numbers.formatDecimal(item.rerolled.avg,1,1) : '未提供'}"></strong></div><div class="stat">中位价<strong th:text="${item.rerolled.median != null ? #numbers.formatDecimal(item.rerolled.median,1,1) : '未提供'}"></strong></div>
+<div class="stat">最低价<strong th:text="${item.rerolled.min != null ? #numbers.formatDecimal(item.rerolled.min,1,1) : '未提供'}"></strong></div><div class="stat">最高价<strong th:text="${item.rerolled.max != null ? #numbers.formatDecimal(item.rerolled.max,1,1) : '未提供'}"></strong></div>
+<div class="stat">标准差<strong th:text="${item.rerolled.stddev != null ? #numbers.formatDecimal(item.rerolled.stddev,1,2) : '未提供'}"></strong></div><div class="stat">相对热度<strong th:text="${item.rerolled.pop != null ? #numbers.formatDecimal(item.rerolled.pop,1,4) : '未提供'}"></strong></div></div></section></div></article>
+<div class="notice" th:if="${notice != null}" th:text="${notice}"></div><div class="empty" th:if="${(items == null or #lists.isEmpty(items)) and notice == null}">没有找到匹配的周成交记录</div></div><footer th:text="${pagination}"></footer></main></body></html>
+$weekly$, false, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- 无参数订阅命令使用静态 HTML 说明，列出的范围严格限制为当前命令实际支持的能力。
+INSERT INTO nnmbot.bot_command_template
+    (id, template_code, name, command_id, sort_order, html_content, function_description, enabled, created_at, updated_at)
+VALUES (33, 'warframe-subscribe-help', 'Warframe 订阅功能说明', 39, 0, $subscribe_help$
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}body{margin:0;padding:20px;background:#edf2f1;color:#223330;font:15px/1.55 "Noto Sans SC","PingFang SC",sans-serif}
+main{width:720px;max-width:100%;margin:auto;background:#fff;border:1px solid #d8e2df;border-radius:8px;overflow:hidden}
+header{padding:20px 24px;background:#174d48;color:#fff}h1{margin:0;font-size:24px}header p{margin:5px 0 0;color:#d2e5df}
+section{padding:16px 24px;border-bottom:1px solid #e5ecea}h2{margin:0 0 8px;font-size:16px;color:#174d48}
+.row{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:5px 0}.name{font-weight:700}.cmd{color:#a52f68;font-family:monospace}.note{color:#657571;font-size:13px}
+footer{padding:12px 24px;color:#657571;font-size:12px}
+</style></head><body><main><header><h1>Warframe 订阅说明</h1><p>按当前已解析的动态快照检查；同一事件不会随周期刷新重复提醒。</p></header>
+<section><h2>常用主题</h2>
+<div class="row"><span class="name">平原夜晚</span><span><span class="cmd">订阅平原</span> · 夜晚开始前提醒</span></div>
+<div class="row"><span class="name">奸商 / 特惠</span><span><span class="cmd">订阅奸商</span>、<span class="cmd">订阅特惠</span></span></div>
+<div class="row"><span class="name">钢精 / 警报 / 活动</span><span><span class="cmd">订阅钢精</span>、<span class="cmd">订阅警报</span>、<span class="cmd">订阅活动</span></span></div>
+<div class="row"><span class="name">入侵</span><span><span class="cmd">订阅入侵</span> · 特殊奖励出现时提醒</span></div>
+<div class="row"><span class="name">圣所 / 扎里曼 / 六人组</span><span><span class="cmd">订阅圣所</span>、<span class="cmd">订阅扎里曼</span>、<span class="cmd">订阅六人组</span> · 高级歼灭</span></div>
+<div class="row"><span class="name">六人组箱</span><span><span class="cmd">订阅六人组箱</span> · 补给箱任务</span></div>
+</section><section><h2>条件筛选</h2>
+<div class="row"><span class="name">仲裁节点</span><span class="cmd">订阅仲裁 谷神防御 谷神拦截</span></div>
+<div class="row"><span class="name">裂缝条件</span><span class="cmd">订阅裂缝 钢铁虚空捕获</span></div>
+<div class="row"><span class="name">取消订阅</span><span class="cmd">取消订阅 主题 [条件]</span><span class="note">条件与创建订阅时保持一致。</span></div>
+</section><footer>终幕与信条的武器/加成条件及网页专属星球筛选目前没有命令订阅入口。命令只处理项目实际解析出的字段。</footer></main></body></html>
+$subscribe_help$, true, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO nnmbot.bot_command_template
+    (id, template_code, name, command_id, sort_order, html_content, function_description, enabled, created_at, updated_at)
+SELECT 34, 'warframe-unsubscribe-help', 'Warframe 取消订阅功能说明', 40, 0, html_content, true, true,
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM nnmbot.bot_command_template
+WHERE template_code = 'warframe-subscribe-help';
+
 
 
 --
@@ -4494,7 +4557,7 @@ INSERT INTO nnmbot.sys_menu (id, parent_id, name, path, component, title, icon, 
 ('19', '2', 'Menus', 'menu', '/system/menu', 'menus.system.menu', 'ri:menu-line', '24', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('20', '2', 'OperationLog', 'audit', '/system/audit', 'menus.system.audit', 'ri:file-list-3-line', '25', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('21', '2', 'OnlineSession', 'session', '/system/session', 'menus.system.session', 'ri:computer-line', '26', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
-('22', '2', 'Nested', 'nested', NULL, 'menus.system.nested', 'ri:menu-unfold-3-line', '27', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
+('22', NULL, 'Nested', '/system/nested', '/index/index', 'menus.system.nested', 'ri:menu-unfold-3-line', '110', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('23', '5', 'BotInstanceManagement', 'instance', '/bot/instance', 'menus.bot.instance', 'ri:robot-2-line', '281', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('24', '5', 'BotFunctionManagement', 'function', '/bot/function', 'menus.bot.function', 'ri:settings-3-line', '282', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
 ('25', '5', 'BotClusterManagement', 'cluster', '/bot/cluster', 'menus.bot.cluster', 'ri:server-line', '283', 't', 't', 't', 'f', 'f', 'f', 'f', NULL, NULL, NULL, '2026-09-28 15:57:12.652567', '2026-09-28 15:57:12.652567'),
@@ -4966,7 +5029,7 @@ SELECT pg_catalog.setval('nnmbot.bot_command_role_id_seq', 1, false);
 -- Name: bot_command_template_id_seq; Type: SEQUENCE SET; Schema: nnmbot; Owner: -
 --
 
-SELECT pg_catalog.setval('nnmbot.bot_command_template_id_seq', 31, true);
+SELECT pg_catalog.setval('nnmbot.bot_command_template_id_seq', 34, true);
 
 
 --
@@ -5564,6 +5627,12 @@ CREATE INDEX idx_bot_command_robot_role_command ON nnmbot.bot_command_robot_role
 --
 
 CREATE INDEX idx_bot_command_template_command_order ON nnmbot.bot_command_template USING btree (command_id, sort_order, id);
+
+-- 同一命令仅可启用一份无参数功能说明，运行时据此确定性选择模板。
+CREATE UNIQUE INDEX uq_bot_command_template_function_description
+    ON nnmbot.bot_command_template USING btree (command_id)
+    WHERE function_description AND enabled AND command_id IS NOT NULL;
+COMMENT ON INDEX nnmbot.uq_bot_command_template_function_description IS '每个命令最多启用一个无参数功能说明模板';
 
 
 --
@@ -24328,8 +24397,49 @@ COMMENT ON COLUMN nnmbot.wf_official_upgrade_type_root.namezh_state IS '中文�
 COMMENT ON COLUMN nnmbot.wf_official_upgrade_type_root.namezh IS '中文名称';
 -- END GENERATED OFFICIAL MODELS
 
+-- 官方公告列出普通难度候选但公开掉落表未给概率。这两组在官方掉落模型中以自维护身份补入。
+INSERT INTO nnmbot.wf_official_drop_table_root (
+    maintenance_type, bkey, official_name, localized_name, created_at, updated_at,
+    root_state, source_name_state, source_name, rewards_state
+)
+VALUES
+    ('SELF_MAINTAINED', 'contexts/Descendia:normal-common', 'The Descendia: Normal Common Rewards',
+        '沉沦之地普通候选奖池', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 2, 'The Descendia: Normal Common Rewards', 6),
+    ('SELF_MAINTAINED', 'contexts/Descendia:normal-final', 'The Descendia: Normal Final Rewards',
+        '沉沦之地普通最终候选奖池', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 2, 'The Descendia: Normal Final Rewards', 6)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 数量来自公告，物品路径采用已采纳掉落或物品表中的精确身份；没有披露的概率留空。
+INSERT INTO nnmbot.wf_official_drop_table_rewards_items (
+    bkey, sort_order, root_state, item_uniquename_state, item_uniquename, item_count_state, item_count,
+    item_nameen_state, item_nameen, item_namezh_state, item_namezh
+)
+SELECT pool.id, reward.position, 5,
+    CASE WHEN reward.item_key IS NULL THEN 0 ELSE 2 END, reward.item_key, 3, reward.quantity,
+    2, reward.name_en, 2, reward.name_zh
+FROM (VALUES
+    ('normal-common', 0, '/Lotus/Types/PickUps/Credits/10000Credits', 3, '10,000 Credits Cache', '10,000 现金匣'),
+    ('normal-common', 1, NULL, 2500, 'Endo', '内融核心'),
+    ('normal-common', 2, '/Lotus/Types/Items/MiscItems/DistillPoints', 50, 'Vosfor', '荧尘'),
+    ('normal-common', 3, '/Lotus/Types/Gameplay/Tau/Resources/CoHResourceCommonItem', 25, 'Ignia', '热火核'),
+    ('normal-common', 4, '/Lotus/Types/Gameplay/Tau/Resources/CoHResourceRareItem', 5, 'Maphica', '怒火核'),
+    ('normal-final', 0, '/Lotus/Types/Recipes/Components/FormaBlueprint', 1, 'Forma Blueprint', 'Forma 蓝图'),
+    ('normal-final', 1, '/Lotus/Types/Items/MiscItems/WeaponPrimaryArcaneUnlocker', 1,
+        'Primary Arcane Adapter', '主要武器赋能槽连接器'),
+    ('normal-final', 2, '/Lotus/Types/Items/MiscItems/WeaponSecondaryArcaneUnlocker', 1,
+        'Secondary Arcane Adapter', '次要武器赋能槽连接器'),
+    ('normal-final', 3, '/Lotus/Types/Items/MiscItems/WeaponMeleeArcaneUnlocker', 1,
+        'Melee Arcane Adapter', '近战武器赋能槽连接器'),
+    ('normal-final', 4, '/Lotus/Types/Items/MiscItems/WeaponAmpArcaneUnlocker', 1,
+        'Amp Arcane Adapter', '增幅器赋能槽连接器')
+) AS reward(pool_code, position, item_key, quantity, name_en, name_zh)
+JOIN nnmbot.wf_official_drop_table_root pool
+    ON pool.maintenance_type = 'SELF_MAINTAINED' AND pool.bkey = 'contexts/Descendia:' || reward.pool_code
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_drop_table_rewards_items existing WHERE existing.bkey = pool.id);
+
+
 -- BEGIN COMMUNITY WHITELIST
--- 来自官方更新公告的固定楼层候选（非实时抽中结果）；由人工审核维护，不当作官方 JSON 表。
+-- 人工审核楼层与现有官方掉落池的映射，奖励明细由掉落模型提供。
 CREATE TABLE nnmbot.wf_community_descendia_reward (
     id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     record_key varchar(500) NOT NULL UNIQUE,
@@ -24338,22 +24448,15 @@ CREATE TABLE nnmbot.wf_community_descendia_reward (
     floor_number integer NOT NULL CONSTRAINT ck_wf_descendia_floor CHECK (floor_number BETWEEN 1 AND 21),
     difficulty varchar(20) NOT NULL CONSTRAINT ck_wf_descendia_difficulty CHECK (difficulty IN ('normal', 'steelPath')),
     label TEXT NOT NULL,
-    official_pool_key varchar(500),
-    expected_pool_name TEXT,
-    source_reward_key varchar(500),
+    official_pool_key varchar(500) NOT NULL,
+    expected_pool_name TEXT NOT NULL,
     item_count_override integer CHECK (item_count_override > 0),
-    options_json TEXT,
     note TEXT,
     guaranteed boolean NOT NULL,
     source_url TEXT NOT NULL,
-    CONSTRAINT uq_wf_descendia_floor_difficulty UNIQUE (floor_number, difficulty),
-    CONSTRAINT ck_wf_descendia_reward_source CHECK (
-        (official_pool_key IS NOT NULL)::integer + (source_reward_key IS NOT NULL)::integer
-        + (options_json IS NOT NULL)::integer = 1),
-    CONSTRAINT ck_wf_descendia_pool_identity CHECK (
-        (official_pool_key IS NULL) = (expected_pool_name IS NULL))
+    CONSTRAINT uq_wf_descendia_floor_difficulty UNIQUE (floor_number, difficulty)
 );
-COMMENT ON TABLE nnmbot.wf_community_descendia_reward IS '深层下降楼层与官方 DROP_TABLE 奖池的映射，以及官方表缺失的少量补充候选；非本周实际结果';
+COMMENT ON TABLE nnmbot.wf_community_descendia_reward IS '沉沦之地楼层与官方 DROP_TABLE 奖池的映射；不保存每周抽取结果';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.id IS '本地业务行 ID';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.record_key IS '难度与楼层组成的稳定身份';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.updated_at IS '最后一次人工审核变更时间';
@@ -24363,9 +24466,7 @@ COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.difficulty IS '普通或�
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.label IS '人工审核的奖池名称';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.official_pool_key IS '已采纳官方 DROP_TABLE 根表 bkey；奖励、概率、数量、图标实时查询官方表，不另存副本';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.expected_pool_name IS '官方奖池源名称：防止更新时 ordinal 型 bkey 被另一奖池复用';
-COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.source_reward_key IS '引用本表另一条有选项的补充记录，避免重复写入相同候选池';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.item_count_override IS '相同官方奖池复用于不同楼层时，公告明确的数量差异';
-COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.options_json IS '仅官方 DROP_TABLE 缺失时人工核验的奖励候选名称 JSON 字符串数组';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.note IS '公告特殊说明，例如同一抽选结果数量翻倍';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.guaranteed IS '是否为该楼层通关固定奖励';
 COMMENT ON COLUMN nnmbot.wf_community_descendia_reward.source_url IS '奖池核实所依据的官方公告地址';
@@ -24379,7 +24480,7 @@ CREATE TABLE nnmbot.wf_community_alias (
     alias_name TEXT NOT NULL,
     target_name TEXT NOT NULL
 );
-COMMENT ON TABLE nnmbot.wf_community_alias IS '纯自维护白名单：Alias；不记录输入来源';
+COMMENT ON TABLE nnmbot.wf_community_alias IS '玩家物品简称到正式物品名称的社区白名单';
 COMMENT ON COLUMN nnmbot.wf_community_alias.id IS '业务行本地主键';
 COMMENT ON COLUMN nnmbot.wf_community_alias.record_key IS '数据集内稳定业务身份；禁止使用数组下标';
 COMMENT ON COLUMN nnmbot.wf_community_alias.updated_at IS '最后一次人工确认写入时间';
@@ -24396,7 +24497,7 @@ CREATE TABLE nnmbot.wf_community_term (
     english_text TEXT NOT NULL,
     chinese_text TEXT NOT NULL
 );
-COMMENT ON TABLE nnmbot.wf_community_term IS '纯自维护白名单：Term；不记录输入来源';
+COMMENT ON TABLE nnmbot.wf_community_term IS '社区维护的游戏术语和玩家黑话';
 COMMENT ON COLUMN nnmbot.wf_community_term.id IS '业务行本地主键';
 COMMENT ON COLUMN nnmbot.wf_community_term.record_key IS '数据集内稳定业务身份；禁止使用数组下标';
 COMMENT ON COLUMN nnmbot.wf_community_term.updated_at IS '最后一次人工确认写入时间';
@@ -24405,21 +24506,56 @@ COMMENT ON COLUMN nnmbot.wf_community_term.term_group IS '术语分类';
 COMMENT ON COLUMN nnmbot.wf_community_term.english_text IS '英文术语或标准物品名';
 COMMENT ON COLUMN nnmbot.wf_community_term.chinese_text IS '中文术语与黑话';
 
+-- 社区确认的外部字段对应关系，业务作用域区分目标身份、索引和显示补充。
+CREATE TABLE nnmbot.wf_community_reference_mapping (
+    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    record_key varchar(500) NOT NULL UNIQUE,
+    updated_at timestamp with time zone NOT NULL,
+    version bigint NOT NULL,
+    mapping_scope varchar(50) NOT NULL,
+    source_key TEXT NOT NULL,
+    target_key TEXT NOT NULL,
+    -- 每种目标只由已声明的解析调用方读取。
+    CONSTRAINT ck_wf_community_mapping_scope CHECK (mapping_scope IN ('mission-type', 'circuit', 'bounty-pool', 'worldstate-image', 'item-icon', 'worldstate-reward', 'vault-clear-pool', 'archimedea', 'bounty_stage', 'bounty_ally', 'sortie_modifier', 'isolation_vault_phase')),
+    CONSTRAINT ck_wf_community_mapping_keys CHECK (btrim(source_key) <> '' AND btrim(target_key) <> '')
+);
+COMMENT ON TABLE nnmbot.wf_community_reference_mapping IS '社区审核的解析映射，按作用域由后端关联官方资料或已核实的显示补充';
+COMMENT ON COLUMN nnmbot.wf_community_reference_mapping.id IS '本地业务行 ID';
+COMMENT ON COLUMN nnmbot.wf_community_reference_mapping.record_key IS '预览、修改和重试使用的稳定业务键';
+COMMENT ON COLUMN nnmbot.wf_community_reference_mapping.updated_at IS '最后一次人工审核变更时间';
+COMMENT ON COLUMN nnmbot.wf_community_reference_mapping.version IS '乐观并发版本';
+COMMENT ON COLUMN nnmbot.wf_community_reference_mapping.mapping_scope IS '原值的使用场景，决定后端使用的目标数据集或目标语义';
+COMMENT ON COLUMN nnmbot.wf_community_reference_mapping.source_key IS '上游原始字段值或由运行时提供的业务资源用途键';
+COMMENT ON COLUMN nnmbot.wf_community_reference_mapping.target_key IS '对应的官方业务键，或在专用场景确认的分组索引或显示文本';
+
 CREATE TABLE nnmbot.wf_community_arbitration_essence (
     id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     record_key varchar(500) NOT NULL UNIQUE,
     updated_at timestamp with time zone NOT NULL,
     version bigint NOT NULL,
+    node_key TEXT NOT NULL,
     node_name TEXT NOT NULL,
-    essence_amount integer NOT NULL
+    system_name TEXT,
+    essence_amount integer,
+    efficiency_grade VARCHAR(1),
+    CONSTRAINT uq_wf_community_arbitration_essence_node_key UNIQUE (node_key),
+    CONSTRAINT ck_wf_community_arbitration_essence_grade
+        CHECK (efficiency_grade IS NULL OR efficiency_grade IN ('A', 'B', 'C', 'D', 'E', 'F'))
 );
 COMMENT ON TABLE nnmbot.wf_community_arbitration_essence IS '纯自维护白名单：ArbitrationEssence；不记录输入来源';
 COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.id IS '业务行本地主键';
 COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.record_key IS '数据集内稳定业务身份；禁止使用数组下标';
 COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.updated_at IS '最后一次人工确认写入时间';
 COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.version IS '并发修改版本；预览应用时校验原值';
-COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.node_name IS '节点名称或稳定代码';
-COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.essence_amount IS '社区维护的仲裁精华收益估计，不代表固定掉落数量';
+COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.node_key IS '官方星图中稳定且唯一的节点键';
+COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.node_name IS '节点名称缓存；展示优先使用官方 REGION 本地化名称';
+COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.system_name IS '官方 REGION 中节点所属星球或星系名称缓存';
+COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.essence_amount IS '社区玩家数据估算的每小时仲裁精华收益；NULL 表示无可用样本';
+COMMENT ON COLUMN nnmbot.wf_community_arbitration_essence.efficiency_grade IS 'A-F 效率等级；优先保留 arbi.wf.wiki 原评级，缺失时按有估值节点的精华收益分位推算；NULL 表示无估值样本';
+COMMENT ON CONSTRAINT uq_wf_community_arbitration_essence_node_key
+    ON nnmbot.wf_community_arbitration_essence IS '每个星图节点只维护一条仲裁收益和评级';
+COMMENT ON CONSTRAINT ck_wf_community_arbitration_essence_grade
+    ON nnmbot.wf_community_arbitration_essence IS '节点评级仅允许 A 至 F 或未评级';
 
 CREATE TABLE nnmbot.wf_community_riven_alias (
     id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -24437,6 +24573,7 @@ COMMENT ON COLUMN nnmbot.wf_community_riven_alias.version IS '并发修改版本
 COMMENT ON COLUMN nnmbot.wf_community_riven_alias.attribute_code IS '官方属性 slug 或一至三属性组合编码';
 COMMENT ON COLUMN nnmbot.wf_community_riven_alias.alias_name IS '人工中文属性别名或组合短语';
 
+-- 终幕与信条兑换武器资料由人工按已核实的上游快照维护；未提供的价格、元素或轮次保持为空。
 -- 审核提交锁定数据集行，确保选中集合在一个事务中校验并写入。
 -- 社区表版本从零递增，禁止负版本导致缓存代际倒退。
 CREATE TABLE nnmbot.wf_community_dataset_lock (dataset varchar(50) PRIMARY KEY,
@@ -24446,8 +24583,10 @@ COMMENT ON TABLE nnmbot.wf_community_dataset_lock IS '纯自维护数据集的�
 COMMENT ON COLUMN nnmbot.wf_community_dataset_lock.dataset IS '白名单数据集代码；锁行不承载业务内容';
 INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('alias');
 INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('term');
+INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('reference_mapping');
 INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('arbitration_essence');
 INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('riven_alias');
+INSERT INTO nnmbot.wf_community_dataset_lock(dataset) VALUES ('descendia_reward');
 -- 审核回执与选中身份集合在同一事务提交，支持网络重试而不重复写入。
 CREATE TABLE nnmbot.wf_community_apply_receipt (
     preview_id varchar(36) PRIMARY KEY,
@@ -24463,28 +24602,6 @@ COMMENT ON COLUMN nnmbot.wf_community_apply_receipt.selection_hash IS '本次选
 COMMENT ON COLUMN nnmbot.wf_community_apply_receipt.applied_count IS '同一原子事务内写入的选中条数';
 COMMENT ON COLUMN nnmbot.wf_community_apply_receipt.applied_at IS '审核事务提交时间';
 -- 已审核的 WFCD 八周钢铁轮换顺序；商品名、价格、数量与图标来自官方 Vendor 主表，不在此重复存储。
-CREATE TABLE nnmbot.wf_community_steel_path_rotation (
-    id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    record_key varchar(500) NOT NULL UNIQUE,
-    updated_at timestamp with time zone NOT NULL,
-    version bigint NOT NULL,
-    rotation_index integer NOT NULL,
-    anchor_week date NOT NULL,
-    store_item varchar(500) NOT NULL,
-    CONSTRAINT ck_wf_steel_rotation_index CHECK (rotation_index BETWEEN 0 AND 7),
-    CONSTRAINT uq_wf_steel_rotation_index UNIQUE (rotation_index),
-    CONSTRAINT uq_wf_steel_rotation_item UNIQUE (store_item)
-);
-COMMENT ON TABLE nnmbot.wf_community_steel_path_rotation IS '人工校准的钢铁每周商品顺序；仅存官方 Vendor 的物品身份及周轮换锚点';
-COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.id IS '本地业务行 ID';
-COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.record_key IS '轮换序号的稳定业务键';
-COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.updated_at IS '人工审核更新时间';
-COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.version IS '乐观锁版本';
-COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.rotation_index IS '相对锚点周的八周轮换序号，0 到 7';
-COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.anchor_week IS 'WFCD 已审核轮换起始周一，UTC 日期；每行必须一致';
-COMMENT ON COLUMN nnmbot.wf_community_steel_path_rotation.store_item IS '官方 Vendor.items.storeItem 的精确键，不重复记录商品资料';
--- END COMMUNITY WHITELIST
-
 
 
 -- 管理端持久化通知：每名管理员独立持有消息和到期时间；任务、预览和人工公告共享此存储。
@@ -24600,94 +24717,320 @@ WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_official_skin_root WHERE lower(bkey)=l
 
 -- 已执行的 04 突击火灾环境危机社区术语；官方裂隙静态表只有 VoidT 等级。
 -- 来源：Warframe Wiki Sortie / Fire Hazard（https://wiki.warframe.com/w/Sortie）。
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_FIRE', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_FIRE', '火灾（环境危机）', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
 -- 突击变体映射：参考 warframe-worldstate-data/data/zh/sortieData.json；已存在的 HAZARD_FIRE 不覆盖。
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_LOW_ENERGY', 'sortie_modifier', 'SORTIE_MODIFIER_LOW_ENERGY', '能量减少', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_IMPACT', 'sortie_modifier', 'SORTIE_MODIFIER_IMPACT', '敌人物理强化(冲击)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_SLASH', 'sortie_modifier', 'SORTIE_MODIFIER_SLASH', '敌人物理强化(切割)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_PUNCTURE', 'sortie_modifier', 'SORTIE_MODIFIER_PUNCTURE', '敌人物理强化(穿刺)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_EXIMUS', 'sortie_modifier', 'SORTIE_MODIFIER_EXIMUS', '卓越者大本营', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_MAGNETIC', 'sortie_modifier', 'SORTIE_MODIFIER_MAGNETIC', '敌人元素强化(磁力)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_CORROSIVE', 'sortie_modifier', 'SORTIE_MODIFIER_CORROSIVE', '敌人元素强化(腐蚀)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_VIRAL', 'sortie_modifier', 'SORTIE_MODIFIER_VIRAL', '敌人元素强化(病毒)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_ELECTRICITY', 'sortie_modifier', 'SORTIE_MODIFIER_ELECTRICITY', '敌人元素强化(电击)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_RADIATION', 'sortie_modifier', 'SORTIE_MODIFIER_RADIATION', '敌人元素强化(辐射)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_GAS', 'sortie_modifier', 'SORTIE_MODIFIER_GAS', '敌人元素强化(毒气)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_FIRE', 'sortie_modifier', 'SORTIE_MODIFIER_FIRE', '敌人元素强化(火焰)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_EXPLOSION', 'sortie_modifier', 'SORTIE_MODIFIER_EXPLOSION', '敌人元素强化(爆炸)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_FREEZE', 'sortie_modifier', 'SORTIE_MODIFIER_FREEZE', '敌人元素强化(冰冻)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_TOXIN', 'sortie_modifier', 'SORTIE_MODIFIER_TOXIN', '敌人元素强化(毒素)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_POISON', 'sortie_modifier', 'SORTIE_MODIFIER_POISON', '敌人元素强化(毒素)', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_RADIATION', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_RADIATION', '辐射灾害', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_MAGNETIC', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_MAGNETIC', '电磁异常', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_FOG', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_FOG', '浓雾', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_ICE', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_ICE', '低温外泄', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_HAZARD_COLD', 'sortie_modifier', 'SORTIE_MODIFIER_HAZARD_COLD', '极度寒冷', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_ARMOR', 'sortie_modifier', 'SORTIE_MODIFIER_ARMOR', '敌人护甲强化', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_SHIELDS', 'sortie_modifier', 'SORTIE_MODIFIER_SHIELDS', '敌人护盾强化', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_SECONDARY_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_SECONDARY_ONLY', '次要 限定', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_SHOTGUN_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_SHOTGUN_ONLY', '霰弹枪 限定', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_SNIPER_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_SNIPER_ONLY', '狙击枪 限定', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_RIFLE_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_RIFLE_ONLY', '突击步枪 限定', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_MELEE_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_MELEE_ONLY', '武器限定：近戰', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
 VALUES ('sortie_modifier:SORTIE_MODIFIER_BOW_ONLY', 'sortie_modifier', 'SORTIE_MODIFIER_BOW_ONLY', '弓箭 限定', CURRENT_TIMESTAMP, 0)
 ON CONFLICT (record_key) DO NOTHING;
+
+-- 参考项目把这项增益解释为拾取资源数量，而不是提高掉落概率。
+INSERT INTO nnmbot.wf_official_upgrade_type_root (
+    maintenance_type, bkey, official_name, localized_name, created_at, updated_at,
+    root_state, nameen_state, nameen, namezh_state, namezh
+)
+VALUES ('SELF_MAINTAINED', 'GAMEPLAY_PICKUP_AMOUNT', 'Resource Drop Amount', '资源掉落数量',
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 2, 'Resource Drop Amount', 2, '资源掉落数量')
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 核对了三个地区的 Encounter 与游戏语言键；只补阶段候选说明，不复制动态轮次或奖励。
+INSERT INTO nnmbot.wf_official_bounty_root (
+    maintenance_type, bkey, created_at, updated_at, root_state, name_state, name,
+    description_value_state, description_value
+)
+SELECT 'SELF_MAINTAINED', 'definitions//Lotus/Types/Gameplay/' || encounter,
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 2, '/Lotus/Language/' || name_key,
+    2, '/Lotus/Language/' || description_key
+FROM (VALUES
+    ('Eidolon/Encounters/DynamicAssassinate', 'EidolonPlains/AssassinateName', 'EidolonPlains/AssassinateObjective'),
+    ('Eidolon/Encounters/DynamicHijack', 'EidolonPlains/DroneHijackName', 'EidolonPlains/DroneHijackObjective'),
+    ('Eidolon/Encounters/DynamicDefend', 'EidolonPlains/DefendName', 'EidolonPlains/DefendObjective'),
+    ('Eidolon/Encounters/DynamicResourceTheft', 'EidolonPlains/ResourceTheftName', 'EidolonPlains/ResourceTheftObjective'),
+    ('Eidolon/Encounters/DynamicExterminate', 'EidolonPlains/ExterminateName', 'EidolonPlains/ExterminateObjective'),
+    ('Eidolon/Encounters/DynamicCapture', 'EidolonPlains/CaptureName', 'EidolonPlains/CaptureObjective'),
+    ('Eidolon/Encounters/DynamicRescue', 'EidolonPlains/RescueName', 'EidolonPlains/RescueObjective'),
+    ('Eidolon/Encounters/DynamicSabotage', 'EidolonPlains/SabotageName', 'EidolonPlains/SabotageObjective'),
+    ('Eidolon/Encounters/HiddenResourceCaches', 'EidolonPlains/CachesName', 'EidolonPlains/CachesObjective'),
+    ('Venus/Encounters/DynamicDroneDefense', 'SolarisJobs/EncounterDroneDefenseTitle', 'SolarisJobs/EncounterDroneDefenseObjective'),
+    ('Venus/Encounters/DynamicBaseSpy', 'SolarisJobs/EncounterBaseSpyTitle', 'SolarisJobs/EncounterBaseSpyObjective'),
+    ('Venus/Encounters/DynamicResourceCapture', 'SolarisJobs/EncounterResourceCaptureTitle', 'SolarisJobs/EncounterResourceCaptureObjective'),
+    ('Venus/Encounters/DynamicAmbush', 'SolarisJobs/EncounterAmbushTitle', 'SolarisJobs/EncounterAmbushObjective'),
+    ('Venus/Encounters/DynamicRecovery', 'SolarisJobs/EncounterRecoveryTitle', 'SolarisJobs/EncounterRecoveryObjective'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicCorpusSurvivors', 'InfestedMicroplanet/DynamicCorpusSurvivorsName', 'InfestedMicroplanet/DynamicCorpusSurvivorsObjective'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicGrineerSurvivors', 'InfestedMicroplanet/DynamicGrineerSurvivorsName', 'InfestedMicroplanet/DynamicGrineerSurvivorsObjective'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicExcavation', 'InfestedMicroplanet/DynamicExcavationName', 'InfestedMicroplanet/DynamicExcavationObjective'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicKeyPieces', 'InfestedMicroplanet/KeyPiecesName', 'InfestedMicroplanet/KeyPiecesDesc'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicPurify', 'InfestedMicroplanet/PurifyName', 'InfestedMicroplanet/PurifyDesc'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicAreaDefense', 'InfestedMicroplanet/DynamicAreaDefenseName', 'InfestedMicroplanet/DynamicAreaDefenseObjective'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicAssassinate', 'InfestedMicroplanet/AssassinateName', 'InfestedMicroplanet/AssassinateDesc')
+) AS stage(encounter, name_key, description_key)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 官方更新 44.0.0 确认低收益 3 米；更新 36.0.0 确认缩短技能 50%。
+-- 同业务键并存：保留原始 OFFICIAL 记录，运行时优先读取自维护副本。
+INSERT INTO nnmbot.wf_official_activity_root (
+    maintenance_type, bkey, official_name, localized_name, description, created_at, updated_at, root_state,
+    nameen_state, nameen, namezh_state, namezh, namekey_state, namekey,
+    descriptionen_state, descriptionen, descriptionzh_state, descriptionzh, descriptionkey_state, descriptionkey
+)
+SELECT 'SELF_MAINTAINED', 'conquests/personalModifiers/' || code, name_en, name_zh, description_zh,
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 2, name_en, 2, name_zh, 2, language_key,
+    2, description_en, 2, description_zh, 2, language_key || '_Desc'
+FROM (VALUES
+    ('AoeDebuff', 'Low Yield', '低收益', 'Blast radius of weapons with radial attacks is set to 3 m.',
+        '具有范围攻击的武器爆炸半径固定为 3 米。', '/Lotus/Language/Conquest/PersonalMod_AoeDebuff'),
+    ('TimeDilation', 'Abbreviated Abilities', '缩短技能', 'Ability durations reduced by 50%.',
+        '技能持续时间减少 50%。', '/Lotus/Language/Conquest/PersonalMod_TimeDilation')
+) AS modifier(code, name_en, name_zh, description_en, description_zh, language_key)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 下降短码与官方客户端语言键的人工核对结果。翠玉、吸血、冰火用对应 Aura，躁狂症用 CoHManicSpec 核对。
+INSERT INTO nnmbot.wf_official_activity_root (
+    maintenance_type, bkey, official_name, localized_name, created_at, updated_at, root_state,
+    nameen_state, nameen, namezh_state, namezh, namekey_state, namekey
+)
+SELECT 'SELF_MAINTAINED', ref, name_en, name_zh, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5,
+    CASE WHEN name_en IS NULL THEN 0 ELSE 2 END, name_en,
+    CASE WHEN name_zh IS NULL THEN 0 ELSE 2 END, name_zh,
+    CASE WHEN language_key IS NULL THEN 0 ELSE 2 END, language_key
+FROM (VALUES
+    ('descents/gameModes/InfestedSalvage', NULL, NULL, '/Lotus/Language/Missions/MissionName_Purify'),
+    ('descents/gameModes/SabotageHive', NULL, NULL, '/Lotus/Language/CircleOfHell/CoHGamemodeHive'),
+    ('descents/gameModes/Protoframe', 'Protoframe Encounter', '原型战甲遭遇', NULL),
+    ('descents/challenges/Manics', NULL, NULL, '/Lotus/Language/CircleOfHell/CoHChallengeManicsOnly'),
+    ('descents/challenges/JadeGuardian', NULL, NULL, '/Lotus/Language/CircleOfHell/CoHChallengeEximusJadeGuardian'),
+    ('descents/challenges/ShockingLeech', NULL, NULL, '/Lotus/Language/CircleOfHell/CoHChallengeEximusShockingLeech'),
+    ('descents/challenges/FireAndIce', NULL, NULL, '/Lotus/Language/CircleOfHell/CoHChallengeEximusFireAndIce')
+) AS floor(ref, name_en, name_zh, language_key)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 复用官方希图斯洞穴和索拉里斯场景的任务语言，不把阶段定义当成新的掉落池。
+INSERT INTO nnmbot.wf_official_bounty_root (
+    maintenance_type, bkey, created_at, updated_at, root_state, name_state, name, description_value_state,
+    description_value
+)
+SELECT 'SELF_MAINTAINED', 'definitions//Lotus/Types/Gameplay/' || encounter,
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5, 2, '/Lotus/Language/' || name_key,
+    2, '/Lotus/Language/' || objective_key
+FROM (VALUES
+    ('Eidolon/Encounters/CaveEncounters/HiddenResourceCachesCave', 'EidolonPlains/CachesName', 'EidolonPlains/CachesObjective'),
+    ('Eidolon/Encounters/CaveEncounters/DynamicCaveExterminate', 'EidolonPlains/ExterminateName', 'EidolonPlains/ExterminateObjective'),
+    ('Venus/Encounters/DynamicCaches', 'SolarisJobs/EncounterCachesObjective', 'SolarisJobs/EncounterCachesObjective'),
+    ('Venus/Encounters/DynamicCachesAirDrop', 'SolarisJobs/EncounterCachesAirDropObjective', 'SolarisJobs/EncounterCachesAirDropObjective'),
+    ('Venus/Encounters/DynamicExcavation', 'EidolonPlains/ExcavationName', 'SolarisJobs/EncounterExcavationObjective')
+) AS stage(encounter, name_key, objective_key)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 活动表缺少的沉沦之地模式和挑战身份。复用客户端语言键；首领模式只有独立的展示名称。
+INSERT INTO nnmbot.wf_official_activity_root (
+    maintenance_type, bkey, official_name, localized_name, created_at, updated_at, root_state,
+    nameen_state, nameen, namezh_state, namezh, namekey_state, namekey
+)
+SELECT 'SELF_MAINTAINED', 'descents/' || reference, name_en, name_zh, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5,
+    CASE WHEN name_en IS NULL THEN 0 ELSE 2 END, name_en,
+    CASE WHEN name_zh IS NULL THEN 0 ELSE 2 END, name_zh,
+    CASE WHEN language_key IS NULL THEN 0 ELSE 2 END, '/Lotus/Language/' || language_key
+FROM (VALUES
+    ('gameModes/Boss', 'Boss Fight', '首领战', NULL),
+    ('gameModes/BreakTargets', NULL, NULL, 'CircleOfHell/CoHGamemodeDestroyTargets'),
+    ('gameModes/Loot', NULL, NULL, 'CircleOfHell/CoHGamemodeLootRoom'),
+    ('gameModes/Netracells', NULL, NULL, 'Missions/MissionName_Vaults'),
+    ('gameModes/Capture', NULL, NULL, 'Missions/MissionName_Capture'),
+    ('gameModes/Interception', NULL, NULL, 'Missions/MissionName_Territory'),
+    ('gameModes/LootCreatures', NULL, NULL, 'CircleOfHell/CoHCreaturesLoot'),
+    ('gameModes/Mimics', NULL, NULL, 'CircleOfHell/CoHMimicsLoot'),
+    ('challenges/BasicLootCreatures', NULL, NULL, 'CircleOfHell/CoHCreaturesLoot'),
+    ('challenges/BasicMimics', NULL, NULL, 'CircleOfHell/CoHMimicsLoot'),
+    ('challenges/BasicRace', NULL, NULL, 'CircleOfHell/CoHGamemodeRace'),
+    ('challenges/BasicBreakTargets', NULL, NULL, 'CircleOfHell/CoHGamemodeDestroyTargets'),
+    ('challenges/BasicLoot', NULL, NULL, 'CircleOfHell/CoHGamemodeLootRoom'),
+    ('challenges/ArbitrationDrones', NULL, NULL, 'CircleOfHell/CoHChallengeArbitation'),
+    ('challenges/BlitzLeech', NULL, NULL, 'CircleOfHell/CoHChallengeEximusBlitzLeech'),
+    ('challenges/FreezeInShoot', NULL, NULL, 'CircleOfHell/CoHChallengeEximusFreezeInShoot'),
+    ('challenges/HardShell', NULL, NULL, 'CircleOfHell/CoHChallengeEximusHardshell'),
+    ('challenges/PowerHouse', NULL, NULL, 'CircleOfHell/CoHChallengeEximusPowerhouse'),
+    ('challenges/ToxicFire', NULL, NULL, 'CircleOfHell/CoHChallengeEximusToxicFire'),
+    ('challenges/VeryToxic', NULL, NULL, 'CircleOfHell/CoHChallengeEximusVeryToxic'),
+    ('challenges/SecuritySpin', NULL, NULL, 'CircleOfHell/CoHSecuritySpinDesc'),
+    ('challenges/NC_SecuritySpin', NULL, NULL, 'CircleOfHell/CoHSecuritySpinDesc'),
+    ('challenges/NC_NarmerPhobia', NULL, NULL, 'CircleOfHell/CoHNarmerPhobiaTitle'),
+    ('challenges/NC_Darkness', NULL, NULL, 'CircleOfHell/CoHChallengeDarkness'),
+    ('challenges/VoidAberration', NULL, NULL, 'Conquest/Condition_VoidAberration'),
+    ('challenges/NC_VoidAberration', NULL, NULL, 'Conquest/Condition_VoidAberration'),
+    ('challenges/HeadShotsOnly', NULL, NULL, 'CircleOfHell/CoHChallengeWeakpointsOnly'),
+    ('challenges/MineField', NULL, NULL, 'CircleOfHell/CoHMineFieldDesc'),
+    ('challenges/SlipAndSlide', NULL, NULL, 'CircleOfHell/CoHSlipAndSlideDesc')
+) AS activity(reference, name_en, name_zh, language_key)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 当前三地官方赏金定义引用的 Encounter 候选。名称沿用官方任务语言，保留原变体路径。
+INSERT INTO nnmbot.wf_official_bounty_root (
+    maintenance_type, bkey, created_at, updated_at, root_state, name_state, name
+)
+SELECT 'SELF_MAINTAINED', 'definitions//Lotus/Types/Gameplay/' || encounter, CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP, 5, 2, '/Lotus/Language/' || language_key
+FROM (VALUES
+    ('Eidolon/Encounters/Narmer/DynamicAssassinate', 'EidolonPlains/AssassinateName'),
+    ('Eidolon/Encounters/Narmer/DynamicCaveExterminate', 'EidolonPlains/ExterminateName'),
+    ('Eidolon/Encounters/Narmer/DynamicDefend', 'EidolonPlains/DefendName'),
+    ('Eidolon/Encounters/Narmer/DynamicExterminate', 'EidolonPlains/ExterminateName'),
+    ('Eidolon/Encounters/Narmer/DynamicHijack', 'EidolonPlains/DroneHijackName'),
+    ('Eidolon/Encounters/Narmer/DynamicResourceTheft', 'EidolonPlains/ResourceTheftName'),
+    ('Eidolon/Encounters/Narmer/NarmerHiddenResourceCaches', 'EidolonPlains/CachesName'),
+    ('Venus/Encounters/DynamicAssassinate', 'Missions/MissionName_Assassination'),
+    ('Venus/Encounters/DynamicExterminate', 'Missions/MissionName_Exterminate'),
+    ('Venus/Encounters/Narmer/NarmerDynamicAmbush', 'SolarisJobs/EncounterAmbushTitle'),
+    ('Venus/Encounters/Narmer/NarmerDynamicAssassinate', 'Missions/MissionName_Assassination'),
+    ('Venus/Encounters/Narmer/NarmerDynamicBaseSpy', 'SolarisJobs/EncounterBaseSpyTitle'),
+    ('Venus/Encounters/Narmer/NarmerDynamicDroneDefense', 'SolarisJobs/EncounterDroneDefenseTitle'),
+    ('Venus/Encounters/Narmer/NarmerDynamicExterminate', 'Missions/MissionName_Exterminate'),
+    ('Venus/Encounters/Narmer/NarmerDynamicResourceCapture', 'SolarisJobs/EncounterResourceCaptureTitle'),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicExterminate', 'Missions/MissionName_Exterminate')
+) AS stage(encounter, language_key)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 赏金配置引用这些变体，但当前 ExportBounties 只导出所属任务。按完整路径补足候选定义。
+INSERT INTO nnmbot.wf_official_bounty_root (
+    maintenance_type, bkey, official_name, localized_name, created_at, updated_at, root_state,
+    name_state, name, nameen_state, nameen, namezh_state, namezh, description_value_state, description_value
+)
+SELECT 'SELF_MAINTAINED', 'definitions//Lotus/Types/Gameplay/' || stage.path, stage.name_en, stage.name_zh,
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 5,
+    CASE WHEN stage.name_key IS NULL THEN 0 ELSE 2 END, '/Lotus/Language/' || stage.name_key,
+    CASE WHEN stage.name_en IS NULL THEN 0 ELSE 2 END, stage.name_en,
+    CASE WHEN stage.name_zh IS NULL THEN 0 ELSE 2 END, stage.name_zh,
+    CASE WHEN stage.description_key IS NULL THEN 0 ELSE 2 END, '/Lotus/Language/' || stage.description_key
+FROM (VALUES
+    ('Eidolon/Encounters/Narmer/DynamicSabotage', 'EidolonPlains/SabotageName',
+        'EidolonPlains/SabotageObjective', NULL, NULL),
+    ('InfestedMicroplanet/EncounterTemplates/DynamicExcavationEndless', 'InfestedMicroplanet/DynamicExcavationName',
+        'InfestedMicroplanet/DynamicExcavationObjective', NULL, NULL),
+    ('Venus/Encounters/DynamicExterminateDrones', NULL, NULL, 'Exterminate Drones', '歼灭无人机'),
+    ('Venus/Encounters/DynamicExterminateMoas', NULL, NULL, 'Exterminate MOAs', '歼灭恐鸟'),
+    ('Venus/Encounters/Narmer/NarmerDynamicCachesAirDrop', NULL, NULL, 'Intercept the Airdrop', '拦截空投物资'),
+    ('Venus/Encounters/Narmer/NarmerDynamicExcavation', 'EidolonPlains/ExcavationName',
+        'SolarisJobs/EncounterExcavationObjective', NULL, NULL),
+    ('Venus/Encounters/Narmer/NarmerDynamicRecovery', 'SolarisJobs/EncounterRecoveryTitle',
+        'SolarisJobs/EncounterRecoveryObjective', NULL, NULL)
+) AS stage(path, name_key, description_key, name_en, name_zh)
+WHERE NOT EXISTS (
+    SELECT 1 FROM nnmbot.wf_official_bounty_root existing
+    WHERE existing.enabled AND lower(existing.bkey) = lower('definitions//Lotus/Types/Gameplay/' || stage.path)
+)
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 官方热修以 Pressure Gauge 指称该目标，使用客户端 Pressure Cooker 的已采纳语言键。
+INSERT INTO nnmbot.wf_official_activity_root (
+    maintenance_type, bkey, created_at, updated_at, root_state, namekey_state, namekey
+)
+VALUES ('SELF_MAINTAINED', 'descents/gameModes/PresureGauge', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+    5, 2, '/Lotus/Language/CircleOfHell/CoHGamemodeMeltdown')
+ON CONFLICT (maintenance_type, bkey) DO NOTHING;
+
+-- 沉沦之地的 20 条楼层映射仅关联官方掉落模型，候选奖项在掉落池内维护。
+-- 奖池条目/概率不在此复制；依官方采纳记录查询；非本周抽中的确定奖励。
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:2', CURRENT_TIMESTAMP, 0, 2, 'normal', '普通奖池', 'contexts/Descendia:normal-common', 'The Descendia: Normal Common Rewards', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:4', CURRENT_TIMESTAMP, 0, 4, 'normal', '普通奖池', 'contexts/Descendia:normal-common', 'The Descendia: Normal Common Rewards', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:9', CURRENT_TIMESTAMP, 0, 9, 'normal', '普通奖池', 'contexts/Descendia:normal-common', 'The Descendia: Normal Common Rewards', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:11', CURRENT_TIMESTAMP, 0, 11, 'normal', '普通奖池', 'contexts/Descendia:normal-common', 'The Descendia: Normal Common Rewards', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:16', CURRENT_TIMESTAMP, 0, 16, 'normal', '普通奖池', 'contexts/Descendia:normal-common', 'The Descendia: Normal Common Rewards', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:18', CURRENT_TIMESTAMP, 0, 18, 'normal', '普通奖池', 'contexts/Descendia:normal-common', 'The Descendia: Normal Common Rewards', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:6', CURRENT_TIMESTAMP, 0, 6, 'normal', '夜灵赋能奖池', 'contexts/Dynamic Location Rewards:43', 'The Descendia: Infernum 20 Triple Arcane Rewards', 1, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖；官方公告未逐一列出该奖池物品。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:13', CURRENT_TIMESTAMP, 0, 13, 'normal', '夜灵赋能奖池', 'contexts/Dynamic Location Rewards:43', 'The Descendia: Infernum 20 Triple Arcane Rewards', 1, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖；官方公告未逐一列出该奖池物品。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:20', CURRENT_TIMESTAMP, 0, 20, 'normal', '夜灵赋能奖池', 'contexts/Dynamic Location Rewards:43', 'The Descendia: Infernum 20 Triple Arcane Rewards', NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖；官方公告未逐一列出该奖池物品。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('normal:21', CURRENT_TIMESTAMP, 0, 21, 'normal', '最终奖励', 'contexts/Descendia:normal-final', 'The Descendia: Normal Final Rewards', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:2', CURRENT_TIMESTAMP, 0, 2, 'steelPath', '钢铁普通奖池', 'contexts/Dynamic Location Rewards:45', 'The Descendia: Common Rewards (Steel Path)', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:9', CURRENT_TIMESTAMP, 0, 9, 'steelPath', '钢铁普通奖池', 'contexts/Dynamic Location Rewards:45', 'The Descendia: Common Rewards (Steel Path)', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:16', CURRENT_TIMESTAMP, 0, 16, 'steelPath', '钢铁普通奖池', 'contexts/Dynamic Location Rewards:45', 'The Descendia: Common Rewards (Steel Path)', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:4', CURRENT_TIMESTAMP, 0, 4, 'steelPath', '钢铁进阶奖池', 'contexts/Dynamic Location Rewards:47', 'The Descendia: Uncommon Rewards (Steel Path)', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:11', CURRENT_TIMESTAMP, 0, 11, 'steelPath', '钢铁进阶奖池', 'contexts/Dynamic Location Rewards:47', 'The Descendia: Uncommon Rewards (Steel Path)', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:6', CURRENT_TIMESTAMP, 0, 6, 'steelPath', '沉沦之地专属赋能奖池', 'contexts/Dynamic Location Rewards:44', 'The Descendia: Infernum 6 and 13 Arcane Rewards (Steel Path)', NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:13', CURRENT_TIMESTAMP, 0, 13, 'steelPath', '沉沦之地专属赋能奖池', 'contexts/Dynamic Location Rewards:44', 'The Descendia: Infernum 6 and 13 Arcane Rewards (Steel Path)', NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:20', CURRENT_TIMESTAMP, 0, 20, 'steelPath', '沉沦之地专属赋能奖池', 'contexts/Dynamic Location Rewards:49', 'The Descendia: Infernum 20 Triple Arcane Rewards (Steel Path)', NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:18', CURRENT_TIMESTAMP, 0, 18, 'steelPath', '固定奖励', 'contexts/Dynamic Location Rewards:48', 'The Descendia: Steel Essence Rewards (Steel Path)', NULL, '官方公告注明第 18 层通关奖励。', true, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, item_count_override, note, guaranteed, source_url) VALUES ('steelPath:21', CURRENT_TIMESTAMP, 0, 21, 'steelPath', '钢铁最终奖励', 'contexts/Dynamic Location Rewards:46', 'The Descendia: Rare Rewards (Steel Path)', NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;

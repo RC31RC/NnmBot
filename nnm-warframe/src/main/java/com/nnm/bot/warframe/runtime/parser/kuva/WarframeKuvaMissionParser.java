@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateCodebookService;
 import com.nnm.bot.warframe.runtime.config.jackson.WarframeInputBinding;
-import com.nnm.bot.warframe.runtime.constant.WarframeInvasionMissionType;
 import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateDisplayConstants;
 import com.nnm.bot.warframe.runtime.pojo.dto.kuva.KuvaMissionDTO;
 import com.nnm.bot.warframe.runtime.rawdata.kuva.KuvaLogRawData;
@@ -65,16 +64,16 @@ public class WarframeKuvaMissionParser {
                 if (now.isBefore(activation) || !now.isBefore(expiry)
                     || expiry.isAfter(activation.plus(MAX_MISSION_DURATION)))
                     continue;
-                String missionCode = WarframeInvasionMissionType.officialCode(row.solnodedata().type());
+                String missionCode = row.solnodedata().type();
                 String nodeName = row.solnode();
                 String missionName = missionCode;
                 try {
                     var node = codebook.findNode(row.solnode()).orElse(null);
                     if (ObjUtil.isNotNull(node)) {
                         nodeName = node.displayName();
-                        missionName = codebook.findMissionType(node.relatedReference())
-                            .map(entry -> entry.displayName()).orElse(missionCode);
                     }
+                    missionName = codebook.findMissionType(node == null ? missionCode : node.relatedReference())
+                        .filter(entry -> entry.resolved()).map(entry -> entry.displayName()).orElse(missionCode);
                 } catch (RuntimeException exception) {
                     // 静态代码簿不可用时保留结构化任务和来源引用，不因此清空成功动态数据。
                     log.debug("Kuva mission codebook lookup unavailable for {}", row.solnode(), exception);

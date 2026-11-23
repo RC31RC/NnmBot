@@ -10,7 +10,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordH
 import java.util.List;
 import lombok.Getter;
 
-/** BOSS 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 执刑官代码到首领名称和源力石候选定义的映射。动态猎杀给出本轮首领，阶段实际奖励需有相应动态证据。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

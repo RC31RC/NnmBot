@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.riven.impl;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.BooleanUtil;
 
 import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
@@ -13,6 +14,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.normalization.WarframeNameNormalizer;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.upgrades.WarframeRivenWeaponDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.riven.RivenWeeklyEntryDTO;
+import com.nnm.bot.warframe.runtime.pojo.dto.riven.RivenWeeklyStatisticsDTO;
 import java.io.IOException;
 import com.nnm.bot.warframe.runtime.client.WarframeRuntimeDataClient.FetchedText;
 import com.nnm.bot.warframe.runtime.config.riven.WarframeRivenWeeklyProperties.Source;
@@ -24,6 +26,7 @@ import com.nnm.bot.warframe.runtime.config.riven.WarframeRivenWeeklyProperties;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeTranslationKey;
 import com.nnm.bot.warframe.runtime.parser.riven.WarframeRivenWeeklyParser;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenWeeklyVO.EntryVO;
+import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenWeeklyVO.StatisticsVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.riven.WarframeRivenWeeklyVO;
 import com.nnm.bot.warframe.persistent.official.service.reference.WarframeItemNameService;
 import com.nnm.bot.warframe.runtime.service.riven.WarframeRivenWeeklyService;
@@ -138,22 +141,28 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
             itemNameService.resolveAll(snapshot.entries().stream().map(RivenWeeklyEntryDTO::compatibility)
                 .filter(Objects::nonNull).map(WarframeTranslationKey::name).distinct().toList());
         Map<String, WarframeRivenWeaponDTO> weapons = weaponCatalog.index();
-        return snapshot.entries().stream().map(entry -> {
+        List<EntryWithFilter> prepared = snapshot.entries().stream().map(entry -> {
             WarframeReferenceResolutionDTO translated =
                 entry.compatibility() == null ? null : names.get(WarframeTranslationKey.name(entry.compatibility()));
             WarframeRivenWeaponDTO weapon = weapons.get(WarframeNameNormalizer.weeklyWeapon(entry.compatibility()));
             String name = weapon != null && CharSequenceUtil.isNotBlank(weapon.nameZh()) ? weapon.nameZh()
                 : translated != null && translated.resolved() ? translated.displayName()
                     : entry.compatibility() == null ? entry.itemType() : entry.compatibility();
-            return new EntryVO(name, entry.compatibility(), entry.itemType(), entry.rerolled(), entry.avg(),
-                entry.median(), entry.min(), entry.max(), entry.stddev(), entry.pop(),
-                weapon == null ? null : weapon.uniqueName());
-        }).filter(entry -> (rerolled == null || entry.rerolled() == rerolled)
-            && (CharSequenceUtil.isEmpty(keyword) || contains(entry.weaponName(), keyword)
-                || contains(entry.compatibility(), keyword) || contains(entry.itemType(), keyword)))
-            .sorted(Comparator.comparing(EntryVO::weaponName).thenComparing(EntryVO::itemType)
-                .thenComparing(EntryVO::rerolled))
-            .toList();
+            boolean hasSelectedVariant = rerolled == null || (rerolled ? entry.rerolled() : entry.unrolled()) != null;
+            StatisticsVO unrolled = BooleanUtil.isTrue(rerolled) ? null : statistics(entry.unrolled());
+            StatisticsVO rerolledStatistics = BooleanUtil.isFalse(rerolled) ? null : statistics(entry.rerolled());
+            return new EntryWithFilter(new EntryVO(name, entry.compatibility(), entry.itemType(), unrolled,
+                rerolledStatistics, weapon == null ? null : weapon.uniqueName()), hasSelectedVariant);
+        }).toList();
+        return prepared.stream().filter(EntryWithFilter::hasSelectedVariant).map(EntryWithFilter::entry)
+            .filter(entry -> CharSequenceUtil.isEmpty(keyword) || contains(entry.weaponName(), keyword)
+                || contains(entry.compatibility(), keyword) || contains(entry.itemType(), keyword))
+            .sorted(Comparator.comparing(EntryVO::weaponName).thenComparing(EntryVO::itemType)).toList();
+    }
+
+    private static StatisticsVO statistics(RivenWeeklyStatisticsDTO value) {
+        return value == null ? null
+            : new StatisticsVO(value.avg(), value.median(), value.min(), value.max(), value.stddev(), value.pop());
     }
 
     /**
@@ -212,5 +221,8 @@ public class WarframeRivenWeeklyServiceImpl implements WarframeRivenWeeklyServic
     }
 
     private record Snapshot(List<RivenWeeklyEntryDTO> entries, Instant fetchedAt, Instant nextAttemptAt) {
+    }
+
+    private record EntryWithFilter(EntryVO entry, boolean hasSelectedVariant) {
     }
 }

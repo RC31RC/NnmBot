@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 KEYS 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 任务钥匙与任务链定义。按钥匙路径读取任务身份、阶段和道具说明。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

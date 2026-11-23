@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 ARCHWING 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 曲翼装备定义。按装备身份查询基础属性、外观及技能，用于曲翼资料和物品引用。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

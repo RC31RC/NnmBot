@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 ENEMY 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 敌人对象、行为层和关联掉落清单等定义。按分组及游戏对象路径定位敌人；同名代理和实体保留各自身份。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 DECORATION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 装饰品定义。按装饰品身份查询图标、说明和容量消耗，供装饰及奖励展示。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

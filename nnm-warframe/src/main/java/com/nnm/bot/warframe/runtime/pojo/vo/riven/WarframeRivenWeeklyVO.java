@@ -2,10 +2,9 @@ package com.nnm.bot.warframe.runtime.pojo.vo.riven;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.nnm.bot.warframe.runtime.mapper.WarframeTimeDisplay;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public record WarframeRivenWeeklyVO(@JsonPropertyDescription("查询") String query,
@@ -35,18 +34,21 @@ public record WarframeRivenWeeklyVO(@JsonPropertyDescription("查询") String qu
      * @return 拉取时间时刻标签标题对应的文本。
      */
     @JsonProperty("fetchedAtLabel")
-    @JsonPropertyDescription("拉取时间（UTC）")
+    @JsonPropertyDescription("拉取时间（北京时间）")
     public String fetchedAtLabel() {
-        return fetchedAt == null ? null
-            : DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC).format(fetchedAt);
+        return fetchedAt == null ? null : WarframeTimeDisplay.format(fetchedAt);
     }
 
     public record EntryVO(@JsonPropertyDescription("武器") String weaponName,
         @JsonPropertyDescription("武器英文名") String compatibility, @JsonPropertyDescription("紫卡类型") String itemType,
-        @JsonPropertyDescription("已洗") boolean rerolled, @JsonPropertyDescription("均价") BigDecimal avg,
+        @JsonPropertyDescription("未洗紫卡周成交统计") StatisticsVO unrolled,
+        @JsonPropertyDescription("已洗紫卡周成交统计") StatisticsVO rerolled,
+        @JsonPropertyDescription("匹配成功的静态武器 uniqueName；未匹配或歧义时为空") String weaponUniqueName) {
+    }
+
+    public record StatisticsVO(@JsonPropertyDescription("均价") BigDecimal avg,
         @JsonPropertyDescription("中位价") BigDecimal median, @JsonPropertyDescription("最低价") BigDecimal min,
         @JsonPropertyDescription("最高价") BigDecimal max, @JsonPropertyDescription("价格标准差") BigDecimal stddev,
-        @JsonPropertyDescription("相对交易热度") BigDecimal pop,
-        @JsonPropertyDescription("匹配成功的静态武器 uniqueName；未匹配或歧义时为空") String weaponUniqueName) {
+        @JsonPropertyDescription("相对交易热度") BigDecimal pop) {
     }
 }

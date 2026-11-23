@@ -44,6 +44,10 @@ public class BotCommandTemplate {
     @Column(name = "html_content", nullable = false, columnDefinition = "TEXT")
     private String htmlContent;
 
+    /** 是否为无参数命令展示的功能说明模板。 */
+    @Column(name = "function_description", nullable = false)
+    private boolean functionDescription;
+
     /** 是否允许命令引用该模板。 */
     @Column(nullable = false)
     private boolean enabled = true;

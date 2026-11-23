@@ -11,4 +11,9 @@ public final class BotNotificationConstants {
             return this == COMPLETED || this == CANCELLED || this == FAILED || this == UNKNOWN;
         }
     }
+
+    /** 单个群组目标的通知投递状态。 */
+    public enum GroupDeliveryStatus {
+        IN_PROGRESS, CANCELLED, SUCCEEDED, PARTIAL, FAILED, UNKNOWN, SKIPPED
+    }
 }

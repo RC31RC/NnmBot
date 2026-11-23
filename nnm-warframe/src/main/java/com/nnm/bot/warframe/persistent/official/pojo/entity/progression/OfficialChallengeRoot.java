@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 CHALLENGE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 通用挑战及 1999 日历挑战定义。按挑战完整路径读取目标、计数和奖励引用，用于解释动态挑战。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

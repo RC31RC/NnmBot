@@ -248,7 +248,7 @@ public class WarframeOfficialSnapshotStore {
                 storage.put(indexKey(key), input, indexBytes.length, "application/json");
             }
             return new OfficialChangeCountsDTO(counts);
-        } catch (IOException | RuntimeException exception) {
+        } catch (IOException | RuntimeException | LinkageError exception) {
             for (String objectKey : uploaded) {
                 try {
                     storage.delete(objectKey);

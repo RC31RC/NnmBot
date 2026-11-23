@@ -10,7 +10,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordH
 import java.util.List;
 import lombok.Getter;
 
-/** SONG 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 歌曲物品定义。按物品身份查询名称、描述及购买属性，供音乐物品或商城资料展示。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

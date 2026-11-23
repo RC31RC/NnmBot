@@ -266,11 +266,11 @@ public class WarframeItemResolverServiceImpl implements WarframeItemResolverServ
                     .distinct().toList());
         Map<String, List<String>> aliasTargets = communityCatalogService.aliasTargets();
         Map<String, List<String>> termTargets = communityCatalogService.termTargets();
-        Map<String, List<String>> aliases =
-            view(() -> Stream.concat(aliasTargets.keySet().stream(), termTargets.keySet().stream()),
-                key -> Stream
-                    .concat(aliasTargets.getOrDefault(key, List.of()).stream(),
-                        termTargets.getOrDefault(key, List.of()).stream())
+        Map<String,
+            List<String>> aliases = view(
+                () -> Stream.concat(aliasTargets.keySet().stream(), termTargets.keySet().stream()),
+                key -> Stream.concat(aliasTargets.getOrDefault(key, List.of()).stream(),
+                    termTargets.getOrDefault(key, List.of()).stream())
                     .flatMap(target -> names.getOrDefault(WarframeNameNormalizer.item(target), List.of()).stream())
                     .distinct().toList());
         return new SearchIndex(items, names, aliases);

@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 SONG 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 歌曲物品定义。按物品身份查询名称、描述及购买属性，供音乐物品或商城资料展示。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

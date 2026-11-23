@@ -13,7 +13,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** DROP_TABLE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 按来源场景和地区组织的官方掉落资料。用于掉落来源反查与已核验的深层下降奖池映射，实际结算由游戏给出。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

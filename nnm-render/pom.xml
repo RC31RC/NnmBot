@@ -35,6 +35,12 @@
             <groupId>com.openhtmltopdf</groupId>
             <artifactId>openhtmltopdf-svg-support</artifactId>
         </dependency>
+        <!-- 将数据库 HTML 模板转换为 OpenHTMLToPDF 可直接读取的 DOM。 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.24.1</version>
+        </dependency>
 
         <!-- 渲染：Playwright（可选，用于高保真渲染） -->
         <dependency>

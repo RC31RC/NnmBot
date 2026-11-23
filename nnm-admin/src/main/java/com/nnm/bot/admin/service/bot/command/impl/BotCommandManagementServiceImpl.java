@@ -5,6 +5,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import java.util.stream.Collectors;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.BooleanUtil;
 
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
@@ -114,11 +115,11 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         command.setName(valueOr(request.name(), descriptor.name()));
         command.setGameCode(resolveGameCode(command, descriptor.code(), request.gameCode()));
         command.setDescription(valueOr(request.description(), descriptor.description()));
-        command.setEnabled(Boolean.TRUE.equals(request.enabled()));
-        command.setShowInHelp(Boolean.TRUE.equals(request.showInHelp()));
+        command.setEnabled(BooleanUtil.isTrue(request.enabled()));
+        command.setShowInHelp(BooleanUtil.isTrue(request.showInHelp()));
         command
             .setCooldownSeconds(Math.max(0, ObjUtil.isNull(request.cooldownSeconds()) ? 0 : request.cooldownSeconds()));
-        command.setMentionInvoker(Boolean.TRUE.equals(request.mentionInvoker()));
+        command.setMentionInvoker(BooleanUtil.isTrue(request.mentionInvoker()));
         command.setPermissionOverride(request.permissionOverride());
         command.setGroupRoleRequired(normalizeGroupRole(request.groupRoleRequired()));
         BotCommand saved = commandRepository.save(command);
@@ -259,9 +260,9 @@ public class BotCommandManagementServiceImpl implements BotCommandManagementServ
         BotCommandCost cost = costRepository.findByCommandId(command.getId()).orElseGet(BotCommandCost::new);
         cost.setCommandId(command.getId());
         cost.setCostPoints(request.costPoints());
-        cost.setEnabled(Boolean.TRUE.equals(request.enabled()));
+        cost.setEnabled(BooleanUtil.isTrue(request.enabled()));
         cost.setRewardPoints(request.rewardPoints());
-        cost.setRewardEnabled(Boolean.TRUE.equals(request.rewardEnabled()));
+        cost.setRewardEnabled(BooleanUtil.isTrue(request.rewardEnabled()));
         costRepository.save(cost);
     }
 

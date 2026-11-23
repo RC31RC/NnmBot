@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.group.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
@@ -346,7 +347,7 @@ public class BotGroupManagementServiceImpl implements BotGroupManagementService 
         BotGroupBot binding = binding(groupId, request);
         Plan plan = preparePlacement(binding, request.confirmationToken());
         botRepository.save(binding);
-        if (Boolean.TRUE.equals(request.syncMembers()) && "GROUP".equals(binding.getScopeType())) {
+        if (BooleanUtil.isTrue(request.syncMembers()) && "GROUP".equals(binding.getScopeType())) {
             BotChannelInstance instance = instanceRepository.findById(request.botInstanceId()).orElseThrow();
             synchronizeMembers(groupId, request.platform(), binding.getScopeType(), binding.getScopeKey(), instance);
         }

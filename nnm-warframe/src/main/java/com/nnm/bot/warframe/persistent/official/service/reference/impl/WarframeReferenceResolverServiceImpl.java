@@ -6,23 +6,26 @@ import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceResolu
 import com.nnm.bot.warframe.persistent.official.constant.WarframeReferenceType;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.reference.WarframeReferenceResolutionDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeWorldStateCodebookEntryDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.query.reference.WarframeReferenceQuery;
 import com.nnm.bot.warframe.persistent.official.service.reference.WarframeItemNameService;
 import com.nnm.bot.warframe.persistent.official.service.reference.WarframeReferenceResolverService;
 import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateCodebookService;
 import jakarta.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /** 动态引用使用同身份优先的官方/自维护树；未知代码原样交给上层标记。 */
 @Service
 public class WarframeReferenceResolverServiceImpl implements WarframeReferenceResolverService {
+    /** 按资料类型批量查找官方代码及语言键。 */
     @Resource
     private WarframeWorldStateCodebookService worldStateCodebookService;
+    /** 查询物品身份，兼顾缺少专用表记录的修饰项。 */
     @Resource
     private WarframeItemNameService itemNameService;
 
@@ -36,48 +39,54 @@ public class WarframeReferenceResolverServiceImpl implements WarframeReferenceRe
     public WarframeReferenceResolutionDTO resolve(String reference) {
         if (CharSequenceUtil.isBlank(reference))
             return unresolved(reference);
-        return resolveAll(Map.of(reference, WarframeReferenceType.ITEM)).get(reference);
+        var query = new WarframeReferenceQuery(reference, WarframeReferenceType.ITEM);
+        return resolveAll(List.of(query)).get(query);
     }
 
     /**
      * 批量解析引用，复用同次读取获得的资料。
      *
      * @param references 引用。
-     * @return 以本方法约定的业务键组织的数据映射。
+     * @return 按资料类型及原始引用索引的解析结果。
      */
     @Override
-    public Map<String, WarframeReferenceResolutionDTO> resolveAll(Map<String, WarframeReferenceType> references) {
+    public Map<WarframeReferenceQuery, WarframeReferenceResolutionDTO>
+        resolveAll(Collection<WarframeReferenceQuery> references) {
         if (CollUtil.isEmpty(references))
             return Map.of();
-        Map<String, WarframeReferenceResolutionDTO> result = new LinkedHashMap<>();
-        List<String> itemKeys = references.entrySet().stream()
-            .filter(entry -> entry.getValue() == null || entry.getValue() == WarframeReferenceType.ITEM
-                || entry.getValue() == WarframeReferenceType.MODIFIER)
-            .map(Map.Entry::getKey).filter(CharSequenceUtil::isNotBlank).toList();
-        result.putAll(itemNameService.resolveAll(itemKeys));
+        List<String> itemKeys = references.stream()
+            .filter(
+                query -> query.type() == WarframeReferenceType.ITEM || query.type() == WarframeReferenceType.MODIFIER)
+            .map(WarframeReferenceQuery::reference).filter(CharSequenceUtil::isNotBlank).distinct().toList();
+        Map<String, WarframeReferenceResolutionDTO> items = itemNameService.resolveAll(itemKeys);
         Map<WarframeReferenceType, List<String>> typedReferences = new EnumMap<>(WarframeReferenceType.class);
-        references.forEach((reference, type) -> {
-            if (CharSequenceUtil.isNotBlank(reference) && type != null && type != WarframeReferenceType.ITEM)
-                typedReferences.computeIfAbsent(type, ignored -> new ArrayList<>()).add(reference);
+        references.forEach(query -> {
+            if (CharSequenceUtil.isNotBlank(query.reference()) && query.type() != WarframeReferenceType.ITEM)
+                typedReferences.computeIfAbsent(query.type(), ignored -> new ArrayList<>()).add(query.reference());
         });
         Map<WarframeReferenceType, Map<String, WarframeWorldStateCodebookEntryDTO>> codebooks =
             new EnumMap<>(WarframeReferenceType.class);
         typedReferences.forEach((type, keys) -> codebooks.put(type, worldStateCodebookService.findAll(type, keys)));
-        references.forEach((reference, type) -> {
-            if (reference == null)
-                return;
-            if (type == null || type == WarframeReferenceType.ITEM) {
-                result.putIfAbsent(reference, unresolved(reference));
-                return;
+        Map<WarframeReferenceQuery, WarframeReferenceResolutionDTO> result = new LinkedHashMap<>();
+        for (WarframeReferenceQuery query : references) {
+            String reference = query.reference();
+            if (CharSequenceUtil.isBlank(reference)) {
+                result.put(query, unresolved(reference));
+                continue;
             }
-            var entry = Optional.ofNullable(codebooks.getOrDefault(type, Map.of()).get(reference));
-            result.put(reference,
-                entry.filter(value -> value.resolved())
-                    .map(value -> new WarframeReferenceResolutionDTO(reference, value.displayName(), value.reference(),
-                        value.source(), WarframeReferenceResolutionStatus.RESOLVED, List.of(value.reference())))
-                    .orElseGet(() -> type == WarframeReferenceType.MODIFIER
-                        ? result.getOrDefault(reference, unresolved(reference)) : unresolved(reference)));
-        });
+            var entry = codebooks.getOrDefault(query.type(), Map.of()).get(reference);
+            if (entry != null && entry.resolved()) {
+                result.put(query, new WarframeReferenceResolutionDTO(reference, entry.displayName(), entry.reference(),
+                    entry.source(), WarframeReferenceResolutionStatus.RESOLVED, List.of(entry.reference())));
+            } else if (entry != null && entry.status() == WarframeReferenceResolutionStatus.AMBIGUOUS) {
+                result.put(query, new WarframeReferenceResolutionDTO(reference, reference, reference, entry.source(),
+                    entry.status(), entry.candidates()));
+            } else if (query.type() == WarframeReferenceType.ITEM || query.type() == WarframeReferenceType.MODIFIER) {
+                result.put(query, items.getOrDefault(reference, unresolved(reference)));
+            } else {
+                result.put(query, unresolved(reference));
+            }
+        }
         return Map.copyOf(result);
     }
 

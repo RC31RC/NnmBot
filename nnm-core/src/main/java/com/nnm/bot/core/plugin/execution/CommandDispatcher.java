@@ -10,6 +10,8 @@ import com.nnm.bot.core.channel.runtime.ClusterBotRuntime;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.core.plugin.response.CommandResponseDispatcher;
 import com.nnm.bot.core.plugin.response.ReplyDeliveryException;
+import com.nnm.bot.core.plugin.api.CommandResult;
+import com.nnm.bot.core.plugin.api.ReplyBlock;
 import com.nnm.bot.core.plugin.constant.CommandExecutionConstants.FailurePropagation;
 import com.nnm.bot.core.plugin.execution.advice.BotExceptionResolver;
 import com.nnm.bot.core.plugin.execution.advice.BotFailureDecision;
@@ -21,6 +23,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.Assert;
 
 import java.util.Objects;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 机器人消息的命令入口。
@@ -95,6 +99,19 @@ public class CommandDispatcher {
                     return;
                 }
                 match = coordinator.observe(match);
+            }
+            if (match.command().plugin().shouldShowFunctionDescription(match.invocation())) {
+                var descriptionTemplate = match.command().configuration().functionDescriptionTemplate();
+                if (descriptionTemplate != null) {
+                    if (!executionPipeline.canShowFunctionDescription(match))
+                        return;
+                    RuntimeCommand descriptionCommand =
+                        new RuntimeCommand(match.command().plugin(), match.command().descriptor(),
+                            match.command().configuration().withTemplate(descriptionTemplate));
+                    CommandResult description = CommandResult.of(List.of(new ReplyBlock.HtmlData<>(Map.of())));
+                    responseDispatcher.dispatch(context, descriptionCommand, description, resources);
+                    return;
+                }
             }
             if (!executionPipeline.admit(match))
                 return;

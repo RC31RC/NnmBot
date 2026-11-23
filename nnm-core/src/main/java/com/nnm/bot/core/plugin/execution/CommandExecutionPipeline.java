@@ -65,6 +65,11 @@ public class CommandExecutionPipeline {
             match.command().configuration().cooldownSeconds());
     }
 
+    /** 检查说明图片是否允许发送，但不认领命令、不消耗冷却或积分。 */
+    public boolean canShowFunctionDescription(CommandMatch match) {
+        return allowed(match);
+    }
+
     /**
      * 经 Spring 代理执行业务写事务，扣费、Plugin 写入与奖励共同提交或回滚。
      *

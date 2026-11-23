@@ -21,9 +21,18 @@ public final class ResponseSizeLimitInterceptor implements ClientHttpRequestInte
     // 仅为进程内请求属性，不作为 Header 发送给上游。
     static final String STREAMING_DOWNLOAD = ResponseSizeLimitInterceptor.class.getName() + ".download";
     private final HttpClientProperties properties;
+    private final long maxResponseBodyBytes;
 
     public ResponseSizeLimitInterceptor(HttpClientProperties properties) {
+        this(properties, Long.MAX_VALUE);
+    }
+
+    public ResponseSizeLimitInterceptor(HttpClientProperties properties, long maxResponseBodyBytes) {
         this.properties = properties;
+        if (maxResponseBodyBytes < 1) {
+            throw new IllegalArgumentException("maxResponseBodyBytes must be positive");
+        }
+        this.maxResponseBodyBytes = maxResponseBodyBytes;
     }
 
     @Override
@@ -33,7 +42,7 @@ public final class ResponseSizeLimitInterceptor implements ClientHttpRequestInte
         try {
             long limit = Boolean.TRUE.equals(request.getAttributes().get(STREAMING_DOWNLOAD))
                 && response.getStatusCode().is2xxSuccessful() ? properties.getMaxDownloadBytes()
-                    : properties.getMaxResponseBodyBytes();
+                    : Math.min(maxResponseBodyBytes, properties.getMaxResponseBodyBytes());
             // HEAD 的 Content-Length 描述 GET 实体，而非本次响应体，不能据此拒绝。
             String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
             if (!"HEAD".equals(request.getMethod().name())

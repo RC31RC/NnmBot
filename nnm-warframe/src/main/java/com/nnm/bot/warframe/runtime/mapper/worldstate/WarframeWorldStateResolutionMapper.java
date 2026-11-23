@@ -1,9 +1,5 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
-import cn.hutool.core.text.CharSequenceUtil;
-
-import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateResolutionVO;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,21 +7,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import cn.hutool.core.text.CharSequenceUtil;
+import com.nnm.bot.warframe.runtime.constant.WarframeBountySupplementStatus;
+import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateResolutionStatus;
+import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
+import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateResolutionVO;
 
 /** 在最终投影上确定仍未完成的字段；同一规则供命令和管理端使用。 */
 public final class WarframeWorldStateResolutionMapper {
     private static final Pattern PATH_PART = Pattern.compile("([^.\\[\\]]+)|\\[(\\d+)]");
     private static final Pattern INTERNAL_PATH = Pattern.compile("/(?:Lotus|EE)/[^,，\\s]+");
     private static final Pattern INTERNAL_CODE =
-        Pattern.compile("(?:MT_|SORTIE_|DT_|VoidT|OSTRONS_|SOLARIS_|ENTRATI_)[A-Za-z0-9_]+");
+        Pattern.compile("(?:MT_|SORTIE_|DT_|CT_|VoidT|OSTRONS_|SOLARIS_|ENTRATI_)[A-Za-z0-9_]+");
     private static final Set<String> REFERENCE_FIELDS = Set.of("item", "reward", "node", "mission", "missionType",
         "modifier", "boss", "faction", "syndicate", "tier", "type", "title", "challenge", "location", "locationTag",
         "attackerReward", "defenderReward", "upgradeType", "operationType", "description", "challengeDescription",
         "rewardNotice", "rewardItems", "risks", "personalModifiers", "nodes", "attackerMissions", "defenderMissions",
         "attackerRewards", "defenderRewards", "attackerFaction", "defenderFaction", "agentType", "jobType",
         "lastDiscoveredLocation", "mode", "deviation", "ally");
-    private static final Set<String> COMPLETE_STATUSES = Set.of("direct", "RESOLVED", "OFFICIAL_ONLY",
-        "official_jobs_provided", "expiry_matches_official_php", "disabled");
 
     private WarframeWorldStateResolutionMapper() {}
 
@@ -38,15 +37,18 @@ public final class WarframeWorldStateResolutionMapper {
      */
     public static List<WarframeWorldStateResolutionVO> pending(Map<String, Object> data,
         List<WarframeWorldStateUnresolvedReferenceDTO> unresolved) {
-        Map<String, WarframeWorldStateResolutionVO> pending = new LinkedHashMap<>();
+        Map<PendingReferenceKey, PendingReference> pending = new LinkedHashMap<>();
         if (unresolved != null) {
             for (WarframeWorldStateUnresolvedReferenceDTO reference : unresolved) {
                 Object current = atPath(data, reference.fieldPath());
                 String raw = reference.reference();
+                if (isReadableTitle(reference.fieldPath(), raw))
+                    continue;
                 // 后续记录增强已把该字段解析出来时，旧诊断不再显示。
                 if (!(current instanceof String text))
                     continue;
-                boolean needsChoice = "多候选，待确认".equals(statusLabel(reference.status()));
+                WarframeWorldStateResolutionStatus status = reference.status();
+                boolean needsChoice = status.requiresChoice();
                 if (!needsChoice
                     && (!clean(text).contains(clean(raw)) || resolvedSiblingAtPath(data, reference.fieldPath(), text)))
                     continue;
@@ -55,12 +57,11 @@ public final class WarframeWorldStateResolutionMapper {
                     resolved = resolvedSiblingNameAtPath(data, reference.fieldPath(), text);
                 if (needsChoice && resolved == null && !clean(text).contains(clean(raw)))
                     resolved = clean(text);
-                add(pending, reference.fieldPath(), raw, statusLabel(reference.status()), resolved,
-                    reference.candidates());
+                add(pending, reference.fieldPath(), raw, status.code(), resolved, reference.candidates());
             }
         }
         visit(data.get("items"), "items", pending);
-        return List.copyOf(pending.values());
+        return pending.values().stream().map(PendingReference::toVO).toList();
     }
 
     /**
@@ -70,7 +71,7 @@ public final class WarframeWorldStateResolutionMapper {
      * @param path 当前字段路径。
      * @param pending 已收集的待确认字段。
      */
-    private static void visit(Object value, String path, Map<String, WarframeWorldStateResolutionVO> pending) {
+    private static void visit(Object value, String path, Map<PendingReferenceKey, PendingReference> pending) {
         if (value instanceof List<?> list) {
             for (int index = 0; index < list.size(); index++)
                 visit(list.get(index), path + "[" + index + "]", pending);
@@ -82,16 +83,17 @@ public final class WarframeWorldStateResolutionMapper {
         }
         if (!(value instanceof Map<?, ?> row))
             return;
-        status(row, path, "challengeResolutionStatus", "challengeKey", "challenge", "challenge", pending);
-        status(row, path, "typeResolutionStatus", "typeKey", "type", "type", pending);
+        status(row, path, "challengeResolutionStatus", "challengeKey", "challenge", "challenge", "challengeMatchedKey",
+            pending);
+        status(row, path, "typeResolutionStatus", "typeKey", "type", "type", "typeMatchedKey", pending);
         String resolutionStatus = row.get("resolutionStatus") instanceof String text ? text : "";
-        if (resolutionStatus.equals("ally_unresolved"))
-            status(row, path, "resolutionStatus", "ally", "ally", "allyName", pending);
+        if (WarframeWorldStateResolutionStatus
+            .fromCode(resolutionStatus) == WarframeWorldStateResolutionStatus.ALLY_UNRESOLVED)
+            status(row, path, "resolutionStatus", "ally", "ally", "allyName", null, pending);
         else if (row.containsKey("challenge"))
-            status(row, path, "resolutionStatus", "challenge", "challenge", "challengeName", pending);
+            status(row, path, "resolutionStatus", "challenge", "challenge", "challengeName", null, pending);
         else
-            status(row, path, "resolutionStatus", "node", "node", "nodeName", pending);
-        status(row, path, "supplementStatus", "supplementStatus", "supplementStatus", null, pending);
+            status(row, path, "resolutionStatus", "node", "node", "nodeName", null, pending);
         row.forEach((key, child) -> {
             String field = String.valueOf(key);
             String childPath = path + "." + field;
@@ -102,7 +104,6 @@ public final class WarframeWorldStateResolutionMapper {
         });
     }
 
-    /** 保留供追溯的原始键不代表尚未解析；明确的不完整状态优先于已附加的名称。 */
     /**
      * 判断路径对应原始键是否已有确定的同级解析名称。
      *
@@ -128,7 +129,9 @@ public final class WarframeWorldStateResolutionMapper {
      * @return 当前字段已完成解析时为 true。
      */
     private static boolean resolvedSibling(Map<?, ?> row, String field, String raw) {
-        if (resolvedSiblingName(row, field, raw) == null)
+        if (resolvedSiblingName(row, field, raw) == null && !resolvedByCodeKey(row, field, raw))
+            return false;
+        if (incomplete(row.get(field + "ResolutionStatus")))
             return false;
         if ("challenge".equals(field) && incomplete(row.get("challengeResolutionStatus")))
             return false;
@@ -137,8 +140,9 @@ public final class WarframeWorldStateResolutionMapper {
         Object status = row.get("resolutionStatus");
         if (!incomplete(status))
             return true;
-        String affected =
-            "ally_unresolved".equals(status) ? "ally" : row.containsKey("challenge") ? "challenge" : "node";
+        String affected = status instanceof String code
+            && WarframeWorldStateResolutionStatus.fromCode(code) == WarframeWorldStateResolutionStatus.ALLY_UNRESOLVED
+                ? "ally" : row.containsKey("challenge") ? "challenge" : "node";
         return !field.equals(affected);
     }
 
@@ -175,6 +179,12 @@ public final class WarframeWorldStateResolutionMapper {
         return clean(resolved);
     }
 
+    private static boolean resolvedByCodeKey(Map<?, ?> row, String field, String raw) {
+        return row.get(field) instanceof String display && clean(display).equals(clean(raw))
+            && row.get(field + "Key") instanceof String key && INTERNAL_CODE.matcher(key).matches()
+            && !INTERNAL_PATH.matcher(display).find() && !INTERNAL_CODE.matcher(display).matches();
+    }
+
     /**
      * 判断状态是否仍需确认。
      *
@@ -182,7 +192,7 @@ public final class WarframeWorldStateResolutionMapper {
      * @return 非完整状态时为 true。
      */
     private static boolean incomplete(Object value) {
-        return value instanceof String code && !CharSequenceUtil.isBlank(code) && !COMPLETE_STATUSES.contains(code);
+        return value instanceof String code && !CharSequenceUtil.isBlank(code) && !complete(code);
     }
 
     /**
@@ -192,7 +202,7 @@ public final class WarframeWorldStateResolutionMapper {
      * @param text 字段原值。
      * @param pending 待确认字段集合。
      */
-    private static void reviewRaw(String path, String text, Map<String, WarframeWorldStateResolutionVO> pending) {
+    private static void reviewRaw(String path, String text, Map<PendingReferenceKey, PendingReference> pending) {
         String field = path.substring(path.lastIndexOf('.') + 1).replaceFirst("\\[\\d+]$", "");
         if (!REFERENCE_FIELDS.contains(field))
             return;
@@ -200,10 +210,18 @@ public final class WarframeWorldStateResolutionMapper {
         boolean found = false;
         while (paths.find()) {
             found = true;
-            add(pending, path, paths.group(), "未命中", resolvedPortion(text, paths.group()), List.of());
+            add(pending, path, paths.group(), WarframeWorldStateResolutionStatus.UNRESOLVED.code(),
+                resolvedPortion(text, paths.group()), List.of());
         }
         if (!found && INTERNAL_CODE.matcher(text).matches())
-            add(pending, path, text, "未命中", null, List.of());
+            add(pending, path, text, WarframeWorldStateResolutionStatus.UNRESOLVED.code(), null, List.of());
+    }
+
+    /** 标题通常已经是可读文本，不要求它必须命中物品或语言静态表。 */
+    private static boolean isReadableTitle(String path, String value) {
+        if (path == null || !path.matches("(?:.*\\.)?title"))
+            return false;
+        return !INTERNAL_PATH.matcher(value).find() && !INTERNAL_CODE.matcher(value).matches();
     }
 
     /**
@@ -215,12 +233,13 @@ public final class WarframeWorldStateResolutionMapper {
      * @param rawKey 原始键字段名。
      * @param fallbackKey 原始键不存在时的字段名。
      * @param resolvedKey 已解析名称字段名。
+     * @param matchedKey 候选匹配字段名。
      * @param pending 待确认字段集合。
      */
     private static void status(Map<?, ?> row, String path, String statusKey, String rawKey, String fallbackKey,
-        String resolvedKey, Map<String, WarframeWorldStateResolutionVO> pending) {
+        String resolvedKey, String matchedKey, Map<PendingReferenceKey, PendingReference> pending) {
         Object status = row.get(statusKey);
-        if (!(status instanceof String code) || CharSequenceUtil.isBlank(code) || COMPLETE_STATUSES.contains(code))
+        if (!(status instanceof String code) || CharSequenceUtil.isBlank(code) || complete(code))
             return;
         String field = row.get(rawKey) instanceof String raw && !CharSequenceUtil.isBlank(raw) ? rawKey : fallbackKey;
         Object rawValue = row.get(field);
@@ -228,31 +247,18 @@ public final class WarframeWorldStateResolutionMapper {
             return;
         Object resolvedValue = resolvedKey == null ? null : row.get(resolvedKey);
         String resolved = resolvedValue instanceof String text && !text.equals(raw) ? clean(text) : null;
-        String matchedKey = statusKey.equals("challengeResolutionStatus") ? "challengeMatchedKey"
-            : statusKey.equals("typeResolutionStatus") ? "typeMatchedKey" : null;
         Object matched = matchedKey == null ? null : row.get(matchedKey);
-        List<String> candidates =
-            matched instanceof String text && !CharSequenceUtil.isBlank(text) ? List.of(text) : List.of();
-        add(pending, path + "." + field, raw, statusLabel(code), resolved, candidates);
+        Object alternatives = row.get(fallbackKey + "Candidates");
+        List<String> candidates = alternatives instanceof List<?> values
+            ? values.stream().filter(String.class::isInstance).map(String.class::cast).toList()
+            : matched instanceof String text && CharSequenceUtil.isNotBlank(text) ? List.of(text) : List.of();
+        add(pending, path + "." + fallbackKey, raw, code, resolved, candidates);
     }
 
-    /**
-     * 将待确认的协议状态转换为可读提示。
-     *
-     * @param code 原始状态代码。
-     * @return 对应的状态说明。
-     */
-    private static String statusLabel(String code) {
-        return switch (code) {
-            case "fallback" -> "相似匹配，待确认";
-            case "ambiguous", "AMBIGUOUS", "有歧义" -> "多候选，待确认";
-            case "unresolved", "UNRESOLVED", "unresolved_static_reference", "未解析" -> "未命中";
-            case "ally_unresolved" -> "队友身份未确认";
-            case "expiry_mismatch", "expiry_mismatch_not_merged" -> "补充数据轮次不匹配";
-            case "invalid_response", "unavailable" -> "补充源暂不可用";
-            case "no_supplemental_jobs" -> "补充源未提供本轮任务";
-            default -> code;
-        };
+    /** @param code 状态代码；@return 静态引用或补充来源已经完成处理。 */
+    private static boolean complete(String code) {
+        return WarframeWorldStateResolutionStatus.fromCode(code).isComplete()
+            || WarframeBountySupplementStatus.fromCode(code).isComplete();
     }
 
     /**
@@ -265,19 +271,20 @@ public final class WarframeWorldStateResolutionMapper {
      * @param resolved 当前解析结果。
      * @param candidates 候选名称。
      */
-    private static void add(Map<String, WarframeWorldStateResolutionVO> pending, String path, String raw, String status,
+    private static void add(Map<PendingReferenceKey, PendingReference> pending, String path, String raw, String status,
         String resolved, List<String> candidates) {
         if (raw == null || CharSequenceUtil.isBlank(raw))
             return;
-        String identity = path + "\u0000" + raw;
-        WarframeWorldStateResolutionVO note =
-            new WarframeWorldStateResolutionVO(path, raw, status, resolved, candidates);
+        WarframeWorldStateResolutionStatus statusType = WarframeWorldStateResolutionStatus.fromCode(status);
+        PendingReference note = new PendingReference(path, raw, statusType, resolved, candidates);
         // 已有候选/部分匹配信息优先于简单的原始内部键提示。
-        pending.merge(identity, note,
-            (existing, incoming) -> new WarframeWorldStateResolutionVO(path, raw,
-                "未命中".equals(existing.status()) ? incoming.status() : existing.status(),
+        pending.merge(new PendingReferenceKey(path, raw), note, (existing, incoming) -> {
+            boolean replaceStatus = existing.status().isUnresolved();
+            return new PendingReference(existing.path(), existing.reference(),
+                replaceStatus ? incoming.status() : existing.status(),
                 existing.resolvedValue() != null ? existing.resolvedValue() : incoming.resolvedValue(),
-                existing.candidates().isEmpty() ? incoming.candidates() : existing.candidates()));
+                existing.candidates().isEmpty() ? incoming.candidates() : existing.candidates());
+        });
     }
 
     /**
@@ -287,7 +294,6 @@ public final class WarframeWorldStateResolutionMapper {
      * @param raw 未解析的原始键。
      * @return 已解析部分，只有原始键时为 null。
      */
-    /** 组合摘要同时包含已解析名称和内部键时，仅提取确认已解析的完整片段。 */
     private static String resolvedPortion(String text, String raw) {
         if (raw == null || CharSequenceUtil.isBlank(raw) || !text.contains(raw))
             return null;
@@ -328,5 +334,17 @@ public final class WarframeWorldStateResolutionMapper {
                 return null;
         }
         return current;
+    }
+
+    /** 聚合同一字段的原值、解析状态与候选，供管理端和命令展示。 */
+    private record PendingReference(String path, String reference, WarframeWorldStateResolutionStatus status,
+        String resolvedValue, List<String> candidates) {
+        private WarframeWorldStateResolutionVO toVO() {
+            return new WarframeWorldStateResolutionVO(path, reference, status, resolvedValue, candidates);
+        }
+    }
+
+    /** 字段路径和原值组成的结构化去重键，不依赖分隔符编码。 */
+    private record PendingReferenceKey(String path, String reference) {
     }
 }

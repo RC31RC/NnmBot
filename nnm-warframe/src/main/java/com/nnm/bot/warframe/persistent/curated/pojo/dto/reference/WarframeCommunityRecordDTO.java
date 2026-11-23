@@ -2,6 +2,7 @@ package com.nnm.bot.warframe.persistent.curated.pojo.dto.reference;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeArbitrationEfficiencyGrade;
 
 /** 社区人工资料的非受管记录；四种业务载荷各有固定字段。 */
 public record WarframeCommunityRecordDTO<T>(
@@ -32,13 +33,21 @@ public record WarframeCommunityRecordDTO<T>(
         @JsonProperty("chineseText") String chineseText) implements WarframeCommunityInputDTO {
     }
 
-    /** 仲裁节点与精华数量。 */
+    /** 仲裁节点、精华估值与人工确认的效率评级。 */
     @JsonIgnoreProperties("key")
     public record EssenceDTO(
-        /** 仲裁任务节点名称。 */
+        /** 官方星图节点稳定键。 */
+        @JsonProperty("nodeKey") String nodeKey,
+        /** 官方星图节点显示名。 */
         @JsonProperty("nodeName") String nodeName,
-        /** 该节点维护的仲裁精华数量。 */
-        @JsonProperty("essenceAmount") Integer essenceAmount) implements WarframeCommunityInputDTO {
+        /** 官方星图节点所属星球或星系名称。 */
+        @JsonProperty("systemName") String systemName,
+        /** 该节点社区估计的每小时仲裁精华收益；没有可信估值时为空。 */
+        @JsonProperty("essenceAmount") Integer essenceAmount,
+        /** 由社区维护者确认的效率评级。 */
+        @JsonProperty("efficiencyGrade") WarframeArbitrationEfficiencyGrade efficiencyGrade)
+        implements
+            WarframeCommunityInputDTO {
     }
 
     /** 紫卡属性组合代码与自定义别名。 */
@@ -48,5 +57,18 @@ public record WarframeCommunityRecordDTO<T>(
         @JsonProperty("attributeCode") String attributeCode,
         /** 紫卡属性或组合的自定义别名。 */
         @JsonProperty("aliasName") String aliasName) implements WarframeCommunityInputDTO {
+    }
+
+    /** 社区维护的解析作用域、原始字段和目标。 */
+    @JsonIgnoreProperties("key")
+    public record ReferenceMappingDTO(String mappingScope, String sourceKey, String targetKey)
+        implements WarframeCommunityInputDTO {
+    }
+
+    /** 沉沦之地楼层与已采纳奖池之间的维护记录。 */
+    @JsonIgnoreProperties("key")
+    public record DescendiaRewardDTO(Integer floorNumber, String difficulty, String label, String officialPoolKey,
+        String expectedPoolName, Integer itemCountOverride, String note, Boolean guaranteed,
+        String sourceUrl) implements WarframeCommunityInputDTO {
     }
 }

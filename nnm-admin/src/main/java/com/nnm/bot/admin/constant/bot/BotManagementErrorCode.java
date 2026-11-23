@@ -49,6 +49,8 @@ public enum BotManagementErrorCode implements ErrorCode {
     NOTIFICATION_CAPACITY_REACHED(400421, "待发送通知任务数量已达上限", HttpStatus.BAD_REQUEST),
     NOTIFICATION_FORBIDDEN(400422, "无权操作该通知任务", HttpStatus.BAD_REQUEST),
     SUBMISSION_ID_REQUIRED(400423, "缺少通知提交标识", HttpStatus.BAD_REQUEST),
+    FUNCTION_DESCRIPTION_COMMAND_REQUIRED(400426, "功能说明模板必须关联一个命令", HttpStatus.BAD_REQUEST),
+    DUPLICATE_FUNCTION_DESCRIPTION_TEMPLATE(409411, "同一命令只能启用一个功能说明模板", HttpStatus.CONFLICT),
     INSTANCE_NOT_FOUND(404402, "机器人实例不存在", HttpStatus.NOT_FOUND),
     ROBOT_ROLE_NOT_FOUND(404403, "机器人角色不存在", HttpStatus.NOT_FOUND),
     GROUP_INSTANCE_BINDING_NOT_FOUND(404404, "群组机器人绑定不存在", HttpStatus.NOT_FOUND),

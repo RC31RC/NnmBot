@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 SENTINELS 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 同伴装备定义。按完整装备路径查询属性与图标，保留守护和其他同伴的独立身份。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -10,7 +10,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordH
 import java.util.List;
 import lombok.Getter;
 
-/** TILESET 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 地图场景和其中可用任务的定义。以场景键查询基础阵营、关卡资料与任务定义。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

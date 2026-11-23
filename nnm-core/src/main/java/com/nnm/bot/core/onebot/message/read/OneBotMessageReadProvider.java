@@ -2,6 +2,7 @@ package com.nnm.bot.core.onebot.message.read;
 
 import com.nnm.bot.core.onebot.message.context.OneBotMessageAttachmentMapper;
 import com.nnm.bot.core.onebot.message.context.OneBotMessageSource;
+import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants.ResponseStatus;
 import com.mikuac.shiro.common.utils.JsonObjectWrapper;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
@@ -48,7 +49,8 @@ public class OneBotMessageReadProvider implements BotMessageReadProvider {
             throw unavailable();
         Bot bot = context.nativeSource(OneBotMessageSource.class).bot();
         ActionData<MsgResp> response = bot.getMsg((int)parsed);
-        if (response == null || !"ok".equalsIgnoreCase(response.getStatus()) || response.getData() == null) {
+        if (response == null || !ResponseStatus.fromCode(response.getStatus()).isSuccess()
+            || response.getData() == null) {
             throw unavailable();
         }
         // 标准 get_msg 没有保证返回 group_id；只接受当前协议事件提供的显式引用。
@@ -62,7 +64,7 @@ public class OneBotMessageReadProvider implements BotMessageReadProvider {
         Bot bot = context.nativeSource(OneBotMessageSource.class).bot();
         JsonObjectWrapper response =
             actions.action(bot.getSession(), () -> GET_IMAGE, Map.of("file", attachment.fileId()));
-        if (response == null || !"ok".equalsIgnoreCase(response.getString("status")))
+        if (response == null || !ResponseStatus.fromCode(response.getString("status")).isSuccess())
             throw unavailable();
         // SDK 使用 Jackson 3，保留协议库类型在适配器内，不泄漏到核心模型。
         var data = response.raw().path("data");

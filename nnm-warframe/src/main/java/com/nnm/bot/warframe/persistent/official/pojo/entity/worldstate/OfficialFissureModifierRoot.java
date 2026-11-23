@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 FISSURE_MODIFIER 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 裂缝等级代码簿。按等级代码解析遗物阶级和裂缝名称；节点、任务和时间来自动态活动。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

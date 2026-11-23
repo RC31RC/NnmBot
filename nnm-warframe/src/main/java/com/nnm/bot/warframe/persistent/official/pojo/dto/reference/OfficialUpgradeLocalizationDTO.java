@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** UPGRADE_LOCALIZATION 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 升级对象的双语名称、图标及多段描述。按升级完整路径为 MOD 或其他升级资料补正文。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 ARCANE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 赋能定义。以赋能身份查询等级效果和稀有度，为掉落和物品引用补名称。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

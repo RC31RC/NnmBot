@@ -10,7 +10,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordH
 import java.math.BigDecimal;
 import lombok.Getter;
 
-/** MISSION_TYPE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 官方任务类型代码簿。用稳定任务代码或唯一名称解释动态任务类型；补充源简称先核对受管映射。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

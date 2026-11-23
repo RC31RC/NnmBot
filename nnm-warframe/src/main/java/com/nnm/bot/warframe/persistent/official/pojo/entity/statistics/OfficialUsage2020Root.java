@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 USAGE_2020 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 2020 年装备使用统计。按年份、平台、类别、物品及段位读取使用占比，适用于同统计口径下的比较。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

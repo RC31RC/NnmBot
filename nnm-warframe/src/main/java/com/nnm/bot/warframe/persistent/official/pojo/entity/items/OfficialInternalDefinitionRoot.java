@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 INTERNAL_DEFINITION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 仅用于关联的内部定义。完整路径可定位父级及物品引用，该领域不加入普通物品名索引。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

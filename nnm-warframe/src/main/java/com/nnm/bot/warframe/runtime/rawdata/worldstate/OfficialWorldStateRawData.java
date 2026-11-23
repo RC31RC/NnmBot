@@ -16,7 +16,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Warframe 官方 WorldState 原始数据的类型化输入模型。 未识别字段由 Jackson 忽略；排障原文和顶层字段名由运行时快照单独保留。
+ * 官方世界状态的类型化快照，提供当前轮次、有效时间、任务代码和上游已给出的奖励。 业务投影按字段身份查询官方模型和限域社区资料补齐名称、静态定义及图标。
  */
 @Getter
 @Setter
@@ -28,11 +28,6 @@ public class OfficialWorldStateRawData {
     @JsonAlias({"timestamp", "time", "serverTime"})
     @JsonDeserialize(using = OfficialLongDeserializer.class)
     private Long timestamp;
-
-    /** 当前客户端构建标识。 */
-    @JsonProperty("BuildLabel")
-    @JsonAlias({"buildLabel"})
-    private String buildLabel;
 
     /** 活动警报列表。 */
     @JsonProperty("Alerts")
@@ -173,15 +168,6 @@ public class OfficialWorldStateRawData {
     @JsonProperty("constructionProgress")
     private ConstructionProgressRawData constructionProgress;
 
-    /** Simaris 图书馆状态。 */
-    @JsonProperty("LibraryInfo")
-    @JsonAlias({"libraryInfo"})
-    private LibraryInfoRawData libraryInfo;
-
-    /** Simaris 图书馆状态的精简协议形式。 */
-    @JsonProperty("simaris")
-    private SimarisRawData simaris;
-
     /** Sentient 舰队前哨状态。 */
     @JsonProperty("sentientOutposts")
     @JsonAlias("SentientOutposts")
@@ -211,16 +197,6 @@ public class OfficialWorldStateRawData {
     @JsonProperty("PrimeVaultTraders")
     @JsonAlias({"primeVaultTraders"})
     private List<VoidTraderRawData> primeVaultTraders;
-
-    /** 每周挑战。 */
-    @JsonProperty("WeeklyChallenges")
-    @JsonAlias({"weeklyChallenges"})
-    private List<WeeklyChallengeRawData> weeklyChallenges;
-
-    /** 黑暗地带控制状态。 */
-    @JsonProperty("BadlandNodes")
-    @JsonAlias({"darkSectors"})
-    private List<DarkSectorRawData> darkSectors;
 
     /** 深渊之塔挑战。 */
     @JsonProperty("Descents")
@@ -842,9 +818,13 @@ public class OfficialWorldStateRawData {
         @JsonAlias("minMR")
         private Integer masteryReq;
 
-        /** 是否为虚空任务。 */
+        /** 是否为隔离库赏金。 */
         @JsonProperty("isVault")
         private Boolean isVault;
+
+        /** 无尽赏金的阶段按轮次重复。 */
+        @JsonProperty("endless")
+        private Boolean endless;
 
         /** 自维护赏金的奖励池文本。 */
         @JsonProperty("rewardPool")
@@ -1233,124 +1213,6 @@ public class OfficialWorldStateRawData {
         private String dialogueConvo;
     }
 
-    /** 每周挑战集合。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class WeeklyChallengeRawData extends TimedRawData {
-        /** 挑战列表。 */
-        @JsonProperty("Challenges")
-        @JsonAlias({"challenges"})
-        private List<WeeklyChallengeItemRawData> challenges;
-    }
-
-    /** 单个每周挑战。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class WeeklyChallengeItemRawData {
-        /** 挑战类型。 */
-        @JsonProperty("Type")
-        @JsonAlias({"type"})
-        private String type;
-
-        /** 最低敌人等级。 */
-        @JsonProperty("MinimumEnemyLevel")
-        @JsonAlias({"minimumEnemyLevel"})
-        private Integer minimumEnemyLevel;
-
-        /** 需要完成次数。 */
-        @JsonProperty("RequiredCount")
-        @JsonAlias({"requiredCount", "requiredAmount"})
-        private Integer requiredCount;
-
-        /** 进度更新频率。 */
-        @JsonProperty("ProgressIndicatorFreq")
-        @JsonAlias({"progressIndicatorFreq", "progressAmount"})
-        private Integer progressIndicatorFreq;
-
-        /** 指定伤害类型。 */
-        @JsonProperty("DamageType")
-        @JsonAlias({"damageType"})
-        private String damageType;
-
-        /** 目标敌人类型。 */
-        @JsonProperty("VictimType")
-        @JsonAlias({"victimType", "target"})
-        private String victimType;
-
-        /** 挑战脚本参数。 */
-        @JsonProperty("Script")
-        @JsonAlias({"script"})
-        private WeeklyChallengeScriptRawData script;
-
-    }
-
-    /** 黑暗地带控制方信息。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class DarkSectorRawData {
-        /** 节点标识。 */
-        @JsonProperty("id")
-        @JsonAlias({"_id", "Node", "node"})
-        @JsonDeserialize(using = OfficialIdDeserializer.class)
-        private String id;
-
-        /** 防守方数据。 */
-        @JsonProperty("DefenderInfo")
-        @JsonAlias({"defenderInfo"})
-        private DarkSectorDefenderRawData defenderInfo;
-    }
-
-    /** 黑暗地带防守方数据。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class DarkSectorDefenderRawData {
-        /** 防守方名称。 */
-        @JsonProperty("Name")
-        @JsonAlias({"name"})
-        private String name;
-
-        /** 攻击方名称。 */
-        @JsonProperty("Attacker")
-        @JsonAlias({"attacker"})
-        private String attacker;
-
-        /** 剩余控制强度。 */
-        @JsonProperty("StrengthRemaining")
-        @JsonAlias({"strengthRemaining"})
-        private Double strengthRemaining;
-
-        /** 最大控制强度。 */
-        @JsonProperty("MaxStrength")
-        @JsonAlias({"maxStrength"})
-        private Double maxStrength;
-
-        /** 战斗报酬。 */
-        @JsonProperty("MissionBattlePay")
-        @JsonAlias({"missionBattlePay"})
-        private Integer missionBattlePay;
-
-        /** 战斗任务信息。 */
-        @JsonProperty("MissionInfo")
-        @JsonAlias({"missionInfo"})
-        private MissionInfoRawData missionInfo;
-
-        /** 部署开始时间。 */
-        @JsonProperty("DeploymentActivationTime")
-        @JsonAlias({"deploymentActivationTime"})
-        @JsonDeserialize(using = OfficialInstantDeserializer.class)
-        private Instant deploymentActivationTime;
-
-        /** 部署结束时间。 */
-        @JsonProperty("DeploymentExpiryTime")
-        @JsonAlias({"deploymentExpiryTime"})
-        @JsonDeserialize(using = OfficialInstantDeserializer.class)
-        private Instant deploymentExpiryTime;
-    }
-
     /** 深渊之塔轮换。 */
     @Getter
     @Setter
@@ -1445,16 +1307,6 @@ public class OfficialWorldStateRawData {
         private String english;
     }
 
-    /** 每周挑战脚本中的目标阵营。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class WeeklyChallengeScriptRawData {
-        /** 目标阵营代码。 */
-        @JsonProperty("_faction")
-        private String faction;
-    }
-
     /** 建造进度的命名结构。 */
     @Getter
     @Setter
@@ -1471,31 +1323,6 @@ public class OfficialWorldStateRawData {
         /** 其他建造进度。 */
         @JsonProperty("unknownProgress")
         private Double unknownProgress;
-    }
-
-    /** Simaris 官方数据。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class LibraryInfoRawData {
-        /** 最近完成的目标静态路径。 */
-        @JsonProperty("LastCompletedTargetType")
-        @JsonAlias({"lastCompletedTargetType"})
-        private String lastCompletedTargetType;
-    }
-
-    /** Simaris 简化状态。 */
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class SimarisRawData {
-        /** 当前扫描目标。 */
-        @JsonProperty("target")
-        private String target;
-
-        /** 目标是否有效。 */
-        @JsonProperty("isTargetActive")
-        private Boolean targetActive;
     }
 
     /** Sentient 前哨。 */

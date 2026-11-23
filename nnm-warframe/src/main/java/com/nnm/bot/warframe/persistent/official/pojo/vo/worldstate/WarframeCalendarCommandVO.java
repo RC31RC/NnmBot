@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.persistent.official.pojo.vo.worldstate;
 
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.nnm.bot.core.plugin.annotation.CommandTextInline;
@@ -22,7 +23,8 @@ public record WarframeCalendarCommandVO(@JsonPropertyDescription("查询") Strin
          * @return 单个日历活动的展示内容。
          */
         public static CalendarEntryVO from(WarframeStateTranslationDetailsDTO details) {
-            return new CalendarEntryVO(details.displayName(), details.description());
+            return new CalendarEntryVO(StrUtil.blankToDefault(details.displayName(), details.uniqueName()),
+                details.description());
         }
     }
 }

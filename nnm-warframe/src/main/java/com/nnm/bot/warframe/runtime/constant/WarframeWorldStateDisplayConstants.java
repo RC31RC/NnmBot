@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.constant;
 
-import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -17,10 +17,7 @@ public final class WarframeWorldStateDisplayConstants {
     private WarframeWorldStateDisplayConstants() {}
 
     /** 官方制作配方的完整游戏路径前缀。 */
-    public static final String RECIPE_PREFIX = "/Lotus/Types/Recipes/";
 
-    /** 官方现金匣独立记录缺图时使用已采纳 IMAGE 表中的通用现金图标。 */
-    public static final String GENERIC_CREDIT_ICON = "/Lotus/Interface/Icons/StoreIcons/Currency/GenericCreditIcon.png";
     private static final String CREDIT_CACHE_PREFIX = "/Lotus/Types/PickUps/Credits/";
     private static final String CREDIT_BUNDLE_PREFIX = "/Lotus/Types/StoreItems/CreditBundles/";
     private static final Pattern CREDIT_AMOUNT_NAME = Pattern.compile("[1-9][0-9]*Credits");
@@ -39,31 +36,6 @@ public final class WarframeWorldStateDisplayConstants {
         return prefix != null && CREDIT_AMOUNT_NAME.matcher(key.substring(prefix.length())).matches();
     }
 
-    /** 无原始物品路径的奖励只在名称与已采纳官方记录完全吻合时补图。 */
-    public enum UnkeyedRewardReference {
-        ENDO(WarframeOfficialDataDomain.FUSION_BUNDLES, "/Lotus/Upgrades/Mods/FusionBundles/AlertFusionBundleLarge"),
-        KUVA(WarframeOfficialDataDomain.RESOURCES, "/Lotus/Types/Items/MiscItems/Kuva"),
-        STEEL_ESSENCE(WarframeOfficialDataDomain.RESOURCES, "/Lotus/Types/Items/MiscItems/SteelEssence");
-
-        private final WarframeOfficialDataDomain domain;
-        private final String key;
-
-        UnkeyedRewardReference(WarframeOfficialDataDomain domain, String key) {
-            this.domain = domain;
-            this.key = key;
-        }
-
-        /** @return 官方记录所属的数据集。 */
-        public WarframeOfficialDataDomain domain() {
-            return domain;
-        }
-
-        /** @return 用于校验名称和图标的完整官方记录身份。 */
-        public String key() {
-            return key;
-        }
-    }
-
     /** WFCD 外部日志中标识赤毒任务的类型前缀。 */
     public static final String KUVA_MISSION_PREFIX = "KuvaMission";
 
@@ -71,17 +43,76 @@ public final class WarframeWorldStateDisplayConstants {
     public static final String QTCC_COUNT_PREFIX = "QTCCFloofCount:";
     public static final String QTCC_LIMIT_PREFIX = "QTCCFloofLimit:";
 
-    /** 官方物品本地化表中 Umbra Forma 蓝图缺图时，对应成品的已采纳记录可提供图标。 */
-    public static final String UMBRA_FORMA_BLUEPRINT = "/Lotus/Types/Recipes/Components/UmbraFormaBlueprint";
-    public static final String UMBRA_FORMA_STORE_BLUEPRINT =
-        "/Lotus/StoreItems/Types/Recipes/Components/UmbraFormaBlueprint";
-    public static final String UMBRA_FORMA_PRODUCT = "/Lotus/Types/Items/MiscItems/FormaUmbra";
+    /** 相同业务栏目在命令投影与 DTO 字段中的稳定身份。 */
+    private static final Map<String,
+        String> SECTION_KEY_ALIASES = Map.ofEntries(Map.entry("archonHunts", "archon-hunts"),
+            Map.entry("constructionProgress", "construction-progress"), Map.entry("dailyDeals", "daily-deals"),
+            Map.entry("flashSales", "flash-sales"), Map.entry("marketCategories", "in-game-market"),
+            Map.entry("globalUpgrades", "global-upgrades"), Map.entry("temporaryActivity", "temporary-activities"),
+            Map.entry("steelPathOfferings", "steel-path"), Map.entry("clanInitiatives", "clan-initiative"),
+            Map.entry("sentientOutpost", "sentient-outposts"), Map.entry("voidTraders", "void-trader"),
+            Map.entry("vaultTraders", "vault-trader"), Map.entry("calendarSeasons", "calendar"),
+            Map.entry("syndicateMissions", "syndicate-missions"));
 
-    /** 官方 reference/images.json 内的平原景观图片路径。 */
-    public static final Map<String, String> OPEN_WORLD_IMAGES =
-        Map.of("夜灵平原", "/Lotus/Interface/Icons/StoreIcons/Captura/PlainsOfEidolonLandscape.png", "福尔图娜",
-            "/Lotus/Interface/Icons/StoreIcons/Captura/VallisLandscape.png", "魔胎之境",
-            "/Lotus/Interface/Icons/StoreIcons/Captura/DeimosCambionDriftLandscape.png");
+    /** 两种视图共享的栏目顺序；其余专属业务栏位稳定排在末尾。 */
+    private static final List<String> SECTION_ORDER =
+        List.of("alerts", "sorties", "archon-hunts", "void-trader", "daily-deals", "flash-sales", "in-game-market",
+            "global-upgrades", "temporary-activities", "invasions", "fissures", "steel-fissures", "void-storms",
+            "steel-path", "cycles", "nightwave", "deep-archimedeas", "hex-archimedeas", "other-archimedeas", "descents",
+            "events", "news", "construction-progress", "sentient-outposts", "clan-initiative", "circuit-normal",
+            "circuit-hard", "calendar", "vault-trader", "syndicate-missions", "ostrons", "solaris", "entrati");
+
+    /** 跨模式展示名统一的业务栏目。 */
+    private static final Map<String,
+        String> SECTION_TITLES = Map.ofEntries(Map.entry("alerts", "警报"), Map.entry("sorties", "突击"),
+            Map.entry("archon-hunts", "执刑官猎杀"), Map.entry("void-trader", "奸商"), Map.entry("daily-deals", "每日特惠"),
+            Map.entry("flash-sales", "限时促销"), Map.entry("in-game-market", "商城分类"), Map.entry("global-upgrades", "全局增益"),
+            Map.entry("temporary-activities", "社区活动与寻呼机"), Map.entry("invasions", "入侵"), Map.entry("fissures", "裂隙"),
+            Map.entry("steel-fissures", "钢铁裂隙"), Map.entry("void-storms", "九重天裂隙"), Map.entry("steel-path", "钢铁奖励"),
+            Map.entry("cycles", "平原"), Map.entry("nightwave", "电波"), Map.entry("deep-archimedeas", "深层科研"),
+            Map.entry("hex-archimedeas", "时光科研"), Map.entry("other-archimedeas", "其他科研"), Map.entry("descents", "沉沦之地"),
+            Map.entry("events", "世界事件"), Map.entry("news", "新闻"), Map.entry("construction-progress", "舰队建造进度"),
+            Map.entry("sentient-outposts", "感知者先遣舰"), Map.entry("clan-initiative", "氏族周任务"),
+            Map.entry("circuit-normal", "普通回廊"), Map.entry("circuit-hard", "灵化轮换"), Map.entry("calendar", "实时日历"),
+            Map.entry("vault-trader", "Prime 宝库商人"), Map.entry("syndicate-missions", "集团任务"),
+            Map.entry("ostrons", "希图斯"), Map.entry("solaris", "索拉里斯"), Map.entry("entrati", "英择谛"));
+
+    /** DTO 中仅为兼容或由其他业务栏位完整呈现的重复字段。 */
+    public static final Set<String> DUPLICATE_WORLD_STATE_FIELDS = Set.of("sortie", "voidTrader", "activeMissions");
+
+    /** 应合并到平原周期栏位的 DTO 字段。 */
+    public static final Set<String> CYCLE_WORLD_STATE_FIELDS =
+        Set.of("cetusCycle", "vallisCycle", "cambionCycle", "earthCycle", "duviriCycle", "zarimanCycle");
+
+    /** @param key 当前投影或 DTO 字段中的栏目键；@return 跨模式稳定栏目键。 */
+    public static String sectionKey(String key) {
+        return SECTION_KEY_ALIASES.getOrDefault(key, key);
+    }
+
+    /** @return 两种世界状态视图共用的业务栏目目录。 */
+    public static List<String> sectionKeys() {
+        return SECTION_ORDER;
+    }
+
+    /** @param key 稳定栏目键；@return 当前栏目在导航中的顺序位置。 */
+    public static int sectionOrder(String key) {
+        String canonicalKey = sectionKey(key);
+        if (canonicalKey.startsWith("bounty-cycle-"))
+            return SECTION_ORDER.indexOf("deep-archimedeas") - 1;
+        int order = SECTION_ORDER.indexOf(canonicalKey);
+        return order < 0 ? Integer.MAX_VALUE : order;
+    }
+
+    /**
+     * 解析跨模式共用的栏目名；独有业务栏位保留来源投影给出的标题。
+     *
+     * @param key 稳定栏目键。
+     * @param fallback 来源投影给出的可读标题。
+     * @return 管理端展示使用的栏目标题。
+     */
+    public static String sectionTitle(String key, String fallback) {
+        return SECTION_TITLES.getOrDefault(sectionKey(key), fallback);
+    }
 
     /** 日历事件只展示有可用任务或物品信息的类型。 */
     public enum CalendarEvent {

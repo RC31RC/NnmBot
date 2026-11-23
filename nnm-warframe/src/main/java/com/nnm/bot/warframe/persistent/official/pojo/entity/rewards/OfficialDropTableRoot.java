@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 DROP_TABLE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 按来源场景和地区组织的官方掉落资料。用于掉落来源反查与已核验的深层下降奖池映射，实际结算由游戏给出。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -1,8 +1,9 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.dto.worldstate;
 
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityRowDTO;
+
 /** 数据库人工维护楼层奖池的非受管读取投影。 */
-public interface DescendiaRewardRowDTO {
-    String getRecordKey();
+public interface DescendiaRewardRowDTO extends WarframeCommunityRowDTO {
 
     Integer getFloorNumber();
 
@@ -14,11 +15,7 @@ public interface DescendiaRewardRowDTO {
 
     String getExpectedPoolName();
 
-    String getSourceRewardKey();
-
     Integer getItemCountOverride();
-
-    String getOptionsJson();
 
     String getNote();
 

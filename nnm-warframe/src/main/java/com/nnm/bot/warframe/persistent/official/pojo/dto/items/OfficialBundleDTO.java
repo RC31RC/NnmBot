@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** BUNDLE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 礼包定义。以礼包路径读取组成物品及分类，用于商城和奖励中的礼包展示。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

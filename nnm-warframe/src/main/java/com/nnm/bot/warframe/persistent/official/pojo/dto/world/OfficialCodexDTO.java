@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** CODEX 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 资料库对象、碎片、歌曲等分类定义。按分类和完整身份查询资料页、名称或说明。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

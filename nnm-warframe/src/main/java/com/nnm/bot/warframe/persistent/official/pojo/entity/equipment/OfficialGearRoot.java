@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 GEAR 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 消耗品和装备栏道具定义。以道具完整路径读取名称、说明及图标，供奖励和商人展示使用。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

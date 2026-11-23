@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** RAILJACK_WEAPON 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 九重天武器定义。以装备身份读取伤害、射速、槽位等属性，保留与普通武器的区别。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

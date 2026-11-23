@@ -17,6 +17,7 @@ import com.nnm.bot.core.channel.model.BotScopeDiscoveryResult;
 import com.nnm.bot.core.channel.model.BotMemberQueryResult;
 import com.nnm.bot.core.channel.port.BotGroupMemberQueryProvider;
 import com.nnm.bot.core.onebot.constant.OneBotErrorCode;
+import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants.ResponseStatus;
 import com.nnm.bot.core.channel.port.BotLocalScopeDiscoveryProvider;
 import com.nnm.bot.core.channel.constant.BotPlatform;
 import jakarta.annotation.Resource;
@@ -98,7 +99,7 @@ public class OneBotScopeDiscoveryProvider implements BotLocalScopeDiscoveryProvi
             ActionList<GroupMemberInfoResp> response = bot.getGroupMemberList(groupId);
             if (ObjUtil.isNull(response) || ObjUtil.isNull(response.getData())
                 || (CharSequenceUtil.isNotBlank(response.getStatus())
-                    && !"ok".equalsIgnoreCase(response.getStatus()))) {
+                    && !ResponseStatus.fromCode(response.getStatus()).isSuccess())) {
                 // 空列表是有效的空群；data=null 则表示平台没有给出可用于清理的全量结果。
                 return new MemberDiscovery(List.of(), false);
             }

@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 DOJO_RECIPE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 道场研究、制造、房间及装饰配方。按分组和完整配方键读取成本与产物，保留与普通铸造配方的区别。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

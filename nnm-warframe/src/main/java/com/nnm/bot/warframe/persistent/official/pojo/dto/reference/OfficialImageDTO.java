@@ -8,7 +8,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordD
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordHeaderDTO;
 import lombok.Getter;
 
-/** IMAGE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 图标资产路径与内容哈希的索引。按原始图片路径定位可用图片资源，物品归属由对应定义确定。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

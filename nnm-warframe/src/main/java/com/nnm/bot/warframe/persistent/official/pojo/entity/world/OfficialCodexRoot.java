@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 CODEX 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 资料库对象、碎片、歌曲等分类定义。按分类和完整身份查询资料页、名称或说明。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

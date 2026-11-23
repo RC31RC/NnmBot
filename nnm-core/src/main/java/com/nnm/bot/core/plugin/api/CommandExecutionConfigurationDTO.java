@@ -11,7 +11,8 @@ import java.util.Map;
 
 /** 数据库命令配置在核心层的只读投影。 */
 public record CommandExecutionConfigurationDTO(boolean enabled, boolean showInHelp, CommandTemplateDTO template,
-    List<CommandTrigger> triggers, String permissionOverride, long cooldownSeconds, boolean mentionInvoker) {
+    CommandTemplateDTO functionDescriptionTemplate, List<CommandTrigger> triggers, String permissionOverride,
+    long cooldownSeconds, boolean mentionInvoker) {
 
     public CommandExecutionConfigurationDTO {
         triggers = immutableTriggers(triggers);
@@ -20,11 +21,17 @@ public record CommandExecutionConfigurationDTO(boolean enabled, boolean showInHe
     }
 
     public static CommandExecutionConfigurationDTO defaults() {
-        return new CommandExecutionConfigurationDTO(true, true, null, List.of(), "", 0, false);
+        return new CommandExecutionConfigurationDTO(true, true, null, null, List.of(), "", 0, false);
     }
 
     public static CommandExecutionConfigurationDTO disabledDefaults() {
-        return new CommandExecutionConfigurationDTO(false, false, null, List.of(), "", 0, false);
+        return new CommandExecutionConfigurationDTO(false, false, null, null, List.of(), "", 0, false);
+    }
+
+    /** 用功能说明模板替换本次 HTML 渲染模板，其余命令策略保持不变。 */
+    public CommandExecutionConfigurationDTO withTemplate(CommandTemplateDTO selected) {
+        return new CommandExecutionConfigurationDTO(enabled, showInHelp, selected, functionDescriptionTemplate,
+            triggers, permissionOverride, cooldownSeconds, mentionInvoker);
     }
 
     public record CommandTemplateDTO(String code, String html) {

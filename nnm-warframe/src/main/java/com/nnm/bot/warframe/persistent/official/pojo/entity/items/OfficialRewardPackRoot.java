@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 REWARD_PACK 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 随机奖励包定义。按包键查询候选组件和抽取规则；具体获得物品取自实际结算。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

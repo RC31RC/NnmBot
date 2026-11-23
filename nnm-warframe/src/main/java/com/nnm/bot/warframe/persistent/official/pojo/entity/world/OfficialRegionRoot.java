@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 REGION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 静态星图节点和所属星球或星系。以节点代码关联地域、基础任务类型和阵营，本轮裂缝等活动使用自身任务类型。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

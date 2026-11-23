@@ -26,6 +26,41 @@ public final class WarframeMarketConstants {
         }
     }
 
+    /** 在线市场状态的代码与玩家可读文案。 */
+    public enum PresenceStatus {
+        ONLINE("online", "在线", true), IN_GAME("ingame", "游戏中", true), OFFLINE("offline", "离线", false),
+        UNKNOWN("", null, true);
+
+        private final String code;
+        private final String label;
+        private final boolean visible;
+
+        PresenceStatus(String code, String label, boolean visible) {
+            this.code = code;
+            this.label = label;
+            this.visible = visible;
+        }
+
+        /** @param value 市场上游状态代码；@return 对应状态，未知代码返回 UNKNOWN。 */
+        public static PresenceStatus fromCode(String value) {
+            if (value != null)
+                for (PresenceStatus status : values())
+                    if (status.code.equalsIgnoreCase(value))
+                        return status;
+            return UNKNOWN;
+        }
+
+        /** @param raw 上游原始状态；@return 中文状态或未识别的原始值。 */
+        public String displayText(String raw) {
+            return label == null ? raw : label;
+        }
+
+        /** @return 是否保留该状态的订单。 */
+        public boolean isVisible() {
+            return visible;
+        }
+    }
+
     /** 市场拍卖目录支持的上游类型；保留协议小写值。 */
     @Getter
     @RequiredArgsConstructor

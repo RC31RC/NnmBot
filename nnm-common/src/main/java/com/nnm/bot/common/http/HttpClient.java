@@ -130,6 +130,22 @@ public class HttpClient {
         return last;
     }
 
+    /**
+     * 执行声明式 GET，并在重试耗尽后将非 2xx 响应转换为统一外部 HTTP 异常。
+     *
+     * @param requestUrl 用于日志与诊断的请求地址。
+     * @param request 由 {@code @HttpExchange} 代理执行的请求。
+     * @return 成功响应。
+     */
+    public HttpResult executeGetOrThrow(String requestUrl, Supplier<ResponseEntity<String>> request) {
+        HttpResult result = executeGet(requestUrl, request);
+        if (!result.isSuccess()) {
+            throw new ExternalHttpException("GET", sanitizeUrl(requireUrl(requestUrl)), result.statusCode(),
+                result.body(), result.headers(), result.error());
+        }
+        return result;
+    }
+
     /** 下载需要保留原始字节的响应，例如官方 PublicExport 的 LZMA 和 JSON 文件。 */
     public ByteResult getBytes(String url, Map<String, String> headers) {
         return getBytes(url, toHttpHeaders(headers));

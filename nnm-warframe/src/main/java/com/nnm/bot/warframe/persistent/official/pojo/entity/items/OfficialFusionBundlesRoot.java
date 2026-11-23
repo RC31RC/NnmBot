@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 FUSION_BUNDLES 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 内融核心包定义。按包路径读取内融核心数量和图标，适用于带物品身份的奖励。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

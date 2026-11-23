@@ -1,8 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.vo.reference;
 
-import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityInputDTO;
 import java.time.Instant;
 
-public record WarframeCommunityRecordVO(Long id, String key, WarframeCommunityInputDTO value, Instant updatedAt,
-    long version) {
+/** 社区数据页的单条记录及其所属分区的业务字段。 */
+public record WarframeCommunityRecordVO<T>(Long id, String key, T value, Instant updatedAt, long version) {
 }

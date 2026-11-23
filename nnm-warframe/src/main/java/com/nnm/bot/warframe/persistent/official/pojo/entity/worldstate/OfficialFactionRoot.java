@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 FACTION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 阵营代码簿。通过官方阵营代码和可唯一确认的名称解析入侵双方、星图和活动阵营。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

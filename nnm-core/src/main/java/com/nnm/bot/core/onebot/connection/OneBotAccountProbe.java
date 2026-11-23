@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.onebot.constant.OneBotErrorCode;
 import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants;
+import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants.ResponseStatus;
 import com.nnm.bot.core.onebot.connection.dto.OneBotLoginProbeDTO;
 import com.nnm.bot.core.onebot.connection.dto.OneBotLoginProbeRequestDTO;
 import com.nnm.bot.core.onebot.config.OneBotProperties;
@@ -83,7 +84,7 @@ public class OneBotAccountProbe {
         if (!expectedEcho.equals(response.echo())) {
             return null;
         }
-        if (!OneBotProtocolConstants.STATUS_OK.equalsIgnoreCase(response.status())) {
+        if (!ResponseStatus.fromCode(response.status()).isSuccess()) {
             throw new OneBotAccountProbeException(
                 "OneBot " + OneBotProtocolConstants.ACTION_GET_LOGIN_INFO + " 调用失败，retcode=" + response.retcode());
         }

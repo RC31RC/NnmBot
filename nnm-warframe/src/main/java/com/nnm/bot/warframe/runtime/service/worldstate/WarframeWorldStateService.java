@@ -15,18 +15,11 @@ public interface WarframeWorldStateService {
     WorldStateDTO getCurrentState();
 
     /**
-     * 读取最近一次成功的原始输入、解析结果和采集元数据。
+     * 读取最近一次成功的类型化协议输入、解析结果和采集元数据。
      *
      * @return 世界状态运行时快照对象。
      */
     WorldStateRuntimeSnapshot getCurrentSnapshot();
-
-    /**
-     * 接收已构造状态并发布本地应用更新事件。
-     *
-     * @param state 已经解析的当前世界状态。
-     */
-    void processNewState(WorldStateDTO state);
 
     /**
      * 使用无进度回调的方式刷新官方动态数据。

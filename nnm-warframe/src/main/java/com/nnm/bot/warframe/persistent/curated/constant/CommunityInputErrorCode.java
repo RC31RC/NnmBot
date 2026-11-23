@@ -20,7 +20,11 @@ public enum CommunityInputErrorCode implements ErrorCode {
     RIVEN_ATTRIBUTE_DUPLICATE(400938, "组合不能重复选择同一个官方属性", HttpStatus.BAD_REQUEST),
     RECORD_KEY_INVALID(400939, "业务键必须非空且不超过 500 字符", HttpStatus.BAD_REQUEST),
     RECORD_KEY_DUPLICATE(400940, "输入包含重复业务键", HttpStatus.BAD_REQUEST),
-    FIELD_INVALID(400941, "字段无效：%s", HttpStatus.BAD_REQUEST);
+    FIELD_INVALID(400941, "字段无效：%s", HttpStatus.BAD_REQUEST),
+    ARBITRATION_NODE_UNKNOWN(400942, "仲裁节点必须对应已采纳的官方星图节点", HttpStatus.BAD_REQUEST),
+    DESCENDIA_MAPPING_INVALID(400943, "沉沦之地楼层、难度、数量或来源链接无效", HttpStatus.BAD_REQUEST),
+    REFERENCE_MAPPING_INVALID(400947, "解析映射的作用域或目标格式无效", HttpStatus.BAD_REQUEST),
+    MAPPING_IN_ALIAS_OR_TERM(400948, "解析规则请在解析映射分类维护", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

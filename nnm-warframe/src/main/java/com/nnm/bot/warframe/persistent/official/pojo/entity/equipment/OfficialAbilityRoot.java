@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 ABILITY 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 技能定义。以技能身份读取双语名称、说明和图标，通过拥有者业务键关联装备。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

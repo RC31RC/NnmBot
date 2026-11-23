@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 经人工核对来源的楼层奖池映射；官方奖池内容留在 DROP_TABLE。 */
+/** 人工核对的楼层、难度与固定奖励或候选池映射。通过 DROP_TABLE 查询候选内容和概率。 */
 @Getter
 @Setter
 @Entity
@@ -19,16 +19,14 @@ public class WarframeCommunityDescendiaReward extends WarframeCommunityRow {
     private String difficulty;
     @Column(name = "label", nullable = false, columnDefinition = "TEXT")
     private String label;
-    @Column(name = "official_pool_key", length = 500)
+    /** 已采纳掉落表的来源业务键，用于联查池内容。 */
+    @Column(name = "official_pool_key", nullable = false, length = 500)
     private String officialPoolKey;
-    @Column(name = "expected_pool_name", columnDefinition = "TEXT")
+    /** 核对来源池名称，避免采用重排后同键的其他奖池。 */
+    @Column(name = "expected_pool_name", nullable = false, columnDefinition = "TEXT")
     private String expectedPoolName;
-    @Column(name = "source_reward_key", length = 500)
-    private String sourceRewardKey;
     @Column(name = "item_count_override")
     private Integer itemCountOverride;
-    @Column(name = "options_json", columnDefinition = "TEXT")
-    private String optionsJson;
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
     @Column(name = "guaranteed", nullable = false)

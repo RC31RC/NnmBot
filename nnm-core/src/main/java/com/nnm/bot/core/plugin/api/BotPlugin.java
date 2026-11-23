@@ -27,6 +27,16 @@ public abstract class BotPlugin<P, A> {
     }
 
     /**
+     * 判断无参数调用是否应直接显示数据库维护的功能说明模板。
+     *
+     * @param invocation 当前命令及其参数。
+     * @return 当前命令需要说明模板时为真。
+     */
+    public boolean shouldShowFunctionDescription(CommandInvocation invocation) {
+        return false;
+    }
+
+    /**
      * 在写事务外准备机器人消息或附件；结构化 DTO 输入跳过此步骤，普通命令沿用默认实现即可。
      *
      * @param invocation 当前命令及本条附件、引用元数据

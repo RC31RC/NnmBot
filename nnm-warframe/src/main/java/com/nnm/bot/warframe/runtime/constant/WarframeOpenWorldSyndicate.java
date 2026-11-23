@@ -20,6 +20,11 @@ public enum WarframeOpenWorldSyndicate {
         return code.equals(value);
     }
 
+    /** @return 官方动态数据中的集团代码。 */
+    public String code() {
+        return code;
+    }
+
     /** @return 当前平原对应的管理端分区编码。 */
     public String sectionKey() {
         return sectionKey;

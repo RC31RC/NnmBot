@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import java.util.List;
 
-/** 补充赏金接口的原始响应；轮次判断与静态引用解析由业务服务完成。 */
+/** Oracle 高阶赏金的增量协议。毫秒结束时间与官方轮次一致时，用节点、挑战和友军引用补缺失的任务。 */
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)

@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.worldstate;
 
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateManagementVO;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateRawVO;
+import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateFieldInspectionVO;
 
 /** 为管理端组装与机器人命令一致的世界数据业务视图。 */
 public interface WarframeWorldStateManagementService {
@@ -14,16 +14,9 @@ public interface WarframeWorldStateManagementService {
     WarframeWorldStateManagementVO current();
 
     /**
-     * 展示完整解析字段，不套用机器人命令的字段裁剪和条数限制。
+     * 读取同一运行时快照中的协议输入模型、业务解析模型和待处理字段诊断。
      *
-     * @return 按运行时业务字段分区的完整解析视图。
+     * @return 可折叠字段检查视图。
      */
-    WarframeWorldStateManagementVO parsed();
-
-    /**
-     * 读取排障使用的原始快照和采集信息。
-     *
-     * @return 用于排障的世界状态原文及采集信息。
-     */
-    WarframeWorldStateRawVO raw();
+    WarframeWorldStateFieldInspectionVO fields();
 }

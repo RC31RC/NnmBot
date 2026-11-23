@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 RAILJACK_WEAPON 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 九重天武器定义。以装备身份读取伤害、射速、槽位等属性，保留与普通武器的区别。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

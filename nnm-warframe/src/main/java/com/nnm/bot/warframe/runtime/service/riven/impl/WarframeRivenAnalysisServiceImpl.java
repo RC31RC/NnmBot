@@ -1,6 +1,8 @@
 package com.nnm.bot.warframe.runtime.service.riven.impl;
 
+import com.nnm.bot.warframe.runtime.constant.WarframeRivenAnalysisConstants.ReferenceRangeStatus;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.BooleanUtil;
 
 import static com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.OFFICIAL_SOURCE_CODE;
 import cn.hutool.core.collection.CollUtil;
@@ -419,14 +421,14 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         List<WarframeRivenAttributeDTO> definitions =
             mapping.codes().stream().map(index.byCode()::get).filter(Objects::nonNull).toList();
         boolean allDefined = definitions.size() == mapping.codes().size();
-        if (allDefined && definitions.stream().allMatch(definition -> Boolean.TRUE.equals(definition.negativeOnly()))) {
+        if (allDefined && definitions.stream().allMatch(definition -> BooleanUtil.isTrue(definition.negativeOnly()))) {
             return true;
         }
         if (NEGATIVE_PREFIX_PATTERN.matcher(prefix).find()) {
             return true;
         }
         boolean reversed = allDefined
-            && definitions.stream().allMatch(definition -> Boolean.TRUE.equals(definition.positiveIsNegative()));
+            && definitions.stream().allMatch(definition -> BooleanUtil.isTrue(definition.positiveIsNegative()));
         if (value != null && value != 0) {
             return (value < 0) != reversed;
         }
@@ -477,7 +479,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
             WarframeRivenAttributeDTO definition = index.byCode().get(attribute.code());
             return new ReferenceRangeVO(attribute.code(), attribute.displayName(),
                 definition == null ? "" : CharSequenceUtil.nullToEmpty(definition.units()), null, null, null,
-                "UNAVAILABLE", "officialParameterConversionUnconfirmed", "OFFICIAL_PARAMETERS",
+                ReferenceRangeStatus.UNAVAILABLE, "officialParameterConversionUnconfirmed", "OFFICIAL_PARAMETERS",
                 CharSequenceUtil.nullToEmpty(weapon.key()), weapon.confirmed() ? OFFICIAL_SOURCE_CODE : "",
                 OFFICIAL_SOURCE_CODE);
         }).toList();
@@ -492,7 +494,7 @@ public class WarframeRivenAnalysisServiceImpl implements WarframeRivenAnalysisSe
         Map<String, List<AttributeMapping>> result = new LinkedHashMap<>();
         Map<String, WarframeRivenAttributeDTO> byCode = new LinkedHashMap<>();
         for (WarframeRivenAttributeDTO details : attributeService.definitions()) {
-            if (CharSequenceUtil.isBlank(details.code()) || Boolean.TRUE.equals(details.searchOnly())
+            if (CharSequenceUtil.isBlank(details.code()) || BooleanUtil.isTrue(details.searchOnly())
                 || Set.of("has", "none").contains(details.code())) {
                 continue;
             }

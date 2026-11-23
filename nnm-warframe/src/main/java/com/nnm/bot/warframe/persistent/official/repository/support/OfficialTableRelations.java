@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.official.repository.support;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.BooleanUtil;
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataErrorCode;
 import com.nnm.bot.warframe.persistent.official.constant.OfficialDataConstants.FieldState;
@@ -231,7 +232,7 @@ public class OfficialTableRelations {
         value = unwrap(value);
         if (value == null)
             return;
-        if (field.relation() != null && (value instanceof List<?> || Boolean.TRUE.equals(field.dictionary()))) {
+        if (field.relation() != null && (value instanceof List<?> || BooleanUtil.isTrue(field.dictionary()))) {
             RowModel child = models.table(field.relation());
             int order = 0;
             if (value instanceof Map<?, ?> dictionary) {
@@ -290,7 +291,7 @@ public class OfficialTableRelations {
             case NUMBER -> row.get(field.values().get("number"));
             case BOOLEAN -> row.get(field.values().get("boolean"));
             case OBJECT -> {
-                if (Boolean.TRUE.equals(field.dictionary()))
+                if (BooleanUtil.isTrue(field.dictionary()))
                     yield new LinkedHashMap<String, Object>();
                 OfficialObjectDTO value = construct(type);
                 for (SchemaField child : field.children()) {

@@ -5,6 +5,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import com.nnm.bot.core.onebot.message.outbound.OneBotFileStager;
 import com.nnm.bot.core.onebot.message.context.OneBotMessageSource;
 import com.nnm.bot.core.onebot.message.outbound.OneBotFileStager.StagedFile;
+import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants.ResponseStatus;
 import com.nnm.bot.core.messaging.model.BotMessagePart.File;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Image;
 import com.nnm.bot.core.messaging.constant.BotMessageConstants.PartKind;
@@ -168,11 +169,11 @@ public class OneBotMessageSender implements BotMessageSender {
     }
 
     static BotMessageReceipt receipt(ActionData<MsgId> result) {
-        if (result != null && "failed".equalsIgnoreCase(result.getStatus())) {
+        if (result != null && ResponseStatus.fromCode(result.getStatus()).isFailure()) {
             // SDK 超时也合成 failed，不能证明平台未接受，更不能据此退款。
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 消息结果无法确认: " + result);
         }
-        if (ObjUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
+        if (ObjUtil.isNull(result) || !ResponseStatus.fromCode(result.getStatus()).isSuccess()
             || (ObjUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 消息发送失败: " + result);
         }
@@ -183,10 +184,10 @@ public class OneBotMessageSender implements BotMessageSender {
     }
 
     private static void ensureFileSuccess(ActionRaw result, BotFile file, StagedFile stagedFile) {
-        if (result != null && "failed".equalsIgnoreCase(result.getStatus())) {
+        if (result != null && ResponseStatus.fromCode(result.getStatus()).isFailure()) {
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED, "OneBot 文件结果无法确认: " + result);
         }
-        if (ObjUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
+        if (ObjUtil.isNull(result) || !ResponseStatus.fromCode(result.getStatus()).isSuccess()
             || (ObjUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
             throw new SystemException(BotChannelErrorCode.MESSAGE_SEND_FAILED,
                 "OneBot 文件发送失败: result=" + result + ", file=" + file.fileName() + ", size=" + stagedFile.fileSize()

@@ -9,15 +9,16 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.nnm.bot.warframe.runtime.config.jackson.WarframeInputBinding;
 import com.nnm.bot.warframe.runtime.rawdata.riven.RivenWeeklyRawData;
 import com.nnm.bot.warframe.runtime.pojo.dto.riven.RivenWeeklyEntryDTO;
+import com.nnm.bot.warframe.runtime.pojo.dto.riven.RivenWeeklyStatisticsDTO;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /** 将官方周紫卡响应绑定到具体字段，再校验成交统计。 */
 @Component
@@ -45,18 +46,23 @@ public class WarframeRivenWeeklyParser {
     public List<RivenWeeklyEntryDTO> parse(String body, int maxRecords) throws IOException {
         List<RivenWeeklyRawData> rows = inputReader.readValue(body);
         Assert.isTrue(CollUtil.isNotEmpty(rows) && rows.size() <= maxRecords, "周紫卡响应必须为非空且未超过上限的数组");
-        List<RivenWeeklyEntryDTO> entries = new ArrayList<>();
-        Set<List<Object>> identities = new HashSet<>();
+        Map<List<String>, Map<Boolean, RivenWeeklyStatisticsDTO>> grouped = new LinkedHashMap<>();
         for (RivenWeeklyRawData row : rows) {
             Assert.isTrue(row != null && CharSequenceUtil.isNotBlank(row.getItemType()) && row.getRerolled() != null,
                 "周紫卡记录缺少类别或洗练标记");
             String weapon = row.getCompatibility();
             String type = row.getItemType();
-            Assert.isTrue(identities.add(List.of(type, weapon == null ? "" : weapon, row.getRerolled())), "周紫卡记录身份重复");
-            entries.add(new RivenWeeklyEntryDTO(weapon, type, row.getRerolled(), number(row.getAverage()),
+            RivenWeeklyStatisticsDTO statistics = new RivenWeeklyStatisticsDTO(number(row.getAverage()),
                 number(row.getMedian()), number(row.getMinimum()), number(row.getMaximum()),
-                number(row.getStandardDeviation()), number(row.getPopulation())));
+                number(row.getStandardDeviation()), number(row.getPopulation()));
+            Map<Boolean, RivenWeeklyStatisticsDTO> variants =
+                grouped.computeIfAbsent(List.of(type, weapon == null ? "" : weapon), ignored -> new LinkedHashMap<>());
+            Assert.isTrue(variants.putIfAbsent(row.getRerolled(), statistics) == null, "周紫卡记录身份重复");
         }
+        List<RivenWeeklyEntryDTO> entries = new ArrayList<>(grouped.size());
+        grouped.forEach((identity, variants) -> entries
+            .add(new RivenWeeklyEntryDTO(identity.get(1).isEmpty() ? null : identity.get(1), identity.get(0),
+                variants.get(false), variants.get(true))));
         return List.copyOf(entries);
     }
 

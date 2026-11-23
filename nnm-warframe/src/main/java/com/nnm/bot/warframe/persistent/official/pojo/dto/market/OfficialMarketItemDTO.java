@@ -13,7 +13,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** MARKET_ITEM 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * Warframe Market 商品身份映射。通过市场商品代码与游戏物品路径关联交易命令和物品资料；即时订单独立获取。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

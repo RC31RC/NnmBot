@@ -1,5 +1,7 @@
 package com.nnm.bot.warframe.runtime.mapper.worldstate;
 
+import static com.nnm.bot.warframe.runtime.mapper.WarframeTimeDisplay.format;
+
 import cn.hutool.core.text.CharSequenceUtil;
 
 import cn.hutool.core.collection.CollUtil;
@@ -7,25 +9,29 @@ import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.ActiveMiss
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.AlertDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.ArbitrationDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.ArchimedeaDTO;
+import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.BountyStaticPoolDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.ConstructionProgressDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SentientOutpostDTO;
-import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SimarisDTO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SortieDTO;
+import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO.SyndicateMissionDTO;
 import cn.hutool.core.util.ObjUtil;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WorldStateDTO;
 import com.nnm.bot.warframe.runtime.constant.WarframeBountyCycleConstants.Syndicate;
-import com.nnm.bot.warframe.runtime.constant.WarframeConquestType;
+import com.nnm.bot.warframe.runtime.constant.WarframeGlobalUpgradeOperation;
+import com.nnm.bot.warframe.runtime.constant.WarframeSyndicateMissions;
+import com.nnm.bot.warframe.runtime.constant.WarframeWorldCycle;
+import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateResolutionStatus;
 import com.nnm.bot.warframe.runtime.constant.WarframeWorldStateDisplayConstants.CalendarEvent;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateCommandVO;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -36,8 +42,6 @@ public final class WarframeWorldStateProjector {
     private static final long SECONDS_PER_MINUTE = 60;
     private static final long SECONDS_PER_HOUR = 60 * SECONDS_PER_MINUTE;
     private static final long SECONDS_PER_DAY = 24 * SECONDS_PER_HOUR;
-    private static final ZoneId ZONE_ID = ZoneId.of("Asia/Shanghai");
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(ZONE_ID);
 
     /**
      * 禁止实例化，仅通过本类的静态方法使用此能力。
@@ -210,11 +214,17 @@ public final class WarframeWorldStateProjector {
      * @return 当前命令的标题、状态及展示条目。
      */
     public static WarframeWorldStateCommandVO steelPath(WorldStateDTO state) {
-        List<Map<String, Object>> items = state.steelPathOfferings().stream().map(offering -> item("node",
-            offering.node(), "reward", offering.reward(), "activation", format(offering.activation()),
-            "activationInstant", offering.activation() == null ? "" : offering.activation().toString(), "expiry",
-            format(offering.expiry()), "expiryInstant", offering.expiry() == null ? "" : offering.expiry().toString(),
-            "remaining", remaining(offering.expiry()))).toList();
+        List<Map<String, Object>> items = currentRounds(state.steelPathOfferings(), ignored -> "steel-path",
+            WorldStateDTO.SteelPathOfferingDTO::activation, WorldStateDTO.SteelPathOfferingDTO::expiry,
+            snapshotTime(state))
+            .stream()
+            .map(offering -> item("id", offering.id(), "node", offering.node(), "reward", offering.reward(),
+                "activation", format(offering.activation()), "activationInstant",
+                offering.activation() == null ? "" : offering.activation().toString(), "expiry",
+                format(offering.expiry()), "expiryInstant",
+                offering.expiry() == null ? "" : offering.expiry().toString(), "remaining",
+                remaining(offering.expiry())))
+            .toList();
         return output(state, "钢铁奖励", "钢铁路径奖励：" + items.size() + " 条", items, "items", "itemCount");
     }
 
@@ -236,32 +246,38 @@ public final class WarframeWorldStateProjector {
      * @return 当前命令的标题、状态及展示条目。
      */
     public static WarframeWorldStateCommandVO cycles(WorldStateDTO state, String title) {
-        Map<String, Object> cycles = new LinkedHashMap<>();
+        Map<WarframeWorldCycle, Object> cycles = new LinkedHashMap<>();
         if (ObjUtil.isNotNull(state.earthCycle())) {
-            cycles.put("地球", cycle(state.earthCycle().isDay() ? "白天" : "夜晚", state.earthCycle().expiry()));
+            cycles.put(WarframeWorldCycle.EARTH,
+                cycle(state.earthCycle().isDay() ? "白天" : "夜晚", state.earthCycle().expiry()));
         }
         if (ObjUtil.isNotNull(state.cetusCycle())) {
-            cycles.put("夜灵平原", cycle(state.cetusCycle().isDay() ? "白天" : "夜晚", state.cetusCycle().expiry()));
+            cycles.put(WarframeWorldCycle.CETUS,
+                cycle(state.cetusCycle().isDay() ? "白天" : "夜晚", state.cetusCycle().expiry()));
         }
         if (ObjUtil.isNotNull(state.vallisCycle())) {
-            cycles.put("福尔图娜", cycle(state.vallisCycle().isWarm() ? "温暖" : "寒冷", state.vallisCycle().expiry()));
+            cycles.put(WarframeWorldCycle.VALLIS,
+                cycle(state.vallisCycle().isWarm() ? "温暖" : "寒冷", state.vallisCycle().expiry()));
         }
         if (ObjUtil.isNotNull(state.cambionCycle())) {
-            cycles.put("魔胎之境", cycle(state.cambionCycle().active(), state.cambionCycle().expiry()));
+            cycles.put(WarframeWorldCycle.CAMBION, cycle(state.cambionCycle().active(), state.cambionCycle().expiry()));
         }
         if (ObjUtil.isNotNull(state.zarimanCycle())) {
-            cycles.put("扎里曼", cycle(state.zarimanCycle().state(), state.zarimanCycle().expiry()));
+            cycles.put(WarframeWorldCycle.ZARIMAN, cycle(state.zarimanCycle().state(), state.zarimanCycle().expiry()));
         }
         if (ObjUtil.isNotNull(state.duviriCycle())) {
-            cycles.put("双衍王境", cycle(state.duviriCycle().state(), state.duviriCycle().expiry()));
+            cycles.put(WarframeWorldCycle.DUVIRI, cycle(state.duviriCycle().state(), state.duviriCycle().expiry()));
         }
-        if ("双衍王境".equals(title)) {
-            cycles.keySet().removeIf(name -> !"双衍王境".equals(name));
+        if (WarframeWorldCycle.DUVIRI.label().equals(title)) {
+            cycles.keySet().removeIf(key -> key != WarframeWorldCycle.DUVIRI);
         }
         Map<String, Object> data = base(state, title);
-        data.put("cycles", cycles);
-        data.put("items",
-            cycles.entrySet().stream().map(entry -> item("name", entry.getKey(), "value", entry.getValue())).toList());
+        Map<String, Object> labels = new LinkedHashMap<>();
+        cycles.forEach((key, cycle) -> labels.put(key.label(), cycle));
+        data.put("cycles", labels);
+        data.put("items", cycles.entrySet().stream().map(
+            entry -> item("name", entry.getKey().label(), "cycleKey", entry.getKey().code(), "value", entry.getValue()))
+            .toList());
         data.put("itemCount", cycles.size());
         return new WarframeWorldStateCommandVO(title + "：" + cycles.size() + " 个", data);
     }
@@ -277,36 +293,52 @@ public final class WarframeWorldStateProjector {
     public static WarframeWorldStateCommandVO syndicate(WorldStateDTO state, String title, Predicate<String> matcher) {
         List<
             Map<String, Object>> items =
-                state.syndicateMissions().stream().filter(mission -> matcher.test(value(mission.syndicate(), "")))
-                    .map(mission -> item("syndicate", mission.syndicate(), "node", mission.node(), "nodes",
-                        mission.nodes(), "activation", format(mission.activation()), "activationInstant",
+                currentSyndicateRounds(state, matcher).stream()
+                    .map(mission -> item("id", mission.id(), "syndicateKey", mission.syndicate(), "syndicate",
+                        mission.syndicate(), "node", mission.node(), "nodes", mission.nodes(), "activation",
+                        format(mission.activation()), "activationInstant",
                         mission.activation() == null ? "" : mission.activation().toString(), "expiry",
                         format(mission.expiry()), "expiryInstant",
                         mission.expiry() == null ? "" : mission.expiry().toString(), "remaining",
-                        remaining(mission.expiry()), "supplementStatus", mission.supplementStatus(), "supplementalJobs",
-                        mission.supplementalJobs().stream().map(job -> item(
-                            "node", job.node(), "nodeName", job.nodeName(), "systemName", job.systemName(),
-                            "missionType", job.missionType(), "challenge", job.challenge(), "challengeName",
+                        remaining(mission.expiry()), "supplementStatus", mission.supplementStatus().code(),
+                        "supplementalJobs",
+                        mission.supplementalJobs().stream().map(job -> item("node", job.node(), "nodeName",
+                            job.nodeName(), "systemName", job.systemName(), "missionType", job.missionType(),
+                            "missionTypeKey", job.missionTypeKey(), "challenge", job.challenge(), "challengeName",
                             job.challengeName(), "challengeDescription", job.challengeDescription(), "ally", job.ally(),
-                            "allyName", job.allyName(), "resolutionStatus", job.resolutionStatus())).toList(),
+                            "allyName", job.allyName(), "resolutionStatus", job.resolutionStatus().code())).toList(),
                         "staticRewardPools",
-                        mission.staticRewardPools().stream().map(
-                            pool -> item("poolId", pool.id(), "name", pool.name(), "rewards", pool.rewards())).toList(),
+                        mission.staticRewardPools().stream().map(WarframeWorldStateProjector::bountyPool).toList(),
                         "jobs",
                         mission.jobs().stream()
                             .map(job -> item("jobType", value(job.jobType(), job.type()), "type",
                                 value(job.type(), job.isVault() ? "隔离库" : job.jobType()), "minEnemyLevel",
                                 job.minEnemyLevel(), "maxEnemyLevel", job.maxEnemyLevel(), "standingStages",
-                                job.standingStages(), "minMR", job.minMR(), "isVault", job.isVault(), "locationTag",
-                                job.locationTag(), "expiry", format(job.expiry()), "expiryInstant",
-                                job.expiry() == null ? "" : job.expiry().toString(), "remaining",
-                                remaining(job.expiry()), "timeBound", job.timeBound(), "rewardPoolReference",
-                                job.rewardPoolReference(), "rewards",
+                                job.standingStages(), "minMR", job.minMR(), "isVault", job.isVault(), "endless",
+                                job.endless(), "locationTag", job.locationTag(), "expiry", format(job.expiry()),
+                                "expiryInstant", job.expiry() == null ? "" : job.expiry().toString(), "remaining",
+                                remaining(job.expiry()), "timeBound", job.timeBound(), "rewardPoolReferences",
+                                job.rewardPoolReferences(), "rewards",
                                 job.rewardPool().stream().map(reward -> item("item", reward.item(), "count",
                                     reward.count(), "chance", reward.chance(), "rarity", reward.rarity())).toList()))
                             .toList()))
                     .toList();
         return output(state, title, title + "：" + items.size() + " 条", items, "items", "itemCount");
+    }
+
+    /**
+     * 展示六个集团在当前快照给出的任务节点，类型由星图静态资料补充。
+     *
+     * @param state 当前世界状态。
+     * @return 常规集团节点投影。
+     */
+    public static WarframeWorldStateCommandVO syndicateMissions(WorldStateDTO state) {
+        var items = currentSyndicateRounds(state, WarframeSyndicateMissions::contains).stream()
+            .map(group -> item("id", group.id(), "syndicate", group.syndicate(), "expiry", format(group.expiry()),
+                "expiryInstant", group.expiry() == null ? "" : group.expiry().toString(), "missions",
+                group.nodes().stream().map(node -> item("node", node, "nodeKey", node)).toList()))
+            .toList();
+        return output(state, "集团任务", "集团任务：" + items.size() + " 组", items, "items", "itemCount");
     }
 
     /**
@@ -317,23 +349,104 @@ public final class WarframeWorldStateProjector {
      * @return 当前地区的补充赏金任务与静态候选池。
      */
     public static WarframeWorldStateCommandVO bountyCycle(WorldStateDTO state, Syndicate syndicate) {
-        List<Map<String, Object>> items = state.syndicateMissions().stream()
-            .filter(mission -> syndicate.matches(mission.syndicate()))
-            .map(mission -> item("syndicate", mission.syndicate(), "supplementStatus", mission.supplementStatus(),
-                "expiry", format(mission.expiry()), "expiryInstant",
-                mission.expiry() == null ? "" : mission.expiry().toString(), "supplementalJobs",
-                mission.supplementalJobs().stream()
-                    .map(job -> item("tier", job.tier(), "node", job.node(), "nodeName", job.nodeName(), "systemName",
-                        job.systemName(), "missionType", job.missionType(), "challenge", job.challenge(),
-                        "challengeName", job.challengeName(), "challengeDescription", job.challengeDescription(),
-                        "ally", job.ally(), "allyName", job.allyName(), "resolutionStatus", job.resolutionStatus()))
-                    .toList(),
-                "staticRewardPools",
-                mission.staticRewardPools().stream()
-                    .map(pool -> item("poolId", pool.id(), "name", pool.name(), "rewards", pool.rewards())).toList()))
-            .toList();
+        List<Map<String, Object>> items =
+            currentBountyRound(state, syndicate).stream().map(WarframeWorldStateProjector::bountyCycleRound).toList();
         return output(state, syndicate.title(), syndicate.title() + "：" + items.size() + " 组", items, "items",
             "itemCount");
+    }
+
+    private static Map<String, Object> bountyCycleRound(SyndicateMissionDTO mission) {
+        var jobs = mission.supplementalJobs();
+        var pools = mission.staticRewardPools().stream()
+            .sorted(Comparator.comparing(BountyStaticPoolDTO::minLevel, Comparator.nullsLast(Integer::compareTo)))
+            .toList();
+        boolean pairByTier = !jobs.isEmpty() && jobs.size() == pools.size()
+            && pools.stream().allMatch(pool -> pool.minLevel() != null && !pool.rewards().isEmpty())
+            && pools.stream().map(BountyStaticPoolDTO::minLevel).distinct().count() == pools.size()
+            && jobs.stream().filter(job -> job.tier() >= 1 && job.tier() <= pools.size()).map(job -> job.tier())
+                .distinct().count() == jobs.size();
+        return item("id", mission.id(), "syndicate", mission.syndicate(), "supplementStatus",
+            mission.supplementStatus().code(), "expiry", format(mission.expiry()), "expiryInstant",
+            mission.expiry() == null ? "" : mission.expiry().toString(), "supplementalJobs",
+            jobs.stream()
+                .map(job -> item("tier", job.tier(), "node", job.node(), "nodeName", job.nodeName(), "systemName",
+                    job.systemName(), "missionType", job.missionType(), "missionTypeKey", job.missionTypeKey(),
+                    "challenge", job.challenge(), "challengeName", job.challengeName(), "challengeDescription",
+                    job.challengeDescription(), "ally", job.ally(), "allyName", job.allyName(), "resolutionStatus",
+                    job.resolutionStatus().code(), "candidateRewardPool",
+                    pairByTier ? bountyPool(pools.get(job.tier() - 1)) : null))
+                .toList(),
+            "staticRewardPools",
+            pairByTier ? List.of() : pools.stream().map(WarframeWorldStateProjector::bountyPool).toList());
+    }
+
+    private static Map<String, Object> bountyPool(BountyStaticPoolDTO pool) {
+        return item("poolId", pool.id(), "name", pool.name(), "minEnemyLevel", pool.minLevel(), "rewards",
+            pool.rewards().stream()
+                .map(reward -> item("itemKey", reward.itemKey(), "displayName",
+                    value(reward.displayName(), reward.itemKey()), "count", reward.count(), "probability",
+                    reward.probability(), "imageUrl", reward.imageUrl()))
+                .toList());
+    }
+
+    /**
+     * 以官方快照时点选出该地区最近启动且尚未结束的一轮；未生效的安排仍保留在快照中。
+     *
+     * @param state 官方动态快照及其补充数据。
+     * @param syndicate 地区对应的官方集团。
+     * @return 当前轮次；没有有效记录时为空。
+     */
+    public static Optional<SyndicateMissionDTO> currentBountyRound(WorldStateDTO state, Syndicate syndicate) {
+        Instant asOf = snapshotTime(state);
+        return state.syndicateMissions().stream().filter(mission -> syndicate.matches(mission.syndicate()))
+            .filter(mission -> mission.expiry() != null && asOf.isBefore(mission.expiry()))
+            .filter(mission -> mission.activation() == null || !asOf.isBefore(mission.activation()))
+            .max(Comparator.comparing(SyndicateMissionDTO::activation, Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparing(SyndicateMissionDTO::expiry));
+    }
+
+    /**
+     * 在同一官方快照时点挑选每个集团最新生效的记录，供展示与字段检查共享。
+     *
+     * @param state 已解析快照。
+     * @param matcher 当前视图允许显示的集团。
+     * @return 最新的各集团记录，保持集团首次出现顺序。
+     */
+    public static List<SyndicateMissionDTO> currentSyndicateRounds(WorldStateDTO state, Predicate<String> matcher) {
+        return currentRounds(
+            state.syndicateMissions().stream().filter(mission -> matcher.test(value(mission.syndicate(), ""))).toList(),
+            SyndicateMissionDTO::syndicate, SyndicateMissionDTO::activation, SyndicateMissionDTO::expiry,
+            snapshotTime(state));
+    }
+
+    private static Instant snapshotTime(WorldStateDTO state) {
+        var metadata = state.metadata();
+        if (metadata.providerTimestamp() != null)
+            return metadata.providerTimestamp();
+        return metadata.fetchedAt() == null ? Instant.now() : metadata.fetchedAt();
+    }
+
+    private static <T> List<T> currentRounds(List<T> rows, Function<T, String> identity,
+        Function<T, Instant> activation, Function<T, Instant> expiry, Instant asOf) {
+        var order = Comparator.comparing(activation, Comparator.nullsFirst(Comparator.naturalOrder()))
+            .thenComparing(expiry, Comparator.nullsFirst(Comparator.naturalOrder()));
+        Map<String, T> selected = new LinkedHashMap<>();
+        List<T> unidentified = new ArrayList<>();
+        for (T row : rows) {
+            Instant start = activation.apply(row);
+            Instant end = expiry.apply(row);
+            if ((start != null && start.isAfter(asOf)) || (end != null && !asOf.isBefore(end)))
+                continue;
+            String key = identity.apply(row);
+            if (CharSequenceUtil.isBlank(key))
+                unidentified.add(row);
+            else
+                selected.merge(key, row,
+                    (existing, candidate) -> order.compare(candidate, existing) >= 0 ? candidate : existing);
+        }
+        List<T> result = new ArrayList<>(selected.values());
+        result.addAll(unidentified);
+        return result;
     }
 
     /**
@@ -362,9 +475,11 @@ public final class WarframeWorldStateProjector {
      */
     public static WarframeWorldStateCommandVO archimedeas(WorldStateDTO state, String title,
         Predicate<ArchimedeaDTO> filter) {
-        List<Map<String, Object>> items = state.archimedeas().stream().filter(filter)
-            .map(conquest -> item("id", conquest.id(), "type", WarframeConquestType.displayName(conquest.typeKey()),
-                "typeKey", conquest.typeKey(), "activation", format(conquest.activation()), "activationInstant",
+        List<Map<String, Object>> items = currentRounds(state.archimedeas().stream().filter(filter).toList(),
+            ArchimedeaDTO::typeKey, ArchimedeaDTO::activation, ArchimedeaDTO::expiry, snapshotTime(state))
+            .stream()
+            .map(conquest -> item("id", conquest.id(), "type", conquest.typeKey(), "typeKey", conquest.typeKey(),
+                "activation", format(conquest.activation()), "activationInstant",
                 conquest.activation() == null ? "" : conquest.activation().toString(), "expiry",
                 format(conquest.expiry()), "expiryInstant",
                 conquest.expiry() == null ? "" : conquest.expiry().toString(), "remaining",
@@ -379,7 +494,7 @@ public final class WarframeWorldStateProjector {
     }
 
     /**
-     * 构造恶堕的命令展示字段。
+     * 构造沉沦之地的当前周次和楼层挑战。
      *
      * @param state 已经解析的当前世界状态。
      * @return 当前命令的标题、状态及展示条目。
@@ -401,7 +516,7 @@ public final class WarframeWorldStateProjector {
                         challenge.auras()))
                     .toList()))
             .toList();
-        return output(state, "深层下降", "深层下降：" + items.size() + " 个轮换", items, "items", "itemCount");
+        return output(state, "沉沦之地", "沉沦之地：" + items.size() + " 个轮换", items, "items", "itemCount");
     }
 
     /** @param state 当前官方快照；@return Tmp.pgr 消息和按商品分开的 QTCC 活动目标。 */
@@ -412,7 +527,7 @@ public final class WarframeWorldStateProjector {
             if (temporary.pager() != null) {
                 var pager = temporary.pager();
                 items.add(item("title", "寻呼机消息", "description", pager.message(), "language", pager.language(),
-                    "publishedAt", pager.timestamp() == null ? null : pager.timestamp().toString()));
+                    "publishedAt", format(pager.timestamp())));
             }
             for (var counter : temporary.counters()) {
                 items.add(item("title", "QTCC 社区活动", "item", counter.item(), "current", counter.current(), "goalCount",
@@ -429,13 +544,18 @@ public final class WarframeWorldStateProjector {
      * @return 当前命令的标题、状态及展示条目。
      */
     public static WarframeWorldStateCommandVO globalUpgrades(WorldStateDTO state) {
-        List<Map<String, Object>> items = state.globalUpgrades().stream()
-            .map(upgrade -> item("id", upgrade.id(), "upgradeType", upgrade.upgradeType(), "operationType",
-                upgrade.operationType(), "value", upgrade.value(), "activation", format(upgrade.activation()),
-                "activationInstant", upgrade.activation() == null ? "" : upgrade.activation().toString(), "expiry",
-                format(upgrade.expiry()), "expiryInstant", upgrade.expiry() == null ? "" : upgrade.expiry().toString(),
-                "remaining", remaining(upgrade.expiry())))
-            .toList();
+        List<Map<String, Object>> items = state.globalUpgrades().stream().map(upgrade -> {
+            var operation = WarframeGlobalUpgradeOperation.fromCode(upgrade.operationType());
+            return item("id", upgrade.id(), "upgradeType", upgrade.upgradeType(), "operationTypeKey",
+                upgrade.operationType(), "operationType", operation == null ? upgrade.operationType() : "乘以",
+                "operationTypeResolutionStatus",
+                operation == null ? null : WarframeWorldStateResolutionStatus.DIRECT.code(), "value", upgrade.value(),
+                "formattedValue", operation == null ? null : operation.format(upgrade.value()), "activation",
+                format(upgrade.activation()), "activationInstant",
+                upgrade.activation() == null ? "" : upgrade.activation().toString(), "expiry", format(upgrade.expiry()),
+                "expiryInstant", upgrade.expiry() == null ? "" : upgrade.expiry().toString(), "remaining",
+                remaining(upgrade.expiry()));
+        }).toList();
         return output(state, "全局增益", "全局增益：" + items.size() + " 条", items, "items", "itemCount");
     }
 
@@ -542,19 +662,6 @@ public final class WarframeWorldStateProjector {
     }
 
     /**
-     * 构造Simaris的命令展示字段。
-     *
-     * @param state 已经解析的当前世界状态。
-     * @return 当前命令的标题、状态及展示条目。
-     */
-    public static WarframeWorldStateCommandVO simaris(WorldStateDTO state) {
-        SimarisDTO target = state.simaris();
-        return output(state, "西玛里斯", "西玛里斯公共研究目标",
-            target == null ? List.of() : List.of(item("title", target.target(), "active", target.active())), "items",
-            "itemCount");
-    }
-
-    /**
      * 构造Sentient前哨站的命令展示字段。
      *
      * @param state 已经解析的当前世界状态。
@@ -562,11 +669,13 @@ public final class WarframeWorldStateProjector {
      */
     public static WarframeWorldStateCommandVO sentientOutposts(WorldStateDTO state) {
         SentientOutpostDTO outpost = state.sentientOutpost();
-        return output(state, "Sentient 前哨站", "Sentient 前哨站当前节点", outpost == null ? List.of()
-            : List.of(item("node", outpost.node(), "activation", format(outpost.activation()), "activationInstant",
-                outpost.activation() == null ? "" : outpost.activation().toString(), "expiry", format(outpost.expiry()),
-                "expiryInstant", outpost.expiry() == null ? "" : outpost.expiry().toString(), "remaining",
-                remaining(outpost.expiry()))),
+        return output(state, "感知者先遣舰", "感知者先遣舰当前节点",
+            outpost == null ? List.of() : List.of(item("node", outpost.node(), "nodeKey", outpost.node(),
+                "windowSource", outpost.estimatedWindow() ? "按官方快照时刻估算" : outpost.expiry() == null ? null : "官方时段",
+                "description", "面纱比邻星的九重天节点。登舰完成异常目标可获得异常碎片。", "activation", format(outpost.activation()),
+                "activationInstant", outpost.activation() == null ? "" : outpost.activation().toString(), "expiry",
+                format(outpost.expiry()), "expiryInstant", outpost.expiry() == null ? "" : outpost.expiry().toString(),
+                "remaining", remaining(outpost.expiry()))),
             "items", "itemCount");
     }
 
@@ -601,12 +710,14 @@ public final class WarframeWorldStateProjector {
      * @return 当前命令的标题、状态及展示条目。
      */
     public static WarframeWorldStateCommandVO circuit(WorldStateDTO state, boolean hard) {
+        var tracks = state.circuitChoices().stream()
+            .filter(choice -> (hard ? "EXC_HARD" : "EXC_NORMAL").equalsIgnoreCase(choice.category())
+                || (hard ? "hard" : "normal").equalsIgnoreCase(choice.category()))
+            .toList();
         return output(state, hard ? "灵化轮换" : "普通回廊", "回廊当前奖励",
-            state.circuitChoices().stream()
-                .filter(choice -> (hard ? "EXC_HARD" : "EXC_NORMAL").equalsIgnoreCase(choice.category())
-                    || (hard ? "hard" : "normal").equalsIgnoreCase(choice.category()))
-                .filter(choice -> choice.expiry() == null || choice.expiry().isAfter(Instant.now()))
-                .filter(choice -> choice.activation() == null || !choice.activation().isAfter(Instant.now()))
+            currentRounds(tracks, ignored -> "circuit", WorldStateDTO.CircuitChoiceDTO::activation,
+                WorldStateDTO.CircuitChoiceDTO::expiry, snapshotTime(state))
+                .stream()
                 .flatMap(choice -> choice.choices().stream()
                     .map(name -> item("item", name.replaceAll("([a-z0-9])([A-Z])", "$1 $2").replace(" And ", " & "),
                         "expiry", format(choice.expiry()), "expiryInstant",
@@ -624,7 +735,9 @@ public final class WarframeWorldStateProjector {
      */
     public static WarframeWorldStateCommandVO calendar(WorldStateDTO state) {
         List<Map<String, Object>> days = new ArrayList<>();
-        for (var season : state.calendarSeasons()) {
+        for (var season : currentRounds(state.calendarSeasons(), WorldStateDTO.CalendarSeasonDTO::season,
+            WorldStateDTO.CalendarSeasonDTO::activation, WorldStateDTO.CalendarSeasonDTO::expiry,
+            snapshotTime(state))) {
             for (var day : season.days()) {
                 List<Map<String, Object>> challenges = new ArrayList<>();
                 List<Map<String, Object>> rewards = new ArrayList<>();
@@ -778,16 +891,6 @@ public final class WarframeWorldStateProjector {
             }
         }
         return result;
-    }
-
-    /**
-     * 将业务数据格式化为展示文本。
-     *
-     * @param instant 时间点。
-     * @return 将业务数据格式化为展示文本对应的文本。
-     */
-    private static String format(Instant instant) {
-        return ObjUtil.isNull(instant) ? "" : TIME_FORMAT.format(instant);
     }
 
     /**

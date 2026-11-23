@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 ACHIEVEMENT 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 成就定义。按成就键查询名称、目标和图标，用于成就资料和展示。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

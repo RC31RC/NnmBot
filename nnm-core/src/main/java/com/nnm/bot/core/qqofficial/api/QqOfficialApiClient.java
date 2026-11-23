@@ -12,6 +12,7 @@ import com.nnm.bot.core.messaging.model.BotMessagePart.Keyboard;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Markdown;
 import com.nnm.bot.core.messaging.model.BotMessagePart.Text;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.BooleanUtil;
 
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialApiRequestDTO;
 import com.nnm.bot.core.qqofficial.api.dto.QqOfficialApiResponseDTO;
@@ -122,7 +123,7 @@ public class QqOfficialApiClient {
                 if (item == null) {
                     throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_EMPTY);
                 }
-                if (!Boolean.TRUE.equals(item.bot())) {
+                if (!BooleanUtil.isTrue(item.bot())) {
                     if (CharSequenceUtil.isBlank(item.memberOpenid())) {
                         throw new BusinessException(QqOfficialErrorCode.GROUP_MEMBER_ID_MISSING);
                     }

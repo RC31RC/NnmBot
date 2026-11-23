@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 SKIN 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 皮肤和外观物品定义。使用外观自身路径解析名称和图片，保留与基础装备的关系。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -7,7 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 IMAGE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 图标资产路径与内容哈希的索引。按原始图片路径定位可用图片资源，物品归属由对应定义确定。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

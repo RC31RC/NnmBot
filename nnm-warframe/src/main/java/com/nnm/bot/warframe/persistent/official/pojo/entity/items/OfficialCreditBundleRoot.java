@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 CREDIT_BUNDLE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 有独立类型路径的现金包定义。可按路径确认奖励类型及现金数量；动态字段中的现金数额以原值为准。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -11,6 +11,7 @@ import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.enums.ActionPath;
 import com.nnm.bot.core.channel.constant.BotChannelErrorCode;
 import com.nnm.bot.core.messaging.model.BotFile;
+import com.nnm.bot.core.onebot.constant.OneBotProtocolConstants.ResponseStatus;
 import com.nnm.bot.core.onebot.config.OneBotProperties;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -116,7 +117,7 @@ public class OneBotFileStager {
     }
 
     private void ensureStreamSuccess(ActionData<?> result, BotFile file, long fileSize, String phase) {
-        if (ObjUtil.isNull(result) || !"ok".equalsIgnoreCase(result.getStatus())
+        if (ObjUtil.isNull(result) || !ResponseStatus.fromCode(result.getStatus()).isSuccess()
             || (ObjUtil.isNotNull(result.getRetCode()) && result.getRetCode() != 0)) {
             throw this.streamFailure(file, fileSize, result,
                 "phase=" + phase + "; 远端 OneBot 需要支持 NapCat upload_file_stream");

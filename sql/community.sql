@@ -200,9 +200,6 @@ INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, upda
 SELECT 'alias:61a373f9b67277f05ecac69bac5497e26628a4270c09cf3768f49a1b6c39c8bf', '三傻', 'Hydrolyst', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:61a373f9b67277f05ecac69bac5497e26628a4270c09cf3768f49a1b6c39c8bf' OR (alias_name='三傻' AND target_name='Hydrolyst'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:4a4247573096372b050668ca92362f67b3916ef553f7ad082534108dfbd7d915', '中断', 'Disruption', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:4a4247573096372b050668ca92362f67b3916ef553f7ad082534108dfbd7d915' OR (alias_name='中断' AND target_name='Disruption'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:5f73719962746d75c44d90dc8e59490ca7932577c05b003ad2feaa50cdc34260', '主教', 'Harrow', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:5f73719962746d75c44d90dc8e59490ca7932577c05b003ad2feaa50cdc34260' OR (alias_name='主教' AND target_name='Harrow'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
@@ -218,17 +215,11 @@ INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, upda
 SELECT 'alias:2106b0e34775829b1c087e02c1483f6265396f7b292be487d4c170aebefaf532', '人马 P', 'Dagath Prime', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:2106b0e34775829b1c087e02c1483f6265396f7b292be487d4c170aebefaf532' OR (alias_name='人马 P' AND target_name='Dagath Prime'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:2446f8714f25f44dbe136d32ef1b2963dee7586fe64e21329df127893812da8f', '仲裁', 'Arbitration', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:2446f8714f25f44dbe136d32ef1b2963dee7586fe64e21329df127893812da8f' OR (alias_name='仲裁' AND target_name='Arbitration'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:a6b732309d90c4a1725f16771f02470e6afe743d8462740a8c4f1687158148e4', '但丁', 'Dante', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:a6b732309d90c4a1725f16771f02470e6afe743d8462740a8c4f1687158148e4' OR (alias_name='但丁' AND target_name='Dante'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:4b71639711715142f239450c32e0818def5b5aafb01d2eef2f014cbe2e7743be', '但丁 P', 'Dante Prime', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:4b71639711715142f239450c32e0818def5b5aafb01d2eef2f014cbe2e7743be' OR (alias_name='但丁 P' AND target_name='Dante Prime'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:67a320ba113280993b66eeb3cbc44ba25e991a9686d5e768e9bdd74177544d2c', '信条', 'Tenet', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:67a320ba113280993b66eeb3cbc44ba25e991a9686d5e768e9bdd74177544d2c' OR (alias_name='信条' AND target_name='Tenet'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:468e69cbf8c9510f5f6495b1d8f579d1b0b105b94022b6a6140de676e4188375', '僧甲', 'Baruuk', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:468e69cbf8c9510f5f6495b1d8f579d1b0b105b94022b6a6140de676e4188375' OR (alias_name='僧甲' AND target_name='Baruuk'));
@@ -379,9 +370,6 @@ WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alia
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:515e019632e67c86fe4511cd3fad3bba8f428f18e9197445e7fce002e6b9dad8', '大傻', 'Teralyst', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:515e019632e67c86fe4511cd3fad3bba8f428f18e9197445e7fce002e6b9dad8' OR (alias_name='大傻' AND target_name='Teralyst'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:eb2302eaf035cd2fad57b0a21a9382a0367f15fcaa561175d4305ac3b9203360', '大嘴', 'Helminth', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:eb2302eaf035cd2fad57b0a21a9382a0367f15fcaa561175d4305ac3b9203360' OR (alias_name='大嘴' AND target_name='Helminth'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:8a0aab5e5782d3d6243d71211926dabd94e76a692588dce3679c52a3623a35ae', '女枪', 'Mesa', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:8a0aab5e5782d3d6243d71211926dabd94e76a692588dce3679c52a3623a35ae' OR (alias_name='女枪' AND target_name='Mesa'));
@@ -566,9 +554,6 @@ INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, upda
 SELECT 'alias:cfbdcf7d3379e6cf9445422449604b2655478770b45959148044a32c064cb1b2', '易爆速返', 'Volatile Quick Return', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:cfbdcf7d3379e6cf9445422449604b2655478770b45959148044a32c064cb1b2' OR (alias_name='易爆速返' AND target_name='Volatile Quick Return'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:6edb753b5be36c42e0ebd44ffa0ec46bfd237e2e5c09167149df4ea9a2a1caee', '机甲', 'Necramech', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:6edb753b5be36c42e0ebd44ffa0ec46bfd237e2e5c09167149df4ea9a2a1caee' OR (alias_name='机甲' AND target_name='Necramech'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:d53ae4c1cdb5cb76787e1e96b0e483cf74618c77f4dd1fde88f32dc7c0d3ea95', '杀妈刀', 'Paracesis', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:d53ae4c1cdb5cb76787e1e96b0e483cf74618c77f4dd1fde88f32dc7c0d3ea95' OR (alias_name='杀妈刀' AND target_name='Paracesis'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
@@ -599,9 +584,6 @@ INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, upda
 SELECT 'alias:f748e967e42e3c3505c0099fa5c7ce3c256bc9b32099df79e2e4a348a867f3fe', '武增', 'Baruuk Prime', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:f748e967e42e3c3505c0099fa5c7ce3c256bc9b32099df79e2e4a348a867f3fe' OR (alias_name='武增' AND target_name='Baruuk Prime'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:6242163ca21381524b32c070c9cb1c0055e73a4319b50cc737bdc2c7212bde5a', '殁世机甲', 'Necramech', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:6242163ca21381524b32c070c9cb1c0055e73a4319b50cc737bdc2c7212bde5a' OR (alias_name='殁世机甲' AND target_name='Necramech'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:7f28fe937af655813c4d0d7622463b91535a37d9dd693344dbc8a248660214c2', '母牛', 'Hildryn', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:7f28fe937af655813c4d0d7622463b91535a37d9dd693344dbc8a248660214c2' OR (alias_name='母牛' AND target_name='Hildryn'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
@@ -613,9 +595,6 @@ WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alia
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:ed283ee5adfe8f8cc525e56ffbffc45234dff731c611cf7209bc11130121fb19', '毒妈 P', 'Saryn Prime', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:ed283ee5adfe8f8cc525e56ffbffc45234dff731c611cf7209bc11130121fb19' OR (alias_name='毒妈 P' AND target_name='Saryn Prime'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:dbf34072af5429b06db9cfbc76c5260a7c8fa2468efa800b57af79d6ab8c9c45', '气球', 'Lure', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:dbf34072af5429b06db9cfbc76c5260a7c8fa2468efa800b57af79d6ab8c9c45' OR (alias_name='气球' AND target_name='Lure'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:4fc625148314a7714a7c56d2d367aa7fd5c55f43a60b350660f32b29219c4dfb', '水力使', 'Hydrolyst', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:4fc625148314a7714a7c56d2d367aa7fd5c55f43a60b350660f32b29219c4dfb' OR (alias_name='水力使' AND target_name='Hydrolyst'));
@@ -797,9 +776,6 @@ INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, upda
 SELECT 'alias:64de2848c86151b929c9395a24e6daf59f0d014a7dc67e1dc7fce1233aff5785', '电妹 P', 'Gyre Prime', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:64de2848c86151b929c9395a24e6daf59f0d014a7dc67e1dc7fce1233aff5785' OR (alias_name='电妹 P' AND target_name='Gyre Prime'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:7156f16e1d1bc95b9abb2b4864902f051c9bc4795df6e1ee3211794fb935fbf0', '电波', 'Nightwave', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:7156f16e1d1bc95b9abb2b4864902f051c9bc4795df6e1ee3211794fb935fbf0' OR (alias_name='电波' AND target_name='Nightwave'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:78e18c5a815b065d11a81af86d389e3696d72ce36771eab0c491447543dbdb99', '电浆炮', 'Arca Plasmor', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:78e18c5a815b065d11a81af86d389e3696d72ce36771eab0c491447543dbdb99' OR (alias_name='电浆炮' AND target_name='Arca Plasmor'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
@@ -980,9 +956,6 @@ INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, upda
 SELECT 'alias:a2b069014187711d2a480495ec0f4a98bd7c3837b1ab3bfc26accbbb97fdbe50', '豆子', 'Endo', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:a2b069014187711d2a480495ec0f4a98bd7c3837b1ab3bfc26accbbb97fdbe50' OR (alias_name='豆子' AND target_name='Endo'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:eaf95f6f4dc681b688ab39d86e070b99f907d132494f41572078227a26f76aa7', '赏金', 'Bounty', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:eaf95f6f4dc681b688ab39d86e070b99f907d132494f41572078227a26f76aa7' OR (alias_name='赏金' AND target_name='Bounty'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:20809ebf8735e4c54c8d19a2c59aa1ec149be68196c86f4d94a265b830239237', '赤毒', 'Kuva', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:20809ebf8735e4c54c8d19a2c59aa1ec149be68196c86f4d94a265b830239237' OR (alias_name='赤毒' AND target_name='Kuva'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
@@ -1007,17 +980,8 @@ INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, upda
 SELECT 'alias:3e20da9625b465bc8e56535ae1b9646833fa67d667b2878f34163e5955c177db', '金首发', '膛室 Prime', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:3e20da9625b465bc8e56535ae1b9646833fa67d667b2878f34163e5955c177db' OR (alias_name='金首发' AND target_name='膛室 Prime'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:51faf8221b2fd5d9e953ff2cc236d3d8f38691aa1c7f3541910688735a662ac0', '钢路', 'Steel Path', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:51faf8221b2fd5d9e953ff2cc236d3d8f38691aa1c7f3541910688735a662ac0' OR (alias_name='钢路' AND target_name='Steel Path'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:1a27596e0580766eac73b7b848e3b2768812810154d29549a234402ddf39eed7', '钢铁', 'Steel Path', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:1a27596e0580766eac73b7b848e3b2768812810154d29549a234402ddf39eed7' OR (alias_name='钢铁' AND target_name='Steel Path'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:6180c88e5958fcaa18313d767d7ee8e04b7ed4c7620980e71a5c4de7de3cdc5a', '银土豆', 'Orokin Reactor', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:6180c88e5958fcaa18313d767d7ee8e04b7ed4c7620980e71a5c4de7de3cdc5a' OR (alias_name='银土豆' AND target_name='Orokin Reactor'));
-INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
-SELECT 'alias:68dbb68ac3842926b04e395f75f4dac35f9fe490244c83d9afd672c20394f94d', '镀层', 'Galvanized', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:68dbb68ac3842926b04e395f75f4dac35f9fe490244c83d9afd672c20394f94d' OR (alias_name='镀层' AND target_name='Galvanized'));
 INSERT INTO nnmbot.wf_community_alias (record_key, alias_name, target_name, updated_at, version)
 SELECT 'alias:4ae4cbb277b4e93bab36ebfd260a4f138f3e6501565969802e9ca153ea5ef426', '阴阳', 'Equinox', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_alias WHERE record_key='alias:4ae4cbb277b4e93bab36ebfd260a4f138f3e6501565969802e9ca153ea5ef426' OR (alias_name='阴阳' AND target_name='Equinox'));
@@ -1274,130 +1238,216 @@ WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_riven_alias WHERE record_key
 INSERT INTO nnmbot.wf_community_riven_alias (record_key, alias_name, attribute_code, updated_at, version)
 SELECT '变焦', '变焦', 'zoom', CURRENT_TIMESTAMP, 0
 WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_riven_alias WHERE record_key='变焦' OR (alias_name='变焦' AND attribute_code='zoom'));
--- 社区arbitration_essence：按业务内容去重，多目标别名分别保留，既有人工记录优先。
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'ClanNode22', 'ClanNode22', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='ClanNode22' OR node_name='ClanNode22');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'ClanNode23', 'ClanNode23', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='ClanNode23' OR node_name='ClanNode23');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'ClanNode6', 'ClanNode6', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='ClanNode6' OR node_name='ClanNode6');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode123', 'SolNode123', 350, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode123' OR node_name='SolNode123');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode130', 'SolNode130', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode130' OR node_name='SolNode130');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode147', 'SolNode147', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode147' OR node_name='SolNode147');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode149', 'SolNode149', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode149' OR node_name='SolNode149');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode167', 'SolNode167', 360, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode167' OR node_name='SolNode167');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode177', 'SolNode177', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode177' OR node_name='SolNode177');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode18', 'SolNode18', 240, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode18' OR node_name='SolNode18');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode211', 'SolNode211', 360, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode211' OR node_name='SolNode211');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode224', 'SolNode224', 280, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode224' OR node_name='SolNode224');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode25', 'SolNode25', 480, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode25' OR node_name='SolNode25');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode302', 'SolNode302', 320, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode302' OR node_name='SolNode302');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode412', 'SolNode412', 360, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode412' OR node_name='SolNode412');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode450', 'SolNode450', 480, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode450' OR node_name='SolNode450');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode707', 'SolNode707', 350, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode707' OR node_name='SolNode707');
-INSERT INTO nnmbot.wf_community_arbitration_essence (record_key, node_name, essence_amount, updated_at, version)
-SELECT 'SolNode85', 'SolNode85', 300, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_arbitration_essence WHERE record_key='SolNode85' OR node_name='SolNode85');
--- 已核实用途的科研专用整词与赏金 locationTag 短码；按分组精确匹配。
+-- 已核实用途的科研整词与赏金短码由解析映射按作用域读取。
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('archimedea:EMP Black Hole', 'archimedea', 'EMP Black Hole', 'EMP 黑洞', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('archimedea:EMPBlackHole', 'archimedea', 'EMPBlackHole', 'EMP 黑洞', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('archimedea:Operator Only', 'archimedea', 'Operator Only', '仅限操作者', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('archimedea:Shieldless', 'archimedea', 'Shieldless', '无护盾', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('archimedea:Vampire Rock', 'archimedea', 'Vampire Rock', '吸血岩', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('archimedea:Warframe Only', 'archimedea', 'Warframe Only', '仅限战甲', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('bounty_stage:ChamberA', 'bounty_stage', 'ChamberA', '隔离库（等级2）', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('bounty_stage:ChamberB', 'bounty_stage', 'ChamberB', '隔离库（等级1）', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('bounty_stage:ChamberC', 'bounty_stage', 'ChamberC', '隔离库（等级3）', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+-- warframe-info-api 自维护的玩法称呼。用中文玩家用语关联通行英文术语。
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'archimedea:emp black hole', 'archimedea', 'EMP Black Hole', 'EMP 黑洞', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='archimedea:emp black hole' OR (term_group='archimedea' AND lower(english_text)=lower('EMP Black Hole')));
+SELECT 'gameplay:仲裁', 'gameplay', 'Arbitration', '仲裁', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Arbitration' AND chinese_text='仲裁')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'archimedea:empblackhole', 'archimedea', 'EMPBlackHole', 'EMP 黑洞', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='archimedea:empblackhole' OR (term_group='archimedea' AND lower(english_text)=lower('EMPBlackHole')));
+SELECT 'gameplay:赏金', 'gameplay', 'Bounty', '赏金', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Bounty' AND chinese_text='赏金')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'archimedea:operator only', 'archimedea', 'Operator Only', '仅限操作者', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='archimedea:operator only' OR (term_group='archimedea' AND lower(english_text)=lower('Operator Only')));
+SELECT 'gameplay:中断', 'gameplay', 'Disruption', '中断', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Disruption' AND chinese_text='中断')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'archimedea:shieldless', 'archimedea', 'Shieldless', '无护盾', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='archimedea:shieldless' OR (term_group='archimedea' AND lower(english_text)=lower('Shieldless')));
+SELECT 'gameplay:镀层', 'gameplay', 'Galvanized', '镀层', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Galvanized' AND chinese_text='镀层')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'archimedea:vampire rock', 'archimedea', 'Vampire Rock', '吸血岩', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='archimedea:vampire rock' OR (term_group='archimedea' AND lower(english_text)=lower('Vampire Rock')));
+SELECT 'gameplay:大嘴', 'gameplay', 'Helminth', '大嘴', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Helminth' AND chinese_text='大嘴')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'archimedea:warframe only', 'archimedea', 'Warframe Only', '仅限战甲', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='archimedea:warframe only' OR (term_group='archimedea' AND lower(english_text)=lower('Warframe Only')));
+SELECT 'gameplay:气球', 'gameplay', 'Lure', '气球', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Lure' AND chinese_text='气球')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'bounty_stage:chambera', 'bounty_stage', 'ChamberA', '隔离库（等级2）', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='bounty_stage:chambera' OR (term_group='bounty_stage' AND lower(english_text)=lower('ChamberA')));
+SELECT 'gameplay:机甲', 'gameplay', 'Necramech', '机甲', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Necramech' AND chinese_text='机甲')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'bounty_stage:chamberb', 'bounty_stage', 'ChamberB', '隔离库（等级1）', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='bounty_stage:chamberb' OR (term_group='bounty_stage' AND lower(english_text)=lower('ChamberB')));
+SELECT 'gameplay:殁世机甲', 'gameplay', 'Necramech', '殁世机甲', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Necramech' AND chinese_text='殁世机甲')
+ON CONFLICT (record_key) DO NOTHING;
 INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
-SELECT 'bounty_stage:chamberc', 'bounty_stage', 'ChamberC', '隔离库（等级3）', CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE record_key='bounty_stage:chamberc' OR (term_group='bounty_stage' AND lower(english_text)=lower('ChamberC')));
+SELECT 'gameplay:电波', 'gameplay', 'Nightwave', '电波', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Nightwave' AND chinese_text='电波')
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+SELECT 'gameplay:钢路', 'gameplay', 'Steel Path', '钢路', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Steel Path' AND chinese_text='钢路')
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+SELECT 'gameplay:钢铁', 'gameplay', 'Steel Path', '钢铁', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Steel Path' AND chinese_text='钢铁')
+ON CONFLICT (record_key) DO NOTHING;
+INSERT INTO nnmbot.wf_community_term (record_key, term_group, english_text, chinese_text, updated_at, version)
+SELECT 'gameplay:信条', 'gameplay', 'Tenet', '信条', CURRENT_TIMESTAMP, 0
+WHERE NOT EXISTS (SELECT 1 FROM nnmbot.wf_community_term WHERE english_text='Tenet' AND chinese_text='信条')
+ON CONFLICT (record_key) DO NOTHING;
 -- END WARFRAME REFERENCE SEED
+-- 2026-11-21 从 arbi.wf.wiki 的 tierlist.default.json 与 leaderboard 导入；估值为近 180 天 19,716 条玩家记录 perHour 中位数。
+-- 共 88 个节点，80 个有估值、8 个无样本；16 个网站评级原样保留，另外 64 个按 80 个估值节点的六分位推算。
+-- 网站 S/A+/A/A-/B/C 映射为本项目 A/B/C/D/E/F；推算边界为 459/563/614/694/781，8 个无估值节点仍为 NULL。
+WITH arbitration_nodes(node_key, efficiency_grade, essence_amount) AS (
+    VALUES
+        ('SolNode450', 'A', 904), ('SolNode106', 'A', 798), ('SolNode25', 'A', 806), ('SolNode64', 'A', 637),
+        ('SolNode23', 'B', 764), ('SolNode172', 'B', 725), ('SolNode719', 'B', 719), ('SolNode147', 'B', 624),
+        ('SolNode224', 'C', 547), ('SolNode167', 'C', 635), ('SolNode412', 'C', 534), ('SolNode211', 'C', 563),
+        ('SolNode43', 'D', 387), ('SolNode85', 'D', 421), ('SolNode185', 'F', 230), ('SolNode18', 'F', 337),
+        ('ClanNode14', NULL, 863), ('ClanNode16', NULL, 879), ('ClanNode17', NULL, 876), ('ClanNode19', NULL, 694),
+        ('ClanNode2', NULL, 579), ('ClanNode20', NULL, NULL), ('ClanNode21', NULL, 744), ('ClanNode23', NULL, 770),
+        ('ClanNode25', NULL, 226), ('ClanNode3', NULL, NULL), ('ClanNode4', NULL, 636), ('ClanNode5', NULL, 734),
+        ('ClanNode7', NULL, NULL), ('ClanNode9', NULL, 757), ('SettlementNode11', NULL, 399), ('SettlementNode3', NULL, 609),
+        ('SolNode100', NULL, 769), ('SolNode101', NULL, NULL), ('SolNode118', NULL, 850), ('SolNode123', NULL, 632),
+        ('SolNode125', NULL, 574), ('SolNode146', NULL, 719), ('SolNode16', NULL, NULL), ('SolNode166', NULL, 735),
+        ('SolNode17', NULL, 511), ('SolNode177', NULL, 882), ('SolNode187', NULL, 683), ('SolNode216', NULL, 101),
+        ('SolNode22', NULL, 547), ('SolNode230', NULL, 367), ('SolNode233', NULL, NULL), ('SolNode26', NULL, 541),
+        ('SolNode30', NULL, 639), ('SolNode302', NULL, 534), ('SolNode308', NULL, 708), ('SolNode309', NULL, 495),
+        ('SolNode39', NULL, 208), ('SolNode405', NULL, 909), ('SolNode409', NULL, 829), ('SolNode6', NULL, NULL),
+        ('SolNode711', NULL, 900), ('SolNode718', NULL, 459), ('SolNode81', NULL, 761), ('SolNode87', NULL, 790),
+        ('SolNode94', NULL, 798), ('SolNode96', NULL, 781), ('SolNode232', NULL, NULL), ('ClanNode12', NULL, 282),
+        ('ClanNode11', NULL, 643), ('ClanNode13', NULL, 614), ('ClanNode0', NULL, 526), ('ClanNode1', NULL, 692),
+        ('ClanNode10', NULL, 190), ('ClanNode22', NULL, 650), ('SolNode149', NULL, 644), ('SolNode42', NULL, 589),
+        ('SolNode195', NULL, 590), ('ClanNode24', NULL, 619), ('SolNode707', NULL, 590), ('SolNode72', NULL, 548),
+        ('ClanNode18', NULL, 606), ('SolNode122', NULL, 556), ('SolNode164', NULL, 605), ('SolNode212', NULL, 551),
+        ('ClanNode6', NULL, 620), ('ClanNode8', NULL, 603), ('SolNode46', NULL, 588), ('SolNode305', NULL, 443),
+        ('SolNode402', NULL, 575), ('SolNode408', NULL, 582), ('ClanNode15', NULL, 460), ('SolNode130', NULL, 454)
+), official_nodes AS (
+    SELECT bkey,
+        COALESCE(MAX(NULLIF(localized_name, '')), MAX(NULLIF(official_name, '')), bkey) AS node_name,
+        COALESCE(MAX(NULLIF(zhsystemname, '')), MAX(NULLIF(parent_name, ''))) AS system_name
+    FROM nnmbot.wf_official_region_root
+    WHERE bkey IN (SELECT node_key FROM arbitration_nodes)
+      AND enabled
+    GROUP BY bkey
+)
+INSERT INTO nnmbot.wf_community_arbitration_essence
+    (record_key, node_key, node_name, system_name, essence_amount, efficiency_grade, updated_at, version)
+SELECT nodes.node_key, nodes.node_key,
+    COALESCE(official.node_name, nodes.node_key), official.system_name,
+    nodes.essence_amount,
+    CASE
+        WHEN nodes.efficiency_grade IS NOT NULL THEN nodes.efficiency_grade
+        WHEN nodes.essence_amount IS NULL THEN NULL
+        WHEN nodes.essence_amount <= 459 THEN 'F'
+        WHEN nodes.essence_amount <= 563 THEN 'E'
+        WHEN nodes.essence_amount <= 614 THEN 'D'
+        WHEN nodes.essence_amount <= 694 THEN 'C'
+        WHEN nodes.essence_amount <= 781 THEN 'B'
+        ELSE 'A'
+    END,
+    CURRENT_TIMESTAMP, 0
+FROM arbitration_nodes AS nodes
+LEFT JOIN official_nodes AS official ON official.bkey = nodes.node_key
+ON CONFLICT (node_key) DO NOTHING;
+
 -- BEGIN COMMUNITY WORLDSTATE STATIC SEEDS
--- 已执行的 03 深层下降：20 条难度/楼层到已采纳官方 DROP_TABLE 奖池的人工核验映射。
--- 奖池条目/概率不在此复制；依官方采纳记录查询；非本周抽中的确定奖励。
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:2', CURRENT_TIMESTAMP, 0, 2, 'normal', '普通奖池', NULL, NULL, NULL, NULL, '["3 × 10,000 Credits 奖励包","2,500 Endo","50 Vosfor","25 Ignia","5 Maphica"]', NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:4', CURRENT_TIMESTAMP, 0, 4, 'normal', '普通奖池', NULL, NULL, 'normal:2', NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:9', CURRENT_TIMESTAMP, 0, 9, 'normal', '普通奖池', NULL, NULL, 'normal:2', NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:11', CURRENT_TIMESTAMP, 0, 11, 'normal', '普通奖池', NULL, NULL, 'normal:2', NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:16', CURRENT_TIMESTAMP, 0, 16, 'normal', '普通奖池', NULL, NULL, 'normal:2', NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:18', CURRENT_TIMESTAMP, 0, 18, 'normal', '普通奖池', NULL, NULL, 'normal:2', NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:6', CURRENT_TIMESTAMP, 0, 6, 'normal', '夜灵赋能奖池', 'contexts/Dynamic Location Rewards:43', 'The Descendia: Infernum 20 Triple Arcane Rewards', NULL, 1, NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖；官方公告未逐一列出该奖池物品。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:13', CURRENT_TIMESTAMP, 0, 13, 'normal', '夜灵赋能奖池', 'contexts/Dynamic Location Rewards:43', 'The Descendia: Infernum 20 Triple Arcane Rewards', NULL, 1, NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖；官方公告未逐一列出该奖池物品。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:20', CURRENT_TIMESTAMP, 0, 20, 'normal', '夜灵赋能奖池', 'contexts/Dynamic Location Rewards:43', 'The Descendia: Infernum 20 Triple Arcane Rewards', NULL, NULL, NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖；官方公告未逐一列出该奖池物品。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('normal:21', CURRENT_TIMESTAMP, 0, 21, 'normal', '最终奖励', NULL, NULL, NULL, NULL, '["Forma 蓝图","主要武器赋能适配器","次要武器赋能适配器","近战赋能适配器","增幅器赋能适配器"]', NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:2', CURRENT_TIMESTAMP, 0, 2, 'steelPath', '钢铁普通奖池', 'contexts/Dynamic Location Rewards:45', 'The Descendia: Common Rewards (Steel Path)', NULL, NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:9', CURRENT_TIMESTAMP, 0, 9, 'steelPath', '钢铁普通奖池', 'contexts/Dynamic Location Rewards:45', 'The Descendia: Common Rewards (Steel Path)', NULL, NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:16', CURRENT_TIMESTAMP, 0, 16, 'steelPath', '钢铁普通奖池', 'contexts/Dynamic Location Rewards:45', 'The Descendia: Common Rewards (Steel Path)', NULL, NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:4', CURRENT_TIMESTAMP, 0, 4, 'steelPath', '钢铁进阶奖池', 'contexts/Dynamic Location Rewards:47', 'The Descendia: Uncommon Rewards (Steel Path)', NULL, NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:11', CURRENT_TIMESTAMP, 0, 11, 'steelPath', '钢铁进阶奖池', 'contexts/Dynamic Location Rewards:47', 'The Descendia: Uncommon Rewards (Steel Path)', NULL, NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:6', CURRENT_TIMESTAMP, 0, 6, 'steelPath', '深层下降专属赋能奖池', 'contexts/Dynamic Location Rewards:44', 'The Descendia: Infernum 6 and 13 Arcane Rewards (Steel Path)', NULL, NULL, NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:13', CURRENT_TIMESTAMP, 0, 13, 'steelPath', '深层下降专属赋能奖池', 'contexts/Dynamic Location Rewards:44', 'The Descendia: Infernum 6 and 13 Arcane Rewards (Steel Path)', NULL, NULL, NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:20', CURRENT_TIMESTAMP, 0, 20, 'steelPath', '深层下降专属赋能奖池', 'contexts/Dynamic Location Rewards:49', 'The Descendia: Infernum 20 Triple Arcane Rewards (Steel Path)', NULL, NULL, NULL, '第 20 层为同一抽选结果的三倍数量，不是三次独立抽奖。', false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:18', CURRENT_TIMESTAMP, 0, 18, 'steelPath', '固定奖励', 'contexts/Dynamic Location Rewards:48', 'The Descendia: Steel Essence Rewards (Steel Path)', NULL, NULL, NULL, '官方公告注明第 18 层通关奖励。', true, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_descendia_reward (record_key, updated_at, version, floor_number, difficulty, label, official_pool_key, expected_pool_name, source_reward_key, item_count_override, options_json, note, guaranteed, source_url) VALUES ('steelPath:21', CURRENT_TIMESTAMP, 0, 21, 'steelPath', '钢铁最终奖励', 'contexts/Dynamic Location Rewards:46', 'The Descendia: Rare Rewards (Steel Path)', NULL, NULL, NULL, NULL, false, 'https://www.warframe.com/en/patch-notes/pc/41-0-0') ON CONFLICT (record_key) DO NOTHING;
--- 顺序来自 WFCD warframe-worldstate-data/data/steelPath.json，锚点来自 warframe-worldstate-parser/lib/models/SteelPathOffering.ts；身份已核对官方 vendors.json.gz。
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:0',CURRENT_TIMESTAMP,0,0,DATE '2020-11-16','/Lotus/StoreItems/Types/Recipes/Components/UmbraFormaBlueprint') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:1',CURRENT_TIMESTAMP,0,1,DATE '2020-11-16','/Lotus/StoreItems/Types/Items/MiscItems/Kuva') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:2',CURRENT_TIMESTAMP,0,2,DATE '2020-11-16','/Lotus/StoreItems/Upgrades/Mods/Randomized/RawModularPistolRandomMod') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:3',CURRENT_TIMESTAMP,0,3,DATE '2020-11-16','/Lotus/StoreItems/Types/Items/MiscItems/Forma') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:4',CURRENT_TIMESTAMP,0,4,DATE '2020-11-16','/Lotus/StoreItems/Upgrades/Mods/Randomized/RawModularMeleeRandomMod') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:5',CURRENT_TIMESTAMP,0,5,DATE '2020-11-16','/Lotus/StoreItems/Upgrades/Mods/FusionBundles/EvergreenLoginRewardFusionBundle') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:6',CURRENT_TIMESTAMP,0,6,DATE '2020-11-16','/Lotus/StoreItems/Upgrades/Mods/Randomized/RawRifleRandomMod') ON CONFLICT (record_key) DO NOTHING;
-INSERT INTO nnmbot.wf_community_steel_path_rotation (record_key,updated_at,version,rotation_index,anchor_week,store_item)
-VALUES ('steel_path_rotation:7',CURRENT_TIMESTAMP,0,7,DATE '2020-11-16','/Lotus/StoreItems/Upgrades/Mods/Randomized/RawShotgunRandomMod') ON CONFLICT (record_key) DO NOTHING;
--- END COMMUNITY WORLDSTATE STATIC SEEDS
+
+
+-- 回廊简称指向玩家装备，而不是同名的 BaseStaff 模板；只在灵化轮换查这个别名。
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+VALUES ('circuit:Bo', 'circuit', 'Bo', '/Lotus/Weapons/Tenno/Melee/Staff/Staff', CURRENT_TIMESTAMP, 0)
+ON CONFLICT (record_key) DO NOTHING;
+
+-- 已核对的原值、奖池及图标关系由解析映射维护。
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+SELECT mapping_key, split_part(mapping_key, ':', 1), substring(mapping_key from position(':' in mapping_key) + 1),
+    target_key, CURRENT_TIMESTAMP, 0
+FROM (VALUES
+    ('mission-type:Assassination', 'MT_ASSASSINATION'),
+    ('mission-type:Capture', 'MT_CAPTURE'),
+    ('mission-type:Defense', 'MT_DEFENSE'),
+    ('mission-type:Exterminate', 'MT_EXTERMINATION'),
+    ('mission-type:MobileDefense', 'MT_MOBILE_DEFENSE'),
+    ('mission-type:Sabotage', 'MT_SABOTAGE'),
+    ('mission-type:Spy', 'MT_INTEL'),
+    ('mission-type:Survival', 'MT_SURVIVAL'),
+    ('mission-type:Rescue', 'MT_RESCUE'),
+    ('mission-type:Territory', 'MT_TERRITORY'),
+    ('bounty-pool:HexSyndicate', 'rewardPools/Hex Bounty Rewards'),
+    ('bounty-pool:ZarimanSyndicate', 'rewardPools/Zariman Bounty Rewards'),
+    ('bounty-pool:EntratiLabSyndicate', 'rewardPools/Albrecht''s Laboratories Bounty Rewards'),
+    ('worldstate-image:credit-bundle', '/Lotus/Interface/Icons/StoreIcons/Currency/GenericCreditIcon.png'),
+    ('worldstate-image:cetus', '/Lotus/Interface/Icons/StoreIcons/Captura/PlainsOfEidolonLandscape.png'),
+    ('worldstate-image:vallis', '/Lotus/Interface/Icons/StoreIcons/Captura/VallisLandscape.png'),
+    ('worldstate-image:cambion', '/Lotus/Interface/Icons/StoreIcons/Captura/DeimosCambionDriftLandscape.png'),
+    ('worldstate-image:earth', '/Lotus/Interface/Icons/StoreIcons/Captura/TeacherEarth.png'),
+    ('worldstate-image:zariman', '/Lotus/Interface/Icons/StoreIcons/Captura/Zariman/ZarParkHub.png'),
+    ('worldstate-image:duviri', '/Lotus/Interface/Icons/StoreIcons/Captura/Duviri/DuviriMainlandA.png'),
+    ('item-icon:/Lotus/Types/Recipes/Components/UmbraFormaBlueprint', '/Lotus/Types/Items/MiscItems/FormaUmbra'),
+    ('item-icon:/Lotus/Types/BoosterPacks/CalendarRivenPack', '/Lotus/Upgrades/Mods/Randomized/RawMeleeRandomMod'),
+    ('worldstate-reward:Endo', '/Lotus/Upgrades/Mods/FusionBundles/AlertFusionBundleLarge'),
+    ('worldstate-reward:Kuva', '/Lotus/Types/Items/MiscItems/Kuva'),
+    ('worldstate-reward:Steel Essence', '/Lotus/Types/Items/MiscItems/SteelEssence'),
+    ('worldstate-reward:内融核心', '/Lotus/Upgrades/Mods/FusionBundles/AlertFusionBundleLarge'),
+    ('worldstate-reward:赤毒', '/Lotus/Types/Items/MiscItems/Kuva'),
+    ('worldstate-reward:钢铁精华', '/Lotus/Types/Items/MiscItems/SteelEssence')
+) AS mapping(mapping_key, target_key)
+ON CONFLICT (record_key) DO NOTHING;
+
+-- Oracle 友军对象并非官方物品；完整路径只在赏金友军词条分组内解释。
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+SELECT 'bounty_ally:' || source_key, 'bounty_ally', source_key, display_name, CURRENT_TIMESTAMP, 0
+FROM (VALUES
+    ('Arthur', '亚瑟'),
+    ('Lettie', '莱蒂'),
+    ('Amir', '阿米尔'),
+    ('Aoi', '碧'),
+    ('Eleanor', '埃莉诺'),
+    ('Quincy', '昆西')
+) AS ally(agent, display_name)
+CROSS JOIN LATERAL (SELECT '/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/' || agent || 'AllyAgent') AS identity(source_key)
+ON CONFLICT (record_key) DO NOTHING;
+
+-- 普通隔离库的官方 Final Stage 与游戏池下标 2 对应；下标 3 是秘典隔离库的最终阶段字段。
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+SELECT 'vault-clear-pool:' || source_key, 'vault-clear-pool', source_key, '2', CURRENT_TIMESTAMP, 0
+FROM (VALUES ('A'), ('B'), ('C')) AS tier(code)
+CROSS JOIN (VALUES ('A'), ('B'), ('C')) AS rotation(code)
+CROSS JOIN LATERAL (SELECT '/Lotus/Types/Game/MissionDecks/DeimosMissionRewards/VaultBountyTier'
+    || tier.code || 'Table' || rotation.code || 'Rewards') AS identity(source_key)
+ON CONFLICT (record_key) DO NOTHING;
+
+-- 固定目标用于普通隔离库展示，额外开启储藏室单独标为可选步骤。
+INSERT INTO nnmbot.wf_community_reference_mapping (record_key, mapping_scope, source_key, target_key, updated_at, version)
+SELECT 'isolation_vault_phase:' || code, 'isolation_vault_phase', code, display_name, CURRENT_TIMESTAMP, 0
+FROM (VALUES
+    ('BAIT', '收集残留物，制备诱饵并开启洞口'),
+    ('TOXICITY', '抵御感染者并控制毒性'),
+    ('GUARDIANS', '击败守卫殁世机甲（完成奖励）'),
+    ('BONUS', '护送洛德并解锁储藏室（可选）')
+) AS phase(code, display_name)
+ON CONFLICT (record_key) DO NOTHING;
 
 COMMIT;

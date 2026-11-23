@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 COMPONENT 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 制造部件定义。按部件身份补齐配方材料、遗物及奖励的名称和图标。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.notification.impl;
 
+import com.nnm.bot.admin.constant.bot.notification.BotNotificationConstants.GroupDeliveryStatus;
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
 import com.nnm.bot.admin.pojo.dto.bot.notification.BotGroupNotificationReportDTO;
 import com.nnm.bot.core.task.pojo.dto.AdminTaskSubmissionDTO;
@@ -197,7 +198,7 @@ public class BotNotificationJobServiceImpl implements BotNotificationJobService 
                         store.update(id, current -> {
                             current.setReport(report);
                             boolean unknown = report.deliveries().stream()
-                                .anyMatch(delivery -> "UNKNOWN".equals(delivery.status())
+                                .anyMatch(delivery -> delivery.status() == GroupDeliveryStatus.UNKNOWN
                                     || delivery.report() != null && delivery.report().items().stream()
                                         .anyMatch(item -> item.status() == DeliveryStatus.UNKNOWN));
                             current.setStatus(

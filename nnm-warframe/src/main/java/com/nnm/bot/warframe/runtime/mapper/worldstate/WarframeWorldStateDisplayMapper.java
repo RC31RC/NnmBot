@@ -5,6 +5,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO;
 import com.nnm.bot.warframe.runtime.pojo.dto.worldstate.WarframeWorldStateUnresolvedReferenceDTO;
+import com.nnm.bot.warframe.runtime.constant.WarframeBountySupplementStatus;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.AlertVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ArbitrationMissionVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ArchimedeaVO;
@@ -28,10 +29,11 @@ import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.Miss
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.NewsVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.OfferingVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.OutpostVO;
+import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.DescendiaFloorVO;
+import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.DescendiaWeekVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.PersistentEnemyVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.ProductVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.RewardVO;
-import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.SimarisTargetVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.SortieVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.TraderVO;
 import com.nnm.bot.warframe.runtime.pojo.vo.worldstate.WarframeWorldStateVO.VariantVO;
@@ -46,6 +48,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 在引用解析完成后按命令选择展示字段；不改变管理端、订阅匹配使用的完整内部投影。 仲裁图片预热也调用此入口，防止缓存图片与实时文字使用不同的数据协议。
@@ -92,10 +96,10 @@ public final class WarframeWorldStateDisplayMapper {
                         readable(text(variant, "missionType"), "未知任务"), readable(text(variant, "modifier"), "未知条件")))));
             case "arbitration", "arbitration-table", "today-arbitration",
                 "efficient-arbitration" -> map(rows,
-                    row -> new ArbitrationMissionVO(readable(text(row, "node"), "未知节点"),
+                    row -> new ArbitrationMissionVO(readable(text(row, "node"), "未知节点"), text(row, "nodeReference"),
                         readable(first(text(row, "missionType"), text(row, "type")), "未知任务"),
-                        readable(text(row, "faction"), null), text(row, "essence"), text(row, "activation"),
-                        text(row, "expiry")));
+                        readable(text(row, "faction"), null), text(row, "essenceAmount"), text(row, "efficiencyGrade"),
+                        text(row, "essence"), text(row, "activation"), text(row, "expiry")));
             case "fissures", "steel-fissures",
                 "void-storms" -> map(rows,
                     row -> new MissionVO(readable(text(row, "node"), "未知节点"),
@@ -120,21 +124,23 @@ public final class WarframeWorldStateDisplayMapper {
                     reward(row, "attackerReward", "attackerRewards"), reward(row, "defenderReward", "defenderRewards"),
                     String.join("、", values(row.get("attackerMissions")).stream().map(Object::toString).toList()),
                     String.join("、", values(row.get("defenderMissions")).stream().map(Object::toString).toList())));
-            case "steel-path" -> map(rows, row -> new OfferingVO(readable(text(row, "node"), "未知节点"),
-                readable(text(row, "reward"), "未知奖励"), text(row, "expiry"), text(row, "remaining")));
-            case "ostrons", "solaris", "entrati", "cavia", "holdfasts", "hex-bounties",
-                "syndicate-missions" -> map(rows,
-                    row -> new BountyVO(readable(text(row, "syndicate"), "未知集团"), nodes(row), text(row, "expiry"),
-                        text(row, "remaining"), map(rows(row.get("jobs")), WarframeWorldStateDisplayMapper::job),
-                        map(rows(row.get("supplementalJobs")), job -> new SupplementalBountyVO(
-                            readable(text(job, "nodeName"), "未收录节点"), readable(text(job, "missionType"), "未收录任务"),
-                            readable(text(job, "challengeName"), "未收录条件"),
+            case "steel-path" -> map(rows,
+                row -> new OfferingVO(text(row, "node"),
+                    readable(first(text(row, "reward"), text(row, "item")), "未知奖励"), text(row, "price"),
+                    text(row, "offeringStatus"), text(row, "expiry"), text(row, "remaining")));
+            case "ostrons", "solaris", "entrati", "cavia", "holdfasts", "hex-bounties", "syndicate-missions" -> map(
+                rows,
+                row -> new BountyVO(readable(text(row, "syndicate"), "未知集团"), nodes(row), text(row, "expiry"),
+                    text(row, "remaining"), map(rows(row.get("jobs")), WarframeWorldStateDisplayMapper::job),
+                    map(rows(row.get("supplementalJobs")),
+                        job -> new SupplementalBountyVO(readable(text(job, "nodeName"), "未收录节点"),
+                            readable(text(job, "missionType"), "未收录任务"), readable(text(job, "challengeName"), "未收录条件"),
                             readable(text(job, "challengeDescription"), null), readable(text(job, "allyName"), null))),
-                        map(rows(row.get("staticRewardPools")),
-                            pool -> new BountyRewardPoolVO(readable(text(pool, "name"), "静态赏金池"),
-                                values(pool.get("rewards")).stream()
-                                    .map(value -> readable(String.valueOf(value), "未收录奖励")).toList())),
-                        supplementNotice(text(row, "supplementStatus"))));
+                    map(rows(row.get("staticRewardPools")), pool -> new BountyRewardPoolVO(
+                        readable(text(pool, "name"), "静态赏金池"),
+                        rows(pool.get("rewards")).stream()
+                            .map(reward -> readable(text(reward, "displayName"), text(reward, "itemKey"))).toList())),
+                    supplementNotice(text(row, "supplementStatus"))));
             case "nightwave" -> map(rows,
                 row -> new ChallengeVO(readable(text(row, "title"), "未命名任务"),
                     readable(text(row, "description"), "暂无任务说明"), text(row, "reputation"),
@@ -143,10 +149,10 @@ public final class WarframeWorldStateDisplayMapper {
                 map(rows, row -> new NewsVO(text(row, "title"), text(row, "link"), text(row, "publishedAt")));
             case "construction-progress" ->
                 map(rows, row -> new ConstructionVO(text(row, "name"), text(row, "progress")));
-            case "simaris" -> map(rows, row -> new SimarisTargetVO(readable(text(row, "title"), "未提供目标"),
-                Boolean.TRUE.equals(row.get("active")) ? "研究进行中" : "上次完成的公共研究"));
-            case "sentient-outposts" -> map(rows, row -> new OutpostVO(readable(text(row, "node"), "未知节点"),
-                text(row, "activation"), text(row, "expiry"), text(row, "remaining")));
+            case "sentient-outposts" -> map(rows,
+                row -> new OutpostVO(readable(text(row, "node"), "未知节点"), text(row, "systemName"),
+                    text(row, "baseMissionType"), text(row, "baseFaction"), text(row, "activation"),
+                    text(row, "expiry"), text(row, "remaining"), text(row, "windowSource"), text(row, "description")));
             case "clan-initiative" -> map(rows,
                 row -> new ClanInitiativeVO(text(row, "week"), readable(text(row, "location"), "未知区域"),
                     map(rows(row.get("rewards")), reward -> new ClanRewardVO(readable(text(reward, "item"), "未知奖励"),
@@ -182,11 +188,11 @@ public final class WarframeWorldStateDisplayMapper {
                                 readable(text(mission, "deviation"), "未知偏差"), values(mission.get("risks")).stream()
                                     .map(value -> readable(String.valueOf(value), "未知风险")).toList()))));
             case "descents" -> map(rows,
-                row -> new WorldStateEntryVO("深层下降", "种子：" + readable(text(row, "seed"), "未知"), null, null, null,
+                row -> new DescendiaWeekVO(text(row, "expiry"), text(row, "rewardStatus"),
                     map(rows(row.get("challenges")),
-                        challenge -> new RewardVO(readable(text(challenge, "challenge"), "未知挑战"),
-                            text(challenge, "index"), null, null, null)),
-                    null, null, null));
+                        challenge -> new DescendiaFloorVO(text(challenge, "index"), text(challenge, "challenge"),
+                            text(challenge, "type"), descendiaReward(challenge.get("normalReward")),
+                            descendiaReward(challenge.get("steelPathReward"))))));
             case "events" ->
                 map(rows,
                     row -> new WorldStateEntryVO(readable(text(row, "title"), "未命名活动"),
@@ -195,10 +201,9 @@ public final class WarframeWorldStateDisplayMapper {
                         map(rows(row.get("rewards")), reward -> new RewardVO(readable(text(reward, "item"), "未知奖励"),
                             text(reward, "count"), null, null, null)),
                         null, text(row, "expiry"), text(row, "remaining")));
-            case "global-upgrades" -> map(rows,
-                row -> new WorldStateEntryVO(readable(text(row, "upgradeType"), "未知增益"),
-                    readable(text(row, "operationType"), null), null, null, null, List.of(), text(row, "value"),
-                    text(row, "expiry"), text(row, "remaining")));
+            case "global-upgrades" -> map(rows, row -> new WorldStateEntryVO(readable(text(row, "upgradeType"), "未知增益"),
+                readable(text(row, "operationType"), null), null, null, null, List.of(),
+                first(text(row, "formattedValue"), text(row, "value")), text(row, "expiry"), text(row, "remaining")));
             default -> throw new IllegalArgumentException("Missing world state display: " + command);
         };
         return new WarframeWorldStateVO(items,
@@ -234,13 +239,20 @@ public final class WarframeWorldStateDisplayMapper {
      * @return 补充提示对应的文本。
      */
     private static String supplementNotice(String status) {
-        return switch (status == null ? "" : status) {
-            case "expiry_matches_official_php" -> "社区任务轮次与官方一致；候选奖励不代表本轮必得奖励";
-            case "expiry_mismatch_not_merged" -> "社区任务轮次与官方不符，仅展示官方字段和静态候选池";
-            case "unavailable", "invalid_response" -> "社区任务暂不可用，保留官方字段和静态候选池";
-            case "disabled" -> "社区任务补充已关闭";
-            default -> null;
-        };
+        return WarframeBountySupplementStatus.fromCode(status).notice();
+    }
+
+    private static String descendiaReward(Object value) {
+        if (!(value instanceof Map<?, ?> group))
+            return null;
+        boolean guaranteed = Boolean.TRUE.equals(group.get("guaranteed"));
+        return rows(group.get("options")).stream()
+            .filter(option -> guaranteed || Boolean.TRUE.equals(option.get("confirmed"))).map(option -> {
+                String name = text(option, "name");
+                String count = text(option, "count");
+                return name + (count != null && !"1".equals(count) ? " × " + count : "")
+                    + (guaranteed ? "（固定）" : "（人工确认）");
+            }).findFirst().orElse(null);
     }
 
     /**
@@ -250,14 +262,21 @@ public final class WarframeWorldStateDisplayMapper {
      * @return 单条赏金任务的展示内容。
      */
     private static JobVO job(Map<?, ?> row) {
+        List<RewardVO> phaseRewards =
+            rows(row.get("stages")).stream()
+                .flatMap(stage -> rows(stage.get("rewards")).stream()
+                    .map(reward -> bountyReward(reward, first(text(stage, "stageLabel"), text(stage, "stage")))))
+                .toList();
+        var rewards = phaseRewards.isEmpty()
+            ? map(rows(row.get("rewards")), reward -> bountyReward(reward, text(reward, "stage"))) : phaseRewards;
         return new JobVO(readable(text(row, "type"), "赏金任务"), readable(text(row, "description"), null), level(row),
             text(row, "minMR"), values(row.get("standingStages")), readable(text(row, "locationTag"), "未知区域"),
-            text(row, "remaining"),
-            map(rows(row.get("rewards")),
-                reward -> new RewardVO(first(text(reward, "displayName"), readable(text(reward, "item"), "未知奖励")),
-                    text(reward, "count"), rewardChance(reward), text(reward, "stage"),
-                    readable(text(reward, "rarity"), null))),
-            readable(text(row, "rewardNotice"), null));
+            text(row, "remaining"), rewards, text(row, "rewardRotation"), readable(text(row, "rewardNotice"), null));
+    }
+
+    private static RewardVO bountyReward(Map<?, ?> reward, String phase) {
+        return new RewardVO(first(text(reward, "displayName"), readable(text(reward, "item"), "未知奖励")),
+            text(reward, "count"), rewardChance(reward), phase, readable(text(reward, "rarity"), null));
     }
 
     /**
@@ -280,6 +299,15 @@ public final class WarframeWorldStateDisplayMapper {
      * @return 按当前条件筛选或转换后的数据集合。
      */
     private static List<String> nodes(Map<?, ?> row) {
+        if (row.get("missions") instanceof List<?> missions && !missions.isEmpty()) {
+            return rows(missions).stream().map(mission -> {
+                String node = first(text(mission, "node"), text(mission, "nodeKey"));
+                String system = text(mission, "systemName");
+                String type = text(mission, "baseMissionType");
+                return Stream.of(node, system, type == null ? null : type + "（星图）").filter(Objects::nonNull)
+                    .collect(Collectors.joining(" · "));
+            }).toList();
+        }
         List<String> nodes = values(row.get("nodes")).stream().filter(Objects::nonNull).map(Object::toString)
             .map(value -> readable(value, null)).filter(Objects::nonNull).distinct().toList();
         String node = readable(text(row, "node"), null);

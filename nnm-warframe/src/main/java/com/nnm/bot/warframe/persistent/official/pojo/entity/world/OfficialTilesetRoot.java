@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 TILESET 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 地图场景和其中可用任务的定义。以场景键查询基础阵营、关卡资料与任务定义。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

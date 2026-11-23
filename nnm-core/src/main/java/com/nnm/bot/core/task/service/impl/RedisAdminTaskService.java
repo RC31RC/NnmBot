@@ -160,14 +160,14 @@ public class RedisAdminTaskService implements AdminTaskService {
         } catch (CancellationException cancelled) {
             update(id, AdminTaskStatus.CANCELLED, "CANCELLED", "任务已取消", 0, 0, null, null, null);
             log.info("管理端任务已取消, type={}, taskId={}", taskType, id);
-        } catch (Exception exception) {
+        } catch (Exception | LinkageError failure) {
             try {
-                fail(id, exception);
+                fail(id, failure);
             } catch (RuntimeException unavailable) {
                 log.warn("Cannot persist failure; task will time out: {}", id, unavailable);
             }
             log.warn("管理端任务执行失败, type={}, taskId={}, mode=redis, elapsedMs={}", taskType, id, elapsedMillis(startedAt),
-                exception);
+                failure);
         }
     }
 
@@ -204,9 +204,8 @@ public class RedisAdminTaskService implements AdminTaskService {
         return current;
     }
 
-    private void fail(UUID id, Exception exception) {
-        log.warn("Admin task failed: {}", id, exception);
-        Throwable cause = unwrap(exception);
+    private void fail(UUID id, Throwable failure) {
+        Throwable cause = unwrap(failure);
         int code = CommonErrorCode.SYSTEM_ERROR.getCode();
         String message = CommonErrorCode.SYSTEM_ERROR.getMessage();
         String type = "SYSTEM";

@@ -7,7 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 ACTIVITY 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 科研与深层下降的分组静态规则。以活动族、分组和短码确认模式、条件及说明；每周任务由官方快照提供。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

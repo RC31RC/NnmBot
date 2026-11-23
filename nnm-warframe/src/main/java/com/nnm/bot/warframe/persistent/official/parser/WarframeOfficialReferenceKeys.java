@@ -26,8 +26,8 @@ public final class WarframeOfficialReferenceKeys {
         if (reference == null || CharSequenceUtil.isBlank(reference))
             return List.of();
         String key = CharSequenceUtil.trim(reference);
-        return key.startsWith(STORE_PREFIX) ? List.of(key, ITEM_PREFIX + key.substring(STORE_PREFIX.length()))
-            : List.of(key);
+        return CharSequenceUtil.startWithIgnoreCase(key, STORE_PREFIX)
+            ? List.of(key, ITEM_PREFIX + key.substring(STORE_PREFIX.length())) : List.of(key);
     }
 
     /**

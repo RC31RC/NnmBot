@@ -20,6 +20,11 @@ import jakarta.annotation.Resource;
 // bot_group_bot、bot_group 校验当前群和机器人绑定；bot_group_member 解析或创建调用者；
 // wf_group_watch_rule 保存订阅规则。渠道实例身份由 Provider 在内存边界解析。
 public final class SubscribePlugin extends BotPlugin<Void, WarframeSubscriptionSpec> {
+    @Override
+    public boolean shouldShowFunctionDescription(CommandInvocation invocation) {
+        return invocation.arguments().isEmpty();
+    }
+
     /**
      * 取得已匹配的命令参数，供业务命令解析。
      *

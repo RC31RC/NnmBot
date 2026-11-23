@@ -9,7 +9,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordD
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordHeaderDTO;
 import lombok.Getter;
 
-/** ACTIVITY 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 科研与深层下降的分组静态规则。以活动族、分组和短码确认模式、条件及说明；每周任务由官方快照提供。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

@@ -733,7 +733,7 @@ public class WarframeWorldStateWatchServiceImpl implements WarframeWorldStateWat
             case "hex-bounties" -> "六人组";
             case "hex-caches" -> "六人组箱";
             case "nightwave" -> "电波";
-            case "descents" -> "深层下降";
+            case "descents" -> "沉沦之地";
             case "ostrons" -> "希图斯";
             case "solaris" -> "索拉里斯";
             case "entrati" -> "英择谛";

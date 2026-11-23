@@ -1,6 +1,6 @@
 package com.nnm.bot.warframe.runtime.constant;
 
-/** 仅包含 bounty-cycle 动态补充协议已确认的集团与友军身份。 */
+/** bounty-cycle 动态补充协议支持的集团与对应管理分区。 */
 public final class WarframeBountyCycleConstants {
     private WarframeBountyCycleConstants() {}
 
@@ -24,9 +24,22 @@ public final class WarframeBountyCycleConstants {
             return this.code.equals(code);
         }
 
+        /** @return 官方动态数据中的集团代码。 */
+        public String code() {
+            return code;
+        }
+
         /** @return 管理端独立赏金分区的稳定编码。 */
         public String sectionKey() {
             return sectionKey;
+        }
+
+        /** @param sectionKey 管理端分区键；@return 对应集团或空。 */
+        public static Syndicate fromSectionKey(String sectionKey) {
+            for (Syndicate value : values())
+                if (value.sectionKey.equals(sectionKey))
+                    return value;
+            return null;
         }
 
         /** @return 当前地区赏金的中文标题。 */
@@ -48,31 +61,4 @@ public final class WarframeBountyCycleConstants {
         }
     }
 
-    /** 25 号参考解析中可核实的 Hex 友军；未知路径保留原值。 */
-    public enum Ally {
-        ARTHUR("ArthurAllyAgent", "亚瑟"), LETTIE("LettieAllyAgent", "莱蒂"), AMIR("AmirAllyAgent", "阿米尔"),
-        AOI("AoiAllyAgent", "碧"), ELEANOR("EleanorAllyAgent", "埃莉诺"), QUINCY("QuincyAllyAgent", "昆西");
-
-        private static final String PREFIX = "/Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/";
-        private final String key;
-        private final String displayName;
-
-        Ally(String key, String displayName) {
-            this.key = PREFIX + key;
-            this.displayName = displayName;
-        }
-
-        /** @param key 上游完整友军路径；@return 唯一已知身份或空。 */
-        public static Ally fromKey(String key) {
-            for (Ally value : values())
-                if (value.key.equals(key))
-                    return value;
-            return null;
-        }
-
-        /** @return 已确认的中文名称。 */
-        public String displayName() {
-            return displayName;
-        }
-    }
 }

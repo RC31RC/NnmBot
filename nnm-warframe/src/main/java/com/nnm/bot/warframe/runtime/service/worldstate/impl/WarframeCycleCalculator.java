@@ -130,7 +130,7 @@ public final class WarframeCycleCalculator {
      * @param maxAge 允许赏金锚点早于当前时间的最大时长。
      * @return 赏金结束时间存在且处于允许校准窗口时返回真，否则返回假。
      */
-    private static boolean validBountyAnchor(Instant now, Instant expiry, Duration maxAge) {
+    static boolean validBountyAnchor(Instant now, Instant expiry, Duration maxAge) {
         return expiry != null && !expiry.isBefore(now.minus(maxAge))
             && !expiry.isAfter(now.plusSeconds(BOUNTY_ANCHOR_MAX_FUTURE_SECONDS));
     }

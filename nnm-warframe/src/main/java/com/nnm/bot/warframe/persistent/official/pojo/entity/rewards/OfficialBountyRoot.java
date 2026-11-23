@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 BOUNTY 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 赏金定义与按地区、难度整理的静态候选奖池。定义按任务完整路径取标题和候选阶段，地区奖池使用自身分组键。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

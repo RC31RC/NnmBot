@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 RECIPE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 制造配方。蓝图业务键关联产物、材料、数量和制作耗时，供配方与材料反查使用。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

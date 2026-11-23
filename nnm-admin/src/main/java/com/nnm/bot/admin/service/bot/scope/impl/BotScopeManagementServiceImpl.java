@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.scope.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
@@ -94,7 +95,7 @@ public class BotScopeManagementServiceImpl implements BotScopeManagementService 
         scope.setDisplayName(trimToNull(request.displayName()));
         scope.setEnabled(request.enabled());
         BotScope saved = scopeRepository.save(scope);
-        if (Boolean.TRUE.equals(request.syncMembers())) {
+        if (BooleanUtil.isTrue(request.syncMembers())) {
             synchronizeMembers(saved, request.platform(), scopeType, scopeKey, instance);
         }
         return saved.getId();

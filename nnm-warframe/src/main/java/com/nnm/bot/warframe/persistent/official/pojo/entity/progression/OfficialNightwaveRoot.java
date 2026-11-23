@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 NIGHTWAVE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 午夜电波静态挑战及奖励定义。按挑战路径读取名称、计数和声望，当前发布的挑战及周次由动态快照提供。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

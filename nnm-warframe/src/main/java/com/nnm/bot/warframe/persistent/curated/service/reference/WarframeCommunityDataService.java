@@ -10,10 +10,26 @@ import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommuni
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityDatasetVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityArbitrationGradeVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityArbitrationNodeVO;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface WarframeCommunityDataService {
+    /**
+     * 列出官方星图中可用于仲裁社区资料的节点。
+     *
+     * @return 已采纳官方节点的键、显示名称与星系名称。
+     */
+    List<WarframeCommunityArbitrationNodeVO> arbitrationNodes();
+
+    /**
+     * 列出当前认可的仲裁效率评级。
+     *
+     * @return 按评级顺序排列的评级选项。
+     */
+    List<WarframeCommunityArbitrationGradeVO> arbitrationEfficiencyGrades();
+
     /**
      * 列出已采纳的官方可用裂罅属性，供别名或组合选择。
      *
@@ -35,7 +51,7 @@ public interface WarframeCommunityDataService {
      * @param query 当前业务的查询条件。
      * @return 包含当前页记录及总数的分页结果。
      */
-    PageResult<WarframeCommunityRecordVO> query(String dataset, WarframeCommunityQuery query);
+    PageResult<WarframeCommunityRecordVO<?>> query(String dataset, WarframeCommunityQuery query);
 
     /**
      * 生成变更预览，供后续确认采纳。

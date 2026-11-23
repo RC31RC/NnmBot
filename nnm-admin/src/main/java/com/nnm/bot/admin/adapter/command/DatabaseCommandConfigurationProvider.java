@@ -49,14 +49,15 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         }
 
         Map<Long, List<CommandTrigger>> triggersByCommand = triggersByCommand();
-        Map<Long, CommandTemplateDTO> templatesByCommand = templatesByCommand(commands);
+        TemplateSelections templatesByCommand = templatesByCommand(commands);
         Map<String, CommandDefinitionDTO> definitions = new LinkedHashMap<>();
 
         for (BotCommand command : commands) {
-            CommandExecutionConfigurationDTO configuration =
-                new CommandExecutionConfigurationDTO(command.isEnabled(), command.isShowInHelp(),
-                    templatesByCommand.get(command.getId()), normalizedTriggers(triggersByCommand.get(command.getId())),
-                    command.getPermissionOverride(), command.getCooldownSeconds(), command.isMentionInvoker());
+            CommandExecutionConfigurationDTO configuration = new CommandExecutionConfigurationDTO(command.isEnabled(),
+                command.isShowInHelp(), templatesByCommand.presentation().get(command.getId()),
+                templatesByCommand.descriptions().get(command.getId()),
+                normalizedTriggers(triggersByCommand.get(command.getId())), command.getPermissionOverride(),
+                command.getCooldownSeconds(), command.isMentionInvoker());
             CommandDefinitionDTO definition = new CommandDefinitionDTO(command.getCode(), command.getName(),
                 command.getGameCode(), command.getDescription(), configuration);
             definitions.put(CharSequenceUtil.trim(command.getCode()).toLowerCase(Locale.ROOT), definition);
@@ -73,11 +74,21 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
         return result;
     }
 
-    private Map<Long, CommandTemplateDTO> templatesByCommand(List<BotCommand> commands) {
+    private TemplateSelections templatesByCommand(List<BotCommand> commands) {
         Map<Long, BotCommandTemplate> templates = new HashMap<>();
-        for (BotCommandTemplate template : templateRepository.findAll())
+        Map<Long, CommandTemplateDTO> descriptions = new HashMap<>();
+        List<BotCommandTemplate> allTemplates = templateRepository.findAll();
+        for (BotCommandTemplate template : allTemplates)
             templates.put(template.getId(), template);
         Map<Long, CommandTemplateDTO> result = new HashMap<>();
+        allTemplates.stream().filter(BotCommandTemplate::isEnabled).filter(BotCommandTemplate::isFunctionDescription)
+            .sorted(java.util.Comparator.comparingInt(BotCommandTemplate::getSortOrder)
+                .thenComparing(BotCommandTemplate::getId))
+            .forEach(template -> {
+                if (template.getCommandId() != null)
+                    descriptions.putIfAbsent(template.getCommandId(),
+                        new CommandTemplateDTO(template.getTemplateCode(), template.getHtmlContent()));
+            });
         for (BotCommand command : commands) {
             Long templateId = command.getTemplateId();
             if (templateId == null)
@@ -90,7 +101,7 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
             }
             result.put(command.getId(), new CommandTemplateDTO(selected.getTemplateCode(), selected.getHtmlContent()));
         }
-        return result;
+        return new TemplateSelections(result, descriptions);
     }
 
     private List<CommandTrigger> normalizedTriggers(List<CommandTrigger> triggers) {
@@ -102,6 +113,10 @@ public class DatabaseCommandConfigurationProvider implements CommandConfiguratio
             unique.putIfAbsent(trigger.name().toLowerCase(Locale.ROOT), trigger);
         }
         return List.copyOf(unique.values());
+    }
+
+    private record TemplateSelections(Map<Long, CommandTemplateDTO> presentation,
+        Map<Long, CommandTemplateDTO> descriptions) {
     }
 
 }

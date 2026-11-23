@@ -55,6 +55,7 @@ public final class NotificationConstants {
         COMMAND, LINK
     }
 
+    /** 群通知目标的执行结果，包含提交前因不可投递而跳过的情形。 */
     public enum GroupResultStatus {
         IN_PROGRESS, CANCELLED, SUCCEEDED, PARTIAL, FAILED, UNKNOWN
     }

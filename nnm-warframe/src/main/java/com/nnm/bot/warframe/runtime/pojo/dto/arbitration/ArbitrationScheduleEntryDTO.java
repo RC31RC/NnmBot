@@ -14,7 +14,22 @@ import java.time.Instant;
  * @param planet 经代码簿解析的星球，用于高效筛选
  * @param nodeReference 文本上游的原始星图键；直接给出展示字段的 JSON 上游为空
  * @param boundsJson 上游边界信息；arbys.txt 未提供时保留空对象，不推算补造
+ * @param essenceAmount 社区维护的每小时精华估值；没有可信估值时为空
+ * @param efficiencyGrade 社区评级代码；没有评级资料时为空
  */
 public record ArbitrationScheduleEntryDTO(String id, Instant activation, Instant expiry, String node,
-    String missionType, String enemy, String planet, String boundsJson, String nodeReference) {
+    String missionType, String enemy, String planet, String boundsJson, String nodeReference, Integer essenceAmount,
+    String efficiencyGrade) {
+
+    /**
+     * 添加当前节点的社区参考信息，不改变原始排期字段。
+     *
+     * @param amount 精华每小时估值。
+     * @param grade 社区效率评级。
+     * @return 附带社区参考信息的排期行。
+     */
+    public ArbitrationScheduleEntryDTO withCommunityReference(Integer amount, String grade) {
+        return new ArbitrationScheduleEntryDTO(id, activation, expiry, node, missionType, enemy, planet, boundsJson,
+            nodeReference, amount, grade);
+    }
 }

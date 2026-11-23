@@ -10,6 +10,8 @@ import com.nnm.bot.common.constant.ComputationErrorCode;
 import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.core.messaging.exception.BotImageRenderException;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.jsoup.Jsoup;
+import org.jsoup.helper.W3CDom;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -62,7 +64,8 @@ public class OpenHtmlToPdfEngine implements RenderEngine {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
             registerFonts(builder);
-            builder.withHtmlContent(html, baseUri);
+            // 模板在 Thymeleaf 中按 HTML 处理，PDF 引擎接收已解析的 DOM，避免再按 XML 读取原文。
+            builder.withW3cDocument(W3CDom.convert(Jsoup.parse(html)), baseUri);
             builder.toStream(pdfOs);
             builder.run();
 

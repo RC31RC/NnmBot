@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum WarframeCommunityErrorCode implements ErrorCode {
+    DESCENDIA_POOL_NOT_FOUND(400946, "沉沦之地映射必须引用已采纳且来源名称一致的掉落池", HttpStatus.BAD_REQUEST),
     PREVIEW_INDEX_READ_FAILED(503921, "社区预览索引无法解析", HttpStatus.SERVICE_UNAVAILABLE),
     PREVIEW_INDEX_SAVE_FAILED(503922, "社区预览索引无法保存", HttpStatus.SERVICE_UNAVAILABLE),
     UPLOAD_READ_FAILED(400921, "上传内容无法读取", HttpStatus.BAD_REQUEST),

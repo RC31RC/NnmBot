@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 UPGRADE_LOCALIZATION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 升级对象的双语名称、图标及多段描述。按升级完整路径为 MOD 或其他升级资料补正文。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

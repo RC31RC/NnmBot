@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.plugin.runtime.riven;
 
+import com.nnm.bot.warframe.runtime.constant.WarframeRivenAnalysisConstants.ReferenceRangeStatus;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import cn.hutool.core.collection.CollUtil;
@@ -122,7 +123,7 @@ public final class RivenAnalysePlugin extends BotPlugin<WarframeRivenInputDTO, W
             text.append("\n社区参考范围（Nyx 旧版规则，仅供核对）：");
             result.referenceRanges().forEach(range -> {
                 text.append("\n").append(range.displayName()).append("：");
-                if ("UNAVAILABLE".equals(range.status())) {
+                if (range.status() == ReferenceRangeStatus.UNAVAILABLE) {
                     text.append("待确认 [").append(range.reason()).append("]");
                 } else {
                     String unit = switch (range.units()) {
@@ -132,7 +133,7 @@ public final class RivenAnalysePlugin extends BotPlugin<WarframeRivenInputDTO, W
                     };
                     text.append(String.format(Locale.ROOT, "%.2f ~ %.2f%s，偏差 %+.2f%%", range.lower(), range.upper(),
                         unit, range.deviationPercent()))
-                        .append("IN_RANGE".equals(range.status()) ? "（参考范围内）" : "（参考范围外）");
+                        .append(range.status() == ReferenceRangeStatus.IN_RANGE ? "（参考范围内）" : "（参考范围外）");
                 }
             });
         }

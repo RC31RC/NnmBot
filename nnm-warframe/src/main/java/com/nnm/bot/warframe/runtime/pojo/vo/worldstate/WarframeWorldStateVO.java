@@ -56,9 +56,10 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record ArbitrationMissionVO(@JsonPropertyDescription("节点") String node,
-        @JsonPropertyDescription("任务") String missionType, @JsonPropertyDescription("阵营") String faction,
-        @JsonPropertyDescription("精华/小时（社区参考）") String essence, @JsonPropertyDescription("开始") String activation,
-        @JsonPropertyDescription("结束") String expiry) {
+        @JsonPropertyDescription("节点键") String nodeReference, @JsonPropertyDescription("任务") String missionType,
+        @JsonPropertyDescription("阵营") String faction, @JsonPropertyDescription("预估精华/小时") String essenceAmount,
+        @JsonPropertyDescription("效率等级") String efficiencyGrade, @JsonPropertyDescription("精华/小时（社区参考）") String essence,
+        @JsonPropertyDescription("开始") String activation, @JsonPropertyDescription("结束") String expiry) {
     }
 
     @CommandTextInline
@@ -99,6 +100,7 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record OfferingVO(@JsonPropertyDescription("节点") String node, @JsonPropertyDescription("奖励") String reward,
+        @JsonPropertyDescription("价格") String price, @JsonPropertyDescription("供应") String status,
         @JsonPropertyDescription("结束") String expiry, @JsonPropertyDescription("剩余") String remaining) {
     }
 
@@ -131,7 +133,7 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
         @JsonPropertyDescription("等级") String level, @JsonPropertyDescription("最低段位") String minMR,
         @JsonPropertyDescription("各阶段声望") List<?> standingStages, @JsonPropertyDescription("区域") String location,
         @JsonPropertyDescription("剩余") String remaining, @JsonPropertyDescription("奖励") List<RewardVO> rewards,
-        @JsonPropertyDescription("奖励说明") String rewardNotice) {
+        @JsonPropertyDescription("奖励轮换") String rewardRotation, @JsonPropertyDescription("奖励说明") String rewardNotice) {
     }
 
     @CommandTextInline
@@ -156,15 +158,11 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
 
     @CommandTextInline
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    public record SimarisTargetVO(@JsonPropertyDescription("公共研究目标") String target,
-        @JsonPropertyDescription("状态") String status) {
-    }
-
-    @CommandTextInline
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record OutpostVO(@JsonPropertyDescription("节点") String node,
-        @JsonPropertyDescription("开始") String activation, @JsonPropertyDescription("结束") String expiry,
-        @JsonPropertyDescription("剩余") String remaining) {
+        @JsonPropertyDescription("星区") String systemName, @JsonPropertyDescription("任务") String missionType,
+        @JsonPropertyDescription("阵营") String faction, @JsonPropertyDescription("开始") String activation,
+        @JsonPropertyDescription("结束") String expiry, @JsonPropertyDescription("剩余") String remaining,
+        @JsonPropertyDescription("时间来源") String windowSource, @JsonPropertyDescription("说明") String description) {
     }
 
     @CommandTextInline
@@ -250,6 +248,22 @@ public record WarframeWorldStateVO(@JsonPropertyDescription("项目") List<?> it
     public record ArchimedeaMissionVO(@JsonPropertyDescription("阵营") String faction,
         @JsonPropertyDescription("任务") String missionType, @JsonPropertyDescription("偏差") String deviation,
         @JsonPropertyDescription("风险") List<String> risks) {
+    }
+
+    /** 沉沦之地命令的周次和楼层。 */
+    @CommandTextInline
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public record DescendiaWeekVO(@JsonPropertyDescription("结束") String expiry,
+        @JsonPropertyDescription("奖励说明") String rewardStatus,
+        @JsonPropertyDescription("楼层") List<DescendiaFloorVO> floors) {
+    }
+
+    /** 挑战与已确认的普通、钢铁奖励。 */
+    @CommandTextInline
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public record DescendiaFloorVO(@JsonPropertyDescription("楼层") String floor,
+        @JsonPropertyDescription("挑战") String challenge, @JsonPropertyDescription("模式") String type,
+        @JsonPropertyDescription("普通奖励") String normalReward, @JsonPropertyDescription("钢铁奖励") String steelPathReward) {
     }
 
     @CommandTextInline

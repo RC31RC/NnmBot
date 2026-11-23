@@ -44,6 +44,6 @@ public record WarframeRewardPoolVO(String query, List<EntryVO> items, int page, 
 
     public record EntryVO(String poolKey, String poolName, Integer stage, String itemKey, String itemName,
         Integer count, BigDecimal probability, String rarity, boolean emptyPool, String sourceCode,
-        String resolutionMode) {
+        String resolutionMode, String imageUrl) {
     }
 }

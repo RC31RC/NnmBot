@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 DRONES 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 资源无人机定义。按无人机身份查询容量、采集、耐久和概率参数。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

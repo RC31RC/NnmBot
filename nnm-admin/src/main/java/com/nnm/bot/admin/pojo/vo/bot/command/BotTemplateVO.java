@@ -18,6 +18,8 @@ public record BotTemplateVO(
     String htmlContent,
     /** 是否启用。 */
     boolean enabled,
+    /** 是否为命令无参数调用的功能说明模板。 */
+    boolean functionDescription,
     /** 引用该模板的命令数量。 */
     long commandCount,
     /** 创建时间。 */

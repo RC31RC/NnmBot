@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 MISC 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 杂项物品定义。以具体对象路径查询名称、说明和图标，用于未归入专门类别的奖励与商品。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

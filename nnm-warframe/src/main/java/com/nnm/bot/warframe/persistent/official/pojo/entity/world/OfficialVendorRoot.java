@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 VENDOR 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 静态商人商品目录。以商人清单路径查询商品、价格和图标；当前轮换按动态来源或受管顺序确认。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

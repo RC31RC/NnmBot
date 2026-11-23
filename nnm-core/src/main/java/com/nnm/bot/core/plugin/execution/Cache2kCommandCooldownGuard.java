@@ -66,11 +66,23 @@ public class Cache2kCommandCooldownGuard implements CommandCooldownGuard, AutoCl
                 : memberResolver.findByContext(group.get().group().getId(), context);
             String identity = member.filter(item -> item.getId() != null).map(item -> "member:" + item.getId())
                 .orElseGet(() -> "native:" + context.platform().name() + ":" + context.senderId());
-            return "group:" + group.get().group().getId() + "|" + identity + "|"
-                + descriptor.code().strip().toLowerCase(Locale.ROOT);
+            return encodeComponents("group", Long.toString(group.get().group().getId()), identity,
+                descriptor.code().strip().toLowerCase(Locale.ROOT));
         }
-        return String.join("|", "private", context.platform().name(), context.botAccountId(), context.scope().name(),
+        return encodeComponents("private", context.platform().name(), context.botAccountId(), context.scope().name(),
             context.conversationId(), context.senderId(), descriptor.code().strip().toLowerCase(Locale.ROOT));
+    }
+
+    private static String encodeComponents(String... components) {
+        StringBuilder encoded = new StringBuilder();
+        for (String component : components) {
+            if (component == null) {
+                encoded.append("-1:");
+            } else {
+                encoded.append(component.length()).append(':').append(component);
+            }
+        }
+        return encoded.toString();
     }
 
     @PreDestroy

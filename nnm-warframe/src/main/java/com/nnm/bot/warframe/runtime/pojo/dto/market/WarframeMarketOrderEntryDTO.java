@@ -1,7 +1,7 @@
 package com.nnm.bot.warframe.runtime.pojo.dto.market;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import java.util.Locale;
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.PresenceStatus;
 
 /** 单条可展示订单，不将上游原始 JSON、内部用户字段混入命令输出。 */
 public record WarframeMarketOrderEntryDTO(@JsonPropertyDescription("订单编号") String id,
@@ -20,12 +20,7 @@ public record WarframeMarketOrderEntryDTO(@JsonPropertyDescription("订单编号
      * @return 游戏资料市场订单条目对象。
      */
     public static WarframeMarketOrderEntryDTO from(WarframeMarketOrderDTO order) {
-        String statusText = switch (order.status().toLowerCase(Locale.ROOT)) {
-            case "online" -> "在线";
-            case "ingame" -> "游戏中";
-            case "offline" -> "离线";
-            default -> order.status();
-        };
+        String statusText = PresenceStatus.fromCode(order.status()).displayText(order.status());
         return new WarframeMarketOrderEntryDTO(order.id(), order.orderType(), order.userName(), order.reputation(),
             order.platinum(), order.quantity(), order.perTrade(), order.subtype(), order.rank(), order.charges(),
             order.amberStars(), order.cyanStars(), order.status(), statusText);

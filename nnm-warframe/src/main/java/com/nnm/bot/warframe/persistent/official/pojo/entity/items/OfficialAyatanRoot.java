@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 AYATAN 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 阿耶檀识珍宝定义。按珍宝路径读取稀有度、插槽及展示资料，供奖品识别。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

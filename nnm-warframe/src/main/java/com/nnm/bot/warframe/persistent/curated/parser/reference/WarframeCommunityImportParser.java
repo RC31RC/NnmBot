@@ -16,6 +16,7 @@ import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.persistent.curated.config.reference.WarframeCommunityProperties;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityMappingScope;
 import com.nnm.bot.warframe.persistent.curated.constant.CommunityInputErrorCode;
 import com.nnm.bot.common.error.ErrorCode;
 import java.util.regex.Pattern;
@@ -189,6 +190,8 @@ public class WarframeCommunityImportParser {
             case TERM -> WarframeCommunityRecordDTO.TermDTO.class;
             case ARBITRATION_ESSENCE -> WarframeCommunityRecordDTO.EssenceDTO.class;
             case RIVEN_ALIAS -> WarframeCommunityRecordDTO.RivenAliasDTO.class;
+            case REFERENCE_MAPPING -> WarframeCommunityRecordDTO.ReferenceMappingDTO.class;
+            case DESCENDIA_REWARD -> WarframeCommunityRecordDTO.DescendiaRewardDTO.class;
         };
         WarframeCommunityInputDTO value;
         try (JsonParser input = buffer.asParserOnFirstToken()) {
@@ -199,6 +202,8 @@ public class WarframeCommunityImportParser {
             case WarframeCommunityRecordDTO.AliasDTO item -> {
                 text(item.aliasName(), "aliasName", false);
                 text(item.targetName(), "targetName", false);
+                check(!WarframeCommunityMappingScope.usesMappingPrefix(item.aliasName()),
+                    CommunityInputErrorCode.MAPPING_IN_ALIAS_OR_TERM);
                 yield item.aliasName();
             }
             case WarframeCommunityRecordDTO.TermDTO item -> {
@@ -206,14 +211,19 @@ public class WarframeCommunityImportParser {
                 text(item.chineseText(), "chineseText", false);
                 String group = item.termGroup() == null ? "" : item.termGroup();
                 text(group, "termGroup", true);
+                check(!WarframeCommunityMappingScope.usesMappingGroup(group),
+                    CommunityInputErrorCode.MAPPING_IN_ALIAS_OR_TERM);
                 value = new WarframeCommunityRecordDTO.TermDTO(group, item.englishText(), item.chineseText());
                 yield group + ":" + item.englishText();
             }
             case WarframeCommunityRecordDTO.EssenceDTO item -> {
+                text(item.nodeKey(), "nodeKey", false);
                 text(item.nodeName(), "nodeName", false);
-                check(item.essenceAmount() != null && item.essenceAmount() >= 0,
+                check(
+                    (item.essenceAmount() == null || item.essenceAmount() >= 0)
+                        && (item.essenceAmount() != null || item.efficiencyGrade() != null),
                     CommunityInputErrorCode.ESSENCE_AMOUNT_INVALID);
-                yield item.nodeName();
+                yield item.nodeKey();
             }
             case WarframeCommunityRecordDTO.RivenAliasDTO item -> {
                 text(item.attributeCode(), "attributeCode", false);
@@ -227,8 +237,34 @@ public class WarframeCommunityImportParser {
                 value = new WarframeCommunityRecordDTO.RivenAliasDTO(String.join("+", codes), item.aliasName());
                 yield item.aliasName();
             }
+            case WarframeCommunityRecordDTO.ReferenceMappingDTO item -> {
+                text(item.mappingScope(), "mappingScope", false);
+                text(item.sourceKey(), "sourceKey", false);
+                text(item.targetKey(), "targetKey", false);
+                var scope = WarframeCommunityMappingScope.fromCode(item.mappingScope());
+                check(scope.filter(candidate -> candidate.acceptsTarget(item.targetKey())).isPresent(),
+                    CommunityInputErrorCode.REFERENCE_MAPPING_INVALID);
+                yield item.mappingScope() + ":" + item.sourceKey();
+            }
+            case WarframeCommunityRecordDTO.DescendiaRewardDTO item -> {
+                text(item.label(), "label", false);
+                text(item.officialPoolKey(), "officialPoolKey", false);
+                text(item.expectedPoolName(), "expectedPoolName", false);
+                text(item.sourceUrl(), "sourceUrl", false);
+                if (item.note() != null)
+                    text(item.note(), "note", true);
+                check(
+                    item.floorNumber() != null && item.floorNumber() >= 1 && item.floorNumber() <= 21
+                        && ("normal".equals(item.difficulty()) || "steelPath".equals(item.difficulty()))
+                        && (item.itemCountOverride() == null || item.itemCountOverride() > 0)
+                        && item.guaranteed() != null && item.sourceUrl().startsWith("https://www.warframe.com/"),
+                    CommunityInputErrorCode.DESCENDIA_MAPPING_INVALID);
+                yield item.difficulty() + ":" + item.floorNumber();
+            }
         };
         String key = explicitKey != null ? explicitKey : dictionaryKey != null ? dictionaryKey : naturalKey;
+        check(dataset != WarframeCommunityDataset.DESCENDIA_REWARD || naturalKey.equals(key),
+            CommunityInputErrorCode.DESCENDIA_MAPPING_INVALID);
         check(CharSequenceUtil.isNotBlank(key) && key.length() <= MAX_RECORD_KEY_LENGTH,
             CommunityInputErrorCode.RECORD_KEY_INVALID);
         check(!rows.records.containsKey(key), CommunityInputErrorCode.RECORD_KEY_DUPLICATE);

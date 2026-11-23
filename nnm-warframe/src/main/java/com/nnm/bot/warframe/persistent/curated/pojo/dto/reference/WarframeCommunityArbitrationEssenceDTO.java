@@ -1,6 +1,7 @@
 package com.nnm.bot.warframe.persistent.curated.pojo.dto.reference;
 
 import lombok.Getter;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeArbitrationEfficiencyGrade;
 import lombok.AllArgsConstructor;
 import java.time.Instant;
 
@@ -11,6 +12,9 @@ public class WarframeCommunityArbitrationEssenceDTO implements WarframeCommunity
     private final String recordKey;
     private final Instant updatedAt;
     private final long version;
+    private final String nodeKey;
     private final String nodeName;
+    private final String systemName;
     private final Integer essenceAmount;
+    private final WarframeArbitrationEfficiencyGrade efficiencyGrade;
 }

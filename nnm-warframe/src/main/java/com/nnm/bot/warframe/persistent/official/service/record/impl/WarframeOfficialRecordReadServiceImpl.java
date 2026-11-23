@@ -147,9 +147,9 @@ public class WarframeOfficialRecordReadServiceImpl implements WarframeOfficialRe
     public List<WarframeOfficialRegionDTO> regions() {
         return records(WarframeOfficialDataDomain.REGION).stream().map(record -> {
             OfficialRegionDTO data = (OfficialRegionDTO)record.data();
-            return new WarframeOfficialRegionDTO(record, data.getSystemName(), integer(data.getSystemIndex()),
-                integer(data.getNodeType()), integer(data.getMasteryReq()), integer(data.getMinEnemyLevel()),
-                integer(data.getMaxEnemyLevel()));
+            return new WarframeOfficialRegionDTO(record, data.getSystemName(), data.getZhSystemName(),
+                integer(data.getSystemIndex()), integer(data.getNodeType()), integer(data.getMasteryReq()),
+                integer(data.getMinEnemyLevel()), integer(data.getMaxEnemyLevel()));
         }).toList();
     }
 

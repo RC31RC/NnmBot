@@ -9,6 +9,6 @@ public record WarframeArbitrationManagementVO(boolean available, boolean stale, 
 
     /** 已解析排期的展示行，保留来源引用与边界信息供详情查询。 */
     public record EntryVO(String id, Instant activation, Instant expiry, String node, String missionType, String enemy,
-        String planet, String boundsJson, String nodeReference) {
+        String planet, String boundsJson, String nodeReference, Integer essenceAmount, String efficiencyGrade) {
     }
 }

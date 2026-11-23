@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 BUNDLE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 礼包定义。以礼包路径读取组成物品及分类，用于商城和奖励中的礼包展示。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

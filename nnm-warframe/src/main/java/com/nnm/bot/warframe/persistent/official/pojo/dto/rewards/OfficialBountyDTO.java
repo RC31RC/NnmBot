@@ -14,7 +14,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Getter;
 
-/** BOUNTY 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 赏金定义与按地区、难度整理的静态候选奖池。定义按任务完整路径取标题和候选阶段，地区奖池使用自身分组键。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

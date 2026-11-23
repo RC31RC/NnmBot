@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 RESOURCES 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 资源物品定义。按路径查询材料、代币等资源名称与图标，供掉落、配方和兑换展示使用。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 ANIMAL 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 动物同伴及保育生物定义。按完整对象路径读取生物名称、保育声望和奖励引用。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

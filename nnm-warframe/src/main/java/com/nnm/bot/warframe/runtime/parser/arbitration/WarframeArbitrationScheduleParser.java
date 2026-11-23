@@ -99,7 +99,7 @@ public class WarframeArbitrationScheduleParser {
                 String planet = display(row.getPlanetZh(), row.getPlanet(), "planet", 100);
                 var bounds = row.getBounds();
                 entries.add(new ArbitrationScheduleEntryDTO(id, activation, expiry, node, mission, enemy, planet,
-                    bounds == null ? "{}" : objectMapper.writeValueAsString(bounds), null));
+                    bounds == null ? "{}" : objectMapper.writeValueAsString(bounds), null, null, null));
                 if (entries.size() > properties.getMaxRecords())
                     throw new IllegalArgumentException("仲裁排期窗口超过记录数上限");
             }
@@ -173,7 +173,7 @@ public class WarframeArbitrationScheduleParser {
             throw new IllegalArgumentException("Arbitration node has no planet: " + nodeReference);
         return new ArbitrationScheduleEntryDTO("arbys:" + activation.getEpochSecond(), activation,
             activation.plus(Duration.ofHours(1)), node.displayName(), mission.displayName(), faction.displayName(),
-            planet, "{}", nodeReference);
+            planet, "{}", nodeReference, null, null);
     }
 
     /**
@@ -195,7 +195,8 @@ public class WarframeArbitrationScheduleParser {
             return new ArbitrationScheduleEntryDTO(entry.id(), entry.activation(), entry.expiry(), node.displayName(),
                 ObjUtil.isNull(mission) ? entry.missionType() : mission.displayName(),
                 ObjUtil.isNull(faction) ? entry.enemy() : faction.displayName(),
-                CharSequenceUtil.isBlank(planet) ? entry.planet() : planet, entry.boundsJson(), entry.nodeReference());
+                CharSequenceUtil.isBlank(planet) ? entry.planet() : planet, entry.boundsJson(), entry.nodeReference(),
+                entry.essenceAmount(), entry.efficiencyGrade());
         }).toList();
     }
 

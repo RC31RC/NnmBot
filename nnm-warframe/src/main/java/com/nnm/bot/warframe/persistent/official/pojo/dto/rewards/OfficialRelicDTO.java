@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 
-/** RELIC 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 遗物与各精炼等级的奖励和来源。按遗物身份查询内容或反查部件，保留各稀有度的概率。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

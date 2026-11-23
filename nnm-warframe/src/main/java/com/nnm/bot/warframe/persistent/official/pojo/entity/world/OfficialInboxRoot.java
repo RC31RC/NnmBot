@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 INBOX 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 收件箱消息模板与附件引用定义。以邮件物品路径取得发件人、正文和附件，玩家是否收到由运行时决定。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

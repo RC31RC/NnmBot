@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 UPGRADE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * MOD 主定义。按升级身份读取名称、容量消耗、适配对象和等级效果，供 MOD 与奖励查询。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

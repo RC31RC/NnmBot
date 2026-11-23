@@ -77,7 +77,7 @@ public final class OfficialDataConstants {
 
     /** 官方数据任务进度阶段，与持久化审批状态的用途分离。 */
     public enum ImportStage {
-        RESOLVING_VERSION, DOWNLOADING_DATASET, VERIFYING_DATASET, PREVIEW, APPLYING
+        RESOLVING_VERSION, DOWNLOADING_DATASET, VERIFYING_DATASET, BUILDING_DIFF, STORING_SNAPSHOT, PREVIEW, APPLYING
     }
 
     /** 官方数据差异的记录级分类。 */

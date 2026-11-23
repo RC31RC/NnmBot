@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 RIVEN_DEFINITION 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 按类别归纳的裂罅静态定义。提供通用容量、极性与升级参数，用于裂罅结构解释。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

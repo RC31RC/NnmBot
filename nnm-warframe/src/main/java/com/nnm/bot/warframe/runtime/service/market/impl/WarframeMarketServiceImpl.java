@@ -1,9 +1,11 @@
 package com.nnm.bot.warframe.runtime.service.market.impl;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.BooleanUtil;
 
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.MarketErrorCode;
 import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.AuctionType;
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.PresenceStatus;
 import com.nnm.bot.warframe.runtime.exception.market.WarframeMarketDataException;
 import com.nnm.bot.warframe.runtime.pojo.dto.market.WarframeMarketOrderPageDTO;
 import com.nnm.bot.common.http.HttpClient.HttpResult;
@@ -91,7 +93,7 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             }
             WarframeMarketItemDTO item = details;
             List<WarframeMarketItemSummaryDTO> setItems = List.of();
-            if (Boolean.TRUE.equals(item.setRoot()) || CollUtil.isNotEmpty(item.setParts())) {
+            if (BooleanUtil.isTrue(item.setRoot()) || CollUtil.isNotEmpty(item.setParts())) {
                 try {
                     setItems = fetchItemSet(query.marketSlug())
                         .map(set -> set.items().stream().map(WarframeMarketItemSummaryDTO::from).toList())
@@ -104,7 +106,7 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             Integer maxRank = item.maxRank() == null ? snapshot.maxRank() : item.maxRank();
             List<WarframeMarketOrderDTO> orders = snapshot.orders().stream()
                 .filter(order -> query.filter().accepts(order.orderType())).filter(WarframeMarketOrderDTO::visible)
-                .filter(order -> !"offline".equalsIgnoreCase(order.status()))
+                .filter(order -> PresenceStatus.fromCode(order.status()).isVisible())
                 .filter(order -> matchesMaxRank(query.maxLevel(), maxRank, item, order))
                 .sorted(Comparator.comparing((WarframeMarketOrderDTO order) -> !"sell".equals(order.orderType()))
                     .thenComparingLong(
@@ -120,7 +122,7 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             if (CharSequenceUtil.isBlank(name))
                 name = query.itemInput();
             return new WarframeMarketOrderPageDTO(name, query.itemInput(), query.marketSlug(), snapshot.platform(),
-                query.filter().name(), query.maxLevel(), maxRank, page, price(orders, "sell"), price(orders, "buy"),
+                query.filter(), query.maxLevel(), maxRank, page, price(orders, "sell"), price(orders, "buy"),
                 WarframeMarketItemSummaryDTO.from(item), setItems);
         });
     }
@@ -358,7 +360,8 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             throw new WarframeMarketDataException("市场响应缺少拍卖数组：" + w, null);
         }
         var auctions = root.getPayload().getAuctions().stream()
-            .filter(value -> value.getOwner() == null || !"offline".equalsIgnoreCase(value.getOwner().getStatus()))
+            .filter(
+                value -> value.getOwner() == null || PresenceStatus.fromCode(value.getOwner().getStatus()).isVisible())
             .map(this::parseAuction).toList();
         return Optional.of(new WarframeMarketAuctionSnapshotDTO(t, w, auctions, p, n, response.body()));
     }
@@ -500,18 +503,13 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             : item.getAttributes().stream()
                 .map(attribute -> new AttributeDTO(attribute.getUrlName(),
                     attribute.getValue() == null ? 0 : attribute.getValue().doubleValue(),
-                    Boolean.TRUE.equals(attribute.getPositive())))
+                    BooleanUtil.isTrue(attribute.getPositive())))
                 .toList();
         String status = CharSequenceUtil.emptyIfNull(owner.getStatus());
-        String statusText = switch (status.toLowerCase(Locale.ROOT)) {
-            case "online" -> "在线";
-            case "ingame" -> "游戏中";
-            case "offline" -> "离线";
-            default -> status;
-        };
+        String statusText = PresenceStatus.fromCode(status).displayText(status);
         return new WarframeMarketAuctionEntryDTO(value.getId(), owner.getIngameName(), status, statusText,
             value.getStartingPrice(), value.getBuyoutPrice(), value.getTopBid(),
-            Boolean.TRUE.equals(value.getDirectSell()), value.getCreated(),
+            BooleanUtil.isTrue(value.getDirectSell()), value.getCreated(),
             new WarframeMarketAuctionEntryDTO.AuctionItemDTO(item.getType(), item.getWeaponUrlName(), item.getName(),
                 item.getModRank(), item.getRerolls(), item.getMasteryLevel(), item.getPolarity(), item.getElement(),
                 item.getDamage(), item.getEphemera(), item.getQuirk(), attributes));
@@ -541,10 +539,10 @@ public class WarframeMarketServiceImpl implements WarframeMarketService {
             order.getPlatinum() == null ? 0 : order.getPlatinum(),
             order.getQuantity() == null ? 0 : order.getQuantity(), order.getPerTrade(), order.getSubtype(),
             order.getRank(), order.getCharges(), order.getAmberStars(), order.getCyanStars(),
-            !Boolean.FALSE.equals(order.getVisible()), order.getCreatedAt(), order.getUpdatedAt(), order.getItemId(),
+            !BooleanUtil.isFalse(order.getVisible()), order.getCreatedAt(), order.getUpdatedAt(), order.getItemId(),
             order.getGroupId(),
             new WarframeMarketUserDTO(user.getId(), user.getIngameName(), user.getSlug(), user.getReputation(),
-                user.getPlatform(), Boolean.TRUE.equals(user.getCrossplay()), user.getLocale(), user.getStatus(),
+                user.getPlatform(), BooleanUtil.isTrue(user.getCrossplay()), user.getLocale(), user.getStatus(),
                 user.getAvatar(), user.getLastSeen(), user.getActivity(),
                 objectMapper.convertValue(user, new TypeReference<>() {})),
             objectMapper.convertValue(order, new TypeReference<>() {}));

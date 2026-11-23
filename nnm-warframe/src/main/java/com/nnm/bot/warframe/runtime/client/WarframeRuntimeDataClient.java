@@ -5,10 +5,13 @@ import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.http.HttpClient.TextResult;
 import com.nnm.bot.common.http.HttpDiagnostics;
+import com.nnm.bot.common.http.NnmRestClientFactory;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
+import com.nnm.bot.warframe.runtime.client.exchange.WarframeRuntimeDataHttpExchange;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import java.nio.charset.StandardCharsets;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -21,6 +24,8 @@ import java.util.Map;
 public class WarframeRuntimeDataClient {
     @Resource
     private HttpClient httpClient;
+    @Resource
+    private NnmRestClientFactory restClientFactory;
 
     /**
      * 读取文本。
@@ -30,9 +35,12 @@ public class WarframeRuntimeDataClient {
      * @return 文本结果对象。
      */
     public TextResult getText(URI url, Map<String, String> headers) {
-        TextResult result = httpClient.downloadText(url.toString(), headers);
+        WarframeRuntimeDataHttpExchange exchange =
+            restClientFactory.createClient(url, WarframeRuntimeDataHttpExchange.class);
+        var result = httpClient.executeGetOrThrow(url.toString(), () -> exchange.fetch(headers));
         String body = result.body() == null ? null : decodeUtf8(result.body());
-        return new TextResult(result.statusCode(), body, result.headers(), result.bytes(), result.error());
+        long bytes = body == null ? 0 : body.getBytes(StandardCharsets.UTF_8).length;
+        return new TextResult(result.statusCode(), body, result.headers(), bytes, result.error());
     }
 
     /**

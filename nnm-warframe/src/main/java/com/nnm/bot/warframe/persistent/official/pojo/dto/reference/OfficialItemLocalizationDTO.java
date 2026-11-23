@@ -9,7 +9,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordD
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordHeaderDTO;
 import lombok.Getter;
 
-/** ITEM_LOCALIZATION 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 物品路径到双语名称、说明及图标的映射。为具有同一游戏身份的物品补展示信息。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

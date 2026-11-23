@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 SUPPLY_DROP 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 补给类物品定义。按完整物品路径读取名称、说明和相关引用，供补给资料和奖品展示。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 MISSION_TYPE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 官方任务类型代码簿。用稳定任务代码或唯一名称解释动态任务类型；补充源简称先核对受管映射。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

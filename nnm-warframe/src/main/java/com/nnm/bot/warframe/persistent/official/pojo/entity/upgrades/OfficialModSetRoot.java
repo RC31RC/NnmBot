@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 MOD_SET 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * MOD 套装定义。按套装身份读取成员及套装效果，单张 MOD 的独立属性由 MOD 表提供。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

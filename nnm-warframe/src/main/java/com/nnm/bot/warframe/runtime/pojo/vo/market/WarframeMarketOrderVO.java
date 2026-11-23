@@ -28,9 +28,9 @@ public record WarframeMarketOrderVO(@JsonPropertyDescription("物品") String it
      */
     public static WarframeMarketOrderVO from(WarframeMarketOrderPageDTO result) {
         String direction = switch (result.filter()) {
-            case "BUY" -> "买家";
-            case "SELL" -> "卖家";
-            default -> "买家及卖家";
+            case BUY -> "买家";
+            case SELL -> "卖家";
+            case ALL -> "买家及卖家";
         };
         String filter = direction + (result.maxRankRequested() ? "，满级" : "");
         return new WarframeMarketOrderVO(result.itemName(), result.platform(), filter,

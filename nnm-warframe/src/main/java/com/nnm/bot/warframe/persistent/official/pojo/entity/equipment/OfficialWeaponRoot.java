@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 WEAPON 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 武器定义。按武器身份查询槽位、伤害、暴击等属性，并为奖励与交易物品提供名称和图标。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

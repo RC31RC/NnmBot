@@ -7,6 +7,7 @@ import com.nnm.bot.common.error.BusinessException;
 import com.nnm.bot.common.http.HttpClient;
 import com.nnm.bot.common.http.HttpClient.DownloadResult;
 import com.nnm.bot.common.validation.BusinessAssert;
+import com.nnm.bot.warframe.persistent.official.client.github.exchange.GithubWarframeDataHttpExchange;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.official.client.github.protocol.GithubVersionRawData;
 import com.nnm.bot.warframe.persistent.official.client.github.protocol.GithubVersionRawData.GitObjectRawData;
@@ -49,6 +50,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
+import org.springframework.http.ResponseEntity;
 import java.util.concurrent.TimeUnit;
 
 /** 版本列表由 GitHub 发现；manifest 和成品优先通过固定 tag 的 CDN 传输，并回退 GitHub API。 */
@@ -64,6 +67,8 @@ public class WarframeOfficialSourceClient {
     private WarframeOfficialImportProperties properties;
     @Resource
     private WarframeOfficialSnapshotValidator validator;
+    @Resource
+    private GithubWarframeDataHttpExchange githubHttpExchange;
 
     /**
      * 列出可选的官方数据版本。
@@ -76,7 +81,10 @@ public class WarframeOfficialSourceClient {
         }
         Map<String, WarframeOfficialVersionDTO> versions = new LinkedHashMap<>();
         for (int page = 1; page <= properties.getMaxTagPages(); page++) {
-            GithubVersionRawData[] tags = api("/tags?per_page=100&page=" + page, GithubVersionRawData[].class);
+            int pageNumber = page;
+            GithubVersionRawData[] tags =
+                api(tagsApiUrl(page), () -> githubHttpExchange.tags(repositoryOwner(), repositoryName(), 100,
+                    pageNumber, githubHeaders("application/vnd.github+json")), GithubVersionRawData[].class);
             BusinessAssert.isTrue(tags != null, WarframeManagementErrorCode.DATASET_UNAVAILABLE);
             for (GithubVersionRawData tag : tags) {
                 String name = tag == null || tag.getName() == null ? "" : tag.getName();
@@ -109,7 +117,9 @@ public class WarframeOfficialSourceClient {
         BusinessAssert.notBlank(ref, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
         BusinessAssert.equals(ref, CharSequenceUtil.trim(ref), OfficialSourceErrorCode.TAG_WHITESPACE_INVALID);
         BusinessAssert.isTrue(validTag(ref), OfficialSourceErrorCode.TAG_FORMAT_INVALID);
-        GithubVersionRawData tagRef = api("/git/ref/tags/" + ref, GithubVersionRawData.class);
+        GithubVersionRawData tagRef =
+            api(githubApiUrl("git", "ref", "tags", ref), () -> githubHttpExchange.tagReference(repositoryOwner(),
+                repositoryName(), ref, githubHeaders("application/vnd.github+json")), GithubVersionRawData.class);
         BusinessAssert.equals(tagRef.getRef(), "refs/tags/" + ref, OfficialSourceErrorCode.TAG_REFERENCE_INVALID);
         GitObjectRawData target = tagRef.getObject();
         BusinessAssert.notNull(target, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
@@ -117,7 +127,10 @@ public class WarframeOfficialSourceClient {
         while ("tag".equals(target.getType()) && depth++ < 8) {
             String objectSha = target.getSha();
             BusinessAssert.isTrue(validCommit(objectSha), WarframeManagementErrorCode.DATASET_UNAVAILABLE);
-            target = api("/git/tags/" + objectSha, GithubVersionRawData.class).getObject();
+            target = api(
+                githubApiUrl("git", "tags", objectSha), () -> githubHttpExchange.tag(repositoryOwner(),
+                    repositoryName(), objectSha, githubHeaders("application/vnd.github+json")),
+                GithubVersionRawData.class).getObject();
             BusinessAssert.notNull(target, WarframeManagementErrorCode.DATASET_VERSION_INVALID);
         }
         BusinessAssert.equals(target.getType(), "commit", OfficialSourceErrorCode.TAG_COMMIT_INVALID);
@@ -313,16 +326,36 @@ public class WarframeOfficialSourceClient {
      * @param responseType 响应类型。
      * @return 绑定后的响应对象。
      */
-    private <T> T api(String suffix, Class<T> responseType) {
-        String url = properties.getApiBaseUrl().toString().replaceAll("/+$", "") + "/repos/"
-            + properties.getRepository() + suffix;
-        byte[] response = httpClient.getLimitedBytes(url, githubHeaders("application/vnd.github+json"),
-            properties.getMaxVersionResponseBytes());
+    private <T> T api(String url, Supplier<ResponseEntity<String>> request, Class<T> responseType) {
         try {
+            String response = httpClient.executeGetOrThrow(url, request).body();
+            if (response == null) {
+                throw new BusinessException(OfficialSourceErrorCode.VERSION_RESPONSE_INVALID);
+            }
             return objectMapper.readValue(response, responseType);
         } catch (IOException exception) {
             throw new BusinessException(OfficialSourceErrorCode.VERSION_RESPONSE_INVALID, exception);
         }
+    }
+
+    private String tagsApiUrl(int page) {
+        return UriComponentsBuilder.fromUri(properties.getApiBaseUrl())
+            .pathSegment("repos", repositoryOwner(), repositoryName(), "tags").queryParam("per_page", 100)
+            .queryParam("page", page).build().encode().toUriString();
+    }
+
+    private String githubApiUrl(String... pathSegments) {
+        return UriComponentsBuilder.fromUri(properties.getApiBaseUrl())
+            .pathSegment("repos", repositoryOwner(), repositoryName()).pathSegment(pathSegments).build().encode()
+            .toUriString();
+    }
+
+    private String repositoryOwner() {
+        return properties.getRepository().split("/", 2)[0];
+    }
+
+    private String repositoryName() {
+        return properties.getRepository().split("/", 2)[1];
     }
 
     private void validatePath(String path) {

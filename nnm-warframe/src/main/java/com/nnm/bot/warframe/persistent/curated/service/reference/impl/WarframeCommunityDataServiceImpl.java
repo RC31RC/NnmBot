@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.persistent.curated.service.reference.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import cn.hutool.core.collection.CollUtil;
@@ -9,10 +10,15 @@ import com.nnm.bot.common.response.PageResult;
 import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
 import com.nnm.bot.warframe.persistent.curated.config.reference.WarframeCommunityProperties;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeArbitrationEfficiencyGrade;
+import com.nnm.bot.warframe.persistent.curated.constant.CommunityInputErrorCode;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityDataset;
+import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityMappingScope;
 import com.nnm.bot.warframe.persistent.curated.constant.WarframeCommunityErrorCode;
 import com.nnm.bot.warframe.persistent.curated.event.WarframeCommunityDataChangePublisher;
 import com.nnm.bot.warframe.persistent.curated.parser.reference.WarframeCommunityImportParser;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.reference.WarframeCommunityReferenceMapping;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityReferenceMappingDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.*;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityAliasDTO;
 import com.nnm.bot.warframe.persistent.curated.pojo.dto.reference.WarframeCommunityApplyDTO;
@@ -38,7 +44,13 @@ import com.nnm.bot.warframe.persistent.curated.pojo.query.reference.WarframeComm
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityApplyVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityDatasetVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
+import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityReferenceMappingRepository;
+import com.nnm.bot.warframe.persistent.curated.repository.worldstate.WarframeCommunityDescendiaRewardRepository;
+import com.nnm.bot.warframe.persistent.curated.pojo.dto.worldstate.DescendiaRewardRowDTO;
+import com.nnm.bot.warframe.persistent.curated.pojo.entity.worldstate.WarframeCommunityDescendiaReward;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityArbitrationGradeVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityArbitrationNodeVO;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.*;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityAliasRepository;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityApplyReceiptRepository;
@@ -47,6 +59,9 @@ import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeComm
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityRivenAliasRepository;
 import com.nnm.bot.warframe.persistent.curated.repository.reference.WarframeCommunityTermRepository;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityDataService;
+import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.world.WarframeOfficialRegionDTO;
+import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
 import com.nnm.bot.warframe.persistent.official.service.upgrades.WarframeRivenAttributeService;
 import io.github.rdt.state.SharedStateStore;
 import jakarta.annotation.Resource;
@@ -64,7 +79,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.rewards.OfficialDropTableDTO;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -84,12 +101,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataService {
+    private static final int BATCH_SIZE = 250;
+    private static final Set<String> ARBITRATION_NODE_PREFIXES = Set.of("SolNode", "ClanNode", "SettlementNode");
+
     @Resource
     private WarframeCommunityImportParser importParser;
     @Resource
     private WarframeRivenAttributeService officialRivenAttributes;
+    @Resource
+    private WarframeOfficialRecordReadService officialRecordReadService;
 
-    private static final int BATCH_SIZE = 250;
     @Resource
     private WarframeCommunityAliasRepository aliases;
     @Resource
@@ -98,6 +119,11 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     private WarframeCommunityArbitrationEssenceRepository essence;
     @Resource
     private WarframeCommunityRivenAliasRepository rivenAliases;
+    /** 楼层奖池和轮换配置只在页面提取展示字段。 */
+    @Resource
+    private WarframeCommunityDescendiaRewardRepository descendiaRewards;
+    @Resource
+    private WarframeCommunityReferenceMappingRepository mappings;
     @Resource
     private WarframeCommunityDatasetLockRepository locks;
     @Resource
@@ -122,7 +148,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
     public List<WarframeCommunityRivenAttributeVO> rivenAttributes() {
         return officialRivenAttributes.definitions().stream()
             .filter(attribute -> CharSequenceUtil.isNotBlank(attribute.code())
-                && !Boolean.TRUE.equals(attribute.searchOnly()) && !Set.of("has", "none").contains(attribute.code()))
+                && !BooleanUtil.isTrue(attribute.searchOnly()) && !Set.of("has", "none").contains(attribute.code()))
             .map(attribute -> new WarframeCommunityRivenAttributeVO(attribute.code(),
                 CharSequenceUtil.isNotBlank(attribute.effect()) ? attribute.effect()
                     : CharSequenceUtil.blankToDefault(attribute.effectEn(), attribute.code()),
@@ -154,6 +180,24 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         }
     }
 
+    private void validateDescendiaPools(WarframeCommunityDataset dataset,
+        Collection<WarframeCommunityInputDTO> records) {
+        if (dataset != WarframeCommunityDataset.DESCENDIA_REWARD || records.isEmpty())
+            return;
+        var mappings = records.stream().map(WarframeCommunityRecordDTO.DescendiaRewardDTO.class::cast).toList();
+        var keys =
+            mappings.stream().map(mapping -> mapping.officialPoolKey().toLowerCase(Locale.ROOT)).distinct().toList();
+        var adopted = officialRecordReadService.recordsByKeys(WarframeOfficialDataDomain.DROP_TABLE, keys);
+        for (var mapping : mappings) {
+            BusinessAssert.isTrue(adopted.stream()
+                .anyMatch(row -> row.bkey().equalsIgnoreCase(mapping.officialPoolKey())
+                    && row.data() instanceof OfficialDropTableDTO pool
+                    && mapping.expectedPoolName().equals(pool.getSourceName()) && pool.getRewards() != null
+                    && !pool.getRewards().isEmpty()),
+                WarframeCommunityErrorCode.DESCENDIA_POOL_NOT_FOUND);
+        }
+    }
+
     /**
      * 列出当前支持的数据文件。
      *
@@ -164,7 +208,7 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         List<WarframeCommunityDatasetVO> result = new ArrayList<>();
         for (var dataset : WarframeCommunityDataset.values())
             result.add(new WarframeCommunityDatasetVO(dataset.code(), dataset.label(), dataset.description(),
-                repository(dataset).count()));
+                repository(dataset).count(), true));
         return result;
     }
 
@@ -176,20 +220,91 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @return 包含当前页记录及总数的分页结果。
      */
     @Override
-    public PageResult<WarframeCommunityRecordVO> query(String code, WarframeCommunityQuery request) {
-        var dataset = WarframeCommunityDataset.parse(code);
+    public PageResult<WarframeCommunityRecordVO<?>> query(String code, WarframeCommunityQuery request) {
         int page = request == null || request.current() == null ? 1 : Math.max(1, request.current());
         int size = request == null || request.size() == null ? 20 : Math.max(1, Math.min(100, request.size()));
         String keyword = request == null || request.keyword() == null ? "" : CharSequenceUtil.trim(request.keyword());
+        var dataset = WarframeCommunityDataset.parse(code);
         var pageable = PageRequest.of(page - 1, size, Sort.by("recordKey"));
+        Map<String, WarframeCommunityArbitrationNodeVO> nodeOptions =
+            dataset == WarframeCommunityDataset.ARBITRATION_ESSENCE ? arbitrationNodeIndex() : Map.of();
+        Set<String> localizedNodeKeys = nodeOptions.values().stream()
+            .filter(node -> CharSequenceUtil.isNotBlank(keyword)
+                && (CharSequenceUtil.containsIgnoreCase(node.nodeName(), keyword)
+                    || CharSequenceUtil.containsIgnoreCase(node.systemName(), keyword)))
+            .map(WarframeCommunityArbitrationNodeVO::nodeKey).collect(Collectors.toSet());
         Page<? extends WarframeCommunityRowDTO> result = switch (dataset) {
             case ALIAS -> aliases.query(keyword, pageable);
             case TERM -> terms.query(keyword, pageable);
-            case ARBITRATION_ESSENCE -> essence.query(keyword, pageable);
+            case ARBITRATION_ESSENCE -> essence.query(keyword, localizedNodeKeys, pageable);
             case RIVEN_ALIAS -> rivenAliases.query(keyword, pageable);
+            case REFERENCE_MAPPING -> mappings.query(keyword, pageable);
+            case DESCENDIA_REWARD -> descendiaRewards.query(keyword, pageable);
         };
-        return PageResult.of(result.getContent().stream().map(this::readRow).toList(), page, size,
-            result.getTotalElements());
+        return PageResult.of(result.<WarframeCommunityRecordVO<?>>map(row -> readRow(row, nodeOptions)).getContent(),
+            page, size, result.getTotalElements());
+    }
+
+    /**
+     * 列出官方星图节点，供仲裁社区资料选择并展示本地化名称。
+     *
+     * @return 已采纳官方节点按显示名排序的选项。
+     */
+    @Override
+    public List<WarframeCommunityArbitrationNodeVO> arbitrationNodes() {
+        return arbitrationNodeIndex().values().stream()
+            .sorted(Comparator.comparing(WarframeCommunityArbitrationNodeVO::nodeName)
+                .thenComparing(WarframeCommunityArbitrationNodeVO::nodeKey))
+            .toList();
+    }
+
+    /**
+     * 列出当前可用的人工效率评级。
+     *
+     * @return 按星数从低到高排列的评级代码、名称及整颗星数量。
+     */
+    @Override
+    public List<WarframeCommunityArbitrationGradeVO> arbitrationEfficiencyGrades() {
+        return Arrays.stream(WarframeArbitrationEfficiencyGrade.values())
+            .map(grade -> new WarframeCommunityArbitrationGradeVO(grade.code(), grade.label(), grade.stars())).toList();
+    }
+
+    /**
+     * 从已采纳的官方 REGION 数据构建仲裁节点索引。
+     *
+     * @return 按稳定星图键组织的仲裁节点名称。
+     */
+    private Map<String, WarframeCommunityArbitrationNodeVO> arbitrationNodeIndex() {
+        return officialRecordReadService.regions().stream()
+            .filter(region -> isArbitrationNodeKey(region.record().bkey()))
+            .map(WarframeCommunityDataServiceImpl::arbitrationNode)
+            .collect(Collectors.toMap(WarframeCommunityArbitrationNodeVO::nodeKey, node -> node,
+                (existing, duplicate) -> existing, LinkedHashMap::new));
+    }
+
+    /**
+     * 判断官方星图键是否属于仲裁排期使用的节点范围。
+     *
+     * @param key 官方 REGION 数据键。
+     * @return 属于仲裁任务节点时为真。
+     */
+    private static boolean isArbitrationNodeKey(String key) {
+        return CharSequenceUtil.isNotBlank(key) && ARBITRATION_NODE_PREFIXES.stream().anyMatch(key::startsWith);
+    }
+
+    /**
+     * 将官方 REGION 名称投影为社区维护端使用的仲裁节点选项，系统名优先采用官方中文字段。
+     *
+     * @param region 已采纳的官方星图节点及其双语区域名称。
+     * @return 包含节点键、显示名和所属星系名称的选项。
+     */
+    private static WarframeCommunityArbitrationNodeVO arbitrationNode(WarframeOfficialRegionDTO region) {
+        var record = region.record();
+        String name = CharSequenceUtil.isNotBlank(record.localizedName()) ? record.localizedName()
+            : CharSequenceUtil.isNotBlank(record.officialName()) ? record.officialName() : record.bkey();
+        String systemName = CharSequenceUtil.isNotBlank(region.localizedSystemName()) ? region.localizedSystemName()
+            : region.systemName();
+        return new WarframeCommunityArbitrationNodeVO(record.bkey(), name, systemName);
     }
 
     /**
@@ -205,8 +320,9 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
         BusinessAssert.isTrue(json != null && json.getBytes(StandardCharsets.UTF_8).length <= properties.getMaxBytes(),
             WarframeManagementErrorCode.IMPORT_FILE_TOO_LARGE);
         var parsed = importParser.parse(dataset, json);
-        Map<String, WarframeCommunityInputDTO> incoming = parsed.records();
+        Map<String, WarframeCommunityInputDTO> incoming = normalizeArbitrationNodes(dataset, parsed.records());
         validateRivenAliases(dataset, incoming.values());
+        validateDescendiaPools(dataset, incoming.values());
         List<WarframeCommunityOperationDTO> operations = new ArrayList<>();
         // 输入只产生新增或修改；提前确定字段顺序，避免每条记录重复排序。
         List<String> fieldsToCompare = dataset.fields().stream().sorted().toList();
@@ -249,6 +365,30 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             state.put(pendingKey(dataset), encodePending(pending), properties.getPreviewTtl());
         });
         return preview;
+    }
+
+    /**
+     * 校验仲裁节点来自已采纳官方星图，并用官方本地化名称规范化社区记录。
+     *
+     * @param dataset 当前社区数据集。
+     * @param records 导入解析得到的稳定业务键与记录映射。
+     * @return 节点身份经官方星图校验和规范化后的记录映射。
+     */
+    private Map<String, WarframeCommunityInputDTO> normalizeArbitrationNodes(WarframeCommunityDataset dataset,
+        Map<String, WarframeCommunityInputDTO> records) {
+        if (dataset != WarframeCommunityDataset.ARBITRATION_ESSENCE)
+            return records;
+        Map<String, WarframeCommunityArbitrationNodeVO> nodes = arbitrationNodeIndex();
+        Map<String, WarframeCommunityInputDTO> normalized = new LinkedHashMap<>(records.size());
+        records.forEach((recordKey, value) -> {
+            if (!(value instanceof WarframeCommunityRecordDTO.EssenceDTO input))
+                throw new BusinessException(WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT);
+            var node = nodes.get(input.nodeKey());
+            BusinessAssert.isTrue(node != null, CommunityInputErrorCode.ARBITRATION_NODE_UNKNOWN);
+            normalized.put(recordKey, new WarframeCommunityRecordDTO.EssenceDTO(node.nodeKey(), node.nodeName(),
+                node.systemName(), input.essenceAmount(), input.efficiencyGrade()));
+        });
+        return normalized;
     }
 
     /**
@@ -416,7 +556,18 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             .filter(operation -> request.selectedOperationIds().contains(operation.id())).toList();
         BusinessAssert.isTrue(selected.size() == request.selectedOperationIds().size(),
             WarframeManagementErrorCode.COMMUNITY_INVALID_INPUT);
-        validateRivenAliases(dataset, selected.stream().map(WarframeCommunityOperationDTO::value).toList());
+        var selectedValues = selected.stream().map(WarframeCommunityOperationDTO::value).toList();
+        // 数据用途调整前生成的预览也须通过写入边界校验。
+        selectedValues.forEach(value -> {
+            if (value instanceof WarframeCommunityRecordDTO.AliasDTO alias)
+                BusinessAssert.isTrue(!WarframeCommunityMappingScope.usesMappingPrefix(alias.aliasName()),
+                    CommunityInputErrorCode.MAPPING_IN_ALIAS_OR_TERM);
+            if (value instanceof WarframeCommunityRecordDTO.TermDTO term)
+                BusinessAssert.isTrue(!WarframeCommunityMappingScope.usesMappingGroup(term.termGroup()),
+                    CommunityInputErrorCode.MAPPING_IN_ALIAS_OR_TERM);
+        });
+        validateRivenAliases(dataset, selectedValues);
+        validateDescendiaPools(dataset, selectedValues);
         // 一个根事务包住全部批次；任何后续冲突或写入失败都回滚此前批次的 flush。
         for (int start = 0; start < selected.size(); start += BATCH_SIZE) {
             List<WarframeCommunityOperationDTO> batch =
@@ -566,6 +717,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             case TERM -> terms;
             case ARBITRATION_ESSENCE -> essence;
             case RIVEN_ALIAS -> rivenAliases;
+            case REFERENCE_MAPPING -> mappings;
+            case DESCENDIA_REWARD -> descendiaRewards;
         };
         return (JpaRepository<WarframeCommunityRow, Long>)repository;
     }
@@ -583,6 +736,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             case TERM -> terms.findAllByRecordKeyIn(keys);
             case ARBITRATION_ESSENCE -> essence.findAllByRecordKeyIn(keys);
             case RIVEN_ALIAS -> rivenAliases.findAllByRecordKeyIn(keys);
+            case REFERENCE_MAPPING -> mappings.findAllByRecordKeyIn(keys);
+            case DESCENDIA_REWARD -> descendiaRewards.findAllByRecordKeyIn(keys);
         };
         return rows.stream().collect(Collectors.toMap(WarframeCommunityRow::getRecordKey, row -> row));
     }
@@ -600,6 +755,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             case TERM -> terms.findAllProjectedByRecordKeyIn(keys);
             case ARBITRATION_ESSENCE -> essence.findAllProjectedByRecordKeyIn(keys);
             case RIVEN_ALIAS -> rivenAliases.findAllProjectedByRecordKeyIn(keys);
+            case REFERENCE_MAPPING -> mappings.findAllProjectedByRecordKeyIn(keys);
+            case DESCENDIA_REWARD -> descendiaRewards.findAllProjectedByRecordKeyIn(keys);
         };
         return rows.stream().collect(Collectors.toMap(WarframeCommunityRowDTO::getRecordKey, row -> row));
     }
@@ -610,8 +767,19 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @param row 当前数据行。
      * @return 单条社区资料的管理视图。
      */
-    private WarframeCommunityRecordVO readRow(WarframeCommunityRowDTO row) {
-        return new WarframeCommunityRecordVO(row.getId(), row.getRecordKey(), readValues(row), row.getUpdatedAt(),
+    private WarframeCommunityRecordVO<?> readRow(WarframeCommunityRowDTO row,
+        Map<String, WarframeCommunityArbitrationNodeVO> nodeOptions) {
+        WarframeCommunityInputDTO value = readValues(row);
+        if (value instanceof WarframeCommunityRecordDTO.EssenceDTO essenceValue) {
+            String nodeKey =
+                CharSequenceUtil.isNotBlank(essenceValue.nodeKey()) ? essenceValue.nodeKey() : row.getRecordKey();
+            WarframeCommunityArbitrationNodeVO node = nodeOptions.get(nodeKey);
+            String nodeName = node == null ? essenceValue.nodeName() : node.nodeName();
+            String systemName = node == null ? essenceValue.systemName() : node.systemName();
+            value = new WarframeCommunityRecordDTO.EssenceDTO(nodeKey, nodeName, systemName,
+                essenceValue.essenceAmount(), essenceValue.efficiencyGrade());
+        }
+        return new WarframeCommunityRecordVO<>(row.getId(), row.getRecordKey(), value, row.getUpdatedAt(),
             row.getVersion());
     }
 
@@ -627,10 +795,16 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
                 new WarframeCommunityRecordDTO.AliasDTO(item.getAliasName(), item.getTargetName());
             case WarframeCommunityTermDTO item -> new WarframeCommunityRecordDTO.TermDTO(item.getTermGroup(),
                 item.getEnglishText(), item.getChineseText());
-            case WarframeCommunityArbitrationEssenceDTO item ->
-                new WarframeCommunityRecordDTO.EssenceDTO(item.getNodeName(), item.getEssenceAmount());
+            case WarframeCommunityArbitrationEssenceDTO item -> new WarframeCommunityRecordDTO.EssenceDTO(
+                CharSequenceUtil.isNotBlank(item.getNodeKey()) ? item.getNodeKey() : item.getRecordKey(),
+                item.getNodeName(), item.getSystemName(), item.getEssenceAmount(), item.getEfficiencyGrade());
             case WarframeCommunityRivenAliasDTO item ->
                 new WarframeCommunityRecordDTO.RivenAliasDTO(item.getAttributeCode(), item.getAliasName());
+            case WarframeCommunityReferenceMappingDTO item -> new WarframeCommunityRecordDTO.ReferenceMappingDTO(
+                item.getMappingScope(), item.getSourceKey(), item.getTargetKey());
+            case DescendiaRewardRowDTO item -> new WarframeCommunityRecordDTO.DescendiaRewardDTO(item.getFloorNumber(),
+                item.getDifficulty(), item.getLabel(), item.getOfficialPoolKey(), item.getExpectedPoolName(),
+                item.getItemCountOverride(), item.getNote(), item.isGuaranteed(), item.getSourceUrl());
             default -> throw new IllegalArgumentException("未登记的社区资料类型");
         };
     }
@@ -641,8 +815,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
      * @param row 当前数据行。
      * @return 单条社区资料的管理视图。
      */
-    private WarframeCommunityRecordVO row(WarframeCommunityRow row) {
-        return new WarframeCommunityRecordVO(row.getId(), row.getRecordKey(), values(row), row.getUpdatedAt(),
+    private WarframeCommunityRecordVO<WarframeCommunityInputDTO> row(WarframeCommunityRow row) {
+        return new WarframeCommunityRecordVO<>(row.getId(), row.getRecordKey(), values(row), row.getUpdatedAt(),
             row.getVersion());
     }
 
@@ -658,10 +832,17 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
                 new WarframeCommunityRecordDTO.AliasDTO(item.getAliasName(), item.getTargetName());
             case WarframeCommunityTerm item -> new WarframeCommunityRecordDTO.TermDTO(item.getTermGroup(),
                 item.getEnglishText(), item.getChineseText());
-            case WarframeCommunityArbitrationEssence item ->
-                new WarframeCommunityRecordDTO.EssenceDTO(item.getNodeName(), item.getEssenceAmount());
+            case WarframeCommunityArbitrationEssence item -> new WarframeCommunityRecordDTO.EssenceDTO(
+                CharSequenceUtil.isNotBlank(item.getNodeKey()) ? item.getNodeKey() : item.getRecordKey(),
+                item.getNodeName(), item.getSystemName(), item.getEssenceAmount(), item.getEfficiencyGrade());
             case WarframeCommunityRivenAlias item ->
                 new WarframeCommunityRecordDTO.RivenAliasDTO(item.getAttributeCode(), item.getAliasName());
+            case WarframeCommunityReferenceMapping item -> new WarframeCommunityRecordDTO.ReferenceMappingDTO(
+                item.getMappingScope(), item.getSourceKey(), item.getTargetKey());
+            case WarframeCommunityDescendiaReward item ->
+                new WarframeCommunityRecordDTO.DescendiaRewardDTO(item.getFloorNumber(), item.getDifficulty(),
+                    item.getLabel(), item.getOfficialPoolKey(), item.getExpectedPoolName(), item.getItemCountOverride(),
+                    item.getNote(), item.isGuaranteed(), item.getSourceUrl());
             default -> throw new IllegalArgumentException("未登记的社区实体类型");
         };
     }
@@ -688,10 +869,34 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
                 case "chineseText" -> item.chineseText();
                 default -> null;
             };
-            case WarframeCommunityRecordDTO.EssenceDTO item ->
-                "nodeName".equals(field) ? item.nodeName() : Objects.toString(item.essenceAmount(), null);
+            case WarframeCommunityRecordDTO.EssenceDTO item -> switch (field) {
+                case "nodeKey" -> item.nodeKey();
+                case "nodeName" -> item.nodeName();
+                case "systemName" -> item.systemName();
+                case "essenceAmount" -> Objects.toString(item.essenceAmount(), null);
+                case "efficiencyGrade" -> item.efficiencyGrade() == null ? null : item.efficiencyGrade().code();
+                default -> null;
+            };
             case WarframeCommunityRecordDTO.RivenAliasDTO item ->
                 "aliasName".equals(field) ? item.aliasName() : item.attributeCode();
+            case WarframeCommunityRecordDTO.ReferenceMappingDTO item -> switch (field) {
+                case "mappingScope" -> item.mappingScope();
+                case "sourceKey" -> item.sourceKey();
+                case "targetKey" -> item.targetKey();
+                default -> null;
+            };
+            case WarframeCommunityRecordDTO.DescendiaRewardDTO item -> switch (field) {
+                case "floorNumber" -> Objects.toString(item.floorNumber(), null);
+                case "difficulty" -> item.difficulty();
+                case "label" -> item.label();
+                case "officialPoolKey" -> item.officialPoolKey();
+                case "expectedPoolName" -> item.expectedPoolName();
+                case "itemCountOverride" -> Objects.toString(item.itemCountOverride(), null);
+                case "note" -> item.note();
+                case "guaranteed" -> Objects.toString(item.guaranteed(), null);
+                case "sourceUrl" -> item.sourceUrl();
+                default -> null;
+            };
         };
     }
 
@@ -707,6 +912,8 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             case TERM -> new WarframeCommunityTerm();
             case ARBITRATION_ESSENCE -> new WarframeCommunityArbitrationEssence();
             case RIVEN_ALIAS -> new WarframeCommunityRivenAlias();
+            case REFERENCE_MAPPING -> new WarframeCommunityReferenceMapping();
+            case DESCENDIA_REWARD -> new WarframeCommunityDescendiaReward();
         };
     }
 
@@ -731,13 +938,34 @@ public class WarframeCommunityDataServiceImpl implements WarframeCommunityDataSe
             }
             case WarframeCommunityRecordDTO.EssenceDTO input -> {
                 var item = (WarframeCommunityArbitrationEssence)row;
+                item.setNodeKey(input.nodeKey());
                 item.setNodeName(input.nodeName());
+                item.setSystemName(input.systemName());
                 item.setEssenceAmount(input.essenceAmount());
+                item.setEfficiencyGrade(input.efficiencyGrade());
             }
             case WarframeCommunityRecordDTO.RivenAliasDTO input -> {
                 var item = (WarframeCommunityRivenAlias)row;
                 item.setAttributeCode(input.attributeCode());
                 item.setAliasName(input.aliasName());
+            }
+            case WarframeCommunityRecordDTO.ReferenceMappingDTO input -> {
+                var item = (WarframeCommunityReferenceMapping)row;
+                item.setMappingScope(input.mappingScope());
+                item.setSourceKey(input.sourceKey());
+                item.setTargetKey(input.targetKey());
+            }
+            case WarframeCommunityRecordDTO.DescendiaRewardDTO input -> {
+                var item = (WarframeCommunityDescendiaReward)row;
+                item.setFloorNumber(input.floorNumber());
+                item.setDifficulty(input.difficulty());
+                item.setLabel(input.label());
+                item.setOfficialPoolKey(input.officialPoolKey());
+                item.setExpectedPoolName(input.expectedPoolName());
+                item.setItemCountOverride(input.itemCountOverride());
+                item.setNote(input.note());
+                item.setGuaranteed(input.guaranteed());
+                item.setSourceUrl(input.sourceUrl());
             }
         }
     }

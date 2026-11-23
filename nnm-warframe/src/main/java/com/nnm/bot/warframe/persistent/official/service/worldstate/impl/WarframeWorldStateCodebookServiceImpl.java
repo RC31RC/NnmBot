@@ -49,8 +49,9 @@ public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldState
         Collection<String> references) {
         if (type == null || CollUtil.isEmpty(references))
             return Map.of();
-        var entries = type == WarframeReferenceType.LANGUAGE_STRING
-            ? Map.<String, WarframeWorldStateCodebookEntryDTO>of() : officialIndex.codebook(type);
+        if (type == WarframeReferenceType.LANGUAGE_STRING)
+            return findLanguages(references);
+        var entries = officialIndex.codebook(type);
         Map<String, WarframeWorldStateCodebookEntryDTO> result = new LinkedHashMap<>();
         Map<String, String> languageKeys = new LinkedHashMap<>();
         for (String reference : references) {
@@ -80,7 +81,7 @@ public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldState
             result.put(reference, entry == null ? language
                 : new WarframeWorldStateCodebookEntryDTO(entry.reference(), language.displayName(), entry.description(),
                     entry.relatedReference(), entry.source(), WarframeReferenceResolutionStatus.RESOLVED,
-                    entry.factionReference(), entry.selfMaintained(), entry.nameKey()));
+                    entry.factionReference(), entry.selfMaintained(), entry.nameKey(), entry.candidates()));
         });
         return Map.copyOf(result);
     }
@@ -103,7 +104,7 @@ public class WarframeWorldStateCodebookServiceImpl implements WarframeWorldState
             String text = values.get(CharSequenceUtil.trim(key).toLowerCase(Locale.ROOT));
             if (WarframeNameNormalizer.isReadableDisplayName(text))
                 result.put(key, new WarframeWorldStateCodebookEntryDTO(key, text, "", "", "official:language_string",
-                    WarframeReferenceResolutionStatus.RESOLVED, "", false, key));
+                    WarframeReferenceResolutionStatus.RESOLVED, "", false, key, List.of()));
         }
         return Map.copyOf(result);
     }

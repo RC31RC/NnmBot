@@ -5,14 +5,18 @@ import static com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialVa
 import com.nnm.bot.warframe.runtime.cache.dataset.WarframeDatasetCache;
 import com.nnm.bot.warframe.constant.WarframeDatasetCacheNames;
 import com.nnm.bot.warframe.persistent.official.constant.WarframeOfficialDataDomain;
+import com.nnm.bot.warframe.persistent.official.parser.WarframeOfficialReferenceKeys;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.progression.OfficialChallengeDTO;
+import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialNameDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.record.WarframeOfficialRecordReadDTO;
 import com.nnm.bot.warframe.persistent.official.pojo.dto.worldstate.WarframeStateTranslationDetailsDTO;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialLookupService;
 import com.nnm.bot.warframe.persistent.official.service.record.WarframeOfficialRecordReadService;
 import com.nnm.bot.warframe.persistent.official.service.worldstate.WarframeWorldStateRuleService;
 import jakarta.annotation.Resource;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -42,34 +46,57 @@ public class WarframeWorldStateRuleServiceImpl implements WarframeWorldStateRule
     }
 
     /**
-     * 使用各表名称索引定位身份，再按本次命中的业务键批量装载详情。
+     * 在候选资料中以业务键优先定位唯一身份，再按表批量装载详情。
      *
      * @param references 本次需要展示的引用集合。
      * @return 以原始引用关联的名称和描述。
      */
     @Override
     public List<WarframeStateTranslationDetailsDTO> findTranslations(Collection<String> references) {
-        Map<String, WarframeStateTranslationDetailsDTO> result = new LinkedHashMap<>();
         if (references.isEmpty())
             return List.of();
+        var distinctReferences = references.stream().distinct().toList();
+        Map<String, List<WarframeOfficialNameDTO>> candidatesByReference = new LinkedHashMap<>();
         for (var domain : List.of(WarframeOfficialDataDomain.CHALLENGE, WarframeOfficialDataDomain.ACTIVITY,
             WarframeOfficialDataDomain.BOUNTY, WarframeOfficialDataDomain.ITEM_LOCALIZATION)) {
             var index = lookup.nameIndex(domain);
-            Map<String, String> requested = new LinkedHashMap<>();
-            for (String reference : references) {
-                if (result.containsKey(reference))
-                    continue;
-                var candidates = index.matches(domain, reference);
-                if (candidates.size() == 1)
-                    requested.put(reference, index.items().get(candidates.getFirst()).bkey());
+            for (String reference : distinctReferences) {
+                for (String key : index.matches(domain, reference)) {
+                    candidatesByReference.computeIfAbsent(reference, ignored -> new ArrayList<>())
+                        .add(index.items().get(key));
+                }
             }
+        }
+        Map<WarframeOfficialDataDomain, Map<String, String>> selected = new EnumMap<>(WarframeOfficialDataDomain.class);
+        candidatesByReference.forEach((reference, candidates) -> {
+            var exact = candidates.stream()
+                .filter(candidate -> WarframeOfficialReferenceKeys
+                    .identities(WarframeOfficialDataDomain.fromCode(candidate.domainCode()), candidate.bkey()).stream()
+                    .anyMatch(key -> key.equalsIgnoreCase(reference.trim())))
+                .toList();
+            var matches = exact.isEmpty() ? candidates : exact;
+            if (exact.size() > 1 && reference.trim().startsWith("/")) {
+                // 同一完整路径可能同时存在于专用定义和本地化表，说明以专用定义为准。
+                var definitions = exact.stream().filter(candidate -> !WarframeOfficialDataDomain.ITEM_LOCALIZATION
+                    .domainCode().equals(candidate.domainCode())).toList();
+                if (!definitions.isEmpty())
+                    matches = definitions;
+            }
+            if (matches.size() == 1) {
+                var match = matches.getFirst();
+                selected.computeIfAbsent(WarframeOfficialDataDomain.fromCode(match.domainCode()),
+                    ignored -> new LinkedHashMap<>()).put(reference, match.bkey());
+            }
+        });
+        Map<String, WarframeStateTranslationDetailsDTO> result = new LinkedHashMap<>();
+        selected.forEach((domain, requested) -> {
             var records = lookup.records(domain, requested.values());
             requested.forEach((reference, bkey) -> {
                 var row = records.get(bkey.toLowerCase(Locale.ROOT));
                 if (row != null)
                     result.put(reference, translation(reference, row));
             });
-        }
+        });
         return List.copyOf(result.values());
     }
 
@@ -85,6 +112,7 @@ public class WarframeWorldStateRuleServiceImpl implements WarframeWorldStateRule
         if (text != null && row.data() instanceof OfficialChallengeDTO challenge
             && challenge.getRequiredCount() != null)
             text = text.replace("|COUNT|", challenge.getRequiredCount().stripTrailingZeros().toPlainString());
-        return new WarframeStateTranslationDetailsDTO(reference, name(row), text);
+        // 缺少展示名时由调用方继续查语言键，避免把主表业务键当成已经翻译的标题。
+        return new WarframeStateTranslationDetailsDTO(reference, first(row.localizedName(), row.officialName()), text);
     }
 }

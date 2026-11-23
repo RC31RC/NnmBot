@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+/** 按社区数据集串行采纳与编辑，并在成功写入后发布新数据版本以失效缓存。 */
 @Getter
 @Setter
 @Entity

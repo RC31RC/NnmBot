@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 CUSTOMS 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 定制选项及基础资源关系。按定制身份读取说明和图片，保持与外观皮肤的来源归属。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

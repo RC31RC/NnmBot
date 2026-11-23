@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import cn.hutool.core.collection.CollUtil;
@@ -250,7 +251,7 @@ public class MarketPlugin extends BotPlugin<Void, WarframeMarketCommandDTO> {
      */
     private static int marketPriority(WarframeMarketItemDTO item) {
         String slug = item.slug().toLowerCase(Locale.ROOT);
-        if (Boolean.TRUE.equals(item.setRoot()) || slug.endsWith("_set"))
+        if (BooleanUtil.isTrue(item.setRoot()) || slug.endsWith("_set"))
             return 0;
         return slug.contains("_prime") ? 1 : 2;
     }

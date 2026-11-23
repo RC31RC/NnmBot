@@ -42,7 +42,6 @@ public final class WarframeCommandCodes {
     public static final String PERSISTENT_ENEMIES = "persistent-enemies";
     public static final String SYNDICATE_MISSIONS = "syndicate-missions";
     public static final String CONSTRUCTION_PROGRESS = "construction-progress";
-    public static final String SIMARIS = "simaris";
     public static final String SENTIENT_OUTPOSTS = "sentient-outposts";
     public static final String CLAN_INITIATIVE = "clan-initiative";
     public static final String CIRCUIT_NORMAL = "circuit-normal";
@@ -162,7 +161,7 @@ public final class WarframeCommandCodes {
         DEEP_ARCHIMEDEAS(WarframeCommandCodes.DEEP_ARCHIMEDEAS, "深层科研", 59),
         HEX_ARCHIMEDEAS(WarframeCommandCodes.HEX_ARCHIMEDEAS, "时光科研", 60),
         UPDATE_SISTER(WarframeCommandCodes.UPDATE_SISTER, "更新信条", 60), CAVIA(WarframeCommandCodes.CAVIA, "科维兽赏金", 61),
-        DESCENTS(WarframeCommandCodes.DESCENTS, "深层下降", 61),
+        DESCENTS(WarframeCommandCodes.DESCENTS, "沉沦之地", 61),
         UPDATE_LICHES(WarframeCommandCodes.UPDATE_LICHES, "更新赤毒", 61),
         HOLDFASTS(WarframeCommandCodes.HOLDFASTS, "扎里曼赏金", 62),
         UPDATE_PERRIN_SEQUENCE(WarframeCommandCodes.UPDATE_PERRIN_SEQUENCE, "更新终幕", 62),
@@ -195,8 +194,7 @@ public final class WarframeCommandCodes {
         CONSTRUCTION_PROGRESS(WarframeCommandCodes.CONSTRUCTION_PROGRESS, "舰队建造", 80),
         MISC(WarframeCommandCodes.MISC, "杂项资料", 80),
         RIVEN_UNROLLABLES(WarframeCommandCodes.RIVEN_UNROLLABLES, "紫卡不可洗属性", 80),
-        QUESTS(WarframeCommandCodes.QUESTS, "任务资料", 81), SIMARIS(WarframeCommandCodes.SIMARIS, "西玛里斯", 81),
-        CUSTOMS(WarframeCommandCodes.CUSTOMS, "外观资料", 82),
+        QUESTS(WarframeCommandCodes.QUESTS, "任务资料", 81), CUSTOMS(WarframeCommandCodes.CUSTOMS, "外观资料", 82),
         SENTIENT_OUTPOSTS(WarframeCommandCodes.SENTIENT_OUTPOSTS, "先遣舰", 82),
         CLAN_INITIATIVE(WarframeCommandCodes.CLAN_INITIATIVE, "氏族周任务", 83),
         ITEM_COMPONENTS(WarframeCommandCodes.ITEM_COMPONENTS, "物品组件", 83),

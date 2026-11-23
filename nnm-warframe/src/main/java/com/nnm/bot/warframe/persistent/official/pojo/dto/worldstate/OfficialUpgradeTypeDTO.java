@@ -9,7 +9,9 @@ import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordD
 import com.nnm.bot.warframe.persistent.official.pojo.dto.support.OfficialRecordHeaderDTO;
 import lombok.Getter;
 
-/** UPGRADE_TYPE 的 JSON 输入合同；由生成器和契约测试共同维护，不携带 JPA 状态。 */
+/**
+ * 全局增益类型词典。用类型代码查询显示名；倍率、运算类型和有效时间来自官方动态快照。 接收独立官方 JSON 的业务字段。由生成器和契约测试共同维护。
+ */
 @Getter
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
     setterVisibility = JsonAutoDetect.Visibility.NONE)

@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 CAPTURA 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * Captura 场景物品定义。按物品路径获取名称和图标；场景键与掉落地点分开解析。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 RIVEN_ATTRIBUTE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 裂罅属性与市场属性代码的映射。说明前后缀、单位和适用范围，用于归一词条及数值分析。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

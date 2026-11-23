@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 AVIONIC 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 九重天航电定义。按升级对象路径读取极性、容量消耗和等级效果。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

@@ -7,10 +7,15 @@ import java.util.Set;
 
 /** 人工资料白名单；官方资料不通过此入口维护。 */
 public enum WarframeCommunityDataset {
-    ALIAS("alias", "物品别名", "社区维护的别名与官方物品名称映射", Set.of("aliasName", "targetName")),
+    ALIAS("alias", "物品别名", "玩家搜索用的称呼与正式物品名称", Set.of("aliasName", "targetName")),
     TERM("term", "术语与黑话", "游戏术语、黑话及其中英文释义", Set.of("termGroup", "englishText", "chineseText")),
-    ARBITRATION_ESSENCE("arbitration_essence", "仲裁精华", "按节点维护的仲裁精华收益估计，不代表固定掉落数量", Set.of("nodeName", "essenceAmount")),
-    RIVEN_ALIAS("riven_alias", "紫卡自定义别名与组合", "裂罅属性编码的中文别名及组合映射", Set.of("attributeCode", "aliasName"));
+    ARBITRATION_ESSENCE("arbitration_essence", "仲裁精华", "按官方星图节点维护精华估值与社区效率评级",
+        Set.of("nodeKey", "nodeName", "essenceAmount", "efficiencyGrade")),
+    RIVEN_ALIAS("riven_alias", "紫卡自定义别名与组合", "裂罅属性编码的中文别名及组合映射", Set.of("attributeCode", "aliasName")),
+    REFERENCE_MAPPING("reference_mapping", "解析映射", "按场景关联原始字段、官方资料键或显示补充",
+        Set.of("mappingScope", "sourceKey", "targetKey")),
+    DESCENDIA_REWARD("descendia_reward", "沉沦之地楼层映射", "维护楼层、难度和已采纳的官方掉落池", Set.of("floorNumber", "difficulty", "label",
+        "officialPoolKey", "expectedPoolName", "itemCountOverride", "note", "guaranteed", "sourceUrl"));
 
     private final String code;
     private final String label;

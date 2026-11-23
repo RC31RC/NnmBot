@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 REWARD_POOL 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 以游戏奖励池完整路径保存阶段、物品、数量和概率。动态赏金下发池路径时用它连接静态奖励。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

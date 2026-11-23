@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.command.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
@@ -18,6 +19,7 @@ import com.nnm.bot.admin.pojo.entity.bot.command.BotCommand;
 import com.nnm.bot.admin.validation.command.BotCommandPresentationValidator;
 import com.nnm.bot.core.plugin.registry.CommandRegistry;
 import com.nnm.bot.common.error.BusinessException;
+import com.nnm.bot.common.validation.BusinessAssert;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +47,8 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
         return templateRepository.findAll().stream().sorted(Comparator.comparing(BotCommandTemplate::getTemplateCode))
             .map(template -> new BotTemplateDTO(template.getId(), template.getTemplateCode(), template.getName(),
                 template.getCommandId(), template.getSortOrder(), template.getHtmlContent(), template.isEnabled(),
-                selected.getOrDefault(template.getId(), 0L), template.getCreatedAt(), template.getUpdatedAt()))
+                template.isFunctionDescription(), selected.getOrDefault(template.getId(), 0L), template.getCreatedAt(),
+                template.getUpdatedAt()))
             .toList();
     }
 
@@ -60,6 +63,7 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
         BotCommandTemplate template = new BotCommandTemplate();
         apply(template, request, code);
         presentationValidator.validate(List.of(template));
+        validateFunctionDescription(template, null);
         long id = templateRepository.save(template).getId();
         commandRegistry.refreshAfterCommit();
         return id;
@@ -78,6 +82,7 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
         }
         apply(template, request, code);
         presentationValidator.validate(List.of(template));
+        validateFunctionDescription(template, id);
         clearOldSelection(previousCommandId, template);
         templateRepository.save(template);
         commandRegistry.refreshAfterCommit();
@@ -106,7 +111,20 @@ public class BotTemplateManagementServiceImpl implements BotTemplateManagementSe
         if (request.htmlContent() == null || CharSequenceUtil.isBlank(request.htmlContent()))
             throw new BusinessException(BotManagementErrorCode.HTML_TEMPLATE_REQUIRED);
         template.setHtmlContent(request.htmlContent() == null ? "" : request.htmlContent());
-        template.setEnabled(Boolean.TRUE.equals(request.enabled()));
+        template.setEnabled(BooleanUtil.isTrue(request.enabled()));
+        template.setFunctionDescription(BooleanUtil.isTrue(request.functionDescription()));
+    }
+
+    private void validateFunctionDescription(BotCommandTemplate template, Long currentId) {
+        if (!template.isFunctionDescription() || !template.isEnabled())
+            return;
+        BusinessAssert.notNull(template.getCommandId(), BotManagementErrorCode.FUNCTION_DESCRIPTION_COMMAND_REQUIRED);
+        BusinessAssert.isTrue(
+            templateRepository.findAll().stream()
+                .noneMatch(existing -> !Objects.equals(existing.getId(), currentId) && existing.isEnabled()
+                    && existing.isFunctionDescription()
+                    && Objects.equals(existing.getCommandId(), template.getCommandId())),
+            BotManagementErrorCode.DUPLICATE_FUNCTION_DESCRIPTION_TEMPLATE);
     }
 
     private void clearOldSelection(Long previousCommandId, BotCommandTemplate template) {

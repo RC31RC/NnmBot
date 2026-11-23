@@ -13,6 +13,8 @@ import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommuni
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityPreviewPageVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRecordVO;
 import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityRivenAttributeVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityArbitrationGradeVO;
+import com.nnm.bot.warframe.persistent.curated.pojo.vo.reference.WarframeCommunityArbitrationNodeVO;
 import com.nnm.bot.warframe.persistent.curated.service.reference.WarframeCommunityDataService;
 import jakarta.annotation.Resource;
 import java.util.List;
@@ -48,6 +50,28 @@ public class WarframeCommunityDataController {
     }
 
     /**
+     * 查询已采纳官方星图节点，供仲裁社区资料选择。
+     *
+     * @return 官方节点键、显示名和星系。
+     */
+    @PostMapping("/arbitration-nodes/query")
+    @SaCheckPermission("warframe:community:view")
+    public ApiResponse<List<WarframeCommunityArbitrationNodeVO>> arbitrationNodes() {
+        return ApiResponse.ok(service.arbitrationNodes());
+    }
+
+    /**
+     * 查询仲裁社区资料可配置的效率评级。
+     *
+     * @return 评级代码和显示名。
+     */
+    @PostMapping("/arbitration-grades/query")
+    @SaCheckPermission("warframe:community:view")
+    public ApiResponse<List<WarframeCommunityArbitrationGradeVO>> arbitrationGrades() {
+        return ApiResponse.ok(service.arbitrationEfficiencyGrades());
+    }
+
+    /**
      * 列出未过期的社区待审核预览。
      *
      * @return 管理端待审核索引列表。
@@ -67,7 +91,7 @@ public class WarframeCommunityDataController {
      */
     @PostMapping("/{dataset}/query")
     @SaCheckPermission("warframe:community:view")
-    public ApiResponse<PageResult<WarframeCommunityRecordVO>> query(@PathVariable String dataset,
+    public ApiResponse<PageResult<WarframeCommunityRecordVO<?>>> query(@PathVariable String dataset,
         @RequestBody(required = false) WarframeCommunityQuery query) {
         return ApiResponse.ok(service.query(dataset, query));
     }

@@ -1,10 +1,7 @@
 package com.nnm.bot.warframe.runtime.service.worldstate.impl;
 
-import cn.hutool.core.util.ObjUtil;
-import cn.hutool.core.text.CharSequenceUtil;
-import com.fasterxml.jackson.core.JsonParser;
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nnm.bot.common.error.SystemException;
 import com.nnm.bot.warframe.constant.WarframeManagementErrorCode;
@@ -24,13 +21,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HexFormat;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -66,38 +56,17 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     private final AtomicReference<WorldStateRuntimeSnapshot> currentSnapshot = new AtomicReference<>();
 
     /**
-     * 接收已有运行时投影并统一发布本地状态更新事件。
-     *
-     * @param newState 新建状态。
-     */
-    public void processNewState(WorldStateDTO newState) {
-        Objects.requireNonNull(newState, "newState must not be null");
-        applySnapshot(WorldStateRuntimeSnapshot.fromState(newState));
-    }
-
-    /**
      * 一次替换完整快照，避免原始输入与展示结果来自不同响应。
      *
      * @param newSnapshot 新建快照。
      */
     private void applySnapshot(WorldStateRuntimeSnapshot newSnapshot) {
-        refreshLock.lock();
-        try {
-            WorldStateDTO newState = Objects.requireNonNull(newSnapshot.state(), "newSnapshot.state must not be null");
-            // 原子替换完整快照，读取线程不会看到领域状态与原始 JSON 的半更新结果。
-            WorldStateRuntimeSnapshot oldSnapshot = currentSnapshot.getAndSet(newSnapshot);
-            WorldStateDTO oldState = oldSnapshot == null ? null : oldSnapshot.state();
-
-            if (ObjUtil.isNull(oldState)) {
-                log.info("Initial world state loaded");
-                eventPublisher.publishEvent(new WorldStateUpdatedEvent(null, newState, null));
-                return;
-            }
-
-            eventPublisher.publishEvent(new WorldStateUpdatedEvent(oldState, newState, null));
-        } finally {
-            refreshLock.unlock();
-        }
+        WorldStateDTO newState = Objects.requireNonNull(newSnapshot.state(), "newSnapshot.state must not be null");
+        WorldStateRuntimeSnapshot oldSnapshot = currentSnapshot.getAndSet(newSnapshot);
+        if (oldSnapshot == null)
+            log.info("Initial world state loaded");
+        eventPublisher
+            .publishEvent(new WorldStateUpdatedEvent(oldSnapshot == null ? null : oldSnapshot.state(), newState, null));
     }
 
     /**
@@ -114,21 +83,11 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
     /**
      * 读取最近一次成功的原始数据和解析结果。
      *
-     * @return 最近一次完整的本机快照，所有分区必须一起替换。。
+     * @return 最近一次完整的本机快照，所有分区必须一起替换。
      */
     @Override
     public WorldStateRuntimeSnapshot getCurrentSnapshot() {
         return currentSnapshot.get();
-    }
-
-    /**
-     * 管理端手动刷新与定时轮询共用同一条处理链，确保变更检测和事件发布行为一致。
-     *
-     * @return 已经解析并校验的世界状态快照。
-     */
-    @Override
-    public WorldStateDTO refresh() {
-        return refresh(TaskProgressReporter.noop());
     }
 
     /**
@@ -144,7 +103,7 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             TaskProgressReporter progress = reporter == null ? TaskProgressReporter.noop() : reporter;
             progress.report("DOWNLOADING_WORLD_STATE", "正在拉取 Warframe 世界数据");
             HttpResult result = officialApiClient.fetchWorldStateResult();
-            if (result == null || !result.isSuccess() || CharSequenceUtil.isBlank(result.body())) {
+            if (result == null || !result.isSuccess() || StrUtil.isBlank(result.body())) {
                 // 保留最近一次成功的 JVM 内存快照，由本机下一个轮询周期重试。
                 throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "世界状态上游响应失败或为空");
             }
@@ -154,13 +113,13 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
             try {
                 rawData = objectMapper.readValue(result.body(), OfficialWorldStateRawData.class);
             } catch (JsonProcessingException exception) {
-                throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED,
-                    "官方世界状态字段绑定失败：" + exception.getMessage(), exception);
+                throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "官方世界状态字段绑定失败",
+                    exception);
             }
             WorldStateDTO state = cycleService.resolve(invasionEnrichmentService
                 .enrich(bountyCycleService.enrich(worldStateMapper.map(rawData, source, result.body()))));
-            applySnapshot(new WorldStateRuntimeSnapshot(rawData, state, source, result.body(), sha256(result.body()),
-                state.metadata().fetchedAt(), topLevelFields(result.body())));
+            applySnapshot(new WorldStateRuntimeSnapshot(rawData, state, source, state.metadata().contentDigest(),
+                state.metadata().fetchedAt()));
             progress.complete("Warframe 世界数据已更新");
             return state;
         } finally {
@@ -168,42 +127,4 @@ public class WarframeWorldStateServiceImpl implements WarframeWorldStateService 
         }
     }
 
-    /**
-     * 只扫描顶层字段名供排障使用，不把整个响应再次读成 JSON 树。
-     *
-     * @param rawJson 用于审核或排障的原始响应文本。
-     * @return 按当前条件筛选或转换后的数据集合。
-     */
-    private List<String> topLevelFields(String rawJson) {
-        try (JsonParser parser = objectMapper.getFactory().createParser(rawJson)) {
-            if (parser.nextToken() != JsonToken.START_OBJECT) {
-                throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "官方世界状态根输入必须为对象");
-            }
-            List<String> fields = new ArrayList<>();
-            while (parser.nextToken() == JsonToken.FIELD_NAME) {
-                fields.add(parser.currentName());
-                parser.nextToken();
-                parser.skipChildren();
-            }
-            return List.copyOf(fields);
-        } catch (IOException exception) {
-            throw new SystemException(WarframeManagementErrorCode.WORLD_STATE_REFRESH_FAILED, "无法读取官方世界状态字段目录",
-                exception);
-        }
-    }
-
-    /**
-     * 对上游完整原文生成 SHA-256 摘要，用于快照审计。
-     *
-     * @param value 待校验或规范化的文本。
-     * @return 输入内容的 SHA-256 十六进制摘要。
-     */
-    private static String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is not available", exception);
-        }
-    }
 }

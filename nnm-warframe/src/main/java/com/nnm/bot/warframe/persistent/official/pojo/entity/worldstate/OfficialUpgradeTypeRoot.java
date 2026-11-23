@@ -7,7 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 UPGRADE_TYPE 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 全局增益类型词典。用类型代码查询显示名；倍率、运算类型和有效时间来自官方动态快照。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

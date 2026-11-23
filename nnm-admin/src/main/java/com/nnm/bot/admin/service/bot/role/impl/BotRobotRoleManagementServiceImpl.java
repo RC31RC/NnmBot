@@ -1,5 +1,6 @@
 package com.nnm.bot.admin.service.bot.role.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
@@ -226,7 +227,7 @@ public class BotRobotRoleManagementServiceImpl implements BotRobotRoleManagement
         role.setCode(code);
         role.setName(CharSequenceUtil.trim(request.name()));
         role.setDescription(trimToNull(request.description()));
-        role.setEnabled(Boolean.TRUE.equals(request.enabled()));
+        role.setEnabled(BooleanUtil.isTrue(request.enabled()));
     }
 
     private void saveCommandBindings(BotRobotRole role, List<String> commandCodes) {

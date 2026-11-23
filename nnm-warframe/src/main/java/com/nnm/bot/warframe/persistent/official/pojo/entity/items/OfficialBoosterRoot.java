@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 BOOSTER 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 增幅器物品定义。按物品路径读取名称和类型；本轮全服增益的时间和倍率由动态快照提供。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

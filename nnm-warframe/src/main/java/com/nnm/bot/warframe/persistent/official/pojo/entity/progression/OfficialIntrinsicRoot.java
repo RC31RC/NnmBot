@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 INTRINSIC 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 内源之力成长定义。按分支及等级读取技能说明和晋级资料，用于成长查询。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

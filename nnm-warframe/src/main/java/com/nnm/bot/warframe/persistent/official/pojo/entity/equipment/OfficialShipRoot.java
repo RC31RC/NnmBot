@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 
-/** 源 SHIP 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 飞船与登陆艇定义。按飞船身份读取分类和外观资料，供装备或物品查询使用。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

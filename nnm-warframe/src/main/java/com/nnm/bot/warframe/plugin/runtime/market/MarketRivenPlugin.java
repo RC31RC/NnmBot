@@ -1,5 +1,6 @@
 package com.nnm.bot.warframe.plugin.runtime.market;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 
 import com.nnm.bot.warframe.constant.WarframeCommandInputConstants;
@@ -287,7 +288,7 @@ public final class MarketRivenPlugin extends BotPlugin<Void, WarframeMarketRiven
         Set<String> validCodes = new LinkedHashSet<>();
         officialAttributes.definitions().forEach(record -> {
             String code = record.code();
-            if (Boolean.TRUE.equals(record.searchOnly()) || CharSequenceUtil.isBlank(code)
+            if (BooleanUtil.isTrue(record.searchOnly()) || CharSequenceUtil.isBlank(code)
                 || Set.of("has", "none").contains(code))
                 return;
             validCodes.add(code);

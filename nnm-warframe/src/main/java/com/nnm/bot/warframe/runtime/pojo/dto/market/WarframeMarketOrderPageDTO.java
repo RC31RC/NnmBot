@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.nnm.bot.common.response.PageResult;
+import com.nnm.bot.warframe.runtime.constant.WarframeMarketConstants.OrderFilter;
 import java.util.List;
 
 /**
@@ -17,7 +18,7 @@ public record WarframeMarketOrderPageDTO(@JsonPropertyDescription("物品") Stri
 
     @JsonPropertyDescription("平台") String platform,
 
-    @JsonPropertyDescription("筛选条件") String filter,
+    @JsonPropertyDescription("筛选条件") OrderFilter filter,
 
     @JsonPropertyDescription("仅查询满级") boolean maxRankRequested,
 

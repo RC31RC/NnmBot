@@ -59,7 +59,8 @@ public final class AdminBotCommandViewAssembler {
         if (value == null)
             return null;
         return new BotTemplateVO(value.id(), value.templateCode(), value.name(), value.commandId(), value.sortOrder(),
-            value.htmlContent(), value.enabled(), value.commandCount(), value.createdAt(), value.updatedAt());
+            value.htmlContent(), value.enabled(), value.functionDescription(), value.commandCount(), value.createdAt(),
+            value.updatedAt());
     }
 
     public static List<BotTemplateVO> toBotTemplateVO(List<BotTemplateDTO> values) {

@@ -16,5 +16,7 @@ public record BotTemplateSaveDTO(
     /** 完整 HTML 内容。 */
     @NotBlank String htmlContent,
     /** 是否启用。 */
-    @NotNull Boolean enabled) {
+    @NotNull Boolean enabled,
+    /** 无参数命令缺少必需参数时是否使用此模板展示功能说明。 */
+    @NotNull Boolean functionDescription) {
 }

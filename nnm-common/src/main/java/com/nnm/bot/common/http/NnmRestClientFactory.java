@@ -31,12 +31,27 @@ public class NnmRestClientFactory {
      * 创建一个使用指定根地址的 {@code @HttpExchange} 代理。 错误响应被保留为 {@code ResponseEntity}，由上层统一转换为 {@link HttpClient.HttpResult}。
      */
     public <T> T createClient(URI baseUrl, Class<T> serviceType) {
+        return createClient(baseUrl, serviceType, properties.getMaxResponseBodyBytes());
+    }
+
+    /**
+     * 创建具备来源级响应上限的 {@code @HttpExchange} 代理。
+     *
+     * @param baseUrl 接口根地址。
+     * @param serviceType 声明式接口类型。
+     * @param maxResponseBodyBytes 本来源允许读取的最大响应字节数。
+     * @return 可调用的声明式接口代理。
+     */
+    public <T> T createClient(URI baseUrl, Class<T> serviceType, long maxResponseBodyBytes) {
         Objects.requireNonNull(baseUrl, "baseUrl must not be null");
         Objects.requireNonNull(serviceType, "serviceType must not be null");
         validateBaseUrl(baseUrl);
+        if (maxResponseBodyBytes < 1) {
+            throw new IllegalArgumentException("maxResponseBodyBytes must be positive");
+        }
 
         RestClient restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory)
-            .requestInterceptor(new ResponseSizeLimitInterceptor(properties))
+            .requestInterceptor(new ResponseSizeLimitInterceptor(properties, maxResponseBodyBytes))
             .defaultStatusHandler(HttpStatusCode::isError, (request, response) -> {
                 // 声明式结果型客户端必须保留 4xx/5xx 状态，不能提前抛异常。
             }).build();

@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.Setter;
 
-/** 源 TEXT_ICON 独立主表 的固定业务列；由生成器和契约测试共同维护。 */
+/**
+ * 文本图标标记在各平台的映射。以标记代码查询对应资源，供游戏文案显示。 同一业务键可保留官方和自维护版本。由生成器和契约测试共同维护。
+ */
 @Getter
 @Setter
 @Entity

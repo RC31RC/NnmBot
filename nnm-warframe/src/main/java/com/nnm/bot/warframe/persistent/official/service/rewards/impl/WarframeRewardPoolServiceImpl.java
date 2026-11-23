@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -70,11 +71,13 @@ public class WarframeRewardPoolServiceImpl implements WarframeRewardPoolService 
         for (var members : values(value.getStages())) {
             if (filter == null || filter.equals(stage))
                 for (var reward : values(members)) {
-                    String itemName = values(reward.getItemReferences()).stream()
-                        .map(item -> first(item.getNameZh(), item.getNameEn(), item.getName())).findFirst().orElse("");
+                    var references = values(reward.getItemReferences()).stream().filter(Objects::nonNull).toList();
+                    var reference = references.size() == 1 ? references.getFirst() : null;
+                    String itemName = reference == null ? reward.getType()
+                        : first(reference.getNameZh(), reference.getNameEn(), reference.getName(), reward.getType());
                     rows.add(new EntryVO(key, name, stage, first(reward.getType()), itemName,
                         integer(reward.getItemCount()), reward.getProbability(), first(reward.getRarity()), false,
-                        OFFICIAL_SOURCE_CODE, "ROOT_SELECTED"));
+                        OFFICIAL_SOURCE_CODE, "ROOT_SELECTED", reference == null ? null : reference.getIconUrl()));
                 }
             stage++;
         }

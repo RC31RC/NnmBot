@@ -160,6 +160,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
         try (WarframeOfficialSnapshotDTO snapshot = downloader.download(selectedRef, reporter, selectedPaths)) {
             log.info("官方刷新文件下载阶段完成: files={}, elapsedMs={}", selectedPaths.size(),
                 TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - downloadStarted));
+            reporter.report(ImportStage.BUILDING_DIFF.name(), "下载校验完成，正在生成审核差异");
             long previewStarted = System.nanoTime();
             downloaded = snapshot.manifest();
             // 在第一次写入对象存储前建立持久化账本，进程失联后仍可按 TTL 定位遗留文件。
@@ -180,6 +181,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             }, snapshot.directory());
             log.info("官方刷新差异生成阶段完成: paths={}, elapsedMs={}", paths.size(),
                 TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - previewStarted));
+            reporter.report(ImportStage.STORING_SNAPSHOT.name(), "正在保存本轮官方数据文件");
             long publicationStarted = System.nanoTime();
             lockManager.lock(METADATA_LOCK);
             retention.prepareRefresh();
@@ -212,7 +214,7 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             completed = preview;
             staging.deleteById(previewId);
             return preview;
-        } catch (IOException | RuntimeException exception) {
+        } catch (IOException | RuntimeException | LinkageError exception) {
             if (completed != null) {
                 log.warn("Official preview {} was saved; temporary staging cleanup failed", completed.id(), exception);
                 return completed;
@@ -232,6 +234,8 @@ public class WarframeOfficialImportServiceImpl implements WarframeOfficialImport
             }
             if (exception instanceof IOException io)
                 throw unavailable(io);
+            if (exception instanceof LinkageError linkage)
+                throw linkage;
             throw (RuntimeException)exception;
         }
     }

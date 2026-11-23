@@ -1,6 +1,7 @@
 package com.nnm.bot.admin.service.bot.notification.impl;
 
 import com.nnm.bot.admin.constant.bot.BotManagementErrorCode;
+import com.nnm.bot.admin.constant.bot.notification.BotNotificationConstants.GroupDeliveryStatus;
 import com.nnm.bot.core.channel.model.BotChannelSnapshot;
 import com.nnm.bot.core.plugin.api.ReplyBlock.Image;
 import com.nnm.bot.core.plugin.api.ReplyBlock.Markdown;
@@ -19,6 +20,7 @@ import com.nnm.bot.common.validation.BusinessAssert;
 import com.nnm.bot.core.mq.message.notification.GroupNotificationMessage;
 import com.nnm.bot.core.mq.message.notification.GroupNotificationDTO;
 import com.nnm.bot.core.mq.message.notification.NotificationResourceManifest;
+import com.nnm.bot.core.channel.notification.constant.NotificationConstants.GroupResultStatus;
 import com.nnm.bot.core.channel.notification.store.GroupNotificationResultStore;
 import com.nnm.bot.core.channel.notification.store.NotificationCancellationStore;
 import com.nnm.bot.core.channel.notification.store.NotificationResourceStorage;
@@ -112,13 +114,13 @@ public class BotGroupNotificationServiceImpl implements BotGroupNotificationServ
         Instant expires = Instant.now().plus(properties.responseTimeout());
         for (Target selected : targets(request, manifest)) {
             DeliveryDTO delivery = new DeliveryDTO(selected.group().getId(), selected.group().getName(),
-                selected.platform(), selected.conversationId(), "PENDING", "", null);
+                selected.platform(), selected.conversationId(), GroupDeliveryStatus.IN_PROGRESS, "", null);
             if (cancellations.cancelled(manifest.submissionId())) {
-                deliveries.add(outcome(delivery, "CANCELLED", "通知已取消，未入队", null));
+                deliveries.add(outcome(delivery, GroupDeliveryStatus.CANCELLED, "通知已取消，未入队", null));
                 continue;
             }
             if (selected.plans().isEmpty()) {
-                deliveries.add(outcome(delivery, "SKIPPED", selected.reason(), null));
+                deliveries.add(outcome(delivery, GroupDeliveryStatus.SKIPPED, selected.reason(), null));
                 continue;
             }
             UUID id = UUID.nameUUIDFromBytes(
@@ -133,7 +135,7 @@ public class BotGroupNotificationServiceImpl implements BotGroupNotificationServ
                     case MESSAGE_TOO_LARGE -> "通知内容超过队列载荷限制";
                     default -> "通知入队失败";
                 };
-                deliveries.add(outcome(delivery, "FAILED", reason, null));
+                deliveries.add(outcome(delivery, GroupDeliveryStatus.FAILED, reason, null));
                 log.warn("Notification enqueue rejected submission={} target={} code={}", request.submissionId(), id,
                     rejected.code());
             }
@@ -142,15 +144,18 @@ public class BotGroupNotificationServiceImpl implements BotGroupNotificationServ
         long deadline = System.nanoTime() + properties.responseTimeout().toNanos();
         while (!waiting.isEmpty() && System.nanoTime() < deadline) {
             results.findAll(waiting.keySet()).forEach((id, result) -> deliveries
-                .add(outcome(waiting.remove(id), result.status().name(), result.message(), result.report())));
+                .add(outcome(waiting.remove(id), deliveryStatus(result.status()), result.message(), result.report())));
             reporter.report("SENDING", "等待各目标逐条发送结果", deliveries.size(), total);
             if (!waiting.isEmpty())
                 Thread.sleep(properties.pollInterval());
         }
-        waiting.values().forEach(target -> deliveries.add(outcome(target, "UNKNOWN", "未取得最终结果，请核实后决定是否重试", null)));
-        int succeeded = (int)deliveries.stream().filter(item -> "SUCCEEDED".equals(item.status())).count();
+        waiting.values().forEach(
+            target -> deliveries.add(outcome(target, GroupDeliveryStatus.UNKNOWN, "未取得最终结果，请核实后决定是否重试", null)));
+        int succeeded = (int)deliveries.stream().filter(item -> item.status() == GroupDeliveryStatus.SUCCEEDED).count();
         int skipped = (int)deliveries.stream()
-            .filter(item -> ("SKIPPED".equals(item.status()) || "CANCELLED".equals(item.status()))).count();
+            .filter(
+                item -> item.status() == GroupDeliveryStatus.SKIPPED || item.status() == GroupDeliveryStatus.CANCELLED)
+            .count();
         reporter.report("COMPLETED", "通知任务结束", total, total);
         return new BotGroupNotificationReportDTO(succeeded, deliveries.size() - succeeded - skipped, skipped,
             List.copyOf(deliveries));
@@ -198,9 +203,21 @@ public class BotGroupNotificationServiceImpl implements BotGroupNotificationServ
         return List.copyOf(result);
     }
 
-    private DeliveryDTO outcome(DeliveryDTO target, String status, String message, DeliveryReport report) {
+    private DeliveryDTO outcome(DeliveryDTO target, GroupDeliveryStatus status, String message, DeliveryReport report) {
         return new DeliveryDTO(target.groupId(), target.groupName(), target.platform(), target.conversationId(), status,
             message, report);
+    }
+
+    /** @param status 消费端结果；@return 管理端逐群投递状态。 */
+    private static GroupDeliveryStatus deliveryStatus(GroupResultStatus status) {
+        return switch (status) {
+            case IN_PROGRESS -> GroupDeliveryStatus.IN_PROGRESS;
+            case CANCELLED -> GroupDeliveryStatus.CANCELLED;
+            case SUCCEEDED -> GroupDeliveryStatus.SUCCEEDED;
+            case PARTIAL -> GroupDeliveryStatus.PARTIAL;
+            case FAILED -> GroupDeliveryStatus.FAILED;
+            case UNKNOWN -> GroupDeliveryStatus.UNKNOWN;
+        };
     }
 
     private record Target(BotGroup group, String platform, String conversationId, BotProactiveTarget target,

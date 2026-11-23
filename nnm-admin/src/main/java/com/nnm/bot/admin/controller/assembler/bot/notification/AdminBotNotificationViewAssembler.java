@@ -27,7 +27,7 @@ public final class AdminBotNotificationViewAssembler {
         if (value == null)
             return null;
         return new BotGroupNotificationReportVO.DeliveryVO(value.groupId(), value.groupName(), value.platform(),
-            value.conversationId(), value.status(), value.message(), value.report());
+            value.conversationId(), value.status().name(), value.message(), value.report());
     }
 
     public static BotNotificationJobVO toBotNotificationJobVO(BotNotificationJobDTO value) {
